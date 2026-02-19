@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Search, CheckCircle2, XCircle, Clock, AlertCircle, Loader2, ExternalLink, Sparkles, Images, Star, Camera, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, Pencil, Building2, Link2, TriangleAlert, Bookmark, MapPin } from 'lucide-react';
+import { ArrowLeft, Search, CheckCircle2, XCircle, Clock, AlertCircle, Loader2, ExternalLink, Sparkles, Images, Star, Camera, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, Pencil, Building2, Link2, TriangleAlert, Bookmark, MapPin, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -43,6 +43,12 @@ interface Listing {
   logo_photo: string | null;
   parent_chain: string | null;
   location_page_url: string | null;
+  vendor_id: number | null;
+}
+
+interface VendorOption {
+  id: number;
+  canonical_name: string;
 }
 
 export default function AdminListingsPage() {
@@ -69,9 +75,13 @@ export default function AdminListingsPage() {
   const [expandingChain, setExpandingChain] = useState<Set<string>>(new Set());
   const [chainFilter, setChainFilter] = useState<string>('all');
   const [featuredFilter, setFeaturedFilter] = useState<boolean>(false);
+  const [vendors, setVendors] = useState<VendorOption[]>([]);
+  const [assigningVendor, setAssigningVendor] = useState<string | null>(null);
+  const [vendorPopover, setVendorPopover] = useState<string | null>(null);
 
   useEffect(() => {
     fetchListings();
+    fetchVendors();
   }, []);
 
   useEffect(() => {
@@ -95,6 +105,27 @@ export default function AdminListingsPage() {
       toast({ title: 'Error', description: errorMsg, variant: 'destructive' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchVendors = async () => {
+    const { data } = await supabase.from('vendors').select('id, canonical_name').order('canonical_name', { ascending: true });
+    if (data) setVendors(data as VendorOption[]);
+  };
+
+  const assignVendor = async (listingId: string, vendorId: number | null) => {
+    setAssigningVendor(listingId);
+    try {
+      const { error } = await supabase.from('listings').update({ vendor_id: vendorId }).eq('id', listingId);
+      if (error) throw error;
+      setListings((prev) => prev.map((l) => l.id === listingId ? { ...l, vendor_id: vendorId } : l));
+      setVendorPopover(null);
+      const vendorName = vendorId ? vendors.find((v) => v.id === vendorId)?.canonical_name : null;
+      toast({ title: vendorId ? 'Vendor assigned' : 'Vendor removed', description: vendorId ? `Assigned to ${vendorName}` : 'Listing unassigned from vendor' });
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to assign vendor', variant: 'destructive' });
+    } finally {
+      setAssigningVendor(null);
     }
   };
 
@@ -1138,6 +1169,66 @@ export default function AdminListingsPage() {
                                 {listing.parent_chain}
                               </button>
                             )}
+                            <div className="relative">
+                              {listing.vendor_id ? (
+                                <div className="inline-flex items-center gap-0 rounded-full border border-[#22C55E]/40 bg-[#22C55E]/10 overflow-hidden">
+                                  <Link
+                                    href={`/admin/vendors/${listing.vendor_id}`}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 text-[#16A34A] text-xs font-medium hover:bg-[#22C55E]/20 transition-colors"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Building2 className="w-3 h-3" />
+                                    {vendors.find((v) => v.id === listing.vendor_id)?.canonical_name ?? 'Vendor'}
+                                  </Link>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setVendorPopover(vendorPopover === listing.id ? null : listing.id); }}
+                                    className="px-1.5 py-0.5 text-[#16A34A] hover:bg-[#22C55E]/20 transition-colors border-l border-[#22C55E]/30"
+                                    title="Change vendor"
+                                  >
+                                    <Pencil className="w-2.5 h-2.5" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setVendorPopover(vendorPopover === listing.id ? null : listing.id)}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-dashed border-gray-300 text-gray-400 text-xs hover:border-gray-400 hover:text-gray-500 transition-colors"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                  Assign Vendor
+                                </button>
+                              )}
+                              {vendorPopover === listing.id && (
+                                <div className="absolute left-0 top-full mt-1 z-20 bg-white rounded-lg shadow-lg border border-gray-200 w-56 py-1">
+                                  <div className="px-3 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide border-b">Assign Vendor</div>
+                                  <div className="max-h-48 overflow-y-auto">
+                                    {listing.vendor_id && (
+                                      <button
+                                        className="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2"
+                                        onClick={() => assignVendor(listing.id, null)}
+                                        disabled={assigningVendor === listing.id}
+                                      >
+                                        {assigningVendor === listing.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <XCircle className="w-3 h-3" />}
+                                        Remove vendor
+                                      </button>
+                                    )}
+                                    {vendors.map((v) => (
+                                      <button
+                                        key={v.id}
+                                        className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 transition-colors flex items-center gap-2 ${listing.vendor_id === v.id ? 'text-[#0F2744] font-medium bg-blue-50' : 'text-gray-700'}`}
+                                        onClick={() => assignVendor(listing.id, v.id)}
+                                        disabled={assigningVendor === listing.id}
+                                      >
+                                        {assigningVendor === listing.id ? <Loader2 className="w-3 h-3 animate-spin flex-shrink-0" /> : listing.vendor_id === v.id ? <CheckCircle2 className="w-3 h-3 flex-shrink-0 text-[#22C55E]" /> : <Building2 className="w-3 h-3 flex-shrink-0 opacity-30" />}
+                                        {v.canonical_name}
+                                      </button>
+                                    ))}
+                                    {vendors.length === 0 && (
+                                      <div className="px-3 py-2 text-xs text-gray-400 text-center">No vendors yet</div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
                           <p className="text-sm text-gray-600">
                             {listing.address && `${listing.address}, `}
