@@ -56,10 +56,11 @@ async function getTotalCount(): Promise<number> {
 }
 
 export default async function Home() {
-  const [featuredListings, stateListingCounts, totalCount] = await Promise.all([
-    getFeaturedListings(),
-    getStateListingCounts(),
-    getTotalCount(),
+  const [featuredListings, stateListingCounts, totalCount] = await Promise.race([
+    Promise.all([getFeaturedListings(), getStateListingCounts(), getTotalCount()]),
+    new Promise<[[], Record<string, number>, number]>((resolve) =>
+      setTimeout(() => resolve([[], {}, 0]), 5000)
+    ),
   ]);
 
   return (
