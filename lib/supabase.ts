@@ -58,6 +58,18 @@ export type Submission = {
   created_at: string;
 };
 
+export type Vendor = {
+  id: number;
+  canonical_name: string;
+  domain: string | null;
+  website: string | null;
+  logo_url: string | null;
+  description: string | null;
+  is_chain: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 export type BlogPost = {
   id: string;
   title: string;

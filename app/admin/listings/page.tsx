@@ -938,6 +938,11 @@ export default function AdminListingsPage() {
                 )}
               </Button>
               <Button asChild variant="outline">
+                <Link href="/admin/vendors">
+                  <Building2 className="w-4 h-4 mr-2" />Vendors
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
                 <Link href="/admin/crawls/new">Import Data</Link>
               </Button>
             </div>
