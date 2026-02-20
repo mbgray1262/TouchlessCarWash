@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronRight, Eye, Edit3, Bold, Italic, Heading2, Heading3, Link2, List, ListOrdered, Quote, Save, Rocket, Sparkles, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { ChevronRight, Eye, Edit3, Bold, Italic, Heading2, Heading3, Link2, List, ListOrdered, Quote, Save, Rocket, Sparkles, ChevronDown, ChevronUp, Loader2, Clipboard, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -107,6 +107,7 @@ export function BlogEditor({ post }: BlogEditorProps) {
   const [activeTab, setActiveTab] = useState<'write' | 'preview'>('write');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
 
   const [aiOpen, setAiOpen] = useState(false);
   const [aiTopic, setAiTopic] = useState('');
@@ -252,6 +253,38 @@ export function BlogEditor({ post }: BlogEditorProps) {
     }
 
     router.push('/admin/blog');
+  }
+
+  function buildJsonPayload() {
+    return {
+      title,
+      slug,
+      excerpt,
+      content,
+      tags: tagsInput.split(',').map(t => t.trim()).filter(Boolean),
+      status,
+      featured_image_url: featuredImageUrl,
+      meta_title: metaTitle,
+      meta_description: metaDescription,
+      author: (post as any)?.author ?? '',
+    };
+  }
+
+  function handleCopyJson() {
+    navigator.clipboard.writeText(JSON.stringify(buildJsonPayload(), null, 2));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  function handleDownloadJson() {
+    const filename = slug.trim() ? `${slug.trim()}.json` : 'blog-post-draft.json';
+    const blob = new Blob([JSON.stringify(buildJsonPayload(), null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   const toolbarBtn = (icon: React.ReactNode, label: string, onClick: () => void) => (
@@ -544,6 +577,28 @@ export function BlogEditor({ post }: BlogEditorProps) {
                   <Rocket className="w-4 h-4 mr-2" />
                   {saving ? 'Publishing...' : 'Save & Publish'}
                 </Button>
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyJson}
+                    className="flex-1 text-xs text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700"
+                  >
+                    <Clipboard className="w-3.5 h-3.5 mr-1.5" />
+                    {copied ? 'Copied!' : 'Copy JSON'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDownloadJson}
+                    className="flex-1 text-xs text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700"
+                  >
+                    <Download className="w-3.5 h-3.5 mr-1.5" />
+                    Download JSON
+                  </Button>
+                </div>
               </div>
             </div>
 
