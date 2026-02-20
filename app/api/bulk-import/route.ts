@@ -18,16 +18,16 @@ function slugify(str: string): string {
     .slice(0, 80);
 }
 
-function makeSlug(row: RawRow, index: number): string {
+function makeSlug(row: RawRow): string {
   const parts = [
     row['name'] || row['Name'] || row['business_name'] || '',
+    row['address'] || row['Address'] || row['street'] || '',
     row['city'] || row['City'] || '',
     row['state'] || row['State'] || '',
   ]
     .map(String)
     .filter(Boolean);
-  const base = slugify(parts.join('-')) || `listing-${index}`;
-  return `${base}-${index}`;
+  return slugify(parts.join('-')) || `listing-${Date.now()}`;
 }
 
 function col(row: RawRow, ...keys: string[]): string {
@@ -44,7 +44,7 @@ function numCol(row: RawRow, ...keys: string[]): number {
   return isNaN(n) ? 0 : n;
 }
 
-function mapRowToListing(row: RawRow, index: number) {
+function mapRowToListing(row: RawRow, _index: number) {
   const name = col(row, 'name', 'Name', 'business_name', 'Business Name', 'title', 'Title');
   const address = col(row, 'address', 'Address', 'street', 'Street', 'street_address');
   const city = col(row, 'city', 'City');
@@ -57,7 +57,7 @@ function mapRowToListing(row: RawRow, index: number) {
 
   return {
     name,
-    slug: makeSlug(row, index),
+    slug: makeSlug(row),
     address: address || '',
     city,
     state: state.toUpperCase().slice(0, 2),
@@ -184,29 +184,13 @@ export async function POST(req: NextRequest) {
 
       if (valid.length === 0) continue;
 
-      const withPlaceId = valid.filter(r => r.google_place_id);
-      const withoutPlaceId = valid.filter(r => !r.google_place_id);
-
-      if (withPlaceId.length > 0) {
-        const { inserted, error } = await upsertBatch(withPlaceId, 'google_place_id');
-        if (error) {
-          summary.failed += withPlaceId.length;
-          summary.errors.push(`Batch ${Math.floor(i / BATCH_SIZE) + 1} (place_id): ${error}`);
-        } else {
-          summary.inserted += inserted;
-          summary.skipped += withPlaceId.length - inserted;
-        }
-      }
-
-      if (withoutPlaceId.length > 0) {
-        const { inserted, error } = await upsertBatch(withoutPlaceId, 'slug');
-        if (error) {
-          summary.failed += withoutPlaceId.length;
-          summary.errors.push(`Batch ${Math.floor(i / BATCH_SIZE) + 1} (slug): ${error}`);
-        } else {
-          summary.inserted += inserted;
-          summary.skipped += withoutPlaceId.length - inserted;
-        }
+      const { inserted, error } = await upsertBatch(valid, 'slug');
+      if (error) {
+        summary.failed += valid.length;
+        summary.errors.push(`Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${error}`);
+      } else {
+        summary.inserted += inserted;
+        summary.skipped += valid.length - inserted;
       }
     }
 
