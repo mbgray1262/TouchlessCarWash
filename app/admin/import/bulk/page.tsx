@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { read as xlsxRead, utils as xlsxUtils } from 'xlsx';
 import {
   ArrowLeft, Upload, FileSpreadsheet, CheckCircle2, XCircle,
-  AlertCircle, Loader2, RotateCcw, ChevronRight, Info,
+  AlertCircle, Loader2, RotateCcw, ChevronRight, Info, TriangleAlert,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +14,8 @@ import { AdminNav } from '@/components/AdminNav';
 import { createClient } from '@supabase/supabase-js';
 
 const BATCH_SIZE = 500;
+const XLSX_SIZE_LIMIT_MB = 10;
+const XLSX_SIZE_LIMIT_BYTES = XLSX_SIZE_LIMIT_MB * 1024 * 1024;
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -160,8 +162,97 @@ async function insertBatch(rows: ReturnType<typeof mapRowToListing>[]): Promise<
   return result;
 }
 
+function yieldToMain(): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, 0));
+}
+
+function parseCSVText(text: string): RawRow[] {
+  const lines = text.split(/\r?\n/);
+  if (lines.length < 2) return [];
+
+  const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
+  const rows: RawRow[] = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+
+    const values: string[] = [];
+    let inQuotes = false;
+    let current = '';
+
+    for (let c = 0; c < line.length; c++) {
+      const ch = line[c];
+      if (ch === '"') {
+        if (inQuotes && line[c + 1] === '"') {
+          current += '"';
+          c++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (ch === ',' && !inQuotes) {
+        values.push(current);
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+    values.push(current);
+
+    const row: RawRow = {};
+    headers.forEach((h, idx) => {
+      row[h] = values[idx] ?? null;
+    });
+    rows.push(row);
+  }
+
+  return rows;
+}
+
+async function parseFileToRows(
+  file: File,
+  onProgress?: (msg: string) => void
+): Promise<RawRow[]> {
+  const isCSV = file.name.toLowerCase().endsWith('.csv');
+
+  if (isCSV) {
+    onProgress?.('Reading CSV file…');
+    await yieldToMain();
+    const text = await file.text();
+    await yieldToMain();
+    onProgress?.('Parsing CSV rows…');
+    await yieldToMain();
+    const rows = parseCSVText(text);
+    await yieldToMain();
+    return rows;
+  }
+
+  if (file.size > XLSX_SIZE_LIMIT_BYTES) {
+    throw new Error(
+      `This Excel file is ${(file.size / 1024 / 1024).toFixed(1)} MB, which exceeds the ${XLSX_SIZE_LIMIT_MB} MB limit for XLSX files. ` +
+      `Please convert it to CSV format first (File → Save As → CSV in Excel) and re-upload. CSV files parse much faster and support files with 30,000+ rows.`
+    );
+  }
+
+  onProgress?.('Reading Excel file…');
+  await yieldToMain();
+  const buffer = await file.arrayBuffer();
+  await yieldToMain();
+  onProgress?.('Parsing Excel workbook…');
+  await yieldToMain();
+  const wb = xlsxRead(buffer, { type: 'array', dense: true });
+  await yieldToMain();
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  onProgress?.('Converting rows…');
+  await yieldToMain();
+  const rawRows: RawRow[] = xlsxUtils.sheet_to_json(ws, { defval: null });
+  await yieldToMain();
+  return rawRows;
+}
+
 export default function BulkImportPage() {
   const [status, setStatus] = useState<ImportStatus>('idle');
+  const [parseStage, setParseStage] = useState('');
   const [fileName, setFileName] = useState('');
   const [totalRows, setTotalRows] = useState(0);
   const [processedRows, setProcessedRows] = useState(0);
@@ -179,6 +270,7 @@ export default function BulkImportPage() {
     setProcessedRows(0);
     setSummary(null);
     setErrorMsg('');
+    setParseStage('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, []);
 
@@ -187,27 +279,34 @@ export default function BulkImportPage() {
     abortRef.current = false;
     setFileName(file.name);
     setStatus('parsing');
+    setParseStage('Preparing…');
     setSummary(null);
     setErrorMsg('');
     setProcessedRows(0);
+    setTotalRows(0);
+
+    let rawRows: RawRow[];
 
     try {
-      const buffer = await file.arrayBuffer();
-      const wb = xlsxRead(buffer, { type: 'array' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rawRows: RawRow[] = xlsxUtils.sheet_to_json(ws, { defval: null });
+      rawRows = await parseFileToRows(file, msg => setParseStage(msg));
+    } catch (err) {
+      setStatus('error');
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to parse file. Please check the format and try again.');
+      return;
+    }
 
-      if (rawRows.length === 0) {
-        setStatus('error');
-        setErrorMsg('The spreadsheet appears to be empty.');
-        return;
-      }
+    if (rawRows.length === 0) {
+      setStatus('error');
+      setErrorMsg('The spreadsheet appears to be empty or has no valid data rows.');
+      return;
+    }
 
-      setTotalRows(rawRows.length);
-      setStatus('importing');
+    setTotalRows(rawRows.length);
+    setStatus('importing');
 
-      const agg: ImportSummary = { total: rawRows.length, inserted: 0, skipped: 0, failed: 0, errors: [] };
+    const agg: ImportSummary = { total: rawRows.length, inserted: 0, skipped: 0, failed: 0, errors: [] };
 
+    try {
       for (let i = 0; i < rawRows.length; i += BATCH_SIZE) {
         if (abortRef.current) break;
 
@@ -221,14 +320,17 @@ export default function BulkImportPage() {
         if (result.errors.length > 0) agg.errors.push(...result.errors);
 
         setProcessedRows(Math.min(i + BATCH_SIZE, rawRows.length));
-      }
 
-      setSummary(agg);
-      setStatus('done');
+        await yieldToMain();
+      }
     } catch (err) {
       setStatus('error');
-      setErrorMsg(err instanceof Error ? err.message : 'Failed to parse file');
+      setErrorMsg(err instanceof Error ? err.message : 'An error occurred during import. Some rows may have been imported before the failure.');
+      return;
     }
+
+    setSummary(agg);
+    setStatus('done');
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -304,9 +406,17 @@ export default function BulkImportPage() {
                 ) : (
                   <>
                     <p className="text-sm font-medium text-gray-700 mb-1">Drop your file here or click to browse</p>
-                    <p className="text-xs text-gray-400">Supports .csv, .xlsx, .xls</p>
+                    <p className="text-xs text-gray-400">Supports .csv, .xlsx, .xls &mdash; use CSV for files over {XLSX_SIZE_LIMIT_MB} MB</p>
                   </>
                 )}
+              </div>
+
+              <div className="mt-3 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+                <TriangleAlert className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-700">
+                  <span className="font-semibold">Large files:</span> Excel files over {XLSX_SIZE_LIMIT_MB} MB must be saved as CSV first.
+                  In Excel: <span className="font-mono">File &rarr; Save As &rarr; CSV UTF-8</span>. CSV files handle 30,000+ rows without issue.
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -318,7 +428,7 @@ export default function BulkImportPage() {
                   <div className="flex items-center gap-2">
                     <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
                     <span className="text-sm font-medium text-gray-700">
-                      {status === 'parsing' ? 'Parsing file…' : `Importing rows…`}
+                      {status === 'parsing' ? parseStage || 'Parsing file…' : `Importing rows…`}
                     </span>
                   </div>
                   <span className="text-sm text-gray-500 tabular-nums">
