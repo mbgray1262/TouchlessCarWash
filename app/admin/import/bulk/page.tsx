@@ -2,27 +2,16 @@
 
 import { useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { read as xlsxRead, utils as xlsxUtils } from 'xlsx';
 import {
   ArrowLeft, Upload, FileSpreadsheet, CheckCircle2, XCircle,
-  AlertCircle, Loader2, RotateCcw, ChevronRight, Info, TriangleAlert,
+  AlertCircle, Loader2, RotateCcw, ChevronRight, Info,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AdminNav } from '@/components/AdminNav';
-const BATCH_SIZE = 500;
-const XLSX_SIZE_LIMIT_MB = 5;
-const XLSX_SIZE_LIMIT_BYTES = XLSX_SIZE_LIMIT_MB * 1024 * 1024;
 
-type ImportStatus = 'idle' | 'parsing' | 'importing' | 'done' | 'error';
-
-interface BatchResult {
-  inserted: number;
-  skipped: number;
-  failed: number;
-  errors: string[];
-}
+type ImportStatus = 'idle' | 'uploading' | 'processing' | 'done' | 'error';
 
 interface ImportSummary {
   total: number;
@@ -32,327 +21,118 @@ interface ImportSummary {
   errors: string[];
 }
 
-interface RawRow {
-  [key: string]: string | number | boolean | null | undefined;
-}
-
-function slugify(str: string): string {
-  return str
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .slice(0, 80);
-}
-
-function makeSlug(row: RawRow, index: number): string {
-  const parts = [
-    row['name'] || row['Name'] || row['business_name'] || '',
-    row['city'] || row['City'] || '',
-    row['state'] || row['State'] || '',
-  ]
-    .map(String)
-    .filter(Boolean);
-  const base = slugify(parts.join('-')) || `listing-${index}`;
-  return `${base}-${index}`;
-}
-
-function col(row: RawRow, ...keys: string[]): string {
-  for (const k of keys) {
-    const v = row[k];
-    if (v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim();
-  }
-  return '';
-}
-
-function numCol(row: RawRow, ...keys: string[]): number {
-  const v = col(row, ...keys);
-  const n = parseFloat(v);
-  return isNaN(n) ? 0 : n;
-}
-
-function mapRowToListing(row: RawRow, index: number) {
-  const name = col(row, 'name', 'Name', 'business_name', 'Business Name', 'title', 'Title');
-  const address = col(row, 'address', 'Address', 'street', 'Street', 'street_address');
-  const city = col(row, 'city', 'City');
-  const state = col(row, 'state', 'State', 'state_code', 'State Code');
-  const zip = col(row, 'zip', 'Zip', 'zip_code', 'Zip Code', 'postal_code', 'Postal Code');
-
-  if (!name || !city || !state) return null;
-
-  const placeId = col(row, 'google_place_id', 'place_id', 'Place ID', 'Google Place ID') || null;
-
-  return {
-    name,
-    slug: makeSlug(row, index),
-    address: address || '',
-    city,
-    state: state.toUpperCase().slice(0, 2),
-    zip: zip.replace(/^(\d{4})$/, '0$1'),
-    phone: col(row, 'phone', 'Phone', 'phone_number', 'Phone Number') || null,
-    website: col(row, 'website', 'Website', 'url', 'URL', 'website_url') || null,
-    rating: numCol(row, 'rating', 'Rating', 'stars', 'Stars'),
-    review_count: Math.round(numCol(row, 'review_count', 'Review Count', 'reviews', 'Reviews', 'num_reviews')),
-    latitude: numCol(row, 'latitude', 'Latitude', 'lat', 'Lat') || null,
-    longitude: numCol(row, 'longitude', 'Longitude', 'lng', 'Lng', 'lon', 'Lon', 'long', 'Long') || null,
-    parent_chain: col(row, 'parent_chain', 'Parent Chain', 'chain', 'Chain', 'brand', 'Brand') || null,
-    google_place_id: placeId,
-    is_approved: false,
-    is_featured: false,
-    photos: [],
-    amenities: [],
-    wash_packages: [],
-    hours: {},
-  };
-}
-
-async function upsertViaApi(rows: NonNullable<ReturnType<typeof mapRowToListing>>[], onConflict: string): Promise<{ inserted: number; error?: string }> {
-  const res = await fetch('/api/bulk-import', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ rows, onConflict }),
-  });
-  const json = await res.json();
-  if (!res.ok) return { inserted: 0, error: json.error ?? 'Server error' };
-  return { inserted: json.inserted };
-}
-
-async function insertBatch(rows: ReturnType<typeof mapRowToListing>[]): Promise<BatchResult> {
-  const valid = rows.filter(Boolean) as NonNullable<ReturnType<typeof mapRowToListing>>[];
-  const result: BatchResult = { inserted: 0, skipped: rows.length - valid.length, failed: 0, errors: [] };
-
-  if (valid.length === 0) return result;
-
-  const withPlaceId = valid.filter(r => r.google_place_id);
-  const withoutPlaceId = valid.filter(r => !r.google_place_id);
-
-  if (withPlaceId.length > 0) {
-    const { inserted, error } = await upsertViaApi(withPlaceId, 'google_place_id');
-    if (error) {
-      result.failed += withPlaceId.length;
-      result.errors.push(`Place ID batch error: ${error}`);
-    } else {
-      result.inserted += inserted;
-      result.skipped += withPlaceId.length - inserted;
-    }
-  }
-
-  if (withoutPlaceId.length > 0) {
-    const { inserted, error } = await upsertViaApi(withoutPlaceId, 'slug');
-    if (error) {
-      result.failed += withoutPlaceId.length;
-      result.errors.push(`Slug batch error: ${error}`);
-    } else {
-      result.inserted += inserted;
-      result.skipped += withoutPlaceId.length - inserted;
-    }
-  }
-
-  return result;
-}
-
-function yieldToMain(): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, 0));
-}
-
-function parseCSVText(text: string): RawRow[] {
-  const lines = text.split(/\r?\n/);
-  if (lines.length < 2) return [];
-
-  const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
-  const rows: RawRow[] = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-
-    const values: string[] = [];
-    let inQuotes = false;
-    let current = '';
-
-    for (let c = 0; c < line.length; c++) {
-      const ch = line[c];
-      if (ch === '"') {
-        if (inQuotes && line[c + 1] === '"') {
-          current += '"';
-          c++;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (ch === ',' && !inQuotes) {
-        values.push(current);
-        current = '';
-      } else {
-        current += ch;
-      }
-    }
-    values.push(current);
-
-    const row: RawRow = {};
-    headers.forEach((h, idx) => {
-      row[h] = values[idx] ?? null;
-    });
-    rows.push(row);
-  }
-
-  return rows;
-}
-
-async function parseFileToRows(
-  file: File,
-  onProgress?: (msg: string) => void
-): Promise<RawRow[]> {
-  const isCSV = file.name.toLowerCase().endsWith('.csv');
-
-  if (isCSV) {
-    onProgress?.('Reading CSV file…');
-    await yieldToMain();
-    const text = await file.text();
-    await yieldToMain();
-    onProgress?.('Parsing CSV rows…');
-    await yieldToMain();
-    const rows = parseCSVText(text);
-    await yieldToMain();
-    return rows;
-  }
-
-  if (file.size > XLSX_SIZE_LIMIT_BYTES) {
-    throw new Error(
-      `This Excel file is ${(file.size / 1024 / 1024).toFixed(1)} MB, which exceeds the ${XLSX_SIZE_LIMIT_MB} MB limit for XLSX files. ` +
-      `Please convert it to CSV format first (File → Save As → CSV in Excel) and re-upload. CSV files parse much faster and support files with 30,000+ rows.`
-    );
-  }
-
-  onProgress?.('Reading Excel file…');
-  await yieldToMain();
-  const buffer = await file.arrayBuffer();
-  await yieldToMain();
-  onProgress?.('Parsing Excel workbook…');
-  await yieldToMain();
-  const wb = xlsxRead(buffer, { type: 'array', dense: true });
-  await yieldToMain();
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  onProgress?.('Converting rows…');
-  await yieldToMain();
-  const rawRows: RawRow[] = xlsxUtils.sheet_to_json(ws, { defval: null });
-  await yieldToMain();
-  return rawRows;
-}
-
 export default function BulkImportPage() {
   const [status, setStatus] = useState<ImportStatus>('idle');
-  const [parseStage, setParseStage] = useState('');
   const [fileName, setFileName] = useState('');
-  const [totalRows, setTotalRows] = useState(0);
-  const [processedRows, setProcessedRows] = useState(0);
+  const [fileSize, setFileSize] = useState('');
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [summary, setSummary] = useState<ImportSummary | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const abortRef = useRef(false);
+  const xhrRef = useRef<XMLHttpRequest | null>(null);
 
   const reset = useCallback(() => {
-    abortRef.current = false;
+    xhrRef.current?.abort();
+    xhrRef.current = null;
     setStatus('idle');
     setFileName('');
-    setTotalRows(0);
-    setProcessedRows(0);
+    setFileSize('');
+    setUploadProgress(0);
     setSummary(null);
     setErrorMsg('');
-    setParseStage('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, []);
 
   async function processFile(file: File) {
     if (!file) return;
-    abortRef.current = false;
+
+    const ext = file.name.toLowerCase().split('.').pop();
+    if (!['csv', 'xlsx', 'xls'].includes(ext ?? '')) {
+      setStatus('error');
+      setErrorMsg('Unsupported file type. Please upload a .csv, .xlsx, or .xls file.');
+      return;
+    }
+
     setFileName(file.name);
-    setStatus('parsing');
-    setParseStage('Preparing…');
+    setFileSize((file.size / 1024 / 1024).toFixed(1) + ' MB');
+    setStatus('uploading');
+    setUploadProgress(0);
     setSummary(null);
     setErrorMsg('');
-    setProcessedRows(0);
-    setTotalRows(0);
 
-    let rawRows: RawRow[];
+    const formData = new FormData();
+    formData.append('file', file);
 
-    try {
-      rawRows = await parseFileToRows(file, msg => setParseStage(msg));
-    } catch (err) {
-      setStatus('error');
-      setErrorMsg(err instanceof Error ? err.message : 'Failed to parse file. Please check the format and try again.');
-      return;
-    }
+    await new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhrRef.current = xhr;
 
-    if (rawRows.length === 0) {
-      setStatus('error');
-      setErrorMsg('The spreadsheet appears to be empty or has no valid data rows.');
-      return;
-    }
+      xhr.upload.addEventListener('progress', e => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 100);
+          setUploadProgress(pct);
+          if (pct === 100) setStatus('processing');
+        }
+      });
 
-    setTotalRows(rawRows.length);
-    setStatus('importing');
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const result: ImportSummary & { error?: string } = JSON.parse(xhr.responseText);
+            if (result.error) {
+              setStatus('error');
+              setErrorMsg(result.error);
+            } else {
+              setSummary(result);
+              setStatus('done');
+            }
+          } catch {
+            setStatus('error');
+            setErrorMsg('Unexpected response from server.');
+          }
+        } else {
+          try {
+            const body = JSON.parse(xhr.responseText);
+            setStatus('error');
+            setErrorMsg(body.error ?? `Server error (${xhr.status})`);
+          } catch {
+            setStatus('error');
+            setErrorMsg(`Server error (${xhr.status})`);
+          }
+        }
+        resolve();
+      });
 
-    const agg: ImportSummary = { total: rawRows.length, inserted: 0, skipped: 0, failed: 0, errors: [] };
+      xhr.addEventListener('error', () => {
+        setStatus('error');
+        setErrorMsg('Network error. Please check your connection and try again.');
+        reject();
+      });
 
-    try {
-      for (let i = 0; i < rawRows.length; i += BATCH_SIZE) {
-        if (abortRef.current) break;
+      xhr.addEventListener('abort', () => {
+        setStatus('idle');
+        resolve();
+      });
 
-        const batchRaw = rawRows.slice(i, i + BATCH_SIZE);
-        const mapped = batchRaw.map((r, j) => mapRowToListing(r, i + j));
-        const result = await insertBatch(mapped);
-
-        agg.inserted += result.inserted;
-        agg.skipped += result.skipped;
-        agg.failed += result.failed;
-        if (result.errors.length > 0) agg.errors.push(...result.errors);
-
-        setProcessedRows(Math.min(i + BATCH_SIZE, rawRows.length));
-
-        await yieldToMain();
-      }
-    } catch (err) {
-      setStatus('error');
-      setErrorMsg(err instanceof Error ? err.message : 'An error occurred during import. Some rows may have been imported before the failure.');
-      return;
-    }
-
-    setSummary(agg);
-    setStatus('done');
+      xhr.open('POST', '/api/bulk-import');
+      xhr.send(formData);
+    });
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    try {
-      const file = e.target.files?.[0];
-      if (file) processFile(file).catch(err => {
-        setStatus('error');
-        setErrorMsg(err instanceof Error ? err.message : 'Unexpected error processing file.');
-      });
-    } catch (err) {
-      setStatus('error');
-      setErrorMsg(err instanceof Error ? err.message : 'Unexpected error selecting file.');
-    }
+    const file = e.target.files?.[0];
+    if (file) processFile(file).catch(() => {});
   }
 
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     setIsDragging(false);
-    try {
-      const file = e.dataTransfer.files?.[0];
-      if (file) processFile(file).catch(err => {
-        setStatus('error');
-        setErrorMsg(err instanceof Error ? err.message : 'Unexpected error processing file.');
-      });
-    } catch (err) {
-      setStatus('error');
-      setErrorMsg(err instanceof Error ? err.message : 'Unexpected error dropping file.');
-    }
+    const file = e.dataTransfer.files?.[0];
+    if (file) processFile(file).catch(() => {});
   }
 
-  const progress = totalRows > 0 ? Math.round((processedRows / totalRows) * 100) : 0;
-  const isRunning = status === 'parsing' || status === 'importing';
+  const isRunning = status === 'uploading' || status === 'processing';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -373,7 +153,7 @@ export default function BulkImportPage() {
         <div className="mb-8 mt-4">
           <h1 className="text-3xl font-bold text-[#0F2744] mb-2">Bulk Spreadsheet Import</h1>
           <p className="text-gray-500">
-            Upload a CSV or Excel file with up to 30,000+ rows. Rows are processed in batches of {BATCH_SIZE} with automatic deduplication.
+            Upload a CSV or Excel file with up to 30,000+ rows. Files are parsed on the server, so large XLSX files work fine.
           </p>
         </div>
 
@@ -408,49 +188,49 @@ export default function BulkImportPage() {
                 />
                 <Upload className="w-8 h-8 text-gray-400 mx-auto mb-3" />
                 {fileName ? (
-                  <p className="text-sm font-medium text-[#0F2744]">{fileName}</p>
+                  <div>
+                    <p className="text-sm font-medium text-[#0F2744]">{fileName}</p>
+                    {fileSize && <p className="text-xs text-gray-400 mt-1">{fileSize}</p>}
+                  </div>
                 ) : (
                   <>
                     <p className="text-sm font-medium text-gray-700 mb-1">Drop your file here or click to browse</p>
-                    <p className="text-xs text-gray-400">Supports .csv, .xlsx, .xls &mdash; for files over {XLSX_SIZE_LIMIT_MB} MB, use CSV format</p>
+                    <p className="text-xs text-gray-400">Supports .csv, .xlsx, .xls &mdash; any file size</p>
                   </>
                 )}
-              </div>
-
-              <div className="mt-3 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
-                <TriangleAlert className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-700">
-                  <span className="font-semibold">Large files:</span> Excel files over {XLSX_SIZE_LIMIT_MB} MB are too large to parse in the browser and will be rejected. Save as CSV first: <span className="font-mono">File &rarr; Save As &rarr; CSV UTF-8</span>. CSV files handle 30,000+ rows without issue.
-                </p>
               </div>
             </CardContent>
           </Card>
 
-          {(status === 'parsing' || status === 'importing') && (
+          {isRunning && (
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
                     <span className="text-sm font-medium text-gray-700">
-                      {status === 'parsing' ? parseStage || 'Parsing file…' : `Importing rows…`}
+                      {status === 'uploading' ? 'Uploading file to server…' : 'Server is parsing and importing rows…'}
                     </span>
                   </div>
-                  <span className="text-sm text-gray-500 tabular-nums">
-                    {status === 'importing' ? `${processedRows.toLocaleString()} / ${totalRows.toLocaleString()}` : ''}
-                  </span>
+                  {status === 'uploading' && (
+                    <span className="text-sm text-gray-500 tabular-nums">{uploadProgress}%</span>
+                  )}
                 </div>
 
                 <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
-                  <div
-                    className="bg-blue-500 h-2.5 rounded-full transition-all duration-300"
-                    style={{ width: status === 'parsing' ? '5%' : `${progress}%` }}
-                  />
+                  {status === 'uploading' ? (
+                    <div
+                      className="bg-blue-500 h-2.5 rounded-full transition-all duration-200"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  ) : (
+                    <div className="bg-blue-500 h-2.5 rounded-full animate-pulse w-full" />
+                  )}
                 </div>
 
-                {status === 'importing' && totalRows > 0 && (
+                {status === 'processing' && (
                   <p className="text-xs text-gray-400 mt-2">
-                    {progress}% complete &mdash; batch {Math.ceil(processedRows / BATCH_SIZE)} of {Math.ceil(totalRows / BATCH_SIZE)}
+                    Upload complete &mdash; processing and inserting rows into the database&hellip;
                   </p>
                 )}
 
@@ -458,7 +238,7 @@ export default function BulkImportPage() {
                   variant="outline"
                   size="sm"
                   className="mt-4 text-red-600 border-red-200 hover:bg-red-50"
-                  onClick={() => { abortRef.current = true; }}
+                  onClick={reset}
                 >
                   Cancel
                 </Button>
