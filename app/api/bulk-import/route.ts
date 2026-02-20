@@ -208,8 +208,19 @@ export async function POST(req: NextRequest) {
 
       const { inserted, error } = await upsertBatch(valid, 'slug');
       if (error) {
-        summary.failed += valid.length;
-        summary.errors.push(`Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${error}`);
+        // Batch failed — retry row by row to salvage good records
+        for (const row of valid) {
+          const { inserted: ins, error: rowErr } = await upsertBatch([row], 'slug');
+          if (rowErr) {
+            summary.failed += 1;
+            if (summary.errors.length < 20) {
+              summary.errors.push(`Row "${row.name}" (${row.city}, ${row.state}): ${rowErr}`);
+            }
+          } else {
+            summary.inserted += ins;
+            summary.skipped += 1 - ins;
+          }
+        }
       } else {
         summary.inserted += inserted;
         summary.skipped += valid.length - inserted;
