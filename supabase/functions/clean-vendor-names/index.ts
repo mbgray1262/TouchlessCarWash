@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 const BATCH_SIZE = 20;
-const BATCHES_PER_CHUNK = 50;
+const BATCHES_PER_CHUNK = 10;
 
 interface VendorInput {
   id: number;
@@ -211,7 +211,7 @@ async function runChunk(jobId: string, supabaseUrl: string, supabaseKey: string)
       }
 
       processed += batch.length;
-      await updateJob({ processed, changed });
+      await updateJob({ processed, changed, resume_offset: offset + i + batch.length });
       await new Promise(r => setTimeout(r, 150));
     }
 

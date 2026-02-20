@@ -66,6 +66,8 @@ export function CleanVendorNamesButton({ onComplete }: Props) {
     }
   }
 
+  const lastBatchRef = useRef<{ batch: number; seenAt: number } | null>(null);
+
   async function pollJob(jobId: string) {
     try {
       const res = await fetch(
@@ -82,7 +84,17 @@ export function CleanVendorNamesButton({ onComplete }: Props) {
         stopPolling();
         setError(data.error ?? 'Job failed');
       } else if (data.status === 'paused') {
+        lastBatchRef.current = null;
         await resumeJob(jobId);
+      } else if (data.status === 'running') {
+        const now = Date.now();
+        const prev = lastBatchRef.current;
+        if (!prev || prev.batch !== data.current_batch) {
+          lastBatchRef.current = { batch: data.current_batch, seenAt: now };
+        } else if (now - prev.seenAt > 45_000) {
+          lastBatchRef.current = { batch: data.current_batch, seenAt: now };
+          await resumeJob(jobId);
+        }
       }
     } catch {
       // keep polling
