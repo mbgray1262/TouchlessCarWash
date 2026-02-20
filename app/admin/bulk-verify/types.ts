@@ -42,6 +42,7 @@ export interface DashboardStats {
   unverified: number;
   awaiting_classification: number;
   auto_classified: number;
+  name_matched: number;
   approved: number;
   crawl_failed: number;
   chains: number;

@@ -33,9 +33,10 @@ export function DashboardStatsPanel({ stats, onRefresh, loading }: Props) {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
         <Stat label="Total" value={stats.total} color="bg-gray-50 border-gray-200 text-gray-800" />
         <Stat label="Unverified" value={stats.unverified} sub="no snapshot" color="bg-gray-50 border-gray-200 text-gray-700" />
+        <Stat label="Name Matched" value={stats.name_matched} sub="auto-classified" color="bg-sky-50 border-sky-200 text-sky-800" />
         <Stat label="Crawled" value={stats.awaiting_classification} sub="needs classify" color="bg-teal-50 border-teal-200 text-teal-800" />
         <Stat label="Auto-classified" value={stats.auto_classified} sub="needs review" color="bg-blue-50 border-blue-200 text-blue-800" />
         <Stat label="Approved" value={stats.approved} color="bg-emerald-50 border-emerald-200 text-emerald-800" />

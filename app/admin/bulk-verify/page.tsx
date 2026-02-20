@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { AdminNav } from '@/components/AdminNav';
 import { DashboardStatsPanel } from './DashboardStats';
+import { NamePreScanPanel } from './NamePreScanPanel';
 import { CrawlPanel } from './CrawlPanel';
 import { ClassifyPanel } from './ClassifyPanel';
 import { ReviewPanel } from './ReviewPanel';
@@ -16,6 +17,7 @@ const EMPTY_STATS: DashboardStats = {
   unverified: 0,
   awaiting_classification: 0,
   auto_classified: 0,
+  name_matched: 0,
   approved: 0,
   crawl_failed: 0,
   chains: 0,
@@ -31,9 +33,14 @@ export default function BulkVerifyPage() {
   const fetchStats = useCallback(async () => {
     setStatsLoading(true);
     try {
-      const [statusRes, chainRes] = await Promise.all([
+      const [statusRes, chainRes, nameMatchRes] = await Promise.all([
         supabase.from('listings').select('verification_status').then(({ data }) => data ?? []),
         supabase.from('listings').select('parent_chain').not('parent_chain', 'is', null).then(({ data }) => data ?? []),
+        supabase
+          .from('listings')
+          .select('id', { count: 'exact', head: true })
+          .in('classification_source', ['name_match', 'name_match_likely'])
+          .then(({ count }) => count ?? 0),
       ]);
 
       const counts: Record<string, number> = {};
@@ -52,6 +59,7 @@ export default function BulkVerifyPage() {
         unverified: counts['unverified'] ?? 0,
         awaiting_classification: counts['crawled'] ?? 0,
         auto_classified: counts['auto_classified'] ?? 0,
+        name_matched: nameMatchRes,
         approved: counts['approved'] ?? 0,
         crawl_failed: counts['crawl_failed'] ?? 0,
         chains: uniqueChains,
@@ -82,6 +90,8 @@ export default function BulkVerifyPage() {
         </div>
 
         <DashboardStatsPanel stats={stats} onRefresh={fetchStats} loading={statsLoading} />
+
+        <NamePreScanPanel onComplete={handleStepComplete} />
 
         <CrawlPanel onComplete={handleStepComplete} />
 
