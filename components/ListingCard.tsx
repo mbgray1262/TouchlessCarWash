@@ -11,7 +11,7 @@ interface ListingCardProps {
 }
 
 export function ListingCard({ listing, href, showVerifiedBadge = false }: ListingCardProps) {
-  const defaultHref = `/car-washes/${getStateSlug(listing.state)}/${listing.city.toLowerCase().replace(/\s+/g, '-')}/${listing.slug}`;
+  const defaultHref = `/state/${getStateSlug(listing.state)}/${listing.city.toLowerCase().replace(/\s+/g, '-')}/${listing.slug}`;
   const linkHref = href ?? defaultHref;
 
   const washType = listing.amenities?.find((a) =>

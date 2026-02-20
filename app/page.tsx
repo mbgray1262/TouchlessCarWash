@@ -221,7 +221,7 @@ export default async function Home() {
               {US_STATES.filter((state) => (stateListingCounts[state.code] ?? 0) > 0).map((state) => (
                 <Link
                   key={state.code}
-                  href={`/car-washes/${getStateSlug(state.code)}`}
+                  href={`/state/${getStateSlug(state.code)}`}
                   className="group"
                 >
                   <Card className="text-center hover:shadow-lg transition-all cursor-pointer hover:bg-gradient-to-br hover:from-blue-50 hover:to-blue-100">

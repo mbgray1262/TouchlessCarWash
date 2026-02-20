@@ -3,6 +3,25 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  async redirects() {
+    return [
+      {
+        source: '/car-washes/:state',
+        destination: '/state/:state',
+        permanent: true,
+      },
+      {
+        source: '/car-washes/:state/:city',
+        destination: '/state/:state/:city',
+        permanent: true,
+      },
+      {
+        source: '/car-washes/:state/:city/:slug',
+        destination: '/state/:state/:city/:slug',
+        permanent: true,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {
