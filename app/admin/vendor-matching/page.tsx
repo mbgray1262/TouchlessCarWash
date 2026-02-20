@@ -11,6 +11,7 @@ import { MatchStats, ReadyToLink, NewVendorRow, SessionSummary } from './types';
 
 export default function VendorMatchingPage() {
   const [loading, setLoading] = useState(true);
+  const [loadStatus, setLoadStatus] = useState('');
   const [stats, setStats] = useState<MatchStats>({ totalUnmatched: 0, readyToLink: 0, newDomains: 0, newChains: 0, newStandalone: 0 });
   const [readyRows, setReadyRows] = useState<ReadyToLink[]>([]);
   const [newRows, setNewRows] = useState<NewVendorRow[]>([]);
@@ -22,11 +23,25 @@ export default function VendorMatchingPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data: listings } = await supabase
-        .from('listings')
-        .select('id, name, website')
-        .is('vendor_id', null)
-        .not('website', 'is', null);
+      const PAGE = 1000;
+      let allListings: { id: string; name: string; website: string }[] = [];
+      let from = 0;
+      setLoadStatus('Loading listings…');
+      while (true) {
+        const { data, error } = await supabase
+          .from('listings')
+          .select('id, name, website')
+          .is('vendor_id', null)
+          .not('website', 'is', null)
+          .range(from, from + PAGE - 1);
+        if (error || !data || data.length === 0) break;
+        allListings = allListings.concat(data);
+        setLoadStatus(`Loaded ${allListings.length.toLocaleString()} listings…`);
+        if (data.length < PAGE) break;
+        from += PAGE;
+      }
+      setLoadStatus('Analysing domains…');
+      const listings = allListings;
 
       if (!listings || listings.length === 0) {
         setStats({ totalUnmatched: 0, readyToLink: 0, newDomains: 0, newChains: 0, newStandalone: 0 });
@@ -36,12 +51,21 @@ export default function VendorMatchingPage() {
         return;
       }
 
-      const { data: vendors } = await supabase
-        .from('vendors')
-        .select('id, canonical_name, domain');
+      let allVendors: { id: number; canonical_name: string; domain: string | null }[] = [];
+      let vFrom = 0;
+      while (true) {
+        const { data: vPage, error: vErr } = await supabase
+          .from('vendors')
+          .select('id, canonical_name, domain')
+          .range(vFrom, vFrom + PAGE - 1);
+        if (vErr || !vPage || vPage.length === 0) break;
+        allVendors = allVendors.concat(vPage);
+        if (vPage.length < PAGE) break;
+        vFrom += PAGE;
+      }
 
       const vendorMap = new Map<string, { id: number; name: string }>();
-      for (const v of (vendors ?? [])) {
+      for (const v of allVendors) {
         if (v.domain) vendorMap.set(v.domain.toLowerCase(), { id: v.id, name: v.canonical_name });
       }
 
@@ -153,7 +177,7 @@ export default function VendorMatchingPage() {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24 gap-3 text-gray-400">
             <Loader2 className="w-8 h-8 animate-spin" />
-            <p className="text-sm">Analysing listings and domains…</p>
+            <p className="text-sm">{loadStatus || 'Loading…'}</p>
           </div>
         ) : (
           <>
