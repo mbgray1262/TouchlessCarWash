@@ -2,16 +2,18 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, Search, Filter, Loader2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-import { extractDomain, domainToVendorName } from './utils';
+import { domainToVendorName } from './utils';
 import { StatsBar } from './StatsBar';
 import { ReadyToLinkSection } from './ReadyToLinkSection';
 import { NewVendorsSection } from './NewVendorsSection';
 import { MatchStats, ReadyToLink, NewVendorRow, SessionSummary } from './types';
 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
 export default function VendorMatchingPage() {
   const [loading, setLoading] = useState(true);
-  const [loadStatus, setLoadStatus] = useState('');
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [stats, setStats] = useState<MatchStats>({ totalUnmatched: 0, readyToLink: 0, newDomains: 0, newChains: 0, newStandalone: 0 });
   const [readyRows, setReadyRows] = useState<ReadyToLink[]>([]);
   const [newRows, setNewRows] = useState<NewVendorRow[]>([]);
@@ -22,28 +24,30 @@ export default function VendorMatchingPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
-      const PAGE = 1000;
-      let allListings: { id: string; name: string; website: string }[] = [];
-      let from = 0;
-      setLoadStatus('Loading listings…');
-      while (true) {
-        const { data, error } = await supabase
-          .from('listings')
-          .select('id, name, website')
-          .is('vendor_id', null)
-          .not('website', 'is', null)
-          .range(from, from + PAGE - 1);
-        if (error || !data || data.length === 0) break;
-        allListings = allListings.concat(data);
-        setLoadStatus(`Loaded ${allListings.length.toLocaleString()} listings…`);
-        if (data.length < PAGE) break;
-        from += PAGE;
-      }
-      setLoadStatus('Analysing domains…');
-      const listings = allListings;
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/vendor-domain-analysis`, {
+        headers: {
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-      if (!listings || listings.length === 0) {
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error ?? `HTTP ${res.status}`);
+      }
+
+      const rows: {
+        domain: string;
+        listing_count: number;
+        listing_ids: string[];
+        sample_names: string[];
+        vendor_id: number | null;
+        vendor_name: string | null;
+      }[] = await res.json();
+
+      if (!rows || rows.length === 0) {
         setStats({ totalUnmatched: 0, readyToLink: 0, newDomains: 0, newChains: 0, newStandalone: 0 });
         setReadyRows([]);
         setNewRows([]);
@@ -51,63 +55,37 @@ export default function VendorMatchingPage() {
         return;
       }
 
-      let allVendors: { id: number; canonical_name: string; domain: string | null }[] = [];
-      let vFrom = 0;
-      while (true) {
-        const { data: vPage, error: vErr } = await supabase
-          .from('vendors')
-          .select('id, canonical_name, domain')
-          .range(vFrom, vFrom + PAGE - 1);
-        if (vErr || !vPage || vPage.length === 0) break;
-        allVendors = allVendors.concat(vPage);
-        if (vPage.length < PAGE) break;
-        vFrom += PAGE;
-      }
-
-      const vendorMap = new Map<string, { id: number; name: string }>();
-      for (const v of allVendors) {
-        if (v.domain) vendorMap.set(v.domain.toLowerCase(), { id: v.id, name: v.canonical_name });
-      }
-
-      const domainMap = new Map<string, { ids: string[]; names: string[] }>();
-      for (const l of listings) {
-        if (!l.website) continue;
-        const domain = extractDomain(l.website);
-        if (!domain) continue;
-        const existing = domainMap.get(domain) ?? { ids: [], names: [] };
-        existing.ids.push(l.id);
-        existing.names.push(l.name);
-        domainMap.set(domain, existing);
-      }
-
       const ready: ReadyToLink[] = [];
       const newVendors: NewVendorRow[] = [];
+      let totalUnmatched = 0;
 
-      for (const domain of Array.from(domainMap.keys())) {
-        const { ids, names } = domainMap.get(domain)!;
-        const vendor = vendorMap.get(domain);
-        if (vendor) {
-          ready.push({ domain, vendorId: vendor.id, vendorName: vendor.name, listingCount: ids.length, listingIds: ids });
+      for (const row of rows) {
+        totalUnmatched += row.listing_count;
+        if (row.vendor_id !== null && row.vendor_name !== null) {
+          ready.push({
+            domain: row.domain,
+            vendorId: row.vendor_id,
+            vendorName: row.vendor_name,
+            listingCount: row.listing_count,
+            listingIds: row.listing_ids,
+          });
         } else {
-          const isChain = ids.length >= 3;
+          const isChain = row.listing_count >= 3;
           newVendors.push({
-            domain,
-            listingCount: ids.length,
-            listingIds: ids,
-            sampleNames: names.slice(0, 5),
+            domain: row.domain,
+            listingCount: row.listing_count,
+            listingIds: row.listing_ids,
+            sampleNames: row.sample_names ?? [],
             isChain,
-            editedName: domainToVendorName(domain),
+            editedName: domainToVendorName(row.domain),
           });
         }
       }
 
-      newVendors.sort((a, b) => b.listingCount - a.listingCount);
-      ready.sort((a, b) => b.listingCount - a.listingCount);
-
       const newChains = newVendors.filter(r => r.isChain).length;
 
       setStats({
-        totalUnmatched: listings.length,
+        totalUnmatched,
         readyToLink: ready.length,
         newDomains: newVendors.length,
         newChains,
@@ -115,6 +93,8 @@ export default function VendorMatchingPage() {
       });
       setReadyRows(ready);
       setNewRows(newVendors);
+    } catch (e: any) {
+      setLoadError(e?.message ?? 'Failed to load analysis');
     } finally {
       setLoading(false);
     }
@@ -177,7 +157,18 @@ export default function VendorMatchingPage() {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24 gap-3 text-gray-400">
             <Loader2 className="w-8 h-8 animate-spin" />
-            <p className="text-sm">{loadStatus || 'Loading…'}</p>
+            <p className="text-sm">Running domain analysis…</p>
+          </div>
+        ) : loadError ? (
+          <div className="bg-red-50 border border-red-200 rounded-xl px-6 py-8 text-center">
+            <p className="text-red-700 font-medium">Analysis failed</p>
+            <p className="text-red-600 text-sm mt-1">{loadError}</p>
+            <button
+              onClick={load}
+              className="mt-4 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Retry
+            </button>
           </div>
         ) : (
           <>
