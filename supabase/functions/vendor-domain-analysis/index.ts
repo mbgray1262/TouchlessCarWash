@@ -20,7 +20,55 @@ Deno.serve(async (req: Request) => {
   const sql = postgres(Deno.env.get('SUPABASE_DB_URL')!, { ssl: 'require' });
 
   try {
-    const rows = await sql`SELECT * FROM vendor_domain_analysis(${BLACKLIST})`;
+    const rows = await sql`
+      WITH extracted AS (
+        SELECT
+          id,
+          name,
+          regexp_replace(
+            lower(
+              regexp_replace(
+                regexp_replace(website, '^https?://', ''),
+                '/.*$', ''
+              )
+            ),
+            '^www\\.', ''
+          ) AS domain
+        FROM listings
+        WHERE vendor_id IS NULL
+          AND website IS NOT NULL
+          AND website <> ''
+      ),
+      filtered AS (
+        SELECT *
+        FROM extracted
+        WHERE domain IS NOT NULL
+          AND domain <> ''
+          AND length(domain) >= 4
+          AND domain NOT LIKE '%.%' IS FALSE
+          AND domain != ALL(${BLACKLIST})
+      ),
+      grouped AS (
+        SELECT
+          f.domain,
+          count(*) AS listing_count,
+          array_agg(f.id) AS listing_ids,
+          (array_agg(f.name ORDER BY f.name))[1:5] AS sample_names
+        FROM filtered f
+        GROUP BY f.domain
+        HAVING count(*) >= 2
+      )
+      SELECT
+        g.domain,
+        g.listing_count,
+        g.listing_ids,
+        g.sample_names,
+        v.id::bigint AS vendor_id,
+        v.canonical_name AS vendor_name
+      FROM grouped g
+      LEFT JOIN vendors v ON lower(v.domain) = g.domain
+      ORDER BY g.listing_count DESC
+    `;
 
     return new Response(JSON.stringify(rows), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
