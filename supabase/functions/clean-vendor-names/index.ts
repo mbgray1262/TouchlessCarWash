@@ -7,10 +7,18 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
+const BATCH_SIZE = 20;
+
+interface VendorInput {
+  id: number;
+  canonical_name: string;
+  domain: string;
+  sample_names: string[];
+}
+
 async function getAnthropicKey(supabaseUrl: string, supabaseKey: string): Promise<string | null> {
   const envKey = Deno.env.get("ANTHROPIC_API_KEY");
   if (envKey) return envKey;
-
   const res = await fetch(`${supabaseUrl}/rest/v1/rpc/get_secret`, {
     method: "POST",
     headers: {
@@ -25,17 +33,7 @@ async function getAnthropicKey(supabaseUrl: string, supabaseKey: string): Promis
   return typeof val === "string" ? val : null;
 }
 
-interface VendorInput {
-  id: number;
-  canonical_name: string;
-  domain: string;
-  sample_names: string[];
-}
-
-async function cleanBatch(
-  vendors: VendorInput[],
-  anthropicKey: string
-): Promise<Map<number, string>> {
+async function cleanBatch(vendors: VendorInput[], anthropicKey: string): Promise<Map<number, string>> {
   const lines = vendors.map((v) => {
     const samples = v.sample_names.slice(0, 5).join(", ") || "none";
     return `id=${v.id} domain="${v.domain}" current_name="${v.canonical_name}" sample_listing_names=[${samples}]`;
@@ -55,9 +53,8 @@ ${lines.join("\n")}
 
 Respond with a JSON array only, no explanation. Each element: {"id": <number>, "name": "<correct name>"}`;
 
-  let lastErr: Error | null = null;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    if (attempt > 0) await new Promise(r => setTimeout(r, 2000 * attempt));
+  for (let attempt = 0; attempt < 4; attempt++) {
+    if (attempt > 0) await new Promise(r => setTimeout(r, 3000 * attempt));
 
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -73,15 +70,8 @@ Respond with a JSON array only, no explanation. Each element: {"id": <number>, "
       }),
     });
 
-    if (res.status === 529 || res.status === 529) {
-      lastErr = new Error(`Anthropic overloaded (${res.status})`);
-      continue;
-    }
-
-    if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`Anthropic API error ${res.status}: ${body}`);
-    }
+    if (res.status === 529 || res.status === 503) continue;
+    if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await res.text()}`);
 
     const data = await res.json();
     const text = data.content?.[0]?.text ?? "";
@@ -96,7 +86,88 @@ Respond with a JSON array only, no explanation. Each element: {"id": <number>, "
     return map;
   }
 
-  throw lastErr ?? new Error("Failed after retries");
+  return new Map();
+}
+
+async function runJob(jobId: string, supabaseUrl: string, supabaseKey: string) {
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  async function updateJob(fields: Record<string, unknown>) {
+    await supabase.from("vendor_clean_jobs").update(fields).eq("id", jobId);
+  }
+
+  try {
+    const anthropicKey = await getAnthropicKey(supabaseUrl, supabaseKey);
+    if (!anthropicKey) throw new Error("Anthropic API key not configured");
+
+    const { data: vendors, error: vErr } = await supabase
+      .from("vendors")
+      .select("id, canonical_name, domain")
+      .order("id");
+
+    if (vErr || !vendors) throw new Error(vErr?.message ?? "Failed to fetch vendors");
+
+    const { data: listingRows } = await supabase
+      .from("listings")
+      .select("vendor_id, name")
+      .in("vendor_id", vendors.map((v: { id: number }) => v.id))
+      .not("name", "is", null);
+
+    const sampleMap = new Map<number, string[]>();
+    for (const row of (listingRows ?? []) as Array<{ vendor_id: number; name: string }>) {
+      const arr = sampleMap.get(row.vendor_id) ?? [];
+      if (arr.length < 8) arr.push(row.name);
+      sampleMap.set(row.vendor_id, arr);
+    }
+
+    const vendorInputs: VendorInput[] = vendors.map((v: { id: number; canonical_name: string; domain: string }) => ({
+      id: v.id,
+      canonical_name: v.canonical_name,
+      domain: v.domain ?? "",
+      sample_names: sampleMap.get(v.id) ?? [],
+    }));
+
+    const total = vendorInputs.length;
+    const totalBatches = Math.ceil(total / BATCH_SIZE);
+
+    await updateJob({ status: "running", total, total_batches: totalBatches, started_at: new Date().toISOString() });
+
+    let processed = 0;
+    let changed = 0;
+
+    for (let i = 0; i < vendorInputs.length; i += BATCH_SIZE) {
+      const batch = vendorInputs.slice(i, i + BATCH_SIZE);
+      const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+
+      await updateJob({ current_batch: batchNum });
+
+      try {
+        const nameMap = await cleanBatch(batch, anthropicKey);
+
+        for (const vendor of batch) {
+          const newName = nameMap.get(vendor.id);
+          if (!newName) continue;
+          if (newName !== vendor.canonical_name) {
+            changed++;
+            await supabase.from("vendors").update({ canonical_name: newName }).eq("id", vendor.id);
+          }
+        }
+      } catch (err) {
+        console.error(`Batch ${batchNum} error:`, err);
+      }
+
+      processed += batch.length;
+      await updateJob({ processed, changed });
+
+      await new Promise(r => setTimeout(r, 150));
+    }
+
+    await updateJob({ status: "done", processed: total, completed_at: new Date().toISOString() });
+
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    await updateJob({ status: "failed", error: msg, completed_at: new Date().toISOString() });
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -108,118 +179,43 @@ Deno.serve(async (req: Request) => {
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  const anthropicKey = await getAnthropicKey(supabaseUrl, supabaseKey);
-  if (!anthropicKey) {
-    return new Response(JSON.stringify({ error: "Anthropic API key not configured" }), {
+  const url = new URL(req.url);
+
+  if (req.method === "GET" && url.searchParams.has("job_id")) {
+    const jobId = url.searchParams.get("job_id")!;
+    const { data, error } = await supabase
+      .from("vendor_clean_jobs")
+      .select("*")
+      .eq("id", jobId)
+      .maybeSingle();
+
+    if (error || !data) {
+      return new Response(JSON.stringify({ error: "Job not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    return new Response(JSON.stringify(data), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const { data: job, error: createErr } = await supabase
+    .from("vendor_clean_jobs")
+    .insert({ status: "pending" })
+    .select("id")
+    .single();
+
+  if (createErr || !job) {
+    return new Response(JSON.stringify({ error: createErr?.message ?? "Failed to create job" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
-  const body = await req.json().catch(() => ({}));
-  const vendorIds: number[] | null = body.vendor_ids ?? null;
-  const BATCH = 20;
+  EdgeRuntime.waitUntil(runJob(job.id, supabaseUrl, supabaseKey));
 
-  let query = supabase.from("vendors").select("id, canonical_name, domain");
-  if (vendorIds && vendorIds.length > 0) query = query.in("id", vendorIds);
-  const { data: vendors, error: vErr } = await query.order("id");
-
-  if (vErr || !vendors) {
-    return new Response(JSON.stringify({ error: vErr?.message ?? "Failed to fetch vendors" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  const { data: listingRows } = await supabase
-    .from("listings")
-    .select("vendor_id, name")
-    .in("vendor_id", vendors.map((v: { id: number }) => v.id))
-    .not("name", "is", null);
-
-  const sampleMap = new Map<number, string[]>();
-  for (const row of (listingRows ?? []) as Array<{ vendor_id: number; name: string }>) {
-    const arr = sampleMap.get(row.vendor_id) ?? [];
-    if (arr.length < 8) arr.push(row.name);
-    sampleMap.set(row.vendor_id, arr);
-  }
-
-  const vendorInputs: VendorInput[] = vendors.map((v: { id: number; canonical_name: string; domain: string }) => ({
-    id: v.id,
-    canonical_name: v.canonical_name,
-    domain: v.domain ?? "",
-    sample_names: sampleMap.get(v.id) ?? [],
-  }));
-
-  const total = vendorInputs.length;
-  const totalBatches = Math.ceil(total / BATCH);
-
-  const stream = new ReadableStream({
-    async start(controller) {
-      const enc = new TextEncoder();
-
-      function send(event: string, data: unknown) {
-        controller.enqueue(enc.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
-      }
-
-      send("start", { total, batches: totalBatches });
-
-      let processed = 0;
-      let changed = 0;
-
-      for (let i = 0; i < vendorInputs.length; i += BATCH) {
-        const batch = vendorInputs.slice(i, i + BATCH);
-        const batchNum = Math.floor(i / BATCH) + 1;
-
-        try {
-          const nameMap = await cleanBatch(batch, anthropicKey);
-
-          const updates: Array<{ id: number; old_name: string; new_name: string; changed: boolean }> = [];
-
-          for (const vendor of batch) {
-            const newName = nameMap.get(vendor.id);
-            if (!newName) continue;
-            const wasChanged = newName !== vendor.canonical_name;
-            updates.push({ id: vendor.id, old_name: vendor.canonical_name, new_name: newName, changed: wasChanged });
-            if (wasChanged) {
-              changed++;
-              await supabase
-                .from("vendors")
-                .update({ canonical_name: newName })
-                .eq("id", vendor.id);
-            }
-          }
-
-          processed += batch.length;
-          send("progress", {
-            batch: batchNum,
-            total_batches: totalBatches,
-            processed,
-            total,
-            changed,
-            updates,
-          });
-        } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : String(err);
-          send("batch_error", { batch: batchNum, error: msg });
-          processed += batch.length;
-        }
-
-        await new Promise(r => setTimeout(r, 200));
-      }
-
-      send("done", { total, changed });
-      controller.close();
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      ...corsHeaders,
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      "Connection": "keep-alive",
-      "X-Accel-Buffering": "no",
-    },
+  return new Response(JSON.stringify({ job_id: job.id }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 });
