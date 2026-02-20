@@ -64,14 +64,18 @@ export function NewVendorsSection({ rows, filter, chainsOnly, onCreated, onNameC
         return false;
       }
 
-      const { error: lErr } = await supabase
-        .from('listings')
-        .update({ vendor_id: vendor.id })
-        .in('id', row.listingIds);
+      const CHUNK = 500;
+      for (let i = 0; i < row.listingIds.length; i += CHUNK) {
+        const chunk = row.listingIds.slice(i, i + CHUNK);
+        const { error: lErr } = await supabase
+          .from('listings')
+          .update({ vendor_id: vendor.id })
+          .in('id', chunk);
 
-      if (lErr) {
-        addError(row.domain, lErr.message);
-        return false;
+        if (lErr) {
+          addError(row.domain, lErr.message);
+          return false;
+        }
       }
 
       setCreated(prev => new Set(prev).add(row.domain));

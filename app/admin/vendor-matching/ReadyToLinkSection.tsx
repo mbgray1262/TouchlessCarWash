@@ -34,14 +34,18 @@ export function ReadyToLinkSection({ rows, filter, onLinked }: Props) {
     clearError(row.domain);
     setLinking(prev => new Set(prev).add(row.domain));
     try {
-      const { error } = await supabase
-        .from('listings')
-        .update({ vendor_id: row.vendorId })
-        .in('id', row.listingIds);
+      const CHUNK = 500;
+      for (let i = 0; i < row.listingIds.length; i += CHUNK) {
+        const chunk = row.listingIds.slice(i, i + CHUNK);
+        const { error } = await supabase
+          .from('listings')
+          .update({ vendor_id: row.vendorId })
+          .in('id', chunk);
 
-      if (error) {
-        addError(row.domain, error.message);
-        return false;
+        if (error) {
+          addError(row.domain, error.message);
+          return false;
+        }
       }
 
       setLinked(prev => new Set(prev).add(row.domain));
