@@ -77,5 +77,13 @@ export type BlogPost = {
   content: string;
   excerpt: string | null;
   category: string | null;
-  published_at: string;
+  meta_title: string | null;
+  meta_description: string | null;
+  featured_image_url: string | null;
+  tags: string[] | null;
+  status: 'draft' | 'published';
+  author: string;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
 };
