@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronRight, Eye, Edit3, Bold, Italic, Heading2, Heading3, Link2, List, ListOrdered, Quote, Save, Rocket, Sparkles, ChevronDown, ChevronUp, Loader2, Clipboard, Download } from 'lucide-react';
+import { ChevronRight, Eye, Edit3, Bold, Italic, Heading2, Heading3, Link2, List, ListOrdered, Quote, Save, Rocket, Sparkles, ChevronDown, ChevronUp, Loader2, Clipboard, Download, ImagePlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -45,6 +45,7 @@ function renderMarkdownPreview(md: string): string {
   };
 
   const inline = (text: string) => text
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:8px;margin:0.5rem 0">')
     .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
@@ -108,6 +109,13 @@ export function BlogEditor({ post }: BlogEditorProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+
+  const [imgModalOpen, setImgModalOpen] = useState(false);
+  const [imgFile, setImgFile] = useState<File | null>(null);
+  const [imgAlt, setImgAlt] = useState('');
+  const [imgUploading, setImgUploading] = useState(false);
+  const [imgError, setImgError] = useState('');
+  const [imgCursorPos, setImgCursorPos] = useState(0);
 
   const [aiOpen, setAiOpen] = useState(false);
   const [aiTopic, setAiTopic] = useState('');
@@ -253,6 +261,54 @@ export function BlogEditor({ post }: BlogEditorProps) {
     }
 
     router.push('/admin/blog');
+  }
+
+  function openImgModal() {
+    const ta = contentRef.current;
+    setImgCursorPos(ta ? ta.selectionStart : content.length);
+    setImgFile(null);
+    setImgAlt('');
+    setImgError('');
+    setImgModalOpen(true);
+  }
+
+  async function handleImageUpload() {
+    if (!imgFile) { setImgError('Please select an image file.'); return; }
+    setImgError('');
+    setImgUploading(true);
+
+    try {
+      const fd = new FormData();
+      fd.append('file', imgFile);
+
+      const res = await fetch('/api/upload-image', { method: 'POST', body: fd });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setImgError(data.error || 'Upload failed. Please try again.');
+        setImgUploading(false);
+        return;
+      }
+
+      const altText = imgAlt.trim() || imgFile.name.replace(/\.[^.]+$/, '');
+      const markdown = `![${altText}](${data.url})`;
+      const newContent = content.substring(0, imgCursorPos) + markdown + content.substring(imgCursorPos);
+      setContent(newContent);
+      setImgModalOpen(false);
+
+      setTimeout(() => {
+        const ta = contentRef.current;
+        if (ta) {
+          ta.focus();
+          const pos = imgCursorPos + markdown.length;
+          ta.setSelectionRange(pos, pos);
+        }
+      }, 0);
+    } catch {
+      setImgError('Network error. Please try again.');
+    } finally {
+      setImgUploading(false);
+    }
   }
 
   function buildJsonPayload() {
@@ -509,6 +565,7 @@ export function BlogEditor({ post }: BlogEditorProps) {
                     {toolbarBtn(<Heading3 className="w-4 h-4" />, 'H3', () => insertLine('### '))}
                     <div className="w-px h-4 bg-gray-200 mx-1" />
                     {toolbarBtn(<Link2 className="w-4 h-4" />, 'Link', () => insertMarkdown('[', '](https://)', 'link text'))}
+                    {toolbarBtn(<ImagePlus className="w-4 h-4" />, 'Insert Image', openImgModal)}
                     <div className="w-px h-4 bg-gray-200 mx-1" />
                     {toolbarBtn(<List className="w-4 h-4" />, 'Bulleted list', () => insertLine('- '))}
                     {toolbarBtn(<ListOrdered className="w-4 h-4" />, 'Numbered list', () => insertLine('1. '))}
@@ -680,6 +737,105 @@ export function BlogEditor({ post }: BlogEditorProps) {
           </div>
         </div>
       </div>
+
+      {imgModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => !imgUploading && setImgModalOpen(false)} />
+          <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-base font-semibold text-[#0F2744] flex items-center gap-2">
+                <ImagePlus className="w-4 h-4 text-blue-500" />
+                Insert Image
+              </h2>
+              <button
+                type="button"
+                onClick={() => !imgUploading && setImgModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {imgError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                {imgError}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="imgFile" className="text-xs font-medium text-gray-600 mb-1.5 block">Image File</Label>
+                <input
+                  id="imgFile"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  disabled={imgUploading}
+                  onChange={e => {
+                    const f = e.target.files?.[0] ?? null;
+                    setImgFile(f);
+                    if (f && !imgAlt) {
+                      setImgAlt(f.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '));
+                    }
+                  }}
+                  className="block w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-gray-200 file:text-sm file:font-medium file:text-gray-700 file:bg-gray-50 hover:file:bg-gray-100 cursor-pointer"
+                />
+              </div>
+
+              {imgFile && (
+                <div className="rounded-lg overflow-hidden border border-gray-200 h-36 bg-gray-50">
+                  <img
+                    src={URL.createObjectURL(imgFile)}
+                    alt="Preview"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              )}
+
+              <div>
+                <Label htmlFor="imgAlt" className="text-xs font-medium text-gray-600 mb-1.5 block">Alt Text</Label>
+                <Input
+                  id="imgAlt"
+                  value={imgAlt}
+                  onChange={e => setImgAlt(e.target.value)}
+                  placeholder="Descriptive text for the image"
+                  disabled={imgUploading}
+                  className="text-sm"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setImgModalOpen(false)}
+                  disabled={imgUploading}
+                  className="flex-1 border-gray-200 text-gray-600"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleImageUpload}
+                  disabled={imgUploading || !imgFile}
+                  className="flex-1 bg-[#0F2744] hover:bg-[#1a3a6b] text-white"
+                >
+                  {imgUploading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <ImagePlus className="w-4 h-4 mr-2" />
+                      Upload & Insert
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
