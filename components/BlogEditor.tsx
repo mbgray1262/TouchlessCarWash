@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronRight, Eye, Edit3, Bold, Italic, Heading2, Heading3, Link2, List, ListOrdered, Quote, Save, Rocket } from 'lucide-react';
+import { ChevronRight, Eye, Edit3, Bold, Italic, Heading2, Heading3, Link2, List, ListOrdered, Quote, Save, Rocket, Sparkles, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -108,6 +108,15 @@ export function BlogEditor({ post }: BlogEditorProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiTopic, setAiTopic] = useState('');
+  const [aiKeywords, setAiKeywords] = useState('');
+  const [aiTone, setAiTone] = useState('Informative');
+  const [aiLength, setAiLength] = useState('medium');
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiSuccess, setAiSuccess] = useState(false);
+  const [aiError, setAiError] = useState('');
+
   const contentRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -140,6 +149,60 @@ export function BlogEditor({ post }: BlogEditorProps) {
     setContent(newContent);
     setTimeout(() => { ta.focus(); }, 0);
   }, [content]);
+
+  async function generateDraft() {
+    if (!aiTopic.trim()) { setAiError('Please enter a topic or title.'); return; }
+    setAiError('');
+    setAiSuccess(false);
+    setAiGenerating(true);
+
+    try {
+      const res = await fetch('/api/generate-blog-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic: aiTopic,
+          keywords: aiKeywords,
+          tone: aiTone,
+          length: aiLength,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setAiError(data.error || 'Failed to generate draft. Please try again.');
+        setAiGenerating(false);
+        return;
+      }
+
+      const text: string = data.text ?? '';
+      const lines = text.split('\n');
+      const titleLine = lines.find(l => /^#\s/.test(l));
+      const generatedTitle = titleLine ? titleLine.replace(/^#\s+/, '').trim() : '';
+      const bodyLines = lines.filter(l => l !== titleLine);
+      const generatedBody = bodyLines.join('\n').replace(/^\n+/, '');
+
+      const firstPara = generatedBody
+        .split('\n')
+        .find(l => l.trim() && !/^#+\s/.test(l) && !/^[-*]/.test(l) && !/^\d+\./.test(l));
+      const generatedExcerpt = firstPara ? firstPara.replace(/\*\*/g, '').substring(0, 150) : '';
+
+      if (!title && generatedTitle) {
+        setTitle(generatedTitle);
+        if (!slugManual) setSlug(slugify(generatedTitle));
+      }
+      if (!content && generatedBody) setContent(generatedBody);
+      if (!excerpt && generatedExcerpt) setExcerpt(generatedExcerpt);
+      if (!tagsInput && aiKeywords) setTagsInput(aiKeywords);
+
+      setAiSuccess(true);
+    } catch (e) {
+      setAiError('Network error. Please try again.');
+    } finally {
+      setAiGenerating(false);
+    }
+  }
 
   async function save(publishNow: boolean = false) {
     if (!title.trim()) { setError('Title is required.'); return; }
@@ -226,6 +289,114 @@ export function BlogEditor({ post }: BlogEditorProps) {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-5">
+
+            <div className="bg-white rounded-xl border border-blue-100 overflow-hidden shadow-sm">
+              <button
+                type="button"
+                onClick={() => { setAiOpen(o => !o); setAiSuccess(false); setAiError(''); }}
+                className="w-full flex items-center justify-between px-5 py-4 hover:bg-blue-50 transition-colors"
+              >
+                <span className="flex items-center gap-2.5 text-sm font-semibold text-[#0F2744]">
+                  <Sparkles className="w-4 h-4 text-blue-500" />
+                  Generate Draft with AI
+                </span>
+                {aiOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+              </button>
+
+              {aiOpen && (
+                <div className="px-5 pb-5 border-t border-blue-100 pt-4 space-y-4">
+                  {aiSuccess && (
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
+                      <span className="font-medium">Draft generated!</span> Review and edit before publishing.
+                    </div>
+                  )}
+                  {aiError && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center justify-between gap-2">
+                      <span>{aiError}</span>
+                      <button
+                        type="button"
+                        onClick={() => setAiError('')}
+                        className="text-xs underline shrink-0"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  )}
+
+                  <div>
+                    <Label htmlFor="aiTopic" className="text-xs font-medium text-gray-600 mb-1.5 block">Topic or Title</Label>
+                    <Input
+                      id="aiTopic"
+                      value={aiTopic}
+                      onChange={e => setAiTopic(e.target.value)}
+                      placeholder="e.g. Touchless vs brush car wash comparison"
+                      className="text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="aiKeywords" className="text-xs font-medium text-gray-600 mb-1.5 block">Target Keywords</Label>
+                    <Input
+                      id="aiKeywords"
+                      value={aiKeywords}
+                      onChange={e => setAiKeywords(e.target.value)}
+                      placeholder="e.g. touchless, brushless, touch-free, laser car wash"
+                      className="text-sm"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="aiTone" className="text-xs font-medium text-gray-600 mb-1.5 block">Tone</Label>
+                      <select
+                        id="aiTone"
+                        value={aiTone}
+                        onChange={e => setAiTone(e.target.value)}
+                        className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      >
+                        <option value="Informative">Informative</option>
+                        <option value="Casual">Casual</option>
+                        <option value="Professional">Professional</option>
+                        <option value="Friendly">Friendly</option>
+                      </select>
+                    </div>
+                    <div>
+                      <Label htmlFor="aiLength" className="text-xs font-medium text-gray-600 mb-1.5 block">Length</Label>
+                      <select
+                        id="aiLength"
+                        value={aiLength}
+                        onChange={e => setAiLength(e.target.value)}
+                        className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      >
+                        <option value="short">Short (~500 words)</option>
+                        <option value="medium">Medium (~1000 words)</option>
+                        <option value="long">Long (~1500 words)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    onClick={generateDraft}
+                    disabled={aiGenerating}
+                    className="bg-[#0F2744] hover:bg-[#1a3a6b] text-white w-full"
+                  >
+                    {aiGenerating ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Generating draft...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Generate Draft
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
+
             <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
               <div>
                 <Label htmlFor="title" className="text-sm font-semibold text-gray-700 mb-1.5 block">Title</Label>
