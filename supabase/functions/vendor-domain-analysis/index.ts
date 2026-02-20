@@ -25,7 +25,7 @@ Deno.serve(async (req: Request) => {
 
     const { data, error } = await supabase.rpc('vendor_domain_analysis', {
       blacklist: BLACKLIST,
-    });
+    }).limit(100000);
 
     if (error) throw error;
 
