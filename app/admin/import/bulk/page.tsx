@@ -14,7 +14,7 @@ import { AdminNav } from '@/components/AdminNav';
 import { createClient } from '@supabase/supabase-js';
 
 const BATCH_SIZE = 500;
-const XLSX_SIZE_LIMIT_MB = 10;
+const XLSX_SIZE_LIMIT_MB = 20;
 const XLSX_SIZE_LIMIT_BYTES = XLSX_SIZE_LIMIT_MB * 1024 * 1024;
 
 const supabase = createClient(
