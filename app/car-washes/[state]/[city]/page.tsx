@@ -163,6 +163,14 @@ export default async function CityPage({ params }: CityPageProps) {
       },
       {
         '@type': 'Question',
+        name: 'Are touchless car washes safe for Tesla, BMW, and other luxury vehicles?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Yes. Touchless car washes are the safest automated wash option for luxury and high-end vehicles including Tesla, BMW, Mercedes-Benz, Lexus, Audi, and Porsche. Because no brushes or cloth touch your vehicle, there\'s zero risk of scratching delicate paint, clear coats, ceramic coatings, or paint protection film (PPF). If you\'ve invested in protecting your vehicle\'s finish, a touchless or touch-free car wash is the recommended choice.',
+        },
+      },
+      {
+        '@type': 'Question',
         name: "What's the difference between touchless and brushless car washes?",
         acceptedAnswer: {
           '@type': 'Answer',
@@ -283,6 +291,19 @@ export default async function CityPage({ params }: CityPageProps) {
                 brushes or cloth. This eliminates the risk of swirl marks, micro-scratches, and paint damage that can
                 occur with traditional brush-based washes — making them the safest automated wash option for all paint
                 types, clear coats, and finishes.
+              </p>
+            </div>
+
+            <div className="p-5 bg-gray-50 rounded-xl border border-gray-200">
+              <h3 className="font-semibold text-[#0F2744] mb-2">
+                Are touchless car washes safe for Tesla, BMW, and other luxury vehicles?
+              </h3>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                Yes. Touchless car washes are the safest automated wash option for luxury and high-end vehicles
+                including Tesla, BMW, Mercedes-Benz, Lexus, Audi, and Porsche. Because no brushes or cloth touch
+                your vehicle, there&apos;s zero risk of scratching delicate paint, clear coats, ceramic coatings,
+                or paint protection film (PPF). If you&apos;ve invested in protecting your vehicle&apos;s finish,
+                a touchless or touch-free car wash is the recommended choice.
               </p>
             </div>
 
