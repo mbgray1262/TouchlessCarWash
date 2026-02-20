@@ -9,12 +9,13 @@ const POLL_INTERVAL = 2500;
 
 interface Job {
   id: string;
-  status: 'pending' | 'running' | 'done' | 'failed';
+  status: 'pending' | 'running' | 'paused' | 'done' | 'failed';
   total: number;
   processed: number;
   changed: number;
   current_batch: number;
   total_batches: number;
+  resume_offset: number;
   error: string | null;
   started_at: string | null;
   completed_at: string | null;
@@ -50,6 +51,21 @@ export function CleanVendorNamesButton({ onComplete }: Props) {
     return () => stopPolling();
   }, []);
 
+  async function resumeJob(jobId: string) {
+    try {
+      await fetch(`${SUPABASE_URL}/functions/v1/clean-vendor-names`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ resume_job_id: jobId }),
+      });
+    } catch {
+      // will retry on next poll
+    }
+  }
+
   async function pollJob(jobId: string) {
     try {
       const res = await fetch(
@@ -65,6 +81,8 @@ export function CleanVendorNamesButton({ onComplete }: Props) {
       } else if (data.status === 'failed') {
         stopPolling();
         setError(data.error ?? 'Job failed');
+      } else if (data.status === 'paused') {
+        await resumeJob(jobId);
       }
     } catch {
       // keep polling
@@ -99,7 +117,7 @@ export function CleanVendorNamesButton({ onComplete }: Props) {
     }
   }
 
-  const isActive = starting || (job && (job.status === 'pending' || job.status === 'running'));
+  const isActive = starting || (job && (job.status === 'pending' || job.status === 'running' || job.status === 'paused'));
   const isDone = job?.status === 'done';
   const pct = job && job.total > 0 ? Math.round((job.processed / job.total) * 100) : 0;
 
@@ -148,13 +166,13 @@ export function CleanVendorNamesButton({ onComplete }: Props) {
             <div className="flex items-center justify-between text-sm">
               <span className="font-medium text-gray-700">
                 {job.status === 'pending' && 'Starting up...'}
-                {job.status === 'running' && `Batch ${job.current_batch} of ${job.total_batches}`}
+                {(job.status === 'running' || job.status === 'paused') && `Batch ${job.current_batch} of ${job.total_batches}`}
                 {job.status === 'done' && 'Complete'}
                 {job.status === 'failed' && 'Failed'}
               </span>
               <span className="text-gray-500 tabular-nums text-xs">
                 {job.processed.toLocaleString()} / {job.total.toLocaleString()} vendors
-                {job.status === 'running' && job.processed > 0 && (
+                {(job.status === 'running' || job.status === 'paused') && job.processed > 0 && (
                   <span className="ml-2 text-gray-400">{eta(job)}</span>
                 )}
               </span>

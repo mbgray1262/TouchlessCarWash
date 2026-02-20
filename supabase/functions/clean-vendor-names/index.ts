@@ -8,6 +8,7 @@ const corsHeaders = {
 };
 
 const BATCH_SIZE = 20;
+const BATCHES_PER_CHUNK = 50;
 
 interface VendorInput {
   id: number;
@@ -89,26 +90,21 @@ Respond with a JSON array only, no explanation. Each element: {"id": <number>, "
   return new Map();
 }
 
-async function fetchAllVendors(supabase: ReturnType<typeof createClient>) {
-  const PAGE = 1000;
-  const all: Array<{ id: number; canonical_name: string; domain: string }> = [];
-  let from = 0;
-  while (true) {
-    const { data, error } = await supabase
-      .from("vendors")
-      .select("id, canonical_name, domain")
-      .order("id")
-      .range(from, from + PAGE - 1);
-    if (error) throw new Error(error.message);
-    if (!data || data.length === 0) break;
-    all.push(...data);
-    if (data.length < PAGE) break;
-    from += PAGE;
-  }
-  return all;
+async function fetchVendorChunk(
+  supabase: ReturnType<typeof createClient>,
+  offset: number,
+  limit: number
+): Promise<Array<{ id: number; canonical_name: string; domain: string }>> {
+  const { data, error } = await supabase
+    .from("vendors")
+    .select("id, canonical_name, domain")
+    .order("id")
+    .range(offset, offset + limit - 1);
+  if (error) throw new Error(error.message);
+  return data ?? [];
 }
 
-async function fetchSampleNames(
+async function fetchSampleNamesForChunk(
   supabase: ReturnType<typeof createClient>,
   vendorIds: number[]
 ): Promise<Map<number, string[]>> {
@@ -133,7 +129,13 @@ async function fetchSampleNames(
   return map;
 }
 
-async function runJob(jobId: string, supabaseUrl: string, supabaseKey: string) {
+async function countVendors(supabase: ReturnType<typeof createClient>): Promise<number> {
+  const { count, error } = await supabase.from("vendors").select("*", { count: "exact", head: true });
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
+async function runChunk(jobId: string, supabaseUrl: string, supabaseKey: string) {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   async function updateJob(fields: Record<string, unknown>) {
@@ -141,38 +143,61 @@ async function runJob(jobId: string, supabaseUrl: string, supabaseKey: string) {
   }
 
   try {
+    const { data: job, error: jErr } = await supabase
+      .from("vendor_clean_jobs")
+      .select("*")
+      .eq("id", jobId)
+      .maybeSingle();
+
+    if (jErr || !job) throw new Error("Job not found");
+
     const anthropicKey = await getAnthropicKey(supabaseUrl, supabaseKey);
     if (!anthropicKey) throw new Error("Anthropic API key not configured");
 
-    const vendors = await fetchAllVendors(supabase);
-    if (!vendors.length) throw new Error("No vendors found");
+    const total = job.total > 0 ? job.total : await countVendors(supabase);
+    const totalBatches = Math.ceil(total / BATCH_SIZE);
+    const offset: number = job.resume_offset ?? 0;
 
-    const sampleMap = await fetchSampleNames(supabase, vendors.map((v) => v.id));
+    await updateJob({
+      status: "running",
+      total,
+      total_batches: totalBatches,
+      started_at: job.started_at ?? new Date().toISOString(),
+    });
 
-    const vendorInputs: VendorInput[] = vendors.map((v: { id: number; canonical_name: string; domain: string }) => ({
+    const chunkVendorLimit = BATCHES_PER_CHUNK * BATCH_SIZE;
+    const vendors = await fetchVendorChunk(supabase, offset, chunkVendorLimit);
+
+    if (vendors.length === 0) {
+      await updateJob({
+        status: "done",
+        processed: total,
+        completed_at: new Date().toISOString(),
+      });
+      return;
+    }
+
+    const sampleMap = await fetchSampleNamesForChunk(supabase, vendors.map((v) => v.id));
+
+    const vendorInputs: VendorInput[] = vendors.map((v) => ({
       id: v.id,
       canonical_name: v.canonical_name,
       domain: v.domain ?? "",
       sample_names: sampleMap.get(v.id) ?? [],
     }));
 
-    const total = vendorInputs.length;
-    const totalBatches = Math.ceil(total / BATCH_SIZE);
-
-    await updateJob({ status: "running", total, total_batches: totalBatches, started_at: new Date().toISOString() });
-
-    let processed = 0;
-    let changed = 0;
+    let processed = job.processed ?? 0;
+    let changed = job.changed ?? 0;
+    const startBatch = Math.floor(offset / BATCH_SIZE);
 
     for (let i = 0; i < vendorInputs.length; i += BATCH_SIZE) {
       const batch = vendorInputs.slice(i, i + BATCH_SIZE);
-      const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+      const batchNum = startBatch + Math.floor(i / BATCH_SIZE) + 1;
 
       await updateJob({ current_batch: batchNum });
 
       try {
         const nameMap = await cleanBatch(batch, anthropicKey);
-
         for (const vendor of batch) {
           const newName = nameMap.get(vendor.id);
           if (!newName) continue;
@@ -187,11 +212,28 @@ async function runJob(jobId: string, supabaseUrl: string, supabaseKey: string) {
 
       processed += batch.length;
       await updateJob({ processed, changed });
-
       await new Promise(r => setTimeout(r, 150));
     }
 
-    await updateJob({ status: "done", processed: total, completed_at: new Date().toISOString() });
+    const nextOffset = offset + vendors.length;
+    const isComplete = nextOffset >= total;
+
+    if (isComplete) {
+      await updateJob({
+        status: "done",
+        processed: total,
+        changed,
+        resume_offset: nextOffset,
+        completed_at: new Date().toISOString(),
+      });
+    } else {
+      await updateJob({
+        status: "paused",
+        processed,
+        changed,
+        resume_offset: nextOffset,
+      });
+    }
 
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -229,9 +271,19 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
+  const resumeJobId: string | null = body?.resume_job_id ?? null;
+
+  if (resumeJobId) {
+    EdgeRuntime.waitUntil(runChunk(resumeJobId, supabaseUrl, supabaseKey));
+    return new Response(JSON.stringify({ job_id: resumeJobId }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   const { data: job, error: createErr } = await supabase
     .from("vendor_clean_jobs")
-    .insert({ status: "pending" })
+    .insert({ status: "pending", resume_offset: 0 })
     .select("id")
     .single();
 
@@ -242,7 +294,7 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  EdgeRuntime.waitUntil(runJob(job.id, supabaseUrl, supabaseKey));
+  EdgeRuntime.waitUntil(runChunk(job.id, supabaseUrl, supabaseKey));
 
   return new Response(JSON.stringify({ job_id: job.id }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
