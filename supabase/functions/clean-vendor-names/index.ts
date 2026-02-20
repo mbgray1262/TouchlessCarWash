@@ -89,6 +89,50 @@ Respond with a JSON array only, no explanation. Each element: {"id": <number>, "
   return new Map();
 }
 
+async function fetchAllVendors(supabase: ReturnType<typeof createClient>) {
+  const PAGE = 1000;
+  const all: Array<{ id: number; canonical_name: string; domain: string }> = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from("vendors")
+      .select("id, canonical_name, domain")
+      .order("id")
+      .range(from, from + PAGE - 1);
+    if (error) throw new Error(error.message);
+    if (!data || data.length === 0) break;
+    all.push(...data);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+  return all;
+}
+
+async function fetchSampleNames(
+  supabase: ReturnType<typeof createClient>,
+  vendorIds: number[]
+): Promise<Map<number, string[]>> {
+  const PAGE = 5000;
+  const map = new Map<number, string[]>();
+  let from = 0;
+  while (true) {
+    const { data } = await supabase
+      .from("listings")
+      .select("vendor_id, name")
+      .in("vendor_id", vendorIds)
+      .not("name", "is", null)
+      .range(from, from + PAGE - 1);
+    if (!data || data.length === 0) break;
+    for (const row of data as Array<{ vendor_id: number; name: string }>) {
+      const arr = map.get(row.vendor_id) ?? [];
+      if (arr.length < 8) { arr.push(row.name); map.set(row.vendor_id, arr); }
+    }
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+  return map;
+}
+
 async function runJob(jobId: string, supabaseUrl: string, supabaseKey: string) {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -100,25 +144,10 @@ async function runJob(jobId: string, supabaseUrl: string, supabaseKey: string) {
     const anthropicKey = await getAnthropicKey(supabaseUrl, supabaseKey);
     if (!anthropicKey) throw new Error("Anthropic API key not configured");
 
-    const { data: vendors, error: vErr } = await supabase
-      .from("vendors")
-      .select("id, canonical_name, domain")
-      .order("id");
+    const vendors = await fetchAllVendors(supabase);
+    if (!vendors.length) throw new Error("No vendors found");
 
-    if (vErr || !vendors) throw new Error(vErr?.message ?? "Failed to fetch vendors");
-
-    const { data: listingRows } = await supabase
-      .from("listings")
-      .select("vendor_id, name")
-      .in("vendor_id", vendors.map((v: { id: number }) => v.id))
-      .not("name", "is", null);
-
-    const sampleMap = new Map<number, string[]>();
-    for (const row of (listingRows ?? []) as Array<{ vendor_id: number; name: string }>) {
-      const arr = sampleMap.get(row.vendor_id) ?? [];
-      if (arr.length < 8) arr.push(row.name);
-      sampleMap.set(row.vendor_id, arr);
-    }
+    const sampleMap = await fetchSampleNames(supabase, vendors.map((v) => v.id));
 
     const vendorInputs: VendorInput[] = vendors.map((v: { id: number; canonical_name: string; domain: string }) => ({
       id: v.id,
