@@ -44,6 +44,28 @@ function numCol(row: RawRow, ...keys: string[]): number {
   return isNaN(n) ? 0 : n;
 }
 
+function safeJsonArray(row: RawRow, ...keys: string[]): unknown[] {
+  const v = col(row, ...keys);
+  if (!v) return [];
+  try {
+    const parsed = JSON.parse(v);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function safeJsonObject(row: RawRow, ...keys: string[]): Record<string, unknown> {
+  const v = col(row, ...keys);
+  if (!v) return {};
+  try {
+    const parsed = JSON.parse(v);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
 function mapRowToListing(row: RawRow, _index: number) {
   const name = col(row, 'name', 'Name', 'business_name', 'Business Name', 'title', 'Title');
   const address = col(row, 'address', 'Address', 'street', 'Street', 'street_address');
@@ -72,10 +94,10 @@ function mapRowToListing(row: RawRow, _index: number) {
     google_place_id: placeId,
     is_approved: false,
     is_featured: false,
-    photos: [],
-    amenities: [],
-    wash_packages: [],
-    hours: {},
+    photos: safeJsonArray(row, 'photos', 'Photos'),
+    amenities: safeJsonArray(row, 'amenities', 'Amenities'),
+    wash_packages: safeJsonArray(row, 'wash_packages', 'Wash Packages'),
+    hours: safeJsonObject(row, 'hours', 'Hours'),
   };
 }
 
