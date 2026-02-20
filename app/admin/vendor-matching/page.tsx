@@ -7,6 +7,7 @@ import { StatsBar } from './StatsBar';
 import { ReadyToLinkSection } from './ReadyToLinkSection';
 import { NewVendorsSection } from './NewVendorsSection';
 import { MatchStats, ReadyToLink, NewVendorRow, SessionSummary } from './types';
+import { CleanVendorNamesButton } from './CleanVendorNamesButton';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -197,6 +198,8 @@ export default function VendorMatchingPage() {
                 Chains Only
               </button>
             </div>
+
+            <CleanVendorNamesButton onComplete={load} />
 
             <ReadyToLinkSection
               rows={readyRows}
