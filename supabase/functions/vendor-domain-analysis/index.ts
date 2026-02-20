@@ -45,7 +45,6 @@ Deno.serve(async (req: Request) => {
         WHERE domain IS NOT NULL
           AND domain <> ''
           AND length(domain) >= 4
-          AND domain NOT LIKE '%.%' IS FALSE
           AND domain != ALL(${BLACKLIST})
       ),
       grouped AS (
@@ -56,7 +55,6 @@ Deno.serve(async (req: Request) => {
           (array_agg(f.name ORDER BY f.name))[1:5] AS sample_names
         FROM filtered f
         GROUP BY f.domain
-        HAVING count(*) >= 2
       )
       SELECT
         g.domain,
