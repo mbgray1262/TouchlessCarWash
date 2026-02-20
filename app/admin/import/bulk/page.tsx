@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AdminNav } from '@/components/AdminNav';
 const BATCH_SIZE = 500;
-const XLSX_SIZE_LIMIT_MB = 20;
+const XLSX_SIZE_LIMIT_MB = 5;
 const XLSX_SIZE_LIMIT_BYTES = XLSX_SIZE_LIMIT_MB * 1024 * 1024;
 
 type ImportStatus = 'idle' | 'parsing' | 'importing' | 'done' | 'error';
@@ -324,15 +324,31 @@ export default function BulkImportPage() {
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (file) processFile(file);
+    try {
+      const file = e.target.files?.[0];
+      if (file) processFile(file).catch(err => {
+        setStatus('error');
+        setErrorMsg(err instanceof Error ? err.message : 'Unexpected error processing file.');
+      });
+    } catch (err) {
+      setStatus('error');
+      setErrorMsg(err instanceof Error ? err.message : 'Unexpected error selecting file.');
+    }
   }
 
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     setIsDragging(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) processFile(file);
+    try {
+      const file = e.dataTransfer.files?.[0];
+      if (file) processFile(file).catch(err => {
+        setStatus('error');
+        setErrorMsg(err instanceof Error ? err.message : 'Unexpected error processing file.');
+      });
+    } catch (err) {
+      setStatus('error');
+      setErrorMsg(err instanceof Error ? err.message : 'Unexpected error dropping file.');
+    }
   }
 
   const progress = totalRows > 0 ? Math.round((processedRows / totalRows) * 100) : 0;
@@ -396,7 +412,7 @@ export default function BulkImportPage() {
                 ) : (
                   <>
                     <p className="text-sm font-medium text-gray-700 mb-1">Drop your file here or click to browse</p>
-                    <p className="text-xs text-gray-400">Supports .csv, .xlsx, .xls &mdash; use CSV for files over {XLSX_SIZE_LIMIT_MB} MB</p>
+                    <p className="text-xs text-gray-400">Supports .csv, .xlsx, .xls &mdash; for files over {XLSX_SIZE_LIMIT_MB} MB, use CSV format</p>
                   </>
                 )}
               </div>
@@ -404,8 +420,7 @@ export default function BulkImportPage() {
               <div className="mt-3 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
                 <TriangleAlert className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                 <p className="text-xs text-amber-700">
-                  <span className="font-semibold">Large files:</span> Excel files over {XLSX_SIZE_LIMIT_MB} MB must be saved as CSV first.
-                  In Excel: <span className="font-mono">File &rarr; Save As &rarr; CSV UTF-8</span>. CSV files handle 30,000+ rows without issue.
+                  <span className="font-semibold">Large files:</span> Excel files over {XLSX_SIZE_LIMIT_MB} MB are too large to parse in the browser and will be rejected. Save as CSV first: <span className="font-mono">File &rarr; Save As &rarr; CSV UTF-8</span>. CSV files handle 30,000+ rows without issue.
                 </p>
               </div>
             </CardContent>
