@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { read as xlsxRead, utils as xlsxUtils } from 'xlsx';
+import { supabase } from '@/lib/supabase';
 
 const BATCH_SIZE = 500;
 
@@ -80,13 +80,12 @@ function mapRowToListing(row: RawRow, index: number) {
 }
 
 async function upsertBatch(
-  supabaseAdmin: any,
   rows: NonNullable<ReturnType<typeof mapRowToListing>>[],
   onConflict: string
 ): Promise<{ inserted: number; error?: string }> {
-  const { data, error } = await (supabaseAdmin as any)
+  const { data, error } = await supabase
     .from('listings')
-    .upsert(rows, { onConflict, ignoreDuplicates: true })
+    .upsert(rows as any, { onConflict, ignoreDuplicates: true })
     .select('id');
 
   if (error) return { inserted: 0, error: error.message };
@@ -138,62 +137,36 @@ function parseCSVText(text: string): RawRow[] {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    const contentType = req.headers.get('content-type') ?? '';
 
-    if (!serviceRoleKey) {
-      return NextResponse.json({ error: 'Server misconfiguration: missing service role key' }, { status: 500 });
+    if (!contentType.includes('multipart/form-data')) {
+      return NextResponse.json({ error: 'Please upload a file.' }, { status: 400 });
     }
 
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    const formData = await req.formData();
+    const file = formData.get('file') as File | null;
 
-    const contentType = req.headers.get('content-type') ?? '';
+    if (!file) {
+      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+    }
+
+    const isCSV = file.name.toLowerCase().endsWith('.csv');
+    const isXLSX = file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.xls');
+
+    if (!isCSV && !isXLSX) {
+      return NextResponse.json({ error: 'Unsupported file type. Please upload a .csv, .xlsx, or .xls file.' }, { status: 400 });
+    }
 
     let rawRows: RawRow[];
 
-    if (contentType.includes('multipart/form-data')) {
-      const formData = await req.formData();
-      const file = formData.get('file') as File | null;
-
-      if (!file) {
-        return NextResponse.json({ error: 'No file provided' }, { status: 400 });
-      }
-
-      const isCSV = file.name.toLowerCase().endsWith('.csv');
-      const isXLSX = file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.xls');
-
-      if (!isCSV && !isXLSX) {
-        return NextResponse.json({ error: 'Unsupported file type. Please upload a .csv, .xlsx, or .xls file.' }, { status: 400 });
-      }
-
-      if (isCSV) {
-        const text = await file.text();
-        rawRows = parseCSVText(text);
-      } else {
-        const buffer = await file.arrayBuffer();
-        const wb = xlsxRead(buffer, { type: 'array', dense: true });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        rawRows = xlsxUtils.sheet_to_json(ws, { defval: null });
-      }
+    if (isCSV) {
+      const text = await file.text();
+      rawRows = parseCSVText(text);
     } else {
-      const { rows, onConflict } = await req.json();
-
-      if (!Array.isArray(rows) || rows.length === 0) {
-        return NextResponse.json({ error: 'No rows provided' }, { status: 400 });
-      }
-
-      const { data, error } = await (supabaseAdmin as any)
-        .from('listings')
-        .upsert(rows, { onConflict, ignoreDuplicates: true })
-        .select('id');
-
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
-      }
-
-      return NextResponse.json({ inserted: (data as any[])?.length ?? 0 });
+      const buffer = await file.arrayBuffer();
+      const wb = xlsxRead(buffer, { type: 'array', dense: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      rawRows = xlsxUtils.sheet_to_json(ws, { defval: null });
     }
 
     if (rawRows.length === 0) {
@@ -215,7 +188,7 @@ export async function POST(req: NextRequest) {
       const withoutPlaceId = valid.filter(r => !r.google_place_id);
 
       if (withPlaceId.length > 0) {
-        const { inserted, error } = await upsertBatch(supabaseAdmin, withPlaceId, 'google_place_id');
+        const { inserted, error } = await upsertBatch(withPlaceId, 'google_place_id');
         if (error) {
           summary.failed += withPlaceId.length;
           summary.errors.push(`Batch ${Math.floor(i / BATCH_SIZE) + 1} (place_id): ${error}`);
@@ -226,7 +199,7 @@ export async function POST(req: NextRequest) {
       }
 
       if (withoutPlaceId.length > 0) {
-        const { inserted, error } = await upsertBatch(supabaseAdmin, withoutPlaceId, 'slug');
+        const { inserted, error } = await upsertBatch(withoutPlaceId, 'slug');
         if (error) {
           summary.failed += withoutPlaceId.length;
           summary.errors.push(`Batch ${Math.floor(i / BATCH_SIZE) + 1} (slug): ${error}`);
