@@ -148,12 +148,21 @@ export default function ImportPage() {
       </div>
 
       <div className="container mx-auto px-4 max-w-4xl py-10">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[#0F2744] mb-2">Import Listing from URL</h1>
-          <p className="text-gray-500">
-            Paste any car wash page URL. Firecrawl will scrape the page and Claude AI will extract
-            all the listing data automatically.
-          </p>
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-[#0F2744] mb-2">Import Listing from URL</h1>
+            <p className="text-gray-500">
+              Paste any car wash page URL. Firecrawl will scrape the page and Claude AI will extract
+              all the listing data automatically.
+            </p>
+          </div>
+          <Link
+            href="/admin/import/bulk"
+            className="shrink-0 inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-400 rounded-lg px-3 py-2 bg-blue-50 hover:bg-blue-100 transition-colors"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Bulk Import (CSV/Excel)
+          </Link>
         </div>
 
         <Card className="mb-8">
