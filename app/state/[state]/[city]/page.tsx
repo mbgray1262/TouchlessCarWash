@@ -75,7 +75,7 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
 
   return {
     title: `Touchless Car Washes in ${cityName}, ${stateCode} | ${cityName} Car Wash Directory`,
-    description: `Find ${listings.length} touchless car washes in ${cityName}, ${stateName}. Compare ratings, read reviews, and get directions. All locations verified touchless.`,
+    description: `Find ${listings.length} touchless & touch-free car washes in ${cityName}, ${stateName}. Browse verified no-touch, scratch-free laser car wash locations with ratings and reviews.`,
   };
 }
 
@@ -168,11 +168,19 @@ export default async function CityPage({ params }: CityPageProps) {
   const highestRatedAnswer = buildHighestRatedAnswer();
   const mostReviewedAnswer = buildMostReviewedAnswer();
 
+  const cityVariant = params.city.charCodeAt(0) % 4;
+  const introSynonyms = [
+    `touchless, touch-free, and no-touch`,
+    `touchless, laser car wash, and contactless`,
+    `touchless, scratch-free, and touch-free`,
+    `touchless, no-touch, and laser car wash`,
+  ][cityVariant];
+
   const localBusinessJsonLd = listings.map((listing) => ({
     '@context': 'https://schema.org',
     '@type': 'AutoWash',
     name: listing.name,
-    description: `Touchless car wash in ${cityName}, ${stateCode}`,
+    description: `Touchless, touch-free car wash in ${cityName}, ${stateCode}`,
     url: listing.website ?? undefined,
     telephone: listing.phone ?? undefined,
     address: {
@@ -234,6 +242,22 @@ export default async function CityPage({ params }: CityPageProps) {
           text: 'The terms are often used interchangeably. Both refer to car wash systems that clean your vehicle without any physical contact. Touchless washes rely entirely on high-pressure water and chemical cleaners. Brushless washes may use soft foam or cloth materials that are gentler than traditional nylon brushes but still make light contact. All listings on this directory use non-contact or near-contact methods safe for vehicle paint.',
         },
       },
+      {
+        '@type': 'Question',
+        name: 'Is a laser car wash the same as a touchless car wash?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Yes. Laser car washes — also called touch-free or no-touch car washes — use high-pressure water jets and detergents instead of brushes or cloth. The term "laser" refers to the sensor technology used to detect your vehicle\'s shape and size, not actual lasers doing the cleaning. The result is the same contactless, scratch-free wash as any other touchless system.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Are touchless car washes scratch-free?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Yes. Because touchless (also called brushless or contactless) car washes never physically touch your vehicle, they eliminate the risk of scratches and swirl marks that brush-based washes can leave behind. High-pressure water and specially formulated detergents do all the cleaning, making them the safest automated option for any paint type or finish.',
+        },
+      },
     ],
   };
 
@@ -272,9 +296,9 @@ export default async function CityPage({ params }: CityPageProps) {
 
         <div className="mb-8 p-5 bg-blue-50 border border-blue-100 rounded-xl">
           <p className="text-gray-700 text-base leading-relaxed">
-            Find the best touchless car washes in {cityName}, {stateName}. We&apos;ve verified{' '}
+            Find the best {introSynonyms} car washes in {cityName}, {stateName}. We&apos;ve verified{' '}
             <strong>{listings.length} location{listings.length !== 1 ? 's' : ''}</strong> that offer brushless,
-            touchless washing to keep your car&apos;s paint and finish scratch-free.
+            contactless washing to keep your car&apos;s paint and finish scratch-free.
             {topRated.rating && (
               <> Top-rated option: <strong>{topRated.name}</strong> ({topRated.rating} stars).</>
             )}
@@ -369,6 +393,30 @@ export default async function CityPage({ params }: CityPageProps) {
                 Brushless washes may use soft foam or cloth that makes gentle contact, but without the hard nylon
                 bristles that cause scratching. All listings on this directory use non-contact or near-contact methods
                 that are safe for vehicle paint.
+              </p>
+            </div>
+
+            <div className="p-5 bg-gray-50 rounded-xl border border-gray-200">
+              <h3 className="font-semibold text-[#0F2744] mb-2">
+                Is a laser car wash the same as a touchless car wash?
+              </h3>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                Yes. Laser car washes — also called touch-free or no-touch car washes — use high-pressure water jets
+                and detergents instead of brushes or cloth. The term &quot;laser&quot; refers to the sensor technology
+                used to detect your vehicle&apos;s shape and size, not actual lasers doing the cleaning. The result is
+                the same contactless, scratch-free wash as any other touchless system.
+              </p>
+            </div>
+
+            <div className="p-5 bg-gray-50 rounded-xl border border-gray-200">
+              <h3 className="font-semibold text-[#0F2744] mb-2">
+                Are touchless car washes scratch-free?
+              </h3>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                Yes. Because touchless (also called brushless or contactless) car washes never physically touch your
+                vehicle, they eliminate the risk of scratches and swirl marks that brush-based washes can leave behind.
+                High-pressure water and specially formulated detergents do all the cleaning, making them the safest
+                automated option for any paint type or finish.
               </p>
             </div>
           </div>

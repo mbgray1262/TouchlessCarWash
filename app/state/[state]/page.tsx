@@ -57,7 +57,7 @@ export async function generateMetadata({ params }: StatePageProps): Promise<Meta
 
   return {
     title: `Touchless Car Washes in ${stateName} | ${stateName} Car Wash Directory`,
-    description: `Find ${count ?? 0} verified touchless car washes in ${stateName}. Browse by city with ratings, hours, and contact info. Updated ${month} ${year}.`,
+    description: `Find ${count ?? 0} verified touchless & touch-free car washes in ${stateName}. Browse laser car wash and no-touch locations by city with ratings, hours, and contact info. Updated ${month} ${year}.`,
   };
 }
 
@@ -135,7 +135,7 @@ export default async function StatePage({ params }: StatePageProps) {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
     name: `Touchless Car Washes in ${stateName} by City`,
-    description: `Cities in ${stateName} with verified touchless car wash locations`,
+    description: `Cities in ${stateName} with verified touchless, touch-free, and no-touch car wash locations`,
     numberOfItems: cities.length,
     itemListElement: cities.map((city, index) => ({
       '@type': 'ListItem',
@@ -175,10 +175,9 @@ export default async function StatePage({ params }: StatePageProps) {
 
           <div className="mb-8 p-5 bg-blue-50 border border-blue-100 rounded-xl">
             <p className="text-gray-700 text-base leading-relaxed">
-              Looking for a touchless car wash in {stateName}? Browse{' '}
-              <strong>{listings.length} verified touchless car wash{listings.length !== 1 ? ' locations' : ' location'}</strong>{' '}
+              Browse <strong>{listings.length} verified touchless, touch-free, and laser car wash{listings.length !== 1 ? ' locations' : ' location'}</strong>{' '}
               across <strong>{cities.length} {cities.length === 1 ? 'city' : 'cities'}</strong> in {nickname}.
-              Every listing is confirmed to offer touchless or brushless washing that&apos;s safe for all paint
+              Every listing is confirmed to offer brushless, no-touch washing that&apos;s safe for all paint
               types and finishes — no bristles, no scratches, no swirl marks. Last updated {month} {year}.
             </p>
           </div>
