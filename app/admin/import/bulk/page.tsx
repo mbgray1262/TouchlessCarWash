@@ -11,16 +11,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AdminNav } from '@/components/AdminNav';
-import { createClient } from '@supabase/supabase-js';
-
 const BATCH_SIZE = 500;
 const XLSX_SIZE_LIMIT_MB = 20;
 const XLSX_SIZE_LIMIT_BYTES = XLSX_SIZE_LIMIT_MB * 1024 * 1024;
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 type ImportStatus = 'idle' | 'parsing' | 'importing' | 'done' | 'error';
 
@@ -114,6 +107,17 @@ function mapRowToListing(row: RawRow, index: number) {
   };
 }
 
+async function upsertViaApi(rows: NonNullable<ReturnType<typeof mapRowToListing>>[], onConflict: string): Promise<{ inserted: number; error?: string }> {
+  const res = await fetch('/api/bulk-import', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rows, onConflict }),
+  });
+  const json = await res.json();
+  if (!res.ok) return { inserted: 0, error: json.error ?? 'Server error' };
+  return { inserted: json.inserted };
+}
+
 async function insertBatch(rows: ReturnType<typeof mapRowToListing>[]): Promise<BatchResult> {
   const valid = rows.filter(Boolean) as NonNullable<ReturnType<typeof mapRowToListing>>[];
   const result: BatchResult = { inserted: 0, skipped: rows.length - valid.length, failed: 0, errors: [] };
@@ -124,38 +128,24 @@ async function insertBatch(rows: ReturnType<typeof mapRowToListing>[]): Promise<
   const withoutPlaceId = valid.filter(r => !r.google_place_id);
 
   if (withPlaceId.length > 0) {
-    const { data, error } = await supabase
-      .from('listings')
-      .upsert(withPlaceId, {
-        onConflict: 'google_place_id',
-        ignoreDuplicates: true,
-      })
-      .select('id');
-
+    const { inserted, error } = await upsertViaApi(withPlaceId, 'google_place_id');
     if (error) {
       result.failed += withPlaceId.length;
-      result.errors.push(`Place ID batch error: ${error.message}`);
+      result.errors.push(`Place ID batch error: ${error}`);
     } else {
-      result.inserted += data?.length ?? 0;
-      result.skipped += withPlaceId.length - (data?.length ?? 0);
+      result.inserted += inserted;
+      result.skipped += withPlaceId.length - inserted;
     }
   }
 
   if (withoutPlaceId.length > 0) {
-    const { data, error } = await supabase
-      .from('listings')
-      .upsert(withoutPlaceId, {
-        onConflict: 'slug',
-        ignoreDuplicates: true,
-      })
-      .select('id');
-
+    const { inserted, error } = await upsertViaApi(withoutPlaceId, 'slug');
     if (error) {
       result.failed += withoutPlaceId.length;
-      result.errors.push(`Slug batch error: ${error.message}`);
+      result.errors.push(`Slug batch error: ${error}`);
     } else {
-      result.inserted += data?.length ?? 0;
-      result.skipped += withoutPlaceId.length - (data?.length ?? 0);
+      result.inserted += inserted;
+      result.skipped += withoutPlaceId.length - inserted;
     }
   }
 
