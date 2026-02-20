@@ -113,7 +113,60 @@ export default async function CityPage({ params }: CityPageProps) {
     );
   }
 
-  const topRated = listings.find(l => l.rating != null) ?? listings[0];
+  const listingsWithRating = listings.filter(l => l.rating != null && l.rating > 0);
+  const topRatingValue = listingsWithRating.length > 0 ? Math.max(...listingsWithRating.map(l => l.rating)) : null;
+  const topRatedListings = topRatingValue != null
+    ? listingsWithRating.filter(l => l.rating === topRatingValue)
+    : [];
+
+  const listingsWithReviews = listings.filter(l => l.review_count != null && l.review_count > 0);
+  const topReviewCount = listingsWithReviews.length > 0 ? Math.max(...listingsWithReviews.map(l => l.review_count)) : null;
+  const mostReviewedListings = topReviewCount != null
+    ? listingsWithReviews.filter(l => l.review_count === topReviewCount)
+    : [];
+
+  const topRated = listingsWithRating.length > 0 ? listingsWithRating[0] : listings[0];
+
+  function buildHighestRatedAnswer(): string {
+    if (listings.length === 1) {
+      const l = listings[0];
+      if (l.rating != null && l.rating > 0) {
+        return `${l.name} is the touchless car wash in ${cityName} with a ${l.rating}-star rating.`;
+      }
+      return `${l.name} is the touchless car wash in ${cityName}.`;
+    }
+    if (topRatedListings.length === 0) {
+      return `None of the ${listings.length} touchless car washes in ${cityName} currently have ratings. Check each listing for the most up-to-date information.`;
+    }
+    if (topRatedListings.length === 1) {
+      return `${topRatedListings[0].name} is the top-rated touchless car wash in ${cityName} with a ${topRatingValue}-star rating.`;
+    }
+    const names = topRatedListings.map(l => l.name);
+    const last = names.pop();
+    return `${names.join(', ')} and ${last} are tied as the top-rated touchless car washes in ${cityName}, each with a ${topRatingValue}-star rating.`;
+  }
+
+  function buildMostReviewedAnswer(): string {
+    if (listings.length === 1) {
+      const l = listings[0];
+      if (l.review_count != null && l.review_count > 0) {
+        return `${l.name} is the only touchless car wash in ${cityName} and has ${l.review_count} review${l.review_count !== 1 ? 's' : ''}.`;
+      }
+      return `${l.name} is the only touchless car wash listed in ${cityName}. It does not yet have any reviews.`;
+    }
+    if (mostReviewedListings.length === 0) {
+      return `None of the ${listings.length} touchless car washes in ${cityName} currently have reviews. Check each listing for the most up-to-date information.`;
+    }
+    if (mostReviewedListings.length === 1) {
+      return `${mostReviewedListings[0].name} has the most reviews of any touchless car wash in ${cityName} with ${topReviewCount} review${topReviewCount !== 1 ? 's' : ''}.`;
+    }
+    const names = mostReviewedListings.map(l => l.name);
+    const last = names.pop();
+    return `${names.join(', ')} and ${last} are tied for the most-reviewed touchless car washes in ${cityName}, each with ${topReviewCount} review${topReviewCount !== 1 ? 's' : ''}.`;
+  }
+
+  const highestRatedAnswer = buildHighestRatedAnswer();
+  const mostReviewedAnswer = buildMostReviewedAnswer();
 
   const localBusinessJsonLd = listings.map((listing) => ({
     '@context': 'https://schema.org',
@@ -147,12 +200,22 @@ export default async function CityPage({ params }: CityPageProps) {
       },
       {
         '@type': 'Question',
-        name: `What is the highest rated touchless car wash in ${cityName}?`,
+        name: listings.length === 1
+          ? `What is the touchless car wash in ${cityName}?`
+          : `What is the highest rated touchless car wash in ${cityName}?`,
         acceptedAnswer: {
           '@type': 'Answer',
-          text: topRated.rating
-            ? `${topRated.name} is the top-rated touchless car wash in ${cityName} with a ${topRated.rating}-star rating.`
-            : `${topRated.name} is a highly regarded touchless car wash in ${cityName}.`,
+          text: highestRatedAnswer,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: listings.length === 1
+          ? `How many reviews does the touchless car wash in ${cityName} have?`
+          : `Which touchless car wash in ${cityName} has the most reviews?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: mostReviewedAnswer,
         },
       },
       {
@@ -268,14 +331,20 @@ export default async function CityPage({ params }: CityPageProps) {
 
             <div className="p-5 bg-gray-50 rounded-xl border border-gray-200">
               <h3 className="font-semibold text-[#0F2744] mb-2">
-                What is the highest rated touchless car wash in {cityName}?
+                {listings.length === 1
+                  ? `What is the touchless car wash in ${cityName}?`
+                  : `What is the highest rated touchless car wash in ${cityName}?`}
               </h3>
-              <p className="text-gray-600 text-sm leading-relaxed">
-                {topRated.rating
-                  ? <><strong>{topRated.name}</strong> is the top-rated touchless car wash in {cityName} with a <strong>{topRated.rating}-star</strong> rating.</>
-                  : <><strong>{topRated.name}</strong> is a top touchless car wash in {cityName}.</>
-                }
-              </p>
+              <p className="text-gray-600 text-sm leading-relaxed">{highestRatedAnswer}</p>
+            </div>
+
+            <div className="p-5 bg-gray-50 rounded-xl border border-gray-200">
+              <h3 className="font-semibold text-[#0F2744] mb-2">
+                {listings.length === 1
+                  ? `How many reviews does the touchless car wash in ${cityName} have?`
+                  : `Which touchless car wash in ${cityName} has the most reviews?`}
+              </h3>
+              <p className="text-gray-600 text-sm leading-relaxed">{mostReviewedAnswer}</p>
             </div>
 
             <div className="p-5 bg-gray-50 rounded-xl border border-gray-200">
