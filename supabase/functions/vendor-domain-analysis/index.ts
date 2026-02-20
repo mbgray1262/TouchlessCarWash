@@ -1,3 +1,5 @@
+import postgres from 'npm:postgres@3.4.4';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -15,31 +17,12 @@ Deno.serve(async (req: Request) => {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
+  const sql = postgres(Deno.env.get('SUPABASE_DB_URL')!, { ssl: 'require' });
+
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const rows = await sql`SELECT * FROM vendor_domain_analysis(${BLACKLIST})`;
 
-    const res = await fetch(`${supabaseUrl}/rest/v1/rpc/vendor_domain_analysis`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${serviceRoleKey}`,
-        'apikey': serviceRoleKey,
-        'Range': '0-999999',
-        'Range-Unit': 'items',
-        'Prefer': 'count=none',
-      },
-      body: JSON.stringify({ blacklist: BLACKLIST }),
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`PostgREST error ${res.status}: ${text}`);
-    }
-
-    const data = await res.json();
-
-    return new Response(JSON.stringify(data), {
+    return new Response(JSON.stringify(rows), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err: any) {
@@ -47,5 +30,7 @@ Deno.serve(async (req: Request) => {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+  } finally {
+    await sql.end();
   }
 });
