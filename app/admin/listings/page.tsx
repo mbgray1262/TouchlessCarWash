@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase';
 import PhotoGalleryModal from '@/components/PhotoGalleryModal';
 import BatchVerifyModal, { BatchVerifyResult } from '@/components/BatchVerifyModal';
 import EditListingModal, { EditableListing } from '@/components/EditListingModal';
+import { AdminNav } from '@/components/AdminNav';
 
 interface Listing {
   id: string;
@@ -897,6 +898,7 @@ export default function AdminListingsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <AdminNav />
       <div className="container mx-auto px-4 py-8">
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">

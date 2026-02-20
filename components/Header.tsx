@@ -32,7 +32,7 @@ export function Header() {
             <Link href="/blog" className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors">
               Blog
             </Link>
-            <Link href="/admin/listings" className="text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors">
+            <Link href="/admin" className="text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors">
               Admin
             </Link>
             <Button asChild size="sm" className="bg-[#22C55E] hover:bg-[#16A34A] text-white">
@@ -85,7 +85,7 @@ export function Header() {
                 Blog
               </Link>
               <Link
-                href="/admin/listings"
+                href="/admin"
                 className="text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >

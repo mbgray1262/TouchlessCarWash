@@ -6,6 +6,7 @@ import { Plus, Pencil, Trash2, ArrowUpDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase, type BlogPost } from '@/lib/supabase';
+import { AdminNav } from '@/components/AdminNav';
 
 type SortField = 'updated_at' | 'published_at' | 'title';
 type SortDir = 'asc' | 'desc';
@@ -54,6 +55,7 @@ export default function AdminBlogPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <AdminNav />
       <div className="bg-[#0F2744] py-8">
         <div className="container mx-auto px-4 max-w-6xl">
           <nav className="flex items-center gap-1.5 text-sm text-white/50 mb-4">
