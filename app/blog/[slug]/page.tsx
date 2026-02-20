@@ -94,6 +94,15 @@ function renderMarkdown(md: string): string {
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i];
 
+    if (/^!\[/.test(line.trim()) && /\]\(/.test(line)) {
+      closeList(); closeBlockquote();
+      const imgMatch = line.trim().match(/^!\[([^\]]*)\]\(([^)]+)\)/);
+      if (imgMatch) {
+        out.push(`<figure class="my-6"><img src="${imgMatch[2]}" alt="${imgMatch[1]}" class="rounded-xl w-full object-cover shadow-sm" /></figure>`);
+        continue;
+      }
+    }
+
     if (/^#{4}\s/.test(line)) {
       closeList(); closeBlockquote();
       out.push(`<h4 class="text-lg font-semibold text-[#0F2744] mt-6 mb-2">${line.replace(/^#{4}\s/, '')}</h4>`);
@@ -135,6 +144,7 @@ function renderMarkdown(md: string): string {
 
 function inlineMarkdown(text: string): string {
   return text
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="rounded-xl w-full object-cover shadow-sm my-4" />')
     .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
