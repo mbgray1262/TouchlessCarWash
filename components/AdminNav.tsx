@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, List, Building2, FileText, ArrowLeft, Upload } from 'lucide-react';
+import { LayoutDashboard, List, Building2, FileText, ArrowLeft, Upload, ShieldCheck } from 'lucide-react';
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
@@ -10,6 +10,7 @@ const navItems = [
   { href: '/admin/vendors', label: 'Vendors', icon: Building2, exact: false },
   { href: '/admin/blog', label: 'Blog', icon: FileText, exact: false },
   { href: '/admin/import', label: 'Import', icon: Upload, exact: false },
+  { href: '/admin/bulk-verify', label: 'Bulk Verify', icon: ShieldCheck, exact: false },
 ];
 
 export function AdminNav() {
