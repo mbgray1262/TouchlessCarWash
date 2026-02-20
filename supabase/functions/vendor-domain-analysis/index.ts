@@ -1,5 +1,3 @@
-import { createClient } from 'npm:@supabase/supabase-js@2';
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -18,16 +16,28 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-    );
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-    const { data, error } = await supabase.rpc('vendor_domain_analysis', {
-      blacklist: BLACKLIST,
-    }).limit(100000);
+    const res = await fetch(`${supabaseUrl}/rest/v1/rpc/vendor_domain_analysis`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${serviceRoleKey}`,
+        'apikey': serviceRoleKey,
+        'Range': '0-999999',
+        'Range-Unit': 'items',
+        'Prefer': 'count=none',
+      },
+      body: JSON.stringify({ blacklist: BLACKLIST }),
+    });
 
-    if (error) throw error;
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`PostgREST error ${res.status}: ${text}`);
+    }
+
+    const data = await res.json();
 
     return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
