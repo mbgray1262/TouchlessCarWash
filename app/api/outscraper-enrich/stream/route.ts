@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
-import { read as xlsxRead, utils as xlsxUtils } from 'xlsx';
 import { supabase } from '@/lib/supabase';
+
+export const maxDuration = 300;
 
 const BATCH_SIZE = 1000;
 
@@ -96,43 +97,6 @@ function mapRowToEnrichment(row: RawRow): { placeId: string; updates: Record<str
   return { placeId, updates };
 }
 
-function parseCSVText(text: string): RawRow[] {
-  const lines = text.split(/\r?\n/);
-  if (lines.length < 2) return [];
-
-  const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
-  const rows: RawRow[] = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-
-    const values: string[] = [];
-    let inQuotes = false;
-    let current = '';
-
-    for (let c = 0; c < line.length; c++) {
-      const ch = line[c];
-      if (ch === '"') {
-        if (inQuotes && line[c + 1] === '"') { current += '"'; c++; }
-        else inQuotes = !inQuotes;
-      } else if (ch === ',' && !inQuotes) {
-        values.push(current);
-        current = '';
-      } else {
-        current += ch;
-      }
-    }
-    values.push(current);
-
-    const row: RawRow = {};
-    headers.forEach((h, idx) => { row[h] = values[idx] ?? null; });
-    rows.push(row);
-  }
-
-  return rows;
-}
-
 function sseEvent(data: unknown): string {
   return `data: ${JSON.stringify(data)}\n\n`;
 }
@@ -147,47 +111,16 @@ export async function POST(req: NextRequest) {
       }
 
       try {
-        const contentType = req.headers.get('content-type') ?? '';
-        if (!contentType.includes('multipart/form-data')) {
-          send({ type: 'error', message: 'Please upload a file.' });
-          controller.close();
-          return;
-        }
+        const body = await req.json();
+        const rawRows: RawRow[] = body?.rows;
 
-        send({ type: 'status', message: 'Parsing file…', phase: 'parse' });
-
-        const formData = await req.formData();
-        const file = formData.get('file') as File | null;
-        if (!file) {
-          send({ type: 'error', message: 'No file provided.' });
-          controller.close();
-          return;
-        }
-
-        const ext = file.name.toLowerCase().split('.').pop();
-        if (!['csv', 'xlsx', 'xls'].includes(ext ?? '')) {
-          send({ type: 'error', message: 'Unsupported file type. Please upload .csv, .xlsx, or .xls.' });
-          controller.close();
-          return;
-        }
-
-        let rawRows: RawRow[];
-        if (ext === 'csv') {
-          rawRows = parseCSVText(await file.text());
-        } else {
-          const wb = xlsxRead(await file.arrayBuffer(), { type: 'array', dense: true });
-          const ws = wb.Sheets[wb.SheetNames[0]];
-          rawRows = xlsxUtils.sheet_to_json(ws, { defval: null });
-        }
-
-        if (rawRows.length === 0) {
-          send({ type: 'error', message: 'File is empty or has no data rows.' });
+        if (!Array.isArray(rawRows) || rawRows.length === 0) {
+          send({ type: 'error', message: 'No rows provided.' });
           controller.close();
           return;
         }
 
         const totalRows = rawRows.length;
-        send({ type: 'parsed', totalRows });
 
         const mapped = rawRows.map(r => mapRowToEnrichment(r));
         const skippedNoPlaceId = mapped.filter(m => m === null).length;

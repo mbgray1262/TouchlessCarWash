@@ -10,8 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AdminNav } from '@/components/AdminNav';
+import { parseSpreadsheetFile } from './parseSpreadsheet';
 
-type ImportStatus = 'idle' | 'uploading' | 'parsing' | 'processing' | 'done' | 'error';
+type ImportStatus = 'idle' | 'parsing' | 'processing' | 'done' | 'error';
 
 interface EnrichSummary {
   total_rows: number;
@@ -55,7 +56,6 @@ export default function OutscraperEnrichPage() {
   const [status, setStatus] = useState<ImportStatus>('idle');
   const [fileName, setFileName] = useState('');
   const [fileSize, setFileSize] = useState('');
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [progress, setProgress] = useState<ProgressState | null>(null);
   const [totalRows, setTotalRows] = useState<number | null>(null);
   const [statusMessage, setStatusMessage] = useState('');
@@ -63,15 +63,14 @@ export default function OutscraperEnrichPage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const xhrRef = useRef<XMLHttpRequest | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const reset = useCallback(() => {
-    xhrRef.current?.abort();
-    xhrRef.current = null;
+    abortRef.current?.abort();
+    abortRef.current = null;
     setStatus('idle');
     setFileName('');
     setFileSize('');
-    setUploadProgress(0);
     setProgress(null);
     setTotalRows(null);
     setStatusMessage('');
@@ -91,94 +90,86 @@ export default function OutscraperEnrichPage() {
 
     setFileName(file.name);
     setFileSize((file.size / 1024 / 1024).toFixed(1) + ' MB');
-    setStatus('uploading');
-    setUploadProgress(0);
+    setStatus('parsing');
+    setStatusMessage('Reading file…');
     setProgress(null);
     setTotalRows(null);
     setSummary(null);
     setErrorMsg('');
 
-    const formData = new FormData();
-    formData.append('file', file);
+    let rawRows: Record<string, unknown>[];
+    try {
+      rawRows = await parseSpreadsheetFile(file) as Record<string, unknown>[];
+    } catch (err) {
+      setStatus('error');
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to parse file.');
+      return;
+    }
 
-    await new Promise<void>((resolve) => {
-      const xhr = new XMLHttpRequest();
-      xhrRef.current = xhr;
+    if (rawRows.length === 0) {
+      setStatus('error');
+      setErrorMsg('File is empty or has no data rows.');
+      return;
+    }
 
-      xhr.upload.addEventListener('progress', e => {
-        if (e.lengthComputable) {
-          const pct = Math.round((e.loaded / e.total) * 100);
-          setUploadProgress(pct);
-        }
+    setTotalRows(rawRows.length);
+    setStatus('processing');
+    setStatusMessage('Matching rows and writing enrichment data…');
+
+    const ac = new AbortController();
+    abortRef.current = ac;
+
+    try {
+      const res = await fetch('/api/outscraper-enrich/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows: rawRows }),
+        signal: ac.signal,
       });
 
-      xhr.addEventListener('readystatechange', () => {
-        if (xhr.readyState === XMLHttpRequest.HEADERS_RECEIVED) {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            setUploadProgress(100);
-            setStatus('parsing');
-            setStatusMessage('Parsing file…');
-          }
-        }
-      });
+      if (!res.ok || !res.body) {
+        let msg = `Server error (${res.status})`;
+        try {
+          const body = await res.json();
+          msg = body.error ?? msg;
+        } catch { }
+        setStatus('error');
+        setErrorMsg(msg);
+        return;
+      }
 
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
       let buffer = '';
-      xhr.addEventListener('progress', () => {
-        const newText = xhr.responseText.slice(buffer.length);
-        buffer = xhr.responseText;
 
-        const parts = newText.split('\n\n');
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() ?? '';
+
         for (const part of parts) {
           const line = part.trim();
           if (!line.startsWith('data: ')) continue;
           try {
             const event = JSON.parse(line.slice(6));
             handleSSEEvent(event);
-          } catch {
-          }
+          } catch { }
         }
-      });
-
-      xhr.addEventListener('load', () => {
-        xhrRef.current = null;
-        if (xhr.status < 200 || xhr.status >= 300) {
-          try {
-            const body = JSON.parse(xhr.responseText);
-            setStatus('error');
-            setErrorMsg(body.error ?? `Server error (${xhr.status})`);
-          } catch {
-            setStatus('error');
-            setErrorMsg(`Server error (${xhr.status})`);
-          }
-        }
-        resolve();
-      });
-
-      xhr.addEventListener('error', () => {
-        setStatus('error');
-        setErrorMsg('Network error. Please check your connection and try again.');
-        resolve();
-      });
-
-      xhr.addEventListener('abort', () => {
-        setStatus('idle');
-        resolve();
-      });
-
-      xhr.open('POST', '/api/outscraper-enrich/stream');
-      xhr.send(formData);
-    });
+      }
+    } catch (err) {
+      if ((err as Error)?.name === 'AbortError') return;
+      setStatus('error');
+      setErrorMsg(err instanceof Error ? err.message : 'Network error.');
+    }
   }
 
   function handleSSEEvent(event: Record<string, unknown>) {
     switch (event.type) {
       case 'status':
         setStatusMessage(event.message as string);
-        break;
-      case 'parsed':
-        setTotalRows(event.totalRows as number);
-        setStatus('processing');
-        setStatusMessage('Matching rows and writing enrichment data…');
         break;
       case 'progress':
         setProgress({
@@ -212,7 +203,7 @@ export default function OutscraperEnrichPage() {
     if (file) processFile(file).catch(() => {});
   }
 
-  const isRunning = status === 'uploading' || status === 'parsing' || status === 'processing';
+  const isRunning = status === 'parsing' || status === 'processing';
   const matchRate = summary ? Math.round((summary.matched / Math.max(summary.total_rows - summary.skipped_no_place_id, 1)) * 100) : 0;
 
   return (
@@ -303,19 +294,10 @@ export default function OutscraperEnrichPage() {
             <Card>
               <CardContent className="p-6">
                 <div className="space-y-4">
-                  {status === 'uploading' && (
-                    <ProgressSection
-                      label="Uploading file to server"
-                      sublabel={`${uploadProgress}% — ${fileSize}`}
-                      pct={uploadProgress}
-                      indeterminate={false}
-                    />
-                  )}
-
                   {status === 'parsing' && (
                     <ProgressSection
-                      label={statusMessage || 'Parsing file…'}
-                      sublabel="Reading rows from spreadsheet"
+                      label={statusMessage || 'Reading and parsing file…'}
+                      sublabel="Processing spreadsheet in your browser"
                       pct={100}
                       indeterminate={true}
                     />
