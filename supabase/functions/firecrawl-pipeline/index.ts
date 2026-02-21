@@ -404,6 +404,14 @@ Deno.serve(async (req: Request) => {
           await syncFilters(supabase, listing.id, is_touchless, amenities, filterMap);
 
           totalProcessed++;
+
+          if (batch && totalProcessed % 25 === 0) {
+            await supabase.from('pipeline_batches').update({
+              completed_count: batch.completed_count + totalProcessed,
+              credits_used: creditsUsed,
+              updated_at: new Date().toISOString(),
+            }).eq('id', batch.id);
+          }
         }
 
         nextUrl = pollData.next ?? null;

@@ -47,11 +47,13 @@ function BatchProgressCard({
   onPoll,
   polling,
   fcProgress,
+  classifyCount,
 }: {
   batch: PipelineBatch;
   onPoll: (jobId: string) => void;
   polling: string | null;
   fcProgress: FirecrawlProgress | null;
+  classifyCount: number | null;
 }) {
   const scrapeTotal = fcProgress?.total ?? batch.total_urls;
   const scrapeCompleted = fcProgress?.completed ?? batch.completed_count;
@@ -65,6 +67,11 @@ function BatchProgressCard({
     fcStatus === 'completed' ? 'completed' :
     fcStatus === 'failed' ? 'failed' :
     batch.status;
+
+  const isClassifying = isPolling && classifyCount !== null;
+  const classifyPct = isClassifying && scrapeTotal > 0
+    ? Math.min(99, Math.round((classifyCount! / scrapeTotal) * 100))
+    : null;
 
   return (
     <div className="border border-gray-100 rounded-xl p-4 space-y-3">
@@ -121,6 +128,33 @@ function BatchProgressCard({
         )}
       </div>
 
+      {isClassifying && (
+        <div className="space-y-1">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-amber-600 font-medium flex items-center gap-1">
+              <Loader2 className="w-3 h-3 animate-spin" /> Classifying with AI…
+            </span>
+            <span className="text-gray-500 tabular-nums">
+              {classifyCount!.toLocaleString()} / {scrapeTotal.toLocaleString()} ({classifyPct}%)
+            </span>
+          </div>
+          <div className="relative h-2 rounded-full bg-amber-100 overflow-hidden">
+            <div
+              className="absolute inset-y-0 left-0 rounded-full bg-amber-400 transition-all duration-500"
+              style={{ width: `${classifyPct ?? 0}%` }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-300/40 to-transparent animate-[shimmer_1.5s_infinite]" />
+          </div>
+        </div>
+      )}
+
+      {isPolling && !isClassifying && (
+        <div className="flex items-center gap-2 text-xs text-amber-600">
+          <Loader2 className="w-3 h-3 animate-spin" />
+          <span>Fetching results from Firecrawl…</span>
+        </div>
+      )}
+
       <div className="flex items-center justify-between text-xs text-gray-400">
         <span>
           {new Date(batch.created_at).toLocaleString('en-US', {
@@ -128,7 +162,9 @@ function BatchProgressCard({
           })}
         </span>
         <span className="flex items-center gap-3">
-          {isLive && <span className="text-blue-500 flex items-center gap-1"><Loader2 className="w-2.5 h-2.5 animate-spin" /> live</span>}
+          {isLive && fcStatus !== 'completed' && fcStatus !== 'failed' && (
+            <span className="text-blue-500 flex items-center gap-1"><Loader2 className="w-2.5 h-2.5 animate-spin" /> scraping</span>
+          )}
           {(fcProgress?.credits_used ?? batch.credits_used) > 0 && (
             <span>{(fcProgress?.credits_used ?? batch.credits_used).toLocaleString()} credits used</span>
           )}
@@ -146,8 +182,10 @@ export default function PipelinePage() {
   const [chunkIndex, setChunkIndex] = useState(0);
   const [lastSubmitResult, setLastSubmitResult] = useState<{ jobId: string; urls: number } | null>(null);
   const [fcProgressMap, setFcProgressMap] = useState<Record<string, FirecrawlProgress>>({});
+  const [classifyProgressMap, setClassifyProgressMap] = useState<Record<string, number>>({});
   const autoRefreshRef = useRef<NodeJS.Timeout | null>(null);
   const fcPollRef = useRef<NodeJS.Timeout | null>(null);
+  const classifyPollRef = useRef<NodeJS.Timeout | null>(null);
 
   const showToast = useCallback((type: 'success' | 'error', msg: string) => {
     setToast({ type, msg });
@@ -239,6 +277,19 @@ export default function PipelinePage() {
   const handlePollBatch = useCallback(async (jobId: string) => {
     setPollingJobId(jobId);
     setUiState('polling');
+
+    classifyPollRef.current = setInterval(async () => {
+      try {
+        const res = await fetch('/api/pipeline/status');
+        if (!res.ok) return;
+        const json: PipelineStatusResponse = await res.json();
+        const batch = json.batches.find(b => b.firecrawl_job_id === jobId);
+        if (batch) {
+          setClassifyProgressMap(prev => ({ ...prev, [jobId]: batch.completed_count }));
+        }
+      } catch { /* silent */ }
+    }, 2000);
+
     try {
       const res = await fetch('/api/pipeline/poll', {
         method: 'POST',
@@ -247,11 +298,13 @@ export default function PipelinePage() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? `Error ${res.status}`);
-      showToast('success', `Polled: ${json.processed?.toLocaleString() ?? 0} results processed (${json.credits_used?.toLocaleString() ?? 0} credits used)`);
+      showToast('success', `Classified ${json.processed?.toLocaleString() ?? 0} results (${json.credits_used?.toLocaleString() ?? 0} credits used)`);
       await loadStatus();
     } catch (err) {
       showToast('error', (err as Error).message);
     } finally {
+      if (classifyPollRef.current) clearInterval(classifyPollRef.current);
+      setClassifyProgressMap(prev => { const n = { ...prev }; delete n[jobId]; return n; });
       setPollingJobId(null);
       setUiState('idle');
     }
@@ -442,6 +495,7 @@ export default function PipelinePage() {
                     onPoll={handlePollBatch}
                     polling={pollingJobId}
                     fcProgress={batch.firecrawl_job_id ? (fcProgressMap[batch.firecrawl_job_id] ?? null) : null}
+                    classifyCount={batch.firecrawl_job_id ? (classifyProgressMap[batch.firecrawl_job_id] ?? null) : null}
                   />
                 ))}
               </div>
