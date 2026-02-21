@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, List, Building2, FileText, ArrowLeft, Upload, ShieldCheck, Link2, Database, Zap } from 'lucide-react';
+import { LayoutDashboard, List, Building2, FileText, ArrowLeft, Upload, ShieldCheck, Link2, Database, Zap, Filter } from 'lucide-react';
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
@@ -14,6 +14,7 @@ const navItems = [
   { href: '/admin/import/enrich', label: 'Enrich', icon: Database, exact: true },
   { href: '/admin/bulk-verify', label: 'Bulk Verify', icon: ShieldCheck, exact: false },
   { href: '/admin/pipeline', label: 'Pipeline', icon: Zap, exact: false },
+  { href: '/admin/filters', label: 'Filters', icon: Filter, exact: false },
 ];
 
 export function AdminNav() {

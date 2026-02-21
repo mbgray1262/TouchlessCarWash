@@ -11,6 +11,26 @@ const SKIP_DOMAINS = [
   'bbb.org', 'instagram.com', 'twitter.com', 'tiktok.com',
 ];
 
+const AMENITY_TO_FILTER_SLUG: Record<string, string> = {
+  'Free Vacuum': 'free-vacuum',
+  'Free Vacuums': 'free-vacuum',
+  'Vacuum': 'free-vacuum',
+  'Unlimited Wash Club': 'unlimited-wash-club',
+  'Membership': 'unlimited-wash-club',
+  'Monthly Plan': 'unlimited-wash-club',
+  'Unlimited': 'unlimited-wash-club',
+  'Self-Serve Bays': 'self-serve-bays',
+  'Self Service': 'self-serve-bays',
+  'Wand Wash': 'self-serve-bays',
+  'Self Serve': 'self-serve-bays',
+  'RV Wash': 'rv-oversized',
+  'Truck Wash': 'rv-oversized',
+  'Oversized Vehicle': 'rv-oversized',
+  'RV/Truck Wash': 'rv-oversized',
+};
+
+type FilterMap = Record<string, number>;
+
 function filterImages(images: string[]): string[] {
   return images.filter(url => {
     const lower = url.toLowerCase();
@@ -71,6 +91,26 @@ CLASSIFICATION RULES:
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('No JSON in Claude response');
   return JSON.parse(jsonMatch[0]);
+}
+
+// deno-lint-ignore no-explicit-any
+async function syncFilters(supabase: any, listingId: string, isTouchless: boolean | null, amenities: string[], filterMap: FilterMap) {
+  const inserts: { listing_id: string; filter_id: number }[] = [];
+
+  if (isTouchless === true && filterMap['touchless']) {
+    inserts.push({ listing_id: listingId, filter_id: filterMap['touchless'] });
+  }
+
+  for (const amenity of amenities) {
+    const slug = AMENITY_TO_FILTER_SLUG[amenity];
+    if (slug && filterMap[slug]) {
+      inserts.push({ listing_id: listingId, filter_id: filterMap[slug] });
+    }
+  }
+
+  if (inserts.length > 0) {
+    await supabase.from('listing_filters').upsert(inserts, { onConflict: 'listing_id,filter_id' });
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -138,6 +178,10 @@ Deno.serve(async (req: Request) => {
     const { data: batch } = await supabase.from('pipeline_batches')
       .select('id').eq('firecrawl_job_id', payload.jobId ?? '').maybeSingle();
 
+    const { data: filterRows } = await supabase.from('filters').select('id, slug');
+    const filterMap: FilterMap = {};
+    for (const f of (filterRows ?? [])) filterMap[f.slug] = f.id;
+
     let crawl_status = 'success';
     let is_touchless: boolean | null = null;
     let touchless_evidence = '';
@@ -194,6 +238,8 @@ Deno.serve(async (req: Request) => {
       raw_markdown: markdown.slice(0, 50000),
       images_found: images.length,
     });
+
+    await syncFilters(supabase, listing.id, is_touchless, amenities, filterMap);
 
     return Response.json({ ok: true }, { headers: corsHeaders });
   } catch (err) {

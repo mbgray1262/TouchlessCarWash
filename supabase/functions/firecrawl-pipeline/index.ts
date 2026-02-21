@@ -13,6 +13,26 @@ const SKIP_DOMAINS = [
   'bbb.org', 'instagram.com', 'twitter.com', 'tiktok.com',
 ];
 
+const AMENITY_TO_FILTER_SLUG: Record<string, string> = {
+  'Free Vacuum': 'free-vacuum',
+  'Free Vacuums': 'free-vacuum',
+  'Vacuum': 'free-vacuum',
+  'Unlimited Wash Club': 'unlimited-wash-club',
+  'Membership': 'unlimited-wash-club',
+  'Monthly Plan': 'unlimited-wash-club',
+  'Unlimited': 'unlimited-wash-club',
+  'Self-Serve Bays': 'self-serve-bays',
+  'Self Service': 'self-serve-bays',
+  'Wand Wash': 'self-serve-bays',
+  'Self Serve': 'self-serve-bays',
+  'RV Wash': 'rv-oversized',
+  'Truck Wash': 'rv-oversized',
+  'Oversized Vehicle': 'rv-oversized',
+  'RV/Truck Wash': 'rv-oversized',
+};
+
+type FilterMap = Record<string, number>;
+
 function filterImages(images: string[]): string[] {
   return images.filter(url => {
     const lower = url.toLowerCase();
@@ -75,6 +95,26 @@ CLASSIFICATION RULES:
   return JSON.parse(jsonMatch[0]);
 }
 
+// deno-lint-ignore no-explicit-any
+async function syncFilters(supabase: any, listingId: string, isTouchless: boolean | null, amenities: string[], filterMap: FilterMap) {
+  const inserts: { listing_id: string; filter_id: number }[] = [];
+
+  if (isTouchless === true && filterMap['touchless']) {
+    inserts.push({ listing_id: listingId, filter_id: filterMap['touchless'] });
+  }
+
+  for (const amenity of amenities) {
+    const slug = AMENITY_TO_FILTER_SLUG[amenity];
+    if (slug && filterMap[slug]) {
+      inserts.push({ listing_id: listingId, filter_id: filterMap[slug] });
+    }
+  }
+
+  if (inserts.length > 0) {
+    await supabase.from('listing_filters').upsert(inserts, { onConflict: 'listing_id,filter_id' });
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -90,10 +130,12 @@ Deno.serve(async (req: Request) => {
     const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
 
     const url = new URL(req.url);
-    const action = url.searchParams.get('action') ?? (req.method === 'POST' ? (await req.json().catch(() => ({}))).action : 'status');
+    const bodyText = req.method === 'POST' ? await req.text() : '';
+    const body = bodyText ? JSON.parse(bodyText) : {};
+    const action = url.searchParams.get('action') ?? body.action ?? 'status';
 
     // --- GET STATUS ---
-    if (req.method === 'GET' && !action || action === 'status') {
+    if (action === 'status') {
       const [totalRes, scrapedRes, classifiedRes, touchlessRes, notTouchlessRes, failedRes, redirectRes] = await Promise.all([
         supabase.from('listings').select('id', { count: 'exact', head: true })
           .is('is_touchless', null).not('website', 'is', null).neq('website', ''),
@@ -143,7 +185,6 @@ Deno.serve(async (req: Request) => {
     if (action === 'submit_batch') {
       if (!firecrawlKey) return Response.json({ error: 'FIRECRAWL_API_KEY not configured' }, { status: 500, headers: corsHeaders });
 
-      const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
       const retryFailed = body.retry_failed === true;
       const chunkIndex = body.chunk_index ?? 0;
       const appUrl = body.app_url ?? Deno.env.get('APP_URL') ?? '';
@@ -170,7 +211,7 @@ Deno.serve(async (req: Request) => {
       if (listErr) return Response.json({ error: listErr.message }, { status: 500, headers: corsHeaders });
       if (!listings || listings.length === 0) return Response.json({ message: 'No listings to process', done: true }, { headers: corsHeaders });
 
-      const urls = listings.map(l => l.website as string);
+      const urls = listings.map((l: { website: string }) => l.website);
 
       const batchBody: Record<string, unknown> = {
         urls,
@@ -227,12 +268,15 @@ Deno.serve(async (req: Request) => {
     if (action === 'poll_batch') {
       if (!firecrawlKey || !anthropicKey) return Response.json({ error: 'API keys not configured' }, { status: 500, headers: corsHeaders });
 
-      const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
       const jobId: string = body.job_id ?? url.searchParams.get('job_id');
       if (!jobId) return Response.json({ error: 'job_id required' }, { status: 400, headers: corsHeaders });
 
       const { data: batch } = await supabase.from('pipeline_batches')
         .select('*').eq('firecrawl_job_id', jobId).maybeSingle();
+
+      const { data: filterRows } = await supabase.from('filters').select('id, slug');
+      const filterMap: FilterMap = {};
+      for (const f of (filterRows ?? [])) filterMap[f.slug] = f.id;
 
       let nextUrl: string | null = `${FIRECRAWL_API}/batch/scrape/${jobId}`;
       let totalProcessed = 0;
@@ -266,7 +310,6 @@ Deno.serve(async (req: Request) => {
           const sourceURL = item.metadata?.sourceURL ?? '';
           const statusCode = item.metadata?.statusCode ?? 0;
 
-          // Find matching listing by website URL
           const { data: listings } = await supabase.from('listings')
             .select('id, is_touchless, hero_image, description')
             .eq('website', sourceURL)
@@ -333,6 +376,8 @@ Deno.serve(async (req: Request) => {
             raw_markdown: markdown.slice(0, 50000),
             images_found: images.length,
           });
+
+          await syncFilters(supabase, listing.id, is_touchless, amenities, filterMap);
 
           totalProcessed++;
         }
