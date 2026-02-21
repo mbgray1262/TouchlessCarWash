@@ -100,17 +100,22 @@ export async function POST(req: NextRequest) {
 
     const placeIds = candidates.map(c => c.placeId);
 
-    const { data: listings, error: fetchErr } = await supabase
-      .from('listings')
-      .select('id, google_place_id, hours')
-      .in('google_place_id', placeIds);
-
-    if (fetchErr) {
-      return NextResponse.json({ error: fetchErr.message }, { status: 500 });
+    const LOOKUP_BATCH = 100;
+    const allListings: { id: string; google_place_id: string; hours: unknown }[] = [];
+    for (let i = 0; i < placeIds.length; i += LOOKUP_BATCH) {
+      const batch = placeIds.slice(i, i + LOOKUP_BATCH);
+      const { data, error: fetchErr } = await supabase
+        .from('listings')
+        .select('id, google_place_id, hours')
+        .in('google_place_id', batch);
+      if (fetchErr) {
+        return NextResponse.json({ error: fetchErr.message }, { status: 500 });
+      }
+      allListings.push(...(data ?? []));
     }
 
     const listingMap = new Map<string, { id: string; hours: unknown }>();
-    for (const l of (listings ?? [])) {
+    for (const l of allListings) {
       if (l.google_place_id) listingMap.set(l.google_place_id, { id: l.id, hours: l.hours });
     }
 
