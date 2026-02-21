@@ -322,8 +322,8 @@ Deno.serve(async (req: Request) => {
       const { data: batch } = await supabase.from('pipeline_batches')
         .select('*').eq('firecrawl_job_id', jobId).maybeSingle();
 
-      // Mark classification as started if this is the first poll call
-      if (batch && !nextCursor && batch.classify_status !== 'running' && batch.classify_status !== 'completed') {
+      // Mark classification as started (or restarted after a stall) on the first poll call
+      if (batch && !nextCursor && batch.classify_status !== 'completed') {
         await supabase.from('pipeline_batches').update({
           classify_status: 'running',
           classify_started_at: new Date().toISOString(),

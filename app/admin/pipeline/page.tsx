@@ -26,14 +26,20 @@ function getBatchStage(batch: PipelineBatch): {
     return { label: 'Done', sublabel: 'Scraping + AI classification complete', color: 'green', canClassify: false };
   }
   if (batch.classify_status === 'running') {
-    return { label: 'Classifying', sublabel: 'AI is classifying scraped results…', color: 'amber', canClassify: false };
+    // If classify_status is "running" but updated more than 3 minutes ago, the browser tab
+    // that was polling must have closed or crashed. Show button so it can be restarted.
+    const updatedAt = new Date(batch.updated_at).getTime();
+    const stale = Date.now() - updatedAt > 3 * 60 * 1000;
+    if (stale) {
+      return { label: 'Stalled — Click to Resume', sublabel: 'Classification stopped. Click Classify Results to resume.', color: 'blue', canClassify: true };
+    }
+    return { label: 'Classifying', sublabel: 'AI is classifying scraped results…', color: 'blue', canClassify: false };
   }
   if (batch.status === 'running') {
-    // Scraping is still in progress — completed_count tells us how many Firecrawl has finished
     const scraped = batch.completed_count;
     const total = batch.total_urls;
     if (scraped >= total) {
-      return { label: 'Ready to Classify', sublabel: `All ${total.toLocaleString()} pages scraped — click Classify to run AI`, color: 'amber', canClassify: true };
+      return { label: 'Ready to Classify', sublabel: `All ${total.toLocaleString()} pages scraped — click Classify to run AI`, color: 'blue', canClassify: true };
     }
     return { label: 'Scraping', sublabel: `Firecrawl is crawling websites…`, color: 'blue', canClassify: false };
   }
