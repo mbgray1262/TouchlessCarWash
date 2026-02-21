@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AdminNav } from '@/components/AdminNav';
 
-type ImportStatus = 'idle' | 'uploading' | 'processing' | 'done' | 'error';
+type ImportStatus = 'idle' | 'uploading' | 'parsing' | 'processing' | 'done' | 'error';
 
 interface EnrichSummary {
   total_rows: number;
@@ -20,6 +20,14 @@ interface EnrichSummary {
   skipped_no_match: number;
   columns_updated: Record<string, number>;
   errors: string[];
+}
+
+interface ProgressState {
+  processed: number;
+  total: number;
+  pct: number;
+  batch: number;
+  totalBatches: number;
 }
 
 const COLUMN_MAP: { spreadsheet: string; db: string; description: string }[] = [
@@ -48,6 +56,9 @@ export default function OutscraperEnrichPage() {
   const [fileName, setFileName] = useState('');
   const [fileSize, setFileSize] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [progress, setProgress] = useState<ProgressState | null>(null);
+  const [totalRows, setTotalRows] = useState<number | null>(null);
+  const [statusMessage, setStatusMessage] = useState('');
   const [summary, setSummary] = useState<EnrichSummary | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [isDragging, setIsDragging] = useState(false);
@@ -61,6 +72,9 @@ export default function OutscraperEnrichPage() {
     setFileName('');
     setFileSize('');
     setUploadProgress(0);
+    setProgress(null);
+    setTotalRows(null);
+    setStatusMessage('');
     setSummary(null);
     setErrorMsg('');
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -79,13 +93,15 @@ export default function OutscraperEnrichPage() {
     setFileSize((file.size / 1024 / 1024).toFixed(1) + ' MB');
     setStatus('uploading');
     setUploadProgress(0);
+    setProgress(null);
+    setTotalRows(null);
     setSummary(null);
     setErrorMsg('');
 
     const formData = new FormData();
     formData.append('file', file);
 
-    await new Promise<void>((resolve, reject) => {
+    await new Promise<void>((resolve) => {
       const xhr = new XMLHttpRequest();
       xhrRef.current = xhr;
 
@@ -93,26 +109,39 @@ export default function OutscraperEnrichPage() {
         if (e.lengthComputable) {
           const pct = Math.round((e.loaded / e.total) * 100);
           setUploadProgress(pct);
-          if (pct === 100) setStatus('processing');
+        }
+      });
+
+      xhr.addEventListener('readystatechange', () => {
+        if (xhr.readyState === XMLHttpRequest.HEADERS_RECEIVED) {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            setUploadProgress(100);
+            setStatus('parsing');
+            setStatusMessage('Parsing file…');
+          }
+        }
+      });
+
+      let buffer = '';
+      xhr.addEventListener('progress', () => {
+        const newText = xhr.responseText.slice(buffer.length);
+        buffer = xhr.responseText;
+
+        const parts = newText.split('\n\n');
+        for (const part of parts) {
+          const line = part.trim();
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const event = JSON.parse(line.slice(6));
+            handleSSEEvent(event);
+          } catch {
+          }
         }
       });
 
       xhr.addEventListener('load', () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            const result: EnrichSummary & { error?: string } = JSON.parse(xhr.responseText);
-            if (result.error) {
-              setStatus('error');
-              setErrorMsg(result.error);
-            } else {
-              setSummary(result);
-              setStatus('done');
-            }
-          } catch {
-            setStatus('error');
-            setErrorMsg('Unexpected response from server.');
-          }
-        } else {
+        xhrRef.current = null;
+        if (xhr.status < 200 || xhr.status >= 300) {
           try {
             const body = JSON.parse(xhr.responseText);
             setStatus('error');
@@ -128,14 +157,47 @@ export default function OutscraperEnrichPage() {
       xhr.addEventListener('error', () => {
         setStatus('error');
         setErrorMsg('Network error. Please check your connection and try again.');
-        reject();
+        resolve();
       });
 
-      xhr.addEventListener('abort', () => { setStatus('idle'); resolve(); });
+      xhr.addEventListener('abort', () => {
+        setStatus('idle');
+        resolve();
+      });
 
-      xhr.open('POST', '/api/outscraper-enrich');
+      xhr.open('POST', '/api/outscraper-enrich/stream');
       xhr.send(formData);
     });
+  }
+
+  function handleSSEEvent(event: Record<string, unknown>) {
+    switch (event.type) {
+      case 'status':
+        setStatusMessage(event.message as string);
+        break;
+      case 'parsed':
+        setTotalRows(event.totalRows as number);
+        setStatus('processing');
+        setStatusMessage('Matching rows and writing enrichment data…');
+        break;
+      case 'progress':
+        setProgress({
+          processed: event.processed as number,
+          total: event.total as number,
+          pct: event.pct as number,
+          batch: event.batch as number,
+          totalBatches: event.totalBatches as number,
+        });
+        break;
+      case 'done':
+        setSummary(event.summary as EnrichSummary);
+        setStatus('done');
+        break;
+      case 'error':
+        setStatus('error');
+        setErrorMsg(event.message as string);
+        break;
+    }
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -150,7 +212,7 @@ export default function OutscraperEnrichPage() {
     if (file) processFile(file).catch(() => {});
   }
 
-  const isRunning = status === 'uploading' || status === 'processing';
+  const isRunning = status === 'uploading' || status === 'parsing' || status === 'processing';
   const matchRate = summary ? Math.round((summary.matched / Math.max(summary.total_rows - summary.skipped_no_place_id, 1)) * 100) : 0;
 
   return (
@@ -240,30 +302,47 @@ export default function OutscraperEnrichPage() {
           {isRunning && (
             <Card>
               <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
-                    <span className="text-sm font-medium text-gray-700">
-                      {status === 'uploading' ? 'Uploading file…' : 'Matching rows and writing enrichment data…'}
-                    </span>
-                  </div>
+                <div className="space-y-4">
                   {status === 'uploading' && (
-                    <span className="text-sm text-gray-500 tabular-nums">{uploadProgress}%</span>
+                    <ProgressSection
+                      label="Uploading file to server"
+                      sublabel={`${uploadProgress}% — ${fileSize}`}
+                      pct={uploadProgress}
+                      indeterminate={false}
+                    />
+                  )}
+
+                  {status === 'parsing' && (
+                    <ProgressSection
+                      label={statusMessage || 'Parsing file…'}
+                      sublabel="Reading rows from spreadsheet"
+                      pct={100}
+                      indeterminate={true}
+                    />
+                  )}
+
+                  {status === 'processing' && (
+                    <ProgressSection
+                      label="Matching rows and writing enrichment data"
+                      sublabel={
+                        progress
+                          ? `${progress.processed.toLocaleString()} / ${progress.total.toLocaleString()} rows — batch ${progress.batch} of ${progress.totalBatches}`
+                          : totalRows
+                          ? `0 / ${totalRows.toLocaleString()} rows`
+                          : 'Starting…'
+                      }
+                      pct={progress?.pct ?? 0}
+                      indeterminate={!progress}
+                    />
                   )}
                 </div>
-                <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
-                  {status === 'uploading' ? (
-                    <div className="bg-blue-500 h-2.5 rounded-full transition-all duration-200" style={{ width: `${uploadProgress}%` }} />
-                  ) : (
-                    <div className="bg-blue-500 h-2.5 rounded-full animate-pulse w-full" />
-                  )}
-                </div>
-                {status === 'processing' && (
-                  <p className="text-xs text-gray-400 mt-2">
-                    Matching each row by <span className="font-mono">place_id</span> and updating null columns only&hellip;
-                  </p>
-                )}
-                <Button variant="outline" size="sm" className="mt-4 text-red-600 border-red-200 hover:bg-red-50" onClick={reset}>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-5 text-red-600 border-red-200 hover:bg-red-50"
+                  onClick={reset}
+                >
                   Cancel
                 </Button>
               </CardContent>
@@ -380,6 +459,43 @@ export default function OutscraperEnrichPage() {
             </CardContent>
           </Card>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ProgressSection({
+  label,
+  sublabel,
+  pct,
+  indeterminate,
+}: {
+  label: string;
+  sublabel: string;
+  pct: number;
+  indeterminate: boolean;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="flex items-center gap-2">
+          <Loader2 className="w-4 h-4 text-blue-500 animate-spin shrink-0" />
+          <span className="text-sm font-medium text-gray-700">{label}</span>
+        </div>
+        {!indeterminate && (
+          <span className="text-sm text-gray-500 tabular-nums font-medium">{pct}%</span>
+        )}
+      </div>
+      <p className="text-xs text-gray-400 mb-2 ml-6">{sublabel}</p>
+      <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+        {indeterminate ? (
+          <div className="bg-blue-500 h-2.5 rounded-full animate-pulse w-full" />
+        ) : (
+          <div
+            className="bg-blue-500 h-2.5 rounded-full transition-all duration-300"
+            style={{ width: `${pct}%` }}
+          />
+        )}
       </div>
     </div>
   );
