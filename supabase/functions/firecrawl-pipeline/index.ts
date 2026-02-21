@@ -254,7 +254,11 @@ Deno.serve(async (req: Request) => {
       if (listErr) return Response.json({ error: listErr.message }, { status: 500, headers: corsHeaders });
       if (!listings || listings.length === 0) return Response.json({ message: 'No listings to process', done: true }, { headers: corsHeaders });
 
-      const urls = listings.map((l: { website: string }) => l.website);
+      const urls = listings.map((l: { id: string; website: string }) => l.website);
+      const urlToId: Record<string, string> = {};
+      for (const l of listings as Array<{ id: string; website: string }>) {
+        urlToId[l.website] = l.id;
+      }
 
       const batchBody: Record<string, unknown> = {
         urls,
@@ -300,6 +304,7 @@ Deno.serve(async (req: Request) => {
         status: 'running',
         total_urls: urls.length,
         chunk_index: chunkIndex,
+        url_to_id: urlToId,
       }).select().single();
 
       if (batchErr) return Response.json({ error: batchErr.message }, { status: 500, headers: corsHeaders });
@@ -334,6 +339,10 @@ Deno.serve(async (req: Request) => {
       const filterMap: FilterMap = {};
       for (const f of (filterRows ?? [])) filterMap[f.slug] = f.id;
 
+      // url_to_id maps original submitted URL -> listing_id, stored when batch was created
+      const urlToId: Record<string, string> = (batch as unknown as { url_to_id?: Record<string, string> })?.url_to_id ?? {};
+      const hasUrlMap = Object.keys(urlToId).length > 0;
+
       const pageUrl = nextCursor ?? `${FIRECRAWL_API}/batch/scrape/${jobId}`;
       const pollRes = await fetch(pageUrl, {
         headers: { 'Authorization': `Bearer ${firecrawlKey}` },
@@ -361,31 +370,58 @@ Deno.serve(async (req: Request) => {
       const creditsUsed = pollData.creditsUsed ?? 0;
       const items = pollData.data ?? [];
 
-      // Collect all sourceURLs from this page and look them up in bulk
-      const sourceURLs = items.map(i => i.metadata?.sourceURL ?? '').filter(Boolean);
-      const urlVariants = sourceURLs.flatMap(u => {
-        const norm = normalizeUrl(u);
-        return [
-          `https://${norm}`, `https://${norm}/`,
-          `http://${norm}`, `http://${norm}/`,
-          `https://www.${norm}`, `https://www.${norm}/`,
-        ];
-      });
+      // Build listing lookup: prefer stored url_to_id map (exact match), fall back to normalization
+      let listingMap = new Map<string, { id: string; is_touchless: boolean | null; hero_image: string | null; description: string | null; website: string }>();
 
-      const { data: matchedListings } = await supabase.from('listings')
-        .select('id, is_touchless, hero_image, description, website')
-        .in('website', urlVariants);
+      if (hasUrlMap) {
+        // Collect all listing IDs for this page's sourceURLs using the stored map
+        const sourceURLs = items.map(i => i.metadata?.sourceURL ?? '').filter(Boolean);
+        const listingIds = sourceURLs
+          .map(u => urlToId[u] ?? urlToId[u.replace(/\/$/, '')] ?? urlToId[u + '/'] ?? null)
+          .filter(Boolean) as string[];
 
-      const listingMap = new Map<string, { id: string; is_touchless: boolean | null; hero_image: string | null; description: string | null; website: string }>();
-      for (const l of (matchedListings ?? [])) {
-        listingMap.set(normalizeUrl(l.website), l);
+        if (listingIds.length > 0) {
+          const { data: matchedListings } = await supabase.from('listings')
+            .select('id, is_touchless, hero_image, description, website')
+            .in('id', listingIds);
+          for (const l of (matchedListings ?? [])) {
+            listingMap.set(l.id, l);
+          }
+        }
+      } else {
+        // Legacy fallback: normalize URL and match by website field
+        const sourceURLs = items.map(i => i.metadata?.sourceURL ?? '').filter(Boolean);
+        const urlVariants = sourceURLs.flatMap(u => {
+          const norm = normalizeUrl(u);
+          return [
+            `https://${norm}`, `https://${norm}/`,
+            `http://${norm}`, `http://${norm}/`,
+            `https://www.${norm}`, `https://www.${norm}/`,
+          ];
+        });
+        const { data: matchedListings } = await supabase.from('listings')
+          .select('id, is_touchless, hero_image, description, website')
+          .in('website', urlVariants);
+        const byUrl = new Map<string, typeof listingMap extends Map<string, infer V> ? V : never>();
+        for (const l of (matchedListings ?? [])) {
+          byUrl.set(normalizeUrl(l.website), l);
+        }
+        listingMap = byUrl as typeof listingMap;
       }
 
       // Process all items on this page in parallel for maximum speed
       const results = await Promise.all(items.map(async (item) => {
         const sourceURL = item.metadata?.sourceURL ?? '';
         const statusCode = item.metadata?.statusCode ?? 0;
-        const listing = listingMap.get(normalizeUrl(sourceURL));
+
+        // Look up listing: by id (new batches with url_to_id map) or by normalized URL (legacy)
+        let listing: { id: string; is_touchless: boolean | null; hero_image: string | null; description: string | null; website: string } | undefined;
+        if (hasUrlMap) {
+          const listingId = urlToId[sourceURL] ?? urlToId[sourceURL.replace(/\/$/, '')] ?? urlToId[sourceURL + '/'];
+          if (listingId) listing = listingMap.get(listingId);
+        } else {
+          listing = listingMap.get(normalizeUrl(sourceURL));
+        }
         if (!listing) return null;
 
         let crawl_status = 'success';
@@ -463,11 +499,11 @@ Deno.serve(async (req: Request) => {
       const fcCompleted = pollData.completed ?? 0;
       const newClassified = (batch?.classified_count ?? 0) + totalProcessed;
 
-      // Only mark as done if Firecrawl says there's no next page AND it actually returned data.
-      // If Firecrawl returns 0 items with no next page, the job data has expired — do NOT mark complete.
       const hasNextPage = !!pollData.next;
       const hasData = items.length > 0;
-      const isDone = !hasNextPage && hasData;
+      // Only mark done if: no next page, had data to process, AND we actually matched+wrote at least some records.
+      // If 0 records matched (URL mismatch), do NOT mark complete — something went wrong.
+      const isDone = !hasNextPage && hasData && totalProcessed > 0;
       const isExpired = !hasNextPage && !hasData && fcCompleted === 0;
 
       if (isExpired) {
