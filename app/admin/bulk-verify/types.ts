@@ -43,7 +43,12 @@ export interface DashboardStats {
   awaiting_classification: number;
   auto_classified: number;
   name_matched: number;
+  name_match_high: number;
+  name_match_likely: number;
   approved: number;
+  approved_legacy: number;
+  approved_pipeline: number;
+  needs_review: number;
   crawl_failed: number;
   chains: number;
   standalone: number;

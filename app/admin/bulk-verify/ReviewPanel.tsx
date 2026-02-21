@@ -44,7 +44,7 @@ export function ReviewPanel({ refreshTrigger }: Props) {
         .select('id,name,address,city,state,website,parent_chain,verification_status,crawl_status,crawl_notes,is_touchless,touchless_confidence,classification_confidence,classification_source,touchless_evidence,hero_image,logo_url,photos,blocked_photos,amenities,is_approved,last_crawled_at')
         .eq('verification_status', 'auto_classified')
         .order('classification_confidence', { ascending: true, nullsFirst: true })
-        .range(pageNum * PAGE_SIZE, (pageNum + 1) * PAGE_SIZE);
+        .range(pageNum * PAGE_SIZE, pageNum * PAGE_SIZE + PAGE_SIZE - 1);
 
       if (filterState) query = query.eq('state', filterState.toUpperCase());
       if (filterSource === 'chain') query = query.not('parent_chain', 'is', null);
@@ -58,7 +58,7 @@ export function ReviewPanel({ refreshTrigger }: Props) {
         : data.filter(l => inferClassificationFromListing(l as PipelineListing) === filterClass);
 
       setListings(prev => reset ? filtered as PipelineListing[] : [...prev, ...filtered as PipelineListing[]]);
-      setHasMore(data.length === PAGE_SIZE + 1);
+      setHasMore(data.length === PAGE_SIZE);
     } finally {
       setLoading(false);
     }
