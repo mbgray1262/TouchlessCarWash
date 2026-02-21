@@ -1,17 +1,115 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, RefreshCw, SkipForward, Loader2, Zap, AlertCircle, ChevronRight } from 'lucide-react';
+import { Play, RefreshCw, SkipForward, Loader2, Zap, AlertCircle, ChevronRight, CheckCircle2, XCircle, Clock, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AdminNav } from '@/components/AdminNav';
 import { StatsGrid } from './StatsGrid';
-import { BatchesTable } from './BatchesTable';
 import { RecentRunsTable } from './RecentRunsTable';
-import type { PipelineStatusResponse } from './types';
+import type { PipelineBatch, PipelineStatusResponse } from './types';
 
 type UIState = 'idle' | 'submitting' | 'polling' | 'refreshing';
+
+function StatusBadge({ status }: { status: PipelineBatch['status'] }) {
+  if (status === 'completed') return (
+    <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
+      <CheckCircle2 className="w-3 h-3" /> Completed
+    </span>
+  );
+  if (status === 'running') return (
+    <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5">
+      <Loader2 className="w-3 h-3 animate-spin" /> Running
+    </span>
+  );
+  if (status === 'failed') return (
+    <span className="inline-flex items-center gap-1 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">
+      <XCircle className="w-3 h-3" /> Failed
+    </span>
+  );
+  return (
+    <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-full px-2 py-0.5">
+      <Clock className="w-3 h-3" /> Pending
+    </span>
+  );
+}
+
+function BatchProgressCard({
+  batch,
+  onPoll,
+  polling,
+}: {
+  batch: PipelineBatch;
+  onPoll: (jobId: string) => void;
+  polling: string | null;
+}) {
+  const pct = batch.total_urls > 0
+    ? Math.min(100, Math.round((batch.completed_count / batch.total_urls) * 100))
+    : 0;
+  const isPolling = polling === batch.firecrawl_job_id;
+
+  return (
+    <div className="border border-gray-100 rounded-xl p-4 space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-xs font-mono text-gray-400 shrink-0">Chunk #{batch.chunk_index + 1}</span>
+          <StatusBadge status={batch.status} />
+          <span className="text-xs text-gray-400 truncate hidden sm:block">
+            {batch.firecrawl_job_id ?? '—'}
+          </span>
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          <span className="text-xs text-gray-500 tabular-nums">
+            {batch.completed_count.toLocaleString()} / {batch.total_urls.toLocaleString()}
+          </span>
+          {batch.status === 'running' && batch.firecrawl_job_id && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs"
+              onClick={() => onPoll(batch.firecrawl_job_id!)}
+              disabled={isPolling}
+            >
+              {isPolling ? (
+                <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Polling…</>
+              ) : 'Poll Results'}
+            </Button>
+          )}
+          <span className="text-xs text-gray-400 tabular-nums font-semibold w-10 text-right">{pct}%</span>
+        </div>
+      </div>
+
+      <div className="relative h-2 rounded-full bg-gray-100 overflow-hidden">
+        <div
+          className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${
+            batch.status === 'completed' ? 'bg-green-500' :
+            batch.status === 'failed' ? 'bg-red-400' :
+            'bg-blue-500'
+          }`}
+          style={{ width: `${pct}%` }}
+        />
+        {batch.status === 'running' && pct < 100 && (
+          <div
+            className="absolute inset-y-0 rounded-full bg-blue-300/50 animate-pulse"
+            style={{ left: `${pct}%`, width: '20%' }}
+          />
+        )}
+      </div>
+
+      <div className="flex items-center justify-between text-xs text-gray-400">
+        <span>
+          {new Date(batch.created_at).toLocaleString('en-US', {
+            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+          })}
+        </span>
+        {batch.credits_used > 0 && (
+          <span>{batch.credits_used.toLocaleString()} credits used</span>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function PipelinePage() {
   const [data, setData] = useState<PipelineStatusResponse | null>(null);
@@ -19,11 +117,12 @@ export default function PipelinePage() {
   const [pollingJobId, setPollingJobId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
   const [chunkIndex, setChunkIndex] = useState(0);
+  const [lastSubmitResult, setLastSubmitResult] = useState<{ jobId: string; urls: number } | null>(null);
   const autoRefreshRef = useRef<NodeJS.Timeout | null>(null);
 
   const showToast = useCallback((type: 'success' | 'error', msg: string) => {
     setToast({ type, msg });
-    setTimeout(() => setToast(null), 5000);
+    setTimeout(() => setToast(null), 6000);
   }, []);
 
   const loadStatus = useCallback(async (silent = false) => {
@@ -45,7 +144,7 @@ export default function PipelinePage() {
   }, [loadStatus]);
 
   useEffect(() => {
-    autoRefreshRef.current = setInterval(() => loadStatus(true), 30_000);
+    autoRefreshRef.current = setInterval(() => loadStatus(true), 15_000);
     return () => { if (autoRefreshRef.current) clearInterval(autoRefreshRef.current); };
   }, [loadStatus]);
 
@@ -62,8 +161,9 @@ export default function PipelinePage() {
       if (json.done) {
         showToast('success', 'No more listings to process — queue is empty.');
       } else {
-        showToast('success', `Batch submitted: ${json.urls_submitted?.toLocaleString()} URLs (Job: ${json.job_id})`);
+        setLastSubmitResult({ jobId: json.job_id, urls: json.urls_submitted });
         setChunkIndex(i => i + 1);
+        showToast('success', `Batch submitted — ${json.urls_submitted?.toLocaleString()} URLs sent to Firecrawl.`);
       }
       await loadStatus();
     } catch (err) {
@@ -96,6 +196,7 @@ export default function PipelinePage() {
 
   const isRunning = uiState !== 'idle';
   const runningBatches = data?.batches.filter(b => b.status === 'running') ?? [];
+  const hasRunningBatches = runningBatches.length > 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -144,16 +245,28 @@ export default function PipelinePage() {
           </Button>
         </div>
 
-        {runningBatches.length > 0 && (
-          <Card className="border-blue-200 bg-blue-50 mb-6">
-            <CardContent className="p-4 flex items-center gap-3">
-              <Loader2 className="w-4 h-4 text-blue-600 animate-spin shrink-0" />
-              <div className="text-sm text-blue-800">
-                <span className="font-semibold">{runningBatches.length} batch{runningBatches.length > 1 ? 'es' : ''} running.</span>{' '}
-                If you configured a webhook, results will arrive automatically. Otherwise, use the "Poll Results" button on each batch below.
-              </div>
-            </CardContent>
-          </Card>
+        {lastSubmitResult && (
+          <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-4 flex items-start gap-3">
+            <Loader2 className="w-4 h-4 text-blue-600 animate-spin shrink-0 mt-0.5" />
+            <div className="text-sm text-blue-800 space-y-1">
+              <p className="font-semibold">Batch running — {lastSubmitResult.urls.toLocaleString()} URLs submitted to Firecrawl</p>
+              <p className="font-mono text-xs text-blue-600">Job ID: {lastSubmitResult.jobId}</p>
+              <p className="text-xs text-blue-700">
+                Firecrawl is now scraping the websites in the background. Use "Poll Results" on the batch below to fetch completed scrapes and run AI classification.
+                The page auto-refreshes every 15 seconds.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {!lastSubmitResult && hasRunningBatches && (
+          <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-4 flex items-center gap-3">
+            <Loader2 className="w-4 h-4 text-blue-600 animate-spin shrink-0" />
+            <div className="text-sm text-blue-800">
+              <span className="font-semibold">{runningBatches.length} batch{runningBatches.length > 1 ? 'es' : ''} running.</span>{' '}
+              Use "Poll Results" on each batch below to process completed scrapes.
+            </div>
+          </div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -228,14 +341,35 @@ export default function PipelinePage() {
 
         <Card className="mb-6">
           <CardHeader className="pb-3 border-b border-gray-100">
-            <CardTitle className="text-base font-semibold text-[#0F2744]">Batches</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-semibold text-[#0F2744] flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" />
+                Batches
+              </CardTitle>
+              {hasRunningBatches && (
+                <span className="text-xs text-gray-400 flex items-center gap-1">
+                  <Loader2 className="w-3 h-3 animate-spin" /> Auto-refreshing every 15s
+                </span>
+              )}
+            </div>
           </CardHeader>
-          <CardContent className="p-0">
-            <BatchesTable
-              batches={data?.batches ?? []}
-              onPoll={handlePollBatch}
-              polling={pollingJobId}
-            />
+          <CardContent className="p-4">
+            {!data || data.batches.length === 0 ? (
+              <div className="text-center py-8 text-gray-400 text-sm">
+                No batches submitted yet. Click "Start Batch" to begin.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {data.batches.map(batch => (
+                  <BatchProgressCard
+                    key={batch.id}
+                    batch={batch}
+                    onPoll={handlePollBatch}
+                    polling={pollingJobId}
+                  />
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
