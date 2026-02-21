@@ -99,7 +99,11 @@ export default function OutscraperEnrichPage() {
 
     let rawRows: Record<string, unknown>[];
     try {
+      setStatusMessage('Reading file into memory…');
+      await new Promise(r => setTimeout(r, 30));
+      setStatusMessage('Parsing spreadsheet (this may take a moment for large files)…');
       rawRows = await parseSpreadsheetFile(file) as Record<string, unknown>[];
+      setStatusMessage('Parsed successfully, preparing rows…');
     } catch (err) {
       setStatus('error');
       setErrorMsg(err instanceof Error ? err.message : 'Failed to parse file.');

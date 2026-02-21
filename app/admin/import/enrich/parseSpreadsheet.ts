@@ -44,9 +44,28 @@ export async function parseSpreadsheetFile(file: File): Promise<RawRow[]> {
   }
 
   const buffer = await file.arrayBuffer();
-  const wb = xlsxRead(buffer, { type: 'array', dense: true });
+
+  await new Promise(r => setTimeout(r, 0));
+
+  const wb = xlsxRead(buffer, {
+    type: 'array',
+    cellStyles: false,
+    cellHTML: false,
+    cellFormula: false,
+    bookVBA: false,
+    bookFiles: false,
+    bookProps: false,
+    sheetStubs: false,
+    dense: false,
+  });
+
+  await new Promise(r => setTimeout(r, 0));
+
   const ws = wb.Sheets[wb.SheetNames[0]];
-  const rows = xlsxUtils.sheet_to_json(ws, { defval: null }) as RawRow[];
+  const rows = xlsxUtils.sheet_to_json(ws, { defval: null, raw: true }) as RawRow[];
+
+  await new Promise(r => setTimeout(r, 0));
+
   return rows.map(slimRow);
 }
 
