@@ -3,13 +3,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { AdminNav } from '@/components/AdminNav';
-import { DashboardStatsPanel } from './DashboardStats';
-import { NamePreScanPanel } from './NamePreScanPanel';
-import { CrawlPanel } from './CrawlPanel';
-import { ClassifyPanel } from './ClassifyPanel';
+import { PipelineStatusBar } from './PipelineStatusBar';
+import { PipelineStepper } from './PipelineStepper';
 import { ReviewPanel } from './ReviewPanel';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './utils';
-import type { DashboardStats } from './types';
+import type { DashboardStats, ClassificationLabel } from './types';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -34,6 +32,7 @@ export default function BulkVerifyPage() {
   const [stats, setStats] = useState<DashboardStats>(EMPTY_STATS);
   const [statsLoading, setStatsLoading] = useState(false);
   const [reviewTrigger, setReviewTrigger] = useState(0);
+  const [reviewFilter, setReviewFilter] = useState<ClassificationLabel | 'all'>('all');
 
   const fetchStats = useCallback(async () => {
     setStatsLoading(true);
@@ -71,27 +70,45 @@ export default function BulkVerifyPage() {
     setReviewTrigger(t => t + 1);
   }
 
+  function handleFilterReview(filter: ClassificationLabel | 'all') {
+    setReviewFilter(filter);
+    setTimeout(() => {
+      document.getElementById('review-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <AdminNav />
 
-      <div className="container mx-auto px-4 max-w-5xl py-10 space-y-8">
+      <div className="container mx-auto px-4 max-w-5xl py-8 space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-[#0F2744] mb-1">Bulk Verification Pipeline</h1>
+          <h1 className="text-2xl font-bold text-[#0F2744] mb-1">Bulk Verification Pipeline</h1>
           <p className="text-gray-500 text-sm">
-            Process thousands of listings in three steps: crawl websites, classify with Claude AI, then review edge cases.
+            Process thousands of listings: scan names, crawl websites, classify with AI, then review edge cases.
           </p>
         </div>
 
-        <DashboardStatsPanel stats={stats} onRefresh={fetchStats} loading={statsLoading} />
+        <PipelineStatusBar
+          stats={stats}
+          loading={statsLoading}
+          onRefresh={fetchStats}
+          onFilterReview={handleFilterReview}
+        />
 
-        <NamePreScanPanel onComplete={handleStepComplete} />
+        <PipelineStepper
+          stats={stats}
+          onComplete={handleStepComplete}
+          onFilterReview={handleFilterReview}
+        />
 
-        <CrawlPanel onComplete={handleStepComplete} />
-
-        <ClassifyPanel onComplete={handleStepComplete} />
-
-        <ReviewPanel refreshTrigger={reviewTrigger} />
+        <div id="review-panel">
+          <ReviewPanel
+            refreshTrigger={reviewTrigger}
+            filterClassification={reviewFilter}
+            onFilterChange={setReviewFilter}
+          />
+        </div>
       </div>
     </div>
   );
