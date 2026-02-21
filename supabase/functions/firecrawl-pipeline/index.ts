@@ -429,7 +429,8 @@ Deno.serve(async (req: Request) => {
           updatePayload.amenities = amenities;
         }
 
-        await supabase.from('listings').update(updatePayload).eq('id', listing.id);
+        const { error: updateErr } = await supabase.from('listings').update(updatePayload).eq('id', listing.id);
+        if (updateErr) console.error(`listings update failed for ${listing.id}:`, updateErr.message);
 
         await supabase.from('pipeline_runs').insert({
           listing_id: listing.id,
