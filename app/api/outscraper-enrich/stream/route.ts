@@ -1,9 +1,9 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
 export const maxDuration = 300;
 
-const BATCH_SIZE = 1000;
+const BATCH_SIZE = 500;
 
 interface RawRow {
   [key: string]: string | number | boolean | null | undefined;
@@ -97,102 +97,64 @@ function mapRowToEnrichment(row: RawRow): { placeId: string; updates: Record<str
   return { placeId, updates };
 }
 
-function sseEvent(data: unknown): string {
-  return `data: ${JSON.stringify(data)}\n\n`;
-}
-
 export async function POST(req: NextRequest) {
-  const encoder = new TextEncoder();
+  try {
+    const body = await req.json();
+    const rawRows: RawRow[] = body?.rows;
 
-  const stream = new ReadableStream({
-    async start(controller) {
-      function send(data: unknown) {
-        controller.enqueue(encoder.encode(sseEvent(data)));
+    if (!Array.isArray(rawRows) || rawRows.length === 0) {
+      return NextResponse.json({ error: 'No rows provided.' }, { status: 400 });
+    }
+
+    const mapped = rawRows.map(r => mapRowToEnrichment(r));
+    const skippedNoPlaceId = mapped.filter(m => m === null).length;
+    const valid = mapped.filter(Boolean) as NonNullable<ReturnType<typeof mapRowToEnrichment>>[];
+
+    const result = {
+      total_rows: rawRows.length,
+      skipped_no_place_id: skippedNoPlaceId,
+      matched: 0,
+      skipped_no_match: 0,
+      columns_updated: {} as Record<string, number>,
+      errors: [] as string[],
+    };
+
+    for (let batchIdx = 0; batchIdx < valid.length; batchIdx += BATCH_SIZE) {
+      const batch = valid.slice(batchIdx, batchIdx + BATCH_SIZE);
+      const batchNum = Math.floor(batchIdx / BATCH_SIZE) + 1;
+
+      const rpcRows = batch.map(item => ({
+        place_id: item.placeId,
+        ...Object.fromEntries(
+          Object.entries(item.updates).map(([k, v]) => [
+            k,
+            v !== null && typeof v === 'object' ? JSON.stringify(v) : String(v),
+          ])
+        ),
+      }));
+
+      const { data: rpcResult, error: rpcErr } = await supabase
+        .rpc('bulk_enrich_listings', { rows: rpcRows });
+
+      if (rpcErr) {
+        result.errors.push(`Batch ${batchNum} error: ${rpcErr.message}`);
+        continue;
       }
 
-      try {
-        const body = await req.json();
-        const rawRows: RawRow[] = body?.rows;
+      const batchResult = rpcResult as { matched: number; columns_updated: Record<string, number> };
+      result.matched += batchResult.matched ?? 0;
+      result.skipped_no_match += batch.length - (batchResult.matched ?? 0);
 
-        if (!Array.isArray(rawRows) || rawRows.length === 0) {
-          send({ type: 'error', message: 'No rows provided.' });
-          controller.close();
-          return;
-        }
-
-        const totalRows = rawRows.length;
-
-        const mapped = rawRows.map(r => mapRowToEnrichment(r));
-        const skippedNoPlaceId = mapped.filter(m => m === null).length;
-        const valid = mapped.filter(Boolean) as NonNullable<ReturnType<typeof mapRowToEnrichment>>[];
-
-        const summary = {
-          total_rows: totalRows,
-          skipped_no_place_id: skippedNoPlaceId,
-          matched: 0,
-          skipped_no_match: 0,
-          columns_updated: {} as Record<string, number>,
-          errors: [] as string[],
-        };
-
-        const totalBatches = Math.ceil(valid.length / BATCH_SIZE);
-
-        for (let batchIdx = 0; batchIdx < valid.length; batchIdx += BATCH_SIZE) {
-          const batch = valid.slice(batchIdx, batchIdx + BATCH_SIZE);
-          const currentBatch = Math.floor(batchIdx / BATCH_SIZE) + 1;
-          const pct = Math.round((batchIdx / valid.length) * 100);
-
-          send({
-            type: 'progress',
-            processed: batchIdx,
-            total: valid.length,
-            pct,
-            batch: currentBatch,
-            totalBatches,
-          });
-
-          const rpcRows = batch.map(item => ({
-            place_id: item.placeId,
-            ...Object.fromEntries(
-              Object.entries(item.updates).map(([k, v]) => [
-                k,
-                v !== null && typeof v === 'object' ? JSON.stringify(v) : String(v),
-              ])
-            ),
-          }));
-
-          const { data: result, error: rpcErr } = await supabase
-            .rpc('bulk_enrich_listings', { rows: rpcRows });
-
-          if (rpcErr) {
-            summary.errors.push(`Batch ${currentBatch} error: ${rpcErr.message}`);
-            continue;
-          }
-
-          const batchResult = result as { matched: number; columns_updated: Record<string, number> };
-          summary.matched += batchResult.matched ?? 0;
-          summary.skipped_no_match += batch.length - (batchResult.matched ?? 0);
-
-          for (const [col, count] of Object.entries(batchResult.columns_updated ?? {})) {
-            summary.columns_updated[col] = (summary.columns_updated[col] ?? 0) + (count as number);
-          }
-        }
-
-        send({ type: 'progress', processed: valid.length, total: valid.length, pct: 100, batch: totalBatches, totalBatches });
-        send({ type: 'done', summary });
-      } catch (err) {
-        send({ type: 'error', message: err instanceof Error ? err.message : 'Unknown error' });
-      } finally {
-        controller.close();
+      for (const [col, count] of Object.entries(batchResult.columns_updated ?? {})) {
+        result.columns_updated[col] = (result.columns_updated[col] ?? 0) + (count as number);
       }
-    },
-  });
+    }
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-    },
-  });
+    return NextResponse.json(result);
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Unknown error' },
+      { status: 500 }
+    );
+  }
 }

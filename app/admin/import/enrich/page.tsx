@@ -112,82 +112,73 @@ export default function OutscraperEnrichPage() {
       return;
     }
 
-    setTotalRows(rawRows.length);
+    const total = rawRows.length;
+    setTotalRows(total);
     setStatus('processing');
     setStatusMessage('Matching rows and writing enrichment data…');
 
     const ac = new AbortController();
     abortRef.current = ac;
 
+    const CHUNK = 2000;
+    const totalChunks = Math.ceil(total / CHUNK);
+
+    const accumulated: EnrichSummary = {
+      total_rows: total,
+      skipped_no_place_id: 0,
+      matched: 0,
+      skipped_no_match: 0,
+      columns_updated: {},
+      errors: [],
+    };
+
     try {
-      const res = await fetch('/api/outscraper-enrich/stream', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows: rawRows }),
-        signal: ac.signal,
-      });
+      for (let chunkIdx = 0; chunkIdx < total; chunkIdx += CHUNK) {
+        if (ac.signal.aborted) return;
 
-      if (!res.ok || !res.body) {
-        let msg = `Server error (${res.status})`;
-        try {
-          const body = await res.json();
-          msg = body.error ?? msg;
-        } catch { }
-        setStatus('error');
-        setErrorMsg(msg);
-        return;
-      }
+        const chunk = rawRows.slice(chunkIdx, chunkIdx + CHUNK);
+        const chunkNum = Math.floor(chunkIdx / CHUNK) + 1;
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
+        setProgress({
+          processed: chunkIdx,
+          total,
+          pct: Math.round((chunkIdx / total) * 100),
+          batch: chunkNum,
+          totalBatches: totalChunks,
+        });
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
+        const res = await fetch('/api/outscraper-enrich/stream', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rows: chunk }),
+          signal: ac.signal,
+        });
 
-        const parts = buffer.split('\n\n');
-        buffer = parts.pop() ?? '';
-
-        for (const part of parts) {
-          const line = part.trim();
-          if (!line.startsWith('data: ')) continue;
-          try {
-            const event = JSON.parse(line.slice(6));
-            handleSSEEvent(event);
-          } catch { }
+        if (!res.ok) {
+          let msg = `Server error (${res.status}) on chunk ${chunkNum}`;
+          try { const b = await res.json(); msg = b.error ?? msg; } catch { }
+          setStatus('error');
+          setErrorMsg(msg);
+          return;
         }
+
+        const result: EnrichSummary = await res.json();
+        accumulated.skipped_no_place_id += result.skipped_no_place_id ?? 0;
+        accumulated.matched += result.matched ?? 0;
+        accumulated.skipped_no_match += result.skipped_no_match ?? 0;
+        for (const [col, count] of Object.entries(result.columns_updated ?? {})) {
+          accumulated.columns_updated[col] = (accumulated.columns_updated[col] ?? 0) + count;
+        }
+        accumulated.errors.push(...(result.errors ?? []));
       }
+
+      setProgress({ processed: total, total, pct: 100, batch: totalChunks, totalBatches: totalChunks });
+      setSummary(accumulated);
+      setStatus('done');
     } catch (err) {
       if ((err as Error)?.name === 'AbortError') return;
       setStatus('error');
       setErrorMsg(err instanceof Error ? err.message : 'Network error.');
-    }
-  }
-
-  function handleSSEEvent(event: Record<string, unknown>) {
-    switch (event.type) {
-      case 'status':
-        setStatusMessage(event.message as string);
-        break;
-      case 'progress':
-        setProgress({
-          processed: event.processed as number,
-          total: event.total as number,
-          pct: event.pct as number,
-          batch: event.batch as number,
-          totalBatches: event.totalBatches as number,
-        });
-        break;
-      case 'done':
-        setSummary(event.summary as EnrichSummary);
-        setStatus('done');
-        break;
-      case 'error':
-        setStatus('error');
-        setErrorMsg(event.message as string);
-        break;
     }
   }
 

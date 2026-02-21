@@ -6,18 +6,48 @@ export interface RawRow {
   [key: string]: string | number | boolean | null | undefined;
 }
 
+const NEEDED_COLUMNS = new Set([
+  'place_id', 'Place ID',
+  'photo', 'Photo',
+  'logo', 'Logo',
+  'street_view', 'Street View',
+  'photos_count', 'Photos Count',
+  'description', 'Description',
+  'about', 'About',
+  'subtypes', 'Subtypes',
+  'category', 'Category',
+  'business_status', 'Business Status',
+  'verified', 'Verified',
+  'reviews_per_score', 'Reviews Per Score',
+  'popular_times', 'Popular Times',
+  'typical_time_spent', 'Typical Time Spent',
+  'range', 'Range', 'price_range', 'Price Range',
+  'booking_appointment_link', 'Booking Appointment Link',
+  'location_link', 'Location Link',
+  'google_id', 'Google ID',
+]);
+
+function slimRow(row: RawRow): RawRow {
+  const slim: RawRow = {};
+  for (const key of Object.keys(row)) {
+    if (NEEDED_COLUMNS.has(key)) slim[key] = row[key];
+  }
+  return slim;
+}
+
 export async function parseSpreadsheetFile(file: File): Promise<RawRow[]> {
   const ext = file.name.toLowerCase().split('.').pop();
 
   if (ext === 'csv') {
     const text = await file.text();
-    return parseCSVText(text);
+    return parseCSVText(text).map(slimRow);
   }
 
   const buffer = await file.arrayBuffer();
   const wb = xlsxRead(buffer, { type: 'array', dense: true });
   const ws = wb.Sheets[wb.SheetNames[0]];
-  return xlsxUtils.sheet_to_json(ws, { defval: null }) as RawRow[];
+  const rows = xlsxUtils.sheet_to_json(ws, { defval: null }) as RawRow[];
+  return rows.map(slimRow);
 }
 
 function parseCSVText(text: string): RawRow[] {
