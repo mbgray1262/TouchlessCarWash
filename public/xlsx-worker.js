@@ -17,18 +17,29 @@ self.onmessage = function (e) {
     });
 
     const ws = wb.Sheets[wb.SheetNames[0]];
-    const allRows = XLSX.utils.sheet_to_json(ws, { defval: null, raw: true });
+    const allRows = XLSX.utils.sheet_to_json(ws, { defval: null, raw: false });
+
+    function safeVal(v) {
+      if (v === null || v === undefined) return null;
+      if (typeof v === 'object') return JSON.stringify(v);
+      return v;
+    }
 
     let rows;
     if (keepAllColumns) {
-      rows = allRows;
+      rows = allRows.map(function (row) {
+        var safe = {};
+        var keys = Object.keys(row);
+        for (var i = 0; i < keys.length; i++) safe[keys[i]] = safeVal(row[keys[i]]);
+        return safe;
+      });
     } else {
       const needed = new Set(neededColumns);
       rows = allRows.map(function (row) {
         var slim = {};
         var keys = Object.keys(row);
         for (var i = 0; i < keys.length; i++) {
-          if (needed.has(keys[i])) slim[keys[i]] = row[keys[i]];
+          if (needed.has(keys[i])) slim[keys[i]] = safeVal(row[keys[i]]);
         }
         return slim;
       });

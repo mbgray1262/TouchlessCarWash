@@ -17,17 +17,25 @@ function tryFixJson(s: string): string {
 }
 
 function parseWorkingHours(raw: unknown): HoursMap | null {
-  if (!raw || typeof raw !== 'string' || raw.trim() === '') return null;
+  if (!raw) return null;
 
   let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
+
+  if (typeof raw === 'object' && !Array.isArray(raw)) {
+    parsed = raw;
+  } else if (typeof raw === 'string') {
+    if (raw.trim() === '') return null;
     try {
-      parsed = JSON.parse(tryFixJson(raw));
+      parsed = JSON.parse(raw);
     } catch {
-      return null;
+      try {
+        parsed = JSON.parse(tryFixJson(raw));
+      } catch {
+        return null;
+      }
     }
+  } else {
+    return null;
   }
 
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
