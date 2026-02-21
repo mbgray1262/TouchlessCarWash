@@ -9,10 +9,10 @@ interface Props {
 
 export function StatsGrid({ stats }: Props) {
   const scraped = stats.scraped;
-  const total = stats.queue + scraped;
-  const pct = total > 0 ? Math.round((scraped / total) * 100) : 0;
+  const totalWithWebsites = stats.total_with_websites > 0 ? stats.total_with_websites : stats.queue + scraped;
+  const pct = totalWithWebsites > 0 ? Math.round((scraped / totalWithWebsites) * 100) : 0;
   const classified = stats.classified;
-  const classifyPct = scraped > 0 ? Math.round((classified / scraped) * 100) : 0;
+  const classifyPct = totalWithWebsites > 0 ? Math.round((classified / totalWithWebsites) * 100) : 0;
 
   const cards = [
     {
@@ -68,7 +68,7 @@ export function StatsGrid({ stats }: Props) {
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Scrape Progress</p>
               <p className="text-2xl font-bold text-[#0F2744] mt-0.5">
                 {scraped.toLocaleString()}
-                <span className="text-sm font-normal text-gray-400 ml-1.5">/ {total.toLocaleString()}</span>
+                <span className="text-sm font-normal text-gray-400 ml-1.5">/ {totalWithWebsites.toLocaleString()}</span>
               </p>
             </div>
             <p className="text-lg font-bold text-[#0F2744] tabular-nums">{pct}%</p>
@@ -84,7 +84,7 @@ export function StatsGrid({ stats }: Props) {
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Classified</p>
               <p className="text-xl font-bold text-[#0F2744] mt-0.5">
                 {classified.toLocaleString()}
-                <span className="text-sm font-normal text-gray-400 ml-1.5">/ {scraped.toLocaleString()} scraped</span>
+                <span className="text-sm font-normal text-gray-400 ml-1.5">/ {totalWithWebsites.toLocaleString()} total</span>
               </p>
             </div>
             <p className="text-base font-bold text-gray-500 tabular-nums">{classifyPct}%</p>

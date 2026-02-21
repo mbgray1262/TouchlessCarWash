@@ -6,6 +6,7 @@ export interface PipelineStats {
   not_touchless: number;
   failed: number;
   redirects: number;
+  total_with_websites: number;
 }
 
 export interface PipelineBatch {

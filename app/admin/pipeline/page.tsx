@@ -69,8 +69,9 @@ function BatchProgressCard({
     batch.status;
 
   const isClassifying = isPolling && classifyCount !== null;
-  const classifyPct = isClassifying && scrapeTotal > 0
-    ? Math.min(99, Math.round((classifyCount! / scrapeTotal) * 100))
+  const classifyTotal = batch.total_urls > 0 ? batch.total_urls : scrapeTotal;
+  const classifyPct = isClassifying && classifyTotal > 0
+    ? Math.min(99, Math.round((classifyCount! / classifyTotal) * 100))
     : null;
 
   return (
@@ -135,7 +136,7 @@ function BatchProgressCard({
               <Loader2 className="w-3 h-3 animate-spin" /> Classifying with AI…
             </span>
             <span className="text-gray-500 tabular-nums">
-              {classifyCount!.toLocaleString()} / {scrapeTotal.toLocaleString()} ({classifyPct}%)
+              {classifyCount!.toLocaleString()} / {classifyTotal.toLocaleString()} ({classifyPct}%)
             </span>
           </div>
           <div className="relative h-2 rounded-full bg-amber-100 overflow-hidden">

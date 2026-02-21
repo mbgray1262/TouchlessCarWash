@@ -33,6 +33,17 @@ const AMENITY_TO_FILTER_SLUG: Record<string, string> = {
 
 type FilterMap = Record<string, number>;
 
+function normalizeUrl(raw: string): string {
+  try {
+    const u = new URL(raw.trim());
+    let host = u.hostname.toLowerCase().replace(/^www\./, '');
+    let path = u.pathname.replace(/\/+$/, '') || '';
+    return `${host}${path}`;
+  } catch {
+    return raw.trim().toLowerCase().replace(/^https?:\/\/(www\.)?/, '').replace(/\/+$/, '');
+  }
+}
+
 function filterImages(images: string[]): string[] {
   return images.filter(url => {
     const lower = url.toLowerCase();
@@ -136,7 +147,7 @@ Deno.serve(async (req: Request) => {
 
     // --- GET STATUS ---
     if (action === 'status') {
-      const [totalRes, scrapedRes, classifiedRes, touchlessRes, notTouchlessRes, failedRes, redirectRes] = await Promise.all([
+      const [totalRes, scrapedRes, classifiedRes, touchlessRes, notTouchlessRes, failedRes, redirectRes, totalWithWebsitesRes] = await Promise.all([
         supabase.from('listings').select('id', { count: 'exact', head: true })
           .is('is_touchless', null).not('website', 'is', null).neq('website', ''),
         supabase.from('listings').select('id', { count: 'exact', head: true })
@@ -151,6 +162,8 @@ Deno.serve(async (req: Request) => {
           .eq('crawl_status', 'failed'),
         supabase.from('listings').select('id', { count: 'exact', head: true })
           .eq('crawl_status', 'redirect'),
+        supabase.from('listings').select('id', { count: 'exact', head: true })
+          .not('website', 'is', null).neq('website', ''),
       ]);
 
       const batchesRes = await supabase.from('pipeline_batches')
@@ -175,6 +188,7 @@ Deno.serve(async (req: Request) => {
           not_touchless: notTouchlessRes.count ?? 0,
           failed: failedRes.count ?? 0,
           redirects: redirectRes.count ?? 0,
+          total_with_websites: totalWithWebsitesRes.count ?? 0,
         },
         batches: batchesRes.data ?? [],
         recent_runs: recentRunsRes.data ?? [],
@@ -302,6 +316,23 @@ Deno.serve(async (req: Request) => {
       const filterMap: FilterMap = {};
       for (const f of (filterRows ?? [])) filterMap[f.slug] = f.id;
 
+      // Pre-load all listings with websites so we can match by normalized URL
+      const listingMap = new Map<string, { id: string; is_touchless: boolean | null; hero_image: string | null; description: string | null; website: string }>();
+      let listingOffset = 0;
+      while (true) {
+        const { data: chunk } = await supabase.from('listings')
+          .select('id, is_touchless, hero_image, description, website')
+          .not('website', 'is', null)
+          .neq('website', '')
+          .range(listingOffset, listingOffset + 999);
+        if (!chunk || chunk.length === 0) break;
+        for (const l of chunk) {
+          listingMap.set(normalizeUrl(l.website), l);
+        }
+        if (chunk.length < 1000) break;
+        listingOffset += 1000;
+      }
+
       let nextUrl: string | null = `${FIRECRAWL_API}/batch/scrape/${jobId}`;
       let totalProcessed = 0;
       let creditsUsed = 0;
@@ -334,12 +365,7 @@ Deno.serve(async (req: Request) => {
           const sourceURL = item.metadata?.sourceURL ?? '';
           const statusCode = item.metadata?.statusCode ?? 0;
 
-          const { data: listings } = await supabase.from('listings')
-            .select('id, is_touchless, hero_image, description')
-            .eq('website', sourceURL)
-            .limit(1);
-
-          const listing = listings?.[0];
+          const listing = listingMap.get(normalizeUrl(sourceURL));
           if (!listing) continue;
 
           let crawl_status = 'success';
