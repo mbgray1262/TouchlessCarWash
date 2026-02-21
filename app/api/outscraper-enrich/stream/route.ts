@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { read as xlsxRead, utils as xlsxUtils } from 'xlsx';
 import { supabase } from '@/lib/supabase';
 
-const BATCH_SIZE = 200;
+const BATCH_SIZE = 1000;
 
 interface RawRow {
   [key: string]: string | number | boolean | null | undefined;
@@ -206,59 +206,42 @@ export async function POST(req: NextRequest) {
 
         for (let batchIdx = 0; batchIdx < valid.length; batchIdx += BATCH_SIZE) {
           const batch = valid.slice(batchIdx, batchIdx + BATCH_SIZE);
-          const placeIds = batch.map(b => b.placeId);
           const currentBatch = Math.floor(batchIdx / BATCH_SIZE) + 1;
-          const processedSoFar = batchIdx;
-          const pct = Math.round((processedSoFar / valid.length) * 100);
+          const pct = Math.round((batchIdx / valid.length) * 100);
 
           send({
             type: 'progress',
-            processed: processedSoFar,
+            processed: batchIdx,
             total: valid.length,
             pct,
             batch: currentBatch,
             totalBatches,
           });
 
-          const { data: existing, error: fetchErr } = await supabase
-            .from('listings')
-            .select('id, google_place_id, google_photo_url, google_logo_url, street_view_url, google_photos_count, google_description, google_about, google_subtypes, google_category, business_status, is_google_verified, reviews_per_score, popular_times, typical_time_spent, price_range, booking_url, google_maps_url, google_id')
-            .in('google_place_id', placeIds);
+          const rpcRows = batch.map(item => ({
+            place_id: item.placeId,
+            ...Object.fromEntries(
+              Object.entries(item.updates).map(([k, v]) => [
+                k,
+                v !== null && typeof v === 'object' ? JSON.stringify(v) : String(v),
+              ])
+            ),
+          }));
 
-          if (fetchErr) {
-            summary.errors.push(`Batch ${currentBatch} fetch error: ${fetchErr.message}`);
+          const { data: result, error: rpcErr } = await supabase
+            .rpc('bulk_enrich_listings', { rows: rpcRows });
+
+          if (rpcErr) {
+            summary.errors.push(`Batch ${currentBatch} error: ${rpcErr.message}`);
             continue;
           }
 
-          const byPlaceId = new Map((existing ?? []).map(r => [r.google_place_id, r]));
+          const batchResult = result as { matched: number; columns_updated: Record<string, number> };
+          summary.matched += batchResult.matched ?? 0;
+          summary.skipped_no_match += batch.length - (batchResult.matched ?? 0);
 
-          for (const item of batch) {
-            const existingRow = byPlaceId.get(item.placeId);
-            if (!existingRow) { summary.skipped_no_match++; continue; }
-
-            const toSet: Record<string, unknown> = {};
-            for (const [colName, value] of Object.entries(item.updates)) {
-              if (existingRow[colName as keyof typeof existingRow] === null || existingRow[colName as keyof typeof existingRow] === undefined) {
-                toSet[colName] = value;
-              }
-            }
-
-            if (Object.keys(toSet).length === 0) continue;
-
-            const { error: updateErr } = await supabase
-              .from('listings')
-              .update(toSet)
-              .eq('id', existingRow.id);
-
-            if (updateErr) {
-              if (summary.errors.length < 20) summary.errors.push(`place_id ${item.placeId}: ${updateErr.message}`);
-              continue;
-            }
-
-            summary.matched++;
-            for (const colName of Object.keys(toSet)) {
-              summary.columns_updated[colName] = (summary.columns_updated[colName] ?? 0) + 1;
-            }
+          for (const [col, count] of Object.entries(batchResult.columns_updated ?? {})) {
+            summary.columns_updated[col] = (summary.columns_updated[col] ?? 0) + (count as number);
           }
         }
 
