@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 
 export const maxDuration = 300;
 
+
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
 type HoursMap = Record<string, string>;
@@ -56,8 +57,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Expected application/json body with { rows: [...] }' }, { status: 400 });
     }
 
-    const body = await req.json();
-    const rawRows: Record<string, unknown>[] = body?.rows;
+    const rawText = await req.text();
+    let body: { rows?: unknown };
+    try {
+      body = JSON.parse(rawText);
+    } catch {
+      return NextResponse.json({ error: 'Failed to parse request body as JSON. The payload may be too large or malformed.' }, { status: 400 });
+    }
+    const rawRows: Record<string, unknown>[] = body?.rows as Record<string, unknown>[];
 
     if (!Array.isArray(rawRows) || rawRows.length === 0) {
       return NextResponse.json({ error: 'No rows provided.' }, { status: 400 });
