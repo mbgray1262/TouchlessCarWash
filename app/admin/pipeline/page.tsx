@@ -131,6 +131,7 @@ export default function PipelinePage() {
   const processedRef = useRef(0);
   const startTimeRef = useRef<number | null>(null);
   const statsTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastStatsRefreshRef = useRef<number>(0);
   const logRef = useRef<HTMLDivElement | null>(null);
 
   const liveTouchlessRef = useRef(0);
@@ -267,6 +268,12 @@ export default function PipelinePage() {
       await Promise.all(batch.map(listing => classifyOne(listing)));
 
       if (pausedRef.current) return;
+
+      const now = Date.now();
+      if (now - lastStatsRefreshRef.current > 5000) {
+        lastStatsRefreshRef.current = now;
+        await refreshStats();
+      }
     }
   }, [concurrency, classifyOne, refreshStats, refreshRecent, showToast]);
 
@@ -279,6 +286,7 @@ export default function PipelinePage() {
     liveNotTouchlessRef.current = 0;
     liveUnknownRef.current = 0;
     liveFailedRef.current = 0;
+    lastStatsRefreshRef.current = 0;
     startTimeRef.current = Date.now();
     setProcessedCount(0);
     setTotalInQueue(0);
