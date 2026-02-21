@@ -10,7 +10,7 @@ import { StatsGrid } from './StatsGrid';
 import { RecentRunsTable } from './RecentRunsTable';
 import type { PipelineBatch, PipelineStatusResponse } from './types';
 
-type UIState = 'idle' | 'submitting' | 'polling' | 'refreshing';
+type UIState = 'idle' | 'submitting' | 'polling' | 'refreshing' | 'reclassifying';
 
 // Returns a simple label + color for each batch's current lifecycle stage
 function getBatchStage(batch: PipelineBatch): {
@@ -200,6 +200,7 @@ export default function PipelinePage() {
   const [classifyProgressMap, setClassifyProgressMap] = useState<Record<string, number>>({});
   const [fcStatusMap, setFcStatusMap] = useState<Record<string, { status: string; total: number; completed: number; credits_used: number } | { error: string }>>({});
   const [checkingFcStatus, setCheckingFcStatus] = useState(false);
+  const [reclassifyProgress, setReclassifyProgress] = useState<{ processed: number; remaining: number } | null>(null);
   const autoRefreshRef = useRef<NodeJS.Timeout | null>(null);
   const runsPageRef = useRef(runsPage);
   const loadStatusFnRef = useRef<((silent?: boolean) => Promise<void>) | null>(null);
@@ -286,6 +287,42 @@ export default function PipelinePage() {
     setCheckingFcStatus(false);
   }, [data]);
 
+  const handleReclassifySaved = useCallback(async () => {
+    setUiState('reclassifying');
+    setReclassifyProgress({ processed: 0, remaining: 0 });
+    let totalProcessed = 0;
+    let offset = 0;
+
+    try {
+      while (true) {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/firecrawl-pipeline`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ action: 'reclassify_saved', offset }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error ?? `Error ${res.status}`);
+
+        totalProcessed += json.processed ?? 0;
+        setReclassifyProgress({ processed: totalProcessed, remaining: json.remaining_before ?? 0 });
+
+        if (json.done) break;
+        offset = json.offset;
+      }
+
+      showToast('success', `Re-classified ${totalProcessed.toLocaleString()} saved records — no Firecrawl credits used.`);
+      await loadStatus();
+    } catch (err) {
+      showToast('error', (err as Error).message);
+    } finally {
+      setReclassifyProgress(null);
+      setUiState('idle');
+    }
+  }, [loadStatus, showToast]);
+
   const handleClassify = useCallback(async (jobId: string) => {
     setPollingJobId(jobId);
     setUiState('polling');
@@ -339,7 +376,18 @@ export default function PipelinePage() {
   const doneBatches = batches.filter(b => b.classify_status === 'completed' || b.status === 'completed');
 
   let bannerMsg: React.ReactNode = null;
-  if (pollingJobId) {
+  if (reclassifyProgress) {
+    bannerMsg = (
+      <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 flex items-center gap-3">
+        <Loader2 className="w-4 h-4 text-emerald-600 animate-spin shrink-0" />
+        <div className="text-sm text-emerald-800">
+          <span className="font-semibold">Re-classifying saved results</span>
+          <span className="ml-2 text-emerald-700">{reclassifyProgress.processed.toLocaleString()} classified so far</span>
+          <span className="ml-2 text-emerald-600 text-xs">— no Firecrawl credits used — do not close this tab</span>
+        </div>
+      </div>
+    );
+  } else if (pollingJobId) {
     const batch = batches.find(b => b.firecrawl_job_id === pollingJobId);
     const count = classifyProgressMap[pollingJobId] ?? batch?.classified_count ?? 0;
     const total = batch?.total_urls ?? 0;
@@ -474,6 +522,22 @@ export default function PipelinePage() {
                   </p>
                   <Button variant="outline" className="w-full" onClick={() => handleSubmitBatch(true)} disabled={isRunning}>
                     <SkipForward className="w-4 h-4 mr-2" /> Retry Failed
+                  </Button>
+                </div>
+                <div className="border-t border-gray-100 pt-3">
+                  <p className="text-xs text-gray-500 mb-1.5">
+                    Re-classify already-scraped results stored in the database. <strong>Zero Firecrawl credits used.</strong>
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="w-full border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                    onClick={handleReclassifySaved}
+                    disabled={isRunning}
+                  >
+                    {uiState === 'reclassifying'
+                      ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Classifying…</>
+                      : <><Brain className="w-4 h-4 mr-2" /> Classify Saved Results</>
+                    }
                   </Button>
                 </div>
               </CardContent>

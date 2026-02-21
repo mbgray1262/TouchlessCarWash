@@ -509,6 +509,86 @@ Deno.serve(async (req: Request) => {
       }, { headers: corsHeaders });
     }
 
+    // --- RECLASSIFY SAVED ---
+    // Re-runs Claude classification on pipeline_runs rows that have raw_markdown
+    // but no is_touchless value yet. Processes one page of 10 at a time.
+    // No Firecrawl credits used — purely Claude AI from stored data.
+    if (action === 'reclassify_saved') {
+      if (!anthropicKey) return Response.json({ error: 'Anthropic API key not configured' }, { status: 500, headers: corsHeaders });
+
+      const offset: number = body.offset ?? 0;
+      const pageSize = 10;
+
+      const { data: runs, error: runsErr } = await supabase
+        .from('pipeline_runs')
+        .select('id, listing_id, raw_markdown')
+        .is('is_touchless', null)
+        .not('raw_markdown', 'is', null)
+        .gt('raw_markdown', '')
+        .order('processed_at', { ascending: true })
+        .range(offset, offset + pageSize - 1);
+
+      if (runsErr) return Response.json({ error: runsErr.message }, { status: 500, headers: corsHeaders });
+
+      const { data: totalRow } = await supabase
+        .from('pipeline_runs')
+        .select('id', { count: 'exact', head: true })
+        .is('is_touchless', null)
+        .not('raw_markdown', 'is', null)
+        .gt('raw_markdown', '');
+
+      const remaining = (totalRow as unknown as { count: number } | null)?.count ?? 0;
+
+      const { data: filterRows } = await supabase.from('filters').select('id, slug');
+      const filterMap: FilterMap = {};
+      for (const f of (filterRows ?? [])) filterMap[f.slug] = f.id;
+
+      const pageRuns = runs ?? [];
+      let processed = 0;
+
+      await Promise.all(pageRuns.map(async (run) => {
+        const markdown = run.raw_markdown ?? '';
+        if (markdown.trim().length < 50) return;
+
+        try {
+          const classification = await classifyWithClaude(markdown, anthropicKey);
+          const { is_touchless, touchless_evidence, amenities, description } = classification;
+
+          await Promise.all([
+            supabase.from('pipeline_runs').update({
+              is_touchless: is_touchless ?? null,
+              touchless_evidence: touchless_evidence ?? '',
+              crawl_status: 'success',
+            }).eq('id', run.id),
+
+            supabase.from('listings').update({
+              is_touchless: is_touchless ?? null,
+              touchless_evidence: touchless_evidence ?? '',
+              ...(description ? { description } : {}),
+              ...(amenities?.length ? { amenities } : {}),
+              last_crawled_at: new Date().toISOString(),
+            }).eq('id', run.listing_id).is('is_touchless', null),
+
+            syncFilters(supabase, run.listing_id, is_touchless ?? null, amenities ?? [], filterMap),
+          ]);
+
+          processed++;
+        } catch {
+          // skip failed classifications silently
+        }
+      }));
+
+      const nextOffset = offset + pageSize;
+      const isDone = pageRuns.length < pageSize;
+
+      return Response.json({
+        processed,
+        offset: nextOffset,
+        done: isDone,
+        remaining_before: remaining,
+      }, { headers: corsHeaders });
+    }
+
     return Response.json({ error: 'Unknown action' }, { status: 400, headers: corsHeaders });
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 500, headers: corsHeaders });
