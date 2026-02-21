@@ -8,11 +8,9 @@ interface Props {
 }
 
 export function StatsGrid({ stats }: Props) {
-  const scraped = stats.scraped;
-  const totalWithWebsites = stats.total_with_websites > 0 ? stats.total_with_websites : stats.queue + scraped;
-  const pct = totalWithWebsites > 0 ? Math.round((scraped / totalWithWebsites) * 100) : 0;
-  const classified = stats.classified;
-  const classifyPct = totalWithWebsites > 0 ? Math.round((classified / totalWithWebsites) * 100) : 0;
+  const total = stats.total_with_websites > 0 ? stats.total_with_websites : stats.queue + stats.classified;
+  const inconclusive = Math.max(0, stats.classified - stats.touchless - stats.not_touchless);
+  const classifyPct = total > 0 ? Math.round((stats.classified / total) * 100) : 0;
 
   const cards = [
     {
@@ -31,7 +29,7 @@ export function StatsGrid({ stats }: Props) {
     },
     {
       label: 'Inconclusive',
-      value: Math.max(0, classified - stats.touchless - stats.not_touchless),
+      value: inconclusive,
       icon: HelpCircle,
       color: 'text-amber-500',
       bg: 'bg-amber-50 border-amber-200',
@@ -65,35 +63,25 @@ export function StatsGrid({ stats }: Props) {
         <div className="bg-white border border-gray-200 rounded-xl p-4 col-span-2">
           <div className="flex items-end justify-between mb-2">
             <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Scrape Progress</p>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Classifications Complete</p>
               <p className="text-2xl font-bold text-[#0F2744] mt-0.5">
-                {scraped.toLocaleString()}
-                <span className="text-sm font-normal text-gray-400 ml-1.5">/ {totalWithWebsites.toLocaleString()}</span>
+                {stats.classified.toLocaleString()}
+                <span className="text-sm font-normal text-gray-400 ml-1.5">/ {total.toLocaleString()} listings with websites</span>
               </p>
             </div>
-            <p className="text-lg font-bold text-[#0F2744] tabular-nums">{pct}%</p>
+            <p className="text-lg font-bold text-[#0F2744] tabular-nums">{classifyPct}%</p>
           </div>
           <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
             <div
-              className="bg-[#0F2744] h-2.5 rounded-full transition-all duration-500"
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-          <div className="flex items-end justify-between mt-3">
-            <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Classified</p>
-              <p className="text-xl font-bold text-[#0F2744] mt-0.5">
-                {classified.toLocaleString()}
-                <span className="text-sm font-normal text-gray-400 ml-1.5">/ {totalWithWebsites.toLocaleString()} total</span>
-              </p>
-            </div>
-            <p className="text-base font-bold text-gray-500 tabular-nums">{classifyPct}%</p>
-          </div>
-          <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden mt-2">
-            <div
-              className="bg-green-500 h-2 rounded-full transition-all duration-500"
+              className="bg-green-500 h-2.5 rounded-full transition-all duration-500"
               style={{ width: `${classifyPct}%` }}
             />
+          </div>
+          <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
+            <span><span className="font-semibold text-green-600">{stats.touchless.toLocaleString()}</span> touchless</span>
+            <span><span className="font-semibold text-red-500">{stats.not_touchless.toLocaleString()}</span> not touchless</span>
+            {inconclusive > 0 && <span><span className="font-semibold text-amber-500">{inconclusive.toLocaleString()}</span> inconclusive</span>}
+            <span className="ml-auto"><span className="font-semibold text-gray-600">{stats.queue.toLocaleString()}</span> still to process</span>
           </div>
         </div>
       </div>

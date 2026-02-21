@@ -187,6 +187,10 @@ export default function PipelinePage() {
   const [classifyProgressMap, setClassifyProgressMap] = useState<Record<string, number>>({});
   const autoRefreshRef = useRef<NodeJS.Timeout | null>(null);
   const fcPollRef = useRef<NodeJS.Timeout | null>(null);
+  const runsPageRef = useRef(runsPage);
+  const loadStatusFnRef = useRef<((silent?: boolean) => Promise<void>) | null>(null);
+
+  useEffect(() => { runsPageRef.current = runsPage; }, [runsPage]);
 
   const showToast = useCallback((type: 'success' | 'error', msg: string) => {
     setToast({ type, msg });
@@ -206,7 +210,7 @@ export default function PipelinePage() {
   const loadStatus = useCallback(async (silent = false) => {
     if (!silent) setUiState('refreshing');
     try {
-      const res = await fetch(`/api/pipeline/status?runs_page=${runsPage}`);
+      const res = await fetch(`/api/pipeline/status?runs_page=${runsPageRef.current}`);
       if (!res.ok) throw new Error(`Status ${res.status}`);
       const json: PipelineStatusResponse & { total_runs?: number } = await res.json();
       setData(json);
@@ -216,16 +220,22 @@ export default function PipelinePage() {
     } finally {
       if (!silent) setUiState('idle');
     }
-  }, [showToast, runsPage]);
+  }, [showToast]);
+
+  useEffect(() => {
+    loadStatusFnRef.current = loadStatus;
+  }, [loadStatus]);
 
   useEffect(() => {
     loadStatus();
   }, [loadStatus]);
 
   useEffect(() => {
-    autoRefreshRef.current = setInterval(() => loadStatus(true), 15_000);
+    autoRefreshRef.current = setInterval(() => {
+      if (loadStatusFnRef.current) loadStatusFnRef.current(true);
+    }, 5_000);
     return () => { if (autoRefreshRef.current) clearInterval(autoRefreshRef.current); };
-  }, [loadStatus]);
+  }, []);
 
   const fetchFcProgress = useCallback(async (batches: PipelineBatch[]) => {
     const running = batches.filter(b => b.status === 'running' && b.firecrawl_job_id);
@@ -361,18 +371,26 @@ export default function PipelinePage() {
               Scrape unclassified car wash websites and classify touchless vs. non-touchless using AI.
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => loadStatus()}
-            disabled={isRunning}
-            className="shrink-0"
-          >
-            {uiState === 'refreshing'
-              ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Refreshing</>
-              : <><RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Refresh</>
-            }
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="flex items-center gap-1.5 text-xs text-gray-400">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+              </span>
+              Live — refreshing every 5s
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => loadStatus()}
+              disabled={isRunning}
+            >
+              {uiState === 'refreshing'
+                ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Refreshing</>
+                : <><RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Refresh</>
+              }
+            </Button>
+          </div>
         </div>
 
         {lastSubmitResult && (
@@ -478,7 +496,7 @@ export default function PipelinePage() {
               </CardTitle>
               {hasRunningBatches && (
                 <span className="text-xs text-gray-400 flex items-center gap-1">
-                  <Loader2 className="w-3 h-3 animate-spin" /> Auto-refreshing every 15s
+                  <Loader2 className="w-3 h-3 animate-spin" /> Auto-refreshing every 5s
                 </span>
               )}
             </div>
