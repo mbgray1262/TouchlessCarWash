@@ -12,6 +12,13 @@ import type { PipelineBatch, PipelineStatusResponse } from './types';
 
 type UIState = 'idle' | 'submitting' | 'polling' | 'refreshing';
 
+interface FirecrawlProgress {
+  status: string;
+  total: number;
+  completed: number;
+  credits_used: number;
+}
+
 function StatusBadge({ status }: { status: PipelineBatch['status'] }) {
   if (status === 'completed') return (
     <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
@@ -39,15 +46,21 @@ function BatchProgressCard({
   batch,
   onPoll,
   polling,
+  fcProgress,
 }: {
   batch: PipelineBatch;
   onPoll: (jobId: string) => void;
   polling: string | null;
+  fcProgress: FirecrawlProgress | null;
 }) {
-  const pct = batch.total_urls > 0
-    ? Math.min(100, Math.round((batch.completed_count / batch.total_urls) * 100))
+  const scrapeTotal = fcProgress?.total ?? batch.total_urls;
+  const scrapeCompleted = fcProgress?.completed ?? batch.completed_count;
+  const pct = scrapeTotal > 0
+    ? Math.min(100, Math.round((scrapeCompleted / scrapeTotal) * 100))
     : 0;
   const isPolling = polling === batch.firecrawl_job_id;
+  const fcStatus = fcProgress?.status ?? batch.status;
+  const isLive = !!fcProgress;
 
   return (
     <div className="border border-gray-100 rounded-xl p-4 space-y-3">
@@ -55,13 +68,17 @@ function BatchProgressCard({
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-xs font-mono text-gray-400 shrink-0">Chunk #{batch.chunk_index + 1}</span>
           <StatusBadge status={batch.status} />
+          {isLive && fcStatus !== batch.status && (
+            <span className="text-xs text-blue-600 font-medium">Firecrawl: {fcStatus}</span>
+          )}
           <span className="text-xs text-gray-400 truncate hidden sm:block">
             {batch.firecrawl_job_id ?? '—'}
           </span>
         </div>
         <div className="flex items-center gap-3 shrink-0">
           <span className="text-xs text-gray-500 tabular-nums">
-            {batch.completed_count.toLocaleString()} / {batch.total_urls.toLocaleString()}
+            {scrapeCompleted.toLocaleString()} / {scrapeTotal.toLocaleString()}
+            {isLive && <span className="text-blue-500 ml-1">scraped</span>}
           </span>
           {batch.status === 'running' && batch.firecrawl_job_id && (
             <Button
@@ -72,8 +89,8 @@ function BatchProgressCard({
               disabled={isPolling}
             >
               {isPolling ? (
-                <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Polling…</>
-              ) : 'Poll Results'}
+                <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Classifying…</>
+              ) : 'Classify Results'}
             </Button>
           )}
           <span className="text-xs text-gray-400 tabular-nums font-semibold w-10 text-right">{pct}%</span>
@@ -89,11 +106,14 @@ function BatchProgressCard({
           }`}
           style={{ width: `${pct}%` }}
         />
-        {batch.status === 'running' && pct < 100 && (
+        {batch.status === 'running' && pct < 100 && pct > 0 && (
           <div
-            className="absolute inset-y-0 rounded-full bg-blue-300/50 animate-pulse"
-            style={{ left: `${pct}%`, width: '20%' }}
+            className="absolute inset-y-0 rounded-full bg-blue-300/40 animate-pulse"
+            style={{ left: `${pct}%`, width: '8%' }}
           />
+        )}
+        {batch.status === 'running' && pct === 0 && (
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-300/40 to-transparent animate-[shimmer_1.5s_infinite]" />
         )}
       </div>
 
@@ -103,9 +123,12 @@ function BatchProgressCard({
             month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
           })}
         </span>
-        {batch.credits_used > 0 && (
-          <span>{batch.credits_used.toLocaleString()} credits used</span>
-        )}
+        <span className="flex items-center gap-3">
+          {isLive && <span className="text-blue-500 flex items-center gap-1"><Loader2 className="w-2.5 h-2.5 animate-spin" /> live</span>}
+          {(fcProgress?.credits_used ?? batch.credits_used) > 0 && (
+            <span>{(fcProgress?.credits_used ?? batch.credits_used).toLocaleString()} credits used</span>
+          )}
+        </span>
       </div>
     </div>
   );
@@ -118,7 +141,9 @@ export default function PipelinePage() {
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
   const [chunkIndex, setChunkIndex] = useState(0);
   const [lastSubmitResult, setLastSubmitResult] = useState<{ jobId: string; urls: number } | null>(null);
+  const [fcProgressMap, setFcProgressMap] = useState<Record<string, FirecrawlProgress>>({});
   const autoRefreshRef = useRef<NodeJS.Timeout | null>(null);
+  const fcPollRef = useRef<NodeJS.Timeout | null>(null);
 
   const showToast = useCallback((type: 'success' | 'error', msg: string) => {
     setToast({ type, msg });
@@ -147,6 +172,40 @@ export default function PipelinePage() {
     autoRefreshRef.current = setInterval(() => loadStatus(true), 15_000);
     return () => { if (autoRefreshRef.current) clearInterval(autoRefreshRef.current); };
   }, [loadStatus]);
+
+  const fetchFcProgress = useCallback(async (batches: PipelineBatch[]) => {
+    const running = batches.filter(b => b.status === 'running' && b.firecrawl_job_id);
+    if (running.length === 0) return;
+    const results = await Promise.allSettled(
+      running.map(b =>
+        fetch('/api/pipeline/firecrawl-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ job_id: b.firecrawl_job_id }),
+        }).then(r => r.json()).then(j => ({ jobId: b.firecrawl_job_id!, progress: j as FirecrawlProgress & { error?: string } }))
+      )
+    );
+    setFcProgressMap(prev => {
+      const next = { ...prev };
+      for (const r of results) {
+        if (r.status === 'fulfilled' && !r.value.progress.error) {
+          next[r.value.jobId] = r.value.progress;
+        }
+      }
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!data) return;
+    fetchFcProgress(data.batches);
+    if (fcPollRef.current) clearInterval(fcPollRef.current);
+    const running = data.batches.filter(b => b.status === 'running');
+    if (running.length > 0) {
+      fcPollRef.current = setInterval(() => fetchFcProgress(data.batches), 10_000);
+    }
+    return () => { if (fcPollRef.current) clearInterval(fcPollRef.current); };
+  }, [data, fetchFcProgress]);
 
   const handleSubmitBatch = useCallback(async (retryFailed = false) => {
     setUiState('submitting');
@@ -366,6 +425,7 @@ export default function PipelinePage() {
                     batch={batch}
                     onPoll={handlePollBatch}
                     polling={pollingJobId}
+                    fcProgress={batch.firecrawl_job_id ? (fcProgressMap[batch.firecrawl_job_id] ?? null) : null}
                   />
                 ))}
               </div>

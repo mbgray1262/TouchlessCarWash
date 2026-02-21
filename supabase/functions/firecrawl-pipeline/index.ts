@@ -142,7 +142,7 @@ Deno.serve(async (req: Request) => {
         supabase.from('listings').select('id', { count: 'exact', head: true })
           .not('last_crawled_at', 'is', null),
         supabase.from('listings').select('id', { count: 'exact', head: true })
-          .not('touchless_evidence', 'is', null),
+          .not('is_touchless', 'is', null),
         supabase.from('listings').select('id', { count: 'exact', head: true })
           .eq('is_touchless', true),
         supabase.from('listings').select('id', { count: 'exact', head: true })
@@ -178,6 +178,30 @@ Deno.serve(async (req: Request) => {
         },
         batches: batchesRes.data ?? [],
         recent_runs: recentRunsRes.data ?? [],
+      }, { headers: corsHeaders });
+    }
+
+    // --- FIRECRAWL JOB STATUS (real-time progress from Firecrawl API) ---
+    if (action === 'firecrawl_status') {
+      if (!firecrawlKey) return Response.json({ error: 'FIRECRAWL_API_KEY not configured' }, { status: 500, headers: corsHeaders });
+      const jobId: string = body.job_id ?? url.searchParams.get('job_id');
+      if (!jobId) return Response.json({ error: 'job_id required' }, { status: 400, headers: corsHeaders });
+
+      const fcRes = await fetch(`${FIRECRAWL_API}/batch/scrape/${jobId}?limit=1`, {
+        headers: { 'Authorization': `Bearer ${firecrawlKey}` },
+      });
+
+      if (!fcRes.ok) {
+        const errText = await fcRes.text();
+        return Response.json({ error: `Firecrawl ${fcRes.status}: ${errText}` }, { status: 502, headers: corsHeaders });
+      }
+
+      const fcData = await fcRes.json() as { status: string; total: number; completed: number; creditsUsed: number };
+      return Response.json({
+        status: fcData.status,
+        total: fcData.total ?? 0,
+        completed: fcData.completed ?? 0,
+        credits_used: fcData.creditsUsed ?? 0,
       }, { headers: corsHeaders });
     }
 
