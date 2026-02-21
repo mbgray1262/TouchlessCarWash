@@ -180,8 +180,9 @@ export default function PipelinePage() {
   const [uiState, setUiState] = useState<UIState>('idle');
   const [pollingJobId, setPollingJobId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
-  const [chunkIndex, setChunkIndex] = useState(0);
   const [lastSubmitResult, setLastSubmitResult] = useState<{ jobId: string; urls: number } | null>(null);
+  const [runsPage, setRunsPage] = useState(0);
+  const [totalRuns, setTotalRuns] = useState(0);
   const [fcProgressMap, setFcProgressMap] = useState<Record<string, FirecrawlProgress>>({});
   const [classifyProgressMap, setClassifyProgressMap] = useState<Record<string, number>>({});
   const autoRefreshRef = useRef<NodeJS.Timeout | null>(null);
@@ -192,19 +193,30 @@ export default function PipelinePage() {
     setTimeout(() => setToast(null), 6000);
   }, []);
 
+  const loadRuns = useCallback(async (page: number) => {
+    try {
+      const res = await fetch(`/api/pipeline/status?runs_page=${page}`);
+      if (!res.ok) return;
+      const json: PipelineStatusResponse & { total_runs?: number } = await res.json();
+      setData(prev => prev ? { ...prev, recent_runs: json.recent_runs } : json);
+      if (json.total_runs !== undefined) setTotalRuns(json.total_runs);
+    } catch { /* silent */ }
+  }, []);
+
   const loadStatus = useCallback(async (silent = false) => {
     if (!silent) setUiState('refreshing');
     try {
-      const res = await fetch('/api/pipeline/status');
+      const res = await fetch(`/api/pipeline/status?runs_page=${runsPage}`);
       if (!res.ok) throw new Error(`Status ${res.status}`);
-      const json: PipelineStatusResponse = await res.json();
+      const json: PipelineStatusResponse & { total_runs?: number } = await res.json();
       setData(json);
+      if (json.total_runs !== undefined) setTotalRuns(json.total_runs);
     } catch (err) {
       if (!silent) showToast('error', (err as Error).message);
     } finally {
       if (!silent) setUiState('idle');
     }
-  }, [showToast]);
+  }, [showToast, runsPage]);
 
   useEffect(() => {
     loadStatus();
@@ -255,7 +267,7 @@ export default function PipelinePage() {
       const res = await fetch('/api/pipeline/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chunk_index: chunkIndex, retry_failed: retryFailed }),
+        body: JSON.stringify({ retry_failed: retryFailed }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? `Error ${res.status}`);
@@ -263,7 +275,6 @@ export default function PipelinePage() {
         showToast('success', 'No more listings to process — queue is empty.');
       } else {
         setLastSubmitResult({ jobId: json.job_id, urls: json.urls_submitted });
-        setChunkIndex(i => i + 1);
         showToast('success', `Batch submitted — ${json.urls_submitted?.toLocaleString()} URLs sent to Firecrawl.`);
       }
       await loadStatus();
@@ -272,7 +283,7 @@ export default function PipelinePage() {
     } finally {
       setUiState('idle');
     }
-  }, [chunkIndex, loadStatus, showToast]);
+  }, [loadStatus, showToast]);
 
   const handlePollBatch = useCallback(async (jobId: string) => {
     setPollingJobId(jobId);
@@ -310,6 +321,7 @@ export default function PipelinePage() {
   }, [loadStatus, showToast]);
 
   const isRunning = uiState !== 'idle';
+  const nextBatchNum = (data?.batches.length ?? 0) + 1;
   const runningBatches = data?.batches.filter(b => b.status === 'running') ?? [];
   const hasRunningBatches = runningBatches.length > 0;
   const pendingClassifyCount = runningBatches.filter(b =>
@@ -415,7 +427,7 @@ export default function PipelinePage() {
               <CardContent className="space-y-3">
                 <div>
                   <p className="text-xs text-gray-500 mb-1.5">
-                    Submits up to 2,000 unclassified listings per batch (chunk #{chunkIndex + 1}).
+                    Submits up to 2,000 unclassified listings to Firecrawl for scraping.
                   </p>
                   <Button
                     className="w-full bg-[#0F2744] hover:bg-[#1a3a5c] text-white"
@@ -424,7 +436,7 @@ export default function PipelinePage() {
                   >
                     {uiState === 'submitting'
                       ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Submitting…</>
-                      : <><Play className="w-4 h-4 mr-2" /> Start Batch #{chunkIndex + 1}</>
+                      : <><Play className="w-4 h-4 mr-2" /> Start Batch #{nextBatchNum}</>
                     }
                   </Button>
                 </div>
@@ -442,15 +454,6 @@ export default function PipelinePage() {
                     <SkipForward className="w-4 h-4 mr-2" /> Retry Failed
                   </Button>
                 </div>
-
-                {chunkIndex > 0 && (
-                  <button
-                    onClick={() => setChunkIndex(0)}
-                    className="text-xs text-gray-400 hover:text-gray-600 w-full text-center transition-colors"
-                  >
-                    Reset to chunk #1
-                  </button>
-                )}
               </CardContent>
             </Card>
 
@@ -504,7 +507,35 @@ export default function PipelinePage() {
 
         <Card>
           <CardHeader className="pb-3 border-b border-gray-100">
-            <CardTitle className="text-base font-semibold text-[#0F2744]">Recent Classifications</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-semibold text-[#0F2744]">
+                Recent Classifications
+                {totalRuns > 0 && (
+                  <span className="ml-2 text-sm font-normal text-gray-400">({totalRuns.toLocaleString()} total)</span>
+                )}
+              </CardTitle>
+              {totalRuns > 50 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400">
+                    {runsPage * 50 + 1}–{Math.min((runsPage + 1) * 50, totalRuns)} of {totalRuns.toLocaleString()}
+                  </span>
+                  <button
+                    onClick={() => { const p = runsPage - 1; setRunsPage(p); loadRuns(p); }}
+                    disabled={runsPage === 0}
+                    className="text-xs px-2 py-1 rounded border border-gray-200 hover:border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Prev
+                  </button>
+                  <button
+                    onClick={() => { const p = runsPage + 1; setRunsPage(p); loadRuns(p); }}
+                    disabled={(runsPage + 1) * 50 >= totalRuns}
+                    className="text-xs px-2 py-1 rounded border border-gray-200 hover:border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             <RecentRunsTable runs={data?.recent_runs ?? []} />

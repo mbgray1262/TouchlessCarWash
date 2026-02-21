@@ -147,7 +147,10 @@ Deno.serve(async (req: Request) => {
 
     // --- GET STATUS ---
     if (action === 'status') {
-      const [totalRes, scrapedRes, classifiedRes, touchlessRes, notTouchlessRes, failedRes, redirectRes, totalWithWebsitesRes] = await Promise.all([
+      const runsPage = parseInt(url.searchParams.get('runs_page') ?? body.runs_page ?? '0', 10);
+      const PAGE_SIZE = 50;
+
+      const [totalRes, scrapedRes, classifiedRes, touchlessRes, notTouchlessRes, failedRes, redirectRes, totalWithWebsitesRes, totalRunsRes] = await Promise.all([
         supabase.from('listings').select('id', { count: 'exact', head: true })
           .is('is_touchless', null).not('website', 'is', null).neq('website', ''),
         supabase.from('listings').select('id', { count: 'exact', head: true })
@@ -164,6 +167,7 @@ Deno.serve(async (req: Request) => {
           .eq('crawl_status', 'redirect'),
         supabase.from('listings').select('id', { count: 'exact', head: true })
           .not('website', 'is', null).neq('website', ''),
+        supabase.from('pipeline_runs').select('id', { count: 'exact', head: true }),
       ]);
 
       const batchesRes = await supabase.from('pipeline_batches')
@@ -177,7 +181,7 @@ Deno.serve(async (req: Request) => {
           listing:listing_id (name, website)
         `)
         .order('processed_at', { ascending: false })
-        .limit(50);
+        .range(runsPage * PAGE_SIZE, (runsPage + 1) * PAGE_SIZE - 1);
 
       return Response.json({
         stats: {
@@ -192,6 +196,7 @@ Deno.serve(async (req: Request) => {
         },
         batches: batchesRes.data ?? [],
         recent_runs: recentRunsRes.data ?? [],
+        total_runs: totalRunsRes.count ?? 0,
       }, { headers: corsHeaders });
     }
 
