@@ -5,6 +5,7 @@ const nextConfig = {
   },
   experimental: {
     serverActions: true,
+    serverActionsBodySizeLimit: '50mb',
   },
   async redirects() {
     return [

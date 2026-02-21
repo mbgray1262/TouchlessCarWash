@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 
 export const maxDuration = 300;
 
+
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
 type HoursMap = Record<string, string>;
