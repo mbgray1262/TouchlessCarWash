@@ -16,7 +16,7 @@ import type { ClassifyStats, RecentListing, QueueListing, LogEntry } from './typ
 
 const PAGE_SIZE = 50;
 const QUEUE_FETCH_SIZE = 5000;
-const STATS_REFRESH_INTERVAL = 10_000;
+const STATS_REFRESH_INTERVAL = 5_000;
 
 async function fetchStats(): Promise<ClassifyStats> {
   const [total, touchless, not_touchless, unclassified_with, unclassified_no, fetch_failed, classify_failed, unknown] = await Promise.all([
@@ -133,6 +133,7 @@ export default function PipelinePage() {
   const startTimeRef = useRef<number | null>(null);
   const statsTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastStatsRefreshRef = useRef<number>(0);
+  const batchsSinceRefreshRef = useRef(0);
   const logRef = useRef<HTMLDivElement | null>(null);
 
   const liveTouchlessRef = useRef(0);
@@ -270,10 +271,13 @@ export default function PipelinePage() {
 
       if (pausedRef.current) return;
 
+      batchsSinceRefreshRef.current += 1;
       const now = Date.now();
-      if (now - lastStatsRefreshRef.current > 5000) {
+      if (batchsSinceRefreshRef.current >= 3 || now - lastStatsRefreshRef.current > 3000) {
+        batchsSinceRefreshRef.current = 0;
         lastStatsRefreshRef.current = now;
-        await refreshStats();
+        await Promise.all([refreshStats(), refreshRecent(0)]);
+        setRecentPage(0);
       }
     }
   }, [concurrency, classifyOne, refreshStats, refreshRecent, showToast]);
@@ -288,6 +292,7 @@ export default function PipelinePage() {
     liveUnknownRef.current = 0;
     liveFailedRef.current = 0;
     lastStatsRefreshRef.current = 0;
+    batchsSinceRefreshRef.current = 0;
     startTimeRef.current = Date.now();
     setProcessedCount(0);
     setTotalInQueue(0);
