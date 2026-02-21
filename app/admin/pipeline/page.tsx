@@ -13,7 +13,7 @@ import type { PipelineBatch, PipelineStatusResponse } from './types';
 type UIState = 'idle' | 'submitting' | 'polling' | 'refreshing' | 'reclassifying';
 
 // Returns a simple label + color for each batch's current lifecycle stage
-function getBatchStage(batch: PipelineBatch): {
+function getBatchStage(batch: PipelineBatch, fcDone = false): {
   label: string;
   sublabel: string;
   color: 'gray' | 'blue' | 'amber' | 'green' | 'red';
@@ -26,8 +26,6 @@ function getBatchStage(batch: PipelineBatch): {
     return { label: 'Done', sublabel: 'Scraping + AI classification complete', color: 'green', canClassify: false };
   }
   if (batch.classify_status === 'running') {
-    // If classify_status is "running" but updated more than 3 minutes ago, the browser tab
-    // that was polling must have closed or crashed. Show button so it can be restarted.
     const updatedAt = new Date(batch.updated_at).getTime();
     const stale = Date.now() - updatedAt > 3 * 60 * 1000;
     if (stale) {
@@ -38,8 +36,8 @@ function getBatchStage(batch: PipelineBatch): {
   if (batch.status === 'running') {
     const scraped = batch.completed_count;
     const total = batch.total_urls;
-    if (scraped >= total) {
-      return { label: 'Ready to Classify', sublabel: `All ${total.toLocaleString()} pages scraped — click Classify to run AI`, color: 'blue', canClassify: true };
+    if (fcDone || scraped >= total) {
+      return { label: 'Ready to Classify', sublabel: `Scraping complete — click Classify to run AI`, color: 'blue', canClassify: true };
     }
     return { label: 'Scraping', sublabel: `Firecrawl is crawling websites…`, color: 'blue', canClassify: false };
   }
@@ -75,20 +73,21 @@ function BatchCard({
   onClassify,
   isClassifyingThis,
   liveClassifiedCount,
-  liveScrapeCount,
+  liveScrapeInfo,
 }: {
   batch: PipelineBatch;
   batchNumber: number;
   onClassify: (jobId: string) => void;
   isClassifyingThis: boolean;
   liveClassifiedCount: number | null;
-  liveScrapeCount: number | null;
+  liveScrapeInfo: { completed: number; fcDone: boolean } | null;
 }) {
-  const stage = getBatchStage(batch);
+  const fcDone = liveScrapeInfo?.fcDone ?? false;
+  const stage = getBatchStage(batch, fcDone);
   const total = batch.total_urls;
 
   // Scrape progress bar — use live Firecrawl count while scraping, otherwise DB value
-  const scrapeCount = liveScrapeCount !== null ? liveScrapeCount : batch.completed_count;
+  const scrapeCount = liveScrapeInfo !== null ? liveScrapeInfo.completed : batch.completed_count;
   const scrapePct = total > 0 ? Math.min(100, Math.round((scrapeCount / total) * 100)) : 0;
 
   // Classify progress — use live in-memory count while actively polling, otherwise use DB value
@@ -204,7 +203,7 @@ export default function PipelinePage() {
   const [classifyProgressMap, setClassifyProgressMap] = useState<Record<string, number>>({});
   const [fcStatusMap, setFcStatusMap] = useState<Record<string, { status: string; total: number; completed: number; credits_used: number } | { error: string }>>({});
   const [checkingFcStatus, setCheckingFcStatus] = useState(false);
-  const [scrapeProgressMap, setScrapeProgressMap] = useState<Record<string, number>>({});
+  const [scrapeProgressMap, setScrapeProgressMap] = useState<Record<string, { completed: number; fcDone: boolean }>>({});
   const [reclassifyProgress, setReclassifyProgress] = useState<{ processed: number; remaining: number } | null>(null);
   const autoRefreshRef = useRef<NodeJS.Timeout | null>(null);
   const runsPageRef = useRef(runsPage);
@@ -235,7 +234,7 @@ export default function PipelinePage() {
         const res = await fetch(`/api/pipeline/firecrawl-status?job_id=${batch.firecrawl_job_id}`);
         const json = await res.json();
         if (json.completed !== undefined) {
-          setScrapeProgressMap(prev => ({ ...prev, [batch.firecrawl_job_id!]: json.completed }));
+          setScrapeProgressMap(prev => ({ ...prev, [batch.firecrawl_job_id!]: { completed: json.completed, fcDone: json.status === 'completed' } }));
         }
       } catch { /* silent */ }
     }));
@@ -653,7 +652,7 @@ export default function PipelinePage() {
                     onClassify={handleClassify}
                     isClassifyingThis={pollingJobId === batch.firecrawl_job_id}
                     liveClassifiedCount={batch.firecrawl_job_id ? (classifyProgressMap[batch.firecrawl_job_id] ?? null) : null}
-                    liveScrapeCount={batch.firecrawl_job_id ? (scrapeProgressMap[batch.firecrawl_job_id] ?? null) : null}
+                    liveScrapeInfo={batch.firecrawl_job_id ? (scrapeProgressMap[batch.firecrawl_job_id] ?? null) : null}
                   />
                 ))}
               </div>
