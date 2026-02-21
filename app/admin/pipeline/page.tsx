@@ -61,15 +61,19 @@ function BatchProgressCard({
   const isPolling = polling === batch.firecrawl_job_id;
   const fcStatus = fcProgress?.status ?? batch.status;
   const isLive = !!fcProgress;
+  const effectiveStatus: PipelineBatch['status'] =
+    fcStatus === 'completed' ? 'completed' :
+    fcStatus === 'failed' ? 'failed' :
+    batch.status;
 
   return (
     <div className="border border-gray-100 rounded-xl p-4 space-y-3">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-xs font-mono text-gray-400 shrink-0">Chunk #{batch.chunk_index + 1}</span>
-          <StatusBadge status={batch.status} />
-          {isLive && fcStatus !== batch.status && (
-            <span className="text-xs text-blue-600 font-medium">Firecrawl: {fcStatus}</span>
+          <StatusBadge status={effectiveStatus} />
+          {isLive && effectiveStatus !== batch.status && (
+            <span className="text-xs text-gray-400 font-medium">scraped, pending classify</span>
           )}
           <span className="text-xs text-gray-400 truncate hidden sm:block">
             {batch.firecrawl_job_id ?? '—'}
@@ -80,7 +84,7 @@ function BatchProgressCard({
             {scrapeCompleted.toLocaleString()} / {scrapeTotal.toLocaleString()}
             {isLive && <span className="text-blue-500 ml-1">scraped</span>}
           </span>
-          {batch.status === 'running' && batch.firecrawl_job_id && (
+          {effectiveStatus !== 'completed' && batch.firecrawl_job_id && (
             <Button
               size="sm"
               variant="outline"
@@ -100,19 +104,19 @@ function BatchProgressCard({
       <div className="relative h-2 rounded-full bg-gray-100 overflow-hidden">
         <div
           className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${
-            batch.status === 'completed' ? 'bg-green-500' :
-            batch.status === 'failed' ? 'bg-red-400' :
+            effectiveStatus === 'completed' ? 'bg-green-500' :
+            effectiveStatus === 'failed' ? 'bg-red-400' :
             'bg-blue-500'
           }`}
           style={{ width: `${pct}%` }}
         />
-        {batch.status === 'running' && pct < 100 && pct > 0 && (
+        {effectiveStatus === 'running' && pct < 100 && pct > 0 && (
           <div
             className="absolute inset-y-0 rounded-full bg-blue-300/40 animate-pulse"
             style={{ left: `${pct}%`, width: '8%' }}
           />
         )}
-        {batch.status === 'running' && pct === 0 && (
+        {effectiveStatus === 'running' && pct === 0 && (
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-300/40 to-transparent animate-[shimmer_1.5s_infinite]" />
         )}
       </div>
