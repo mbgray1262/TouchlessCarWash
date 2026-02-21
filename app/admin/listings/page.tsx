@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Search, CheckCircle2, XCircle, Clock, AlertCircle, Loader2, ExternalLink, Sparkles, Images, Star, Camera, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, Pencil, Building2, Link2, TriangleAlert, Bookmark, MapPin, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -79,6 +79,9 @@ export default function AdminListingsPage() {
   const [vendors, setVendors] = useState<VendorOption[]>([]);
   const [assigningVendor, setAssigningVendor] = useState<string | null>(null);
   const [vendorPopover, setVendorPopover] = useState<string | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [isSearchMode, setIsSearchMode] = useState(false);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     fetchListings();
@@ -86,8 +89,49 @@ export default function AdminListingsPage() {
   }, []);
 
   useEffect(() => {
-    filterListings();
-  }, [listings, searchQuery, statusFilter, sortField, sortDir, chainFilter, featuredFilter]);
+    if (!isSearchMode) {
+      filterListings();
+    }
+  }, [listings, statusFilter, sortField, sortDir, chainFilter, featuredFilter]);
+
+  useEffect(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+
+    if (!searchQuery.trim()) {
+      setIsSearchMode(false);
+      filterListings();
+      return;
+    }
+
+    setIsSearchMode(true);
+    searchDebounceRef.current = setTimeout(() => {
+      searchDatabase(searchQuery.trim());
+    }, 350);
+
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+  }, [searchQuery]);
+
+  const searchDatabase = async (query: string) => {
+    setSearchLoading(true);
+    try {
+      const term = `%${query}%`;
+      const { data, error } = await supabase
+        .from('listings')
+        .select('*')
+        .or(`name.ilike.${term},city.ilike.${term},state.ilike.${term},parent_chain.ilike.${term}`)
+        .order(sortField === 'last_crawled_at' ? 'last_crawled_at' : sortField, { ascending: sortDir === 'asc', nullsFirst: false })
+        .limit(200);
+
+      if (error) throw error;
+      setFilteredListings(data as Listing[]);
+    } catch (err) {
+      toast({ title: 'Search error', description: err instanceof Error ? err.message : 'Search failed', variant: 'destructive' });
+    } finally {
+      setSearchLoading(false);
+    }
+  };
 
   const fetchListings = async () => {
     setLoading(true);
@@ -96,7 +140,8 @@ export default function AdminListingsPage() {
       const { data, error } = await supabase
         .from('listings')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(1000);
 
       if (error) throw error;
       setListings(data as Listing[]);
@@ -132,17 +177,6 @@ export default function AdminListingsPage() {
 
   const filterListings = () => {
     let filtered = [...listings];
-
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (l) =>
-          l.name.toLowerCase().includes(query) ||
-          l.city.toLowerCase().includes(query) ||
-          l.state.toLowerCase().includes(query) ||
-          (l.parent_chain ?? '').toLowerCase().includes(query)
-      );
-    }
 
     if (featuredFilter) {
       filtered = filtered.filter((l) => l.is_featured === true);
@@ -1039,9 +1073,13 @@ export default function AdminListingsPage() {
           <CardContent className="pt-6">
             <div className="flex gap-4 mb-3">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                {searchLoading ? (
+                  <Loader2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 animate-spin" />
+                ) : (
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                )}
                 <Input
-                  placeholder="Search by name, city, state, or chain..."
+                  placeholder="Search entire database by name, city, state, or chain..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -1107,7 +1145,11 @@ export default function AdminListingsPage() {
               <SortButton field="last_crawled_at" label="Last Modified" />
               <SortButton field="name" label="Name A–Z" />
               <SortButton field="city" label="City" />
-              <span className="ml-auto text-xs text-gray-400">{filteredListings.length} listing{filteredListings.length !== 1 ? 's' : ''}</span>
+              <span className="ml-auto text-xs text-gray-400">
+                {isSearchMode
+                  ? `${filteredListings.length} result${filteredListings.length !== 1 ? 's' : ''} from full database`
+                  : `${filteredListings.length} listing${filteredListings.length !== 1 ? 's' : ''}`}
+              </span>
             </div>
           </CardContent>
         </Card>
