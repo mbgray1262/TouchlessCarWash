@@ -189,8 +189,33 @@ export default function PipelinePage() {
     setLog(prev => [entry, ...prev].slice(0, 50));
   }, []);
 
+  const applyStatsDelta = useCallback((status: LogEntry['status']) => {
+    setStats(prev => {
+      if (!prev) return prev;
+      const next = { ...prev };
+      if (status === 'touchless') {
+        next.touchless += 1;
+        next.unclassified_with_website = Math.max(0, next.unclassified_with_website - 1);
+      } else if (status === 'not_touchless') {
+        next.not_touchless += 1;
+        next.unclassified_with_website = Math.max(0, next.unclassified_with_website - 1);
+      } else if (status === 'unknown') {
+        next.unknown += 1;
+        next.unclassified_with_website = Math.max(0, next.unclassified_with_website - 1);
+      } else if (status === 'fetch_failed') {
+        next.fetch_failed += 1;
+        next.unclassified_with_website = Math.max(0, next.unclassified_with_website - 1);
+      } else if (status === 'classify_failed') {
+        next.classify_failed += 1;
+        next.unclassified_with_website = Math.max(0, next.unclassified_with_website - 1);
+      }
+      return next;
+    });
+  }, []);
+
   const classifyOne = useCallback(async (listing: QueueListing): Promise<void> => {
     setCurrentListing(`${listing.name} — ${listing.website}`);
+    let status: LogEntry['status'] = 'fetch_failed';
     try {
       const res = await fetch('/api/classify-one', {
         method: 'POST',
@@ -199,7 +224,6 @@ export default function PipelinePage() {
       });
       const json = await res.json();
 
-      let status: LogEntry['status'] = 'unknown';
       if (json.status === 'already_classified') status = 'already_classified';
       else if (json.status === 'fetch_failed') status = 'fetch_failed';
       else if (json.status === 'classify_failed') status = 'classify_failed';
@@ -216,10 +240,6 @@ export default function PipelinePage() {
         status,
         evidence: json.evidence,
       });
-      if (status === 'touchless') liveTouchlessRef.current += 1;
-      else if (status === 'not_touchless') liveNotTouchlessRef.current += 1;
-      else if (status === 'unknown') liveUnknownRef.current += 1;
-      else if (status === 'fetch_failed' || status === 'classify_failed') liveFailedRef.current += 1;
     } catch {
       addLog({
         listing_id: listing.id,
@@ -229,8 +249,17 @@ export default function PipelinePage() {
         website: listing.website,
         status: 'fetch_failed',
       });
-      liveFailedRef.current += 1;
     }
+
+    if (status !== 'already_classified') {
+      applyStatsDelta(status);
+    }
+
+    if (status === 'touchless') liveTouchlessRef.current += 1;
+    else if (status === 'not_touchless') liveNotTouchlessRef.current += 1;
+    else if (status === 'unknown') liveUnknownRef.current += 1;
+    else if (status === 'fetch_failed' || status === 'classify_failed') liveFailedRef.current += 1;
+
     setLiveCounts({
       touchless: liveTouchlessRef.current,
       not_touchless: liveNotTouchlessRef.current,
@@ -243,7 +272,7 @@ export default function PipelinePage() {
       const elapsed = (Date.now() - startTimeRef.current) / 60000;
       setSpeed(elapsed > 0 ? Math.round(processedRef.current / elapsed) : 0);
     }
-  }, [addLog]);
+  }, [addLog, applyStatsDelta]);
 
   const runLoop = useCallback(async () => {
     while (true) {
