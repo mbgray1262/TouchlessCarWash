@@ -84,7 +84,7 @@ function BatchProgressCard({
             {scrapeCompleted.toLocaleString()} / {scrapeTotal.toLocaleString()}
             {isLive && <span className="text-blue-500 ml-1">scraped</span>}
           </span>
-          {effectiveStatus !== 'completed' && batch.firecrawl_job_id && (
+          {batch.status === 'running' && batch.firecrawl_job_id && (
             <Button
               size="sm"
               variant="outline"
@@ -94,7 +94,7 @@ function BatchProgressCard({
             >
               {isPolling ? (
                 <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Classifying…</>
-              ) : 'Classify Results'}
+              ) : effectiveStatus === 'completed' ? 'Classify Results' : 'Poll Status'}
             </Button>
           )}
           <span className="text-xs text-gray-400 tabular-nums font-semibold w-10 text-right">{pct}%</span>
@@ -260,6 +260,9 @@ export default function PipelinePage() {
   const isRunning = uiState !== 'idle';
   const runningBatches = data?.batches.filter(b => b.status === 'running') ?? [];
   const hasRunningBatches = runningBatches.length > 0;
+  const pendingClassifyCount = runningBatches.filter(b =>
+    b.firecrawl_job_id && fcProgressMap[b.firecrawl_job_id]?.status === 'completed'
+  ).length;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -326,8 +329,17 @@ export default function PipelinePage() {
           <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-4 flex items-center gap-3">
             <Loader2 className="w-4 h-4 text-blue-600 animate-spin shrink-0" />
             <div className="text-sm text-blue-800">
-              <span className="font-semibold">{runningBatches.length} batch{runningBatches.length > 1 ? 'es' : ''} running.</span>{' '}
-              Use "Poll Results" on each batch below to process completed scrapes.
+              {pendingClassifyCount > 0 ? (
+                <>
+                  <span className="font-semibold">{pendingClassifyCount} batch{pendingClassifyCount > 1 ? 'es' : ''} ready to classify.</span>{' '}
+                  Firecrawl scraping is complete — click "Classify Results" on each batch below to run AI classification.
+                </>
+              ) : (
+                <>
+                  <span className="font-semibold">{runningBatches.length} batch{runningBatches.length > 1 ? 'es' : ''} scraping.</span>{' '}
+                  Firecrawl is crawling websites in the background. The page auto-refreshes every 15s.
+                </>
+              )}
             </div>
           </div>
         )}
