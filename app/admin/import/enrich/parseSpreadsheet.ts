@@ -35,12 +35,13 @@ function slimRow(row: RawRow): RawRow {
   return slim;
 }
 
-export async function parseSpreadsheetFile(file: File): Promise<RawRow[]> {
+export async function parseSpreadsheetFile(file: File, keepAllColumns = false): Promise<RawRow[]> {
   const ext = file.name.toLowerCase().split('.').pop();
 
   if (ext === 'csv') {
     const text = await file.text();
-    return parseCSVText(text).map(slimRow);
+    const rows = parseCSVText(text);
+    return keepAllColumns ? rows : rows.map(slimRow);
   }
 
   const buffer = await file.arrayBuffer();
@@ -66,7 +67,7 @@ export async function parseSpreadsheetFile(file: File): Promise<RawRow[]> {
 
   await new Promise(r => setTimeout(r, 0));
 
-  return rows.map(slimRow);
+  return keepAllColumns ? rows : rows.map(slimRow);
 }
 
 function parseCSVText(text: string): RawRow[] {

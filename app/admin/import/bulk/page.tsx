@@ -10,8 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AdminNav } from '@/components/AdminNav';
+import { parseSpreadsheetFile } from '../enrich/parseSpreadsheet';
 
-type ImportStatus = 'idle' | 'uploading' | 'processing' | 'done' | 'error';
+type ImportStatus = 'idle' | 'parsing' | 'processing' | 'done' | 'error';
 
 interface ImportSummary {
   total: number;
@@ -21,24 +22,38 @@ interface ImportSummary {
   errors: string[];
 }
 
+interface ProgressState {
+  processed: number;
+  total: number;
+  pct: number;
+  batch: number;
+  totalBatches: number;
+}
+
+const CHUNK = 2000;
+
 export default function BulkImportPage() {
   const [status, setStatus] = useState<ImportStatus>('idle');
   const [fileName, setFileName] = useState('');
   const [fileSize, setFileSize] = useState('');
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [statusMessage, setStatusMessage] = useState('');
+  const [progress, setProgress] = useState<ProgressState | null>(null);
+  const [totalRows, setTotalRows] = useState<number | null>(null);
   const [summary, setSummary] = useState<ImportSummary | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const xhrRef = useRef<XMLHttpRequest | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const reset = useCallback(() => {
-    xhrRef.current?.abort();
-    xhrRef.current = null;
+    abortRef.current?.abort();
+    abortRef.current = null;
     setStatus('idle');
     setFileName('');
     setFileSize('');
-    setUploadProgress(0);
+    setStatusMessage('');
+    setProgress(null);
+    setTotalRows(null);
     setSummary(null);
     setErrorMsg('');
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -46,7 +61,6 @@ export default function BulkImportPage() {
 
   async function processFile(file: File) {
     if (!file) return;
-
     const ext = file.name.toLowerCase().split('.').pop();
     if (!['csv', 'xlsx', 'xls'].includes(ext ?? '')) {
       setStatus('error');
@@ -56,68 +70,87 @@ export default function BulkImportPage() {
 
     setFileName(file.name);
     setFileSize((file.size / 1024 / 1024).toFixed(1) + ' MB');
-    setStatus('uploading');
-    setUploadProgress(0);
+    setStatus('parsing');
+    setStatusMessage('Reading file into memory…');
+    setProgress(null);
+    setTotalRows(null);
     setSummary(null);
     setErrorMsg('');
 
-    const formData = new FormData();
-    formData.append('file', file);
+    let rawRows: Record<string, unknown>[];
+    try {
+      await new Promise(r => setTimeout(r, 30));
+      setStatusMessage('Parsing spreadsheet (this may take a moment for large files)…');
+      rawRows = await parseSpreadsheetFile(file, true) as Record<string, unknown>[];
+      setStatusMessage('Parsed successfully, preparing rows…');
+    } catch (err) {
+      setStatus('error');
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to parse file.');
+      return;
+    }
 
-    await new Promise<void>((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhrRef.current = xhr;
+    if (rawRows.length === 0) {
+      setStatus('error');
+      setErrorMsg('File is empty or has no data rows.');
+      return;
+    }
 
-      xhr.upload.addEventListener('progress', e => {
-        if (e.lengthComputable) {
-          const pct = Math.round((e.loaded / e.total) * 100);
-          setUploadProgress(pct);
-          if (pct === 100) setStatus('processing');
+    const total = rawRows.length;
+    setTotalRows(total);
+    setStatus('processing');
+    setStatusMessage('Importing rows into the database…');
+
+    const ac = new AbortController();
+    abortRef.current = ac;
+
+    const totalChunks = Math.ceil(total / CHUNK);
+    const accumulated: ImportSummary = { total, inserted: 0, skipped: 0, failed: 0, errors: [] };
+
+    try {
+      for (let chunkIdx = 0; chunkIdx < total; chunkIdx += CHUNK) {
+        if (ac.signal.aborted) return;
+
+        const chunk = rawRows.slice(chunkIdx, chunkIdx + CHUNK);
+        const chunkNum = Math.floor(chunkIdx / CHUNK) + 1;
+
+        setProgress({
+          processed: chunkIdx,
+          total,
+          pct: Math.round((chunkIdx / total) * 100),
+          batch: chunkNum,
+          totalBatches: totalChunks,
+        });
+
+        const res = await fetch('/api/bulk-import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rows: chunk }),
+          signal: ac.signal,
+        });
+
+        if (!res.ok) {
+          let msg = `Server error (${res.status}) on batch ${chunkNum}`;
+          try { const b = await res.json(); msg = b.error ?? msg; } catch { }
+          setStatus('error');
+          setErrorMsg(msg);
+          return;
         }
-      });
 
-      xhr.addEventListener('load', () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            const result: ImportSummary & { error?: string } = JSON.parse(xhr.responseText);
-            if (result.error) {
-              setStatus('error');
-              setErrorMsg(result.error);
-            } else {
-              setSummary(result);
-              setStatus('done');
-            }
-          } catch {
-            setStatus('error');
-            setErrorMsg('Unexpected response from server.');
-          }
-        } else {
-          try {
-            const body = JSON.parse(xhr.responseText);
-            setStatus('error');
-            setErrorMsg(body.error ?? `Server error (${xhr.status})`);
-          } catch {
-            setStatus('error');
-            setErrorMsg(`Server error (${xhr.status})`);
-          }
-        }
-        resolve();
-      });
+        const result: ImportSummary = await res.json();
+        accumulated.inserted += result.inserted ?? 0;
+        accumulated.skipped += result.skipped ?? 0;
+        accumulated.failed += result.failed ?? 0;
+        accumulated.errors.push(...(result.errors ?? []));
+      }
 
-      xhr.addEventListener('error', () => {
-        setStatus('error');
-        setErrorMsg('Network error. Please check your connection and try again.');
-        reject();
-      });
-
-      xhr.addEventListener('abort', () => {
-        setStatus('idle');
-        resolve();
-      });
-
-      xhr.open('POST', '/api/bulk-import');
-      xhr.send(formData);
-    });
+      setProgress({ processed: total, total, pct: 100, batch: totalChunks, totalBatches: totalChunks });
+      setSummary(accumulated);
+      setStatus('done');
+    } catch (err) {
+      if ((err as Error)?.name === 'AbortError') return;
+      setStatus('error');
+      setErrorMsg(err instanceof Error ? err.message : 'Network error.');
+    }
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -132,7 +165,7 @@ export default function BulkImportPage() {
     if (file) processFile(file).catch(() => {});
   }
 
-  const isRunning = status === 'uploading' || status === 'processing';
+  const isRunning = status === 'parsing' || status === 'processing';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -153,7 +186,8 @@ export default function BulkImportPage() {
         <div className="mb-8 mt-4">
           <h1 className="text-3xl font-bold text-[#0F2744] mb-2">Bulk Spreadsheet Import</h1>
           <p className="text-gray-500">
-            Upload a CSV or Excel file with up to 30,000+ rows. Files are parsed on the server, so large XLSX files work fine.
+            Upload a CSV or Excel file. The file is parsed in your browser and sent in batches — large files work fine.
+            All Outscraper enrichment columns are captured in a single pass, so no separate enrichment step is needed.
           </p>
         </div>
 
@@ -205,39 +239,35 @@ export default function BulkImportPage() {
           {isRunning && (
             <Card>
               <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
-                    <span className="text-sm font-medium text-gray-700">
-                      {status === 'uploading' ? 'Uploading file to server…' : 'Server is parsing and importing rows…'}
-                    </span>
-                  </div>
-                  {status === 'uploading' && (
-                    <span className="text-sm text-gray-500 tabular-nums">{uploadProgress}%</span>
-                  )}
-                </div>
-
-                <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
-                  {status === 'uploading' ? (
-                    <div
-                      className="bg-blue-500 h-2.5 rounded-full transition-all duration-200"
-                      style={{ width: `${uploadProgress}%` }}
+                <div className="space-y-4">
+                  {status === 'parsing' && (
+                    <ProgressSection
+                      label={statusMessage || 'Reading and parsing file…'}
+                      sublabel="Processing spreadsheet in your browser"
+                      pct={100}
+                      indeterminate={true}
                     />
-                  ) : (
-                    <div className="bg-blue-500 h-2.5 rounded-full animate-pulse w-full" />
+                  )}
+                  {status === 'processing' && (
+                    <ProgressSection
+                      label="Importing rows into the database"
+                      sublabel={
+                        progress
+                          ? `${progress.processed.toLocaleString()} / ${progress.total.toLocaleString()} rows — batch ${progress.batch} of ${progress.totalBatches}`
+                          : totalRows
+                          ? `0 / ${totalRows.toLocaleString()} rows`
+                          : 'Starting…'
+                      }
+                      pct={progress?.pct ?? 0}
+                      indeterminate={!progress}
+                    />
                   )}
                 </div>
-
-                {status === 'processing' && (
-                  <p className="text-xs text-gray-400 mt-2">
-                    Upload complete &mdash; processing and inserting rows into the database&hellip;
-                  </p>
-                )}
 
                 <Button
                   variant="outline"
                   size="sm"
-                  className="mt-4 text-red-600 border-red-200 hover:bg-red-50"
+                  className="mt-5 text-red-600 border-red-200 hover:bg-red-50"
                   onClick={reset}
                 >
                   Cancel
@@ -306,34 +336,53 @@ export default function BulkImportPage() {
               <p className="text-sm font-medium text-gray-700 flex items-center gap-1.5 mb-3">
                 <Info className="w-4 h-4 text-gray-400" /> Expected columns
               </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-1.5">
-                {[
-                  { col: 'name', req: true },
-                  { col: 'address', req: false },
-                  { col: 'city', req: true },
-                  { col: 'state', req: true },
-                  { col: 'zip', req: false },
-                  { col: 'phone', req: false },
-                  { col: 'website', req: false },
-                  { col: 'rating', req: false },
-                  { col: 'review_count', req: false },
-                  { col: 'latitude', req: false },
-                  { col: 'longitude', req: false },
-                  { col: 'parent_chain', req: false },
-                  { col: 'google_place_id', req: false },
-                ].map(({ col: c, req }) => (
-                  <div key={c} className="flex items-center gap-1.5 text-xs">
-                    <Badge
-                      className={`text-[10px] px-1.5 py-0 ${req ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-gray-100 text-gray-500 border-gray-200'}`}
-                    >
-                      {req ? 'required' : 'optional'}
-                    </Badge>
-                    <span className="font-mono text-gray-600">{c}</span>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Core listing fields</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-1.5">
+                    {[
+                      { col: 'name', req: true },
+                      { col: 'city', req: true },
+                      { col: 'state', req: true },
+                      { col: 'address', req: false },
+                      { col: 'zip', req: false },
+                      { col: 'phone', req: false },
+                      { col: 'website', req: false },
+                      { col: 'rating', req: false },
+                      { col: 'review_count', req: false },
+                      { col: 'latitude', req: false },
+                      { col: 'longitude', req: false },
+                      { col: 'parent_chain', req: false },
+                      { col: 'place_id / google_place_id', req: false },
+                    ].map(({ col: c, req }) => (
+                      <div key={c} className="flex items-center gap-1.5 text-xs">
+                        <Badge className={`text-[10px] px-1.5 py-0 shrink-0 ${req ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                          {req ? 'required' : 'optional'}
+                        </Badge>
+                        <span className="font-mono text-gray-600">{c}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Outscraper enrichment fields (auto-captured)</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-1.5">
+                    {[
+                      'photo', 'logo', 'street_view', 'photos_count',
+                      'description', 'about', 'subtypes', 'category',
+                      'business_status', 'verified', 'reviews_per_score',
+                      'popular_times', 'typical_time_spent', 'range',
+                      'booking_appointment_link', 'location_link', 'google_id',
+                    ].map(c => (
+                      <div key={c} className="flex items-center gap-1.5 text-xs">
+                        <span className="font-mono text-gray-500">{c}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
               <p className="text-xs text-gray-400 mt-4">
-                Column headers are case-insensitive. Rows with the same <span className="font-mono">google_place_id</span> (or same name+address+city+zip) are skipped automatically on re-import.
+                Column headers are case-insensitive. Rows with the same <span className="font-mono">place_id</span> (or same name+address+city+zip) are skipped automatically on re-import.
               </p>
             </CardContent>
           </Card>
@@ -343,11 +392,45 @@ export default function BulkImportPage() {
   );
 }
 
+function ProgressSection({
+  label, sublabel, pct, indeterminate,
+}: {
+  label: string;
+  sublabel: string;
+  pct: number;
+  indeterminate: boolean;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="flex items-center gap-2">
+          <Loader2 className="w-4 h-4 text-blue-500 animate-spin shrink-0" />
+          <span className="text-sm font-medium text-gray-700">{label}</span>
+        </div>
+        {!indeterminate && (
+          <span className="text-sm text-gray-500 tabular-nums font-medium">{pct}%</span>
+        )}
+      </div>
+      <p className="text-xs text-gray-400 mb-2 ml-6">{sublabel}</p>
+      <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+        {indeterminate ? (
+          <div className="bg-blue-500 h-2.5 rounded-full animate-pulse w-full" />
+        ) : (
+          <div
+            className="bg-blue-500 h-2.5 rounded-full transition-all duration-300"
+            style={{ width: `${pct}%` }}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
 function StatCard({ label, value, color }: { label: string; value: number; color: 'gray' | 'green' | 'yellow' | 'red' }) {
   const colors = {
     gray: 'bg-gray-50 border-gray-200 text-gray-800',
     green: 'bg-green-50 border-green-200 text-green-800',
-    yellow: 'bg-yellow-50 border-yellow-200 text-yellow-800',
+    yellow: value > 0 ? 'bg-yellow-50 border-yellow-200 text-yellow-800' : 'bg-gray-50 border-gray-200 text-gray-400',
     red: value > 0 ? 'bg-red-50 border-red-200 text-red-800' : 'bg-gray-50 border-gray-200 text-gray-400',
   };
 
