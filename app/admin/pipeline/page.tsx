@@ -19,25 +19,29 @@ const QUEUE_FETCH_SIZE = 5000;
 const STATS_REFRESH_INTERVAL = 5_000;
 
 async function fetchStats(): Promise<ClassifyStats> {
-  const [total, touchless, not_touchless, unclassified_with, unclassified_no, fetch_failed, classify_failed, unknown] = await Promise.all([
-    supabase.from('listings').select('id', { count: 'exact', head: true }),
+  const [touchless, not_touchless, unclassified_with, unclassified_no, fetch_failed, classify_failed, unknown] = await Promise.all([
     supabase.from('listings').select('id', { count: 'exact', head: true }).eq('is_touchless', true),
     supabase.from('listings').select('id', { count: 'exact', head: true }).eq('is_touchless', false),
     supabase.from('listings').select('id', { count: 'exact', head: true }).is('is_touchless', null).not('website', 'is', null).neq('website', ''),
     supabase.from('listings').select('id', { count: 'exact', head: true }).is('is_touchless', null).or('website.is.null,website.eq.'),
     supabase.from('listings').select('id', { count: 'exact', head: true }).eq('crawl_status', 'fetch_failed'),
     supabase.from('listings').select('id', { count: 'exact', head: true }).eq('crawl_status', 'classify_failed'),
-    supabase.from('listings').select('id', { count: 'exact', head: true }).is('is_touchless', null).not('last_crawled_at', 'is', null),
+    supabase.from('listings').select('id', { count: 'exact', head: true }).eq('crawl_status', 'unknown'),
   ]);
+  const t = touchless.count ?? 0;
+  const nt = not_touchless.count ?? 0;
+  const uw = unclassified_with.count ?? 0;
+  const un = unclassified_no.count ?? 0;
+  const unk = unknown.count ?? 0;
   return {
-    total: total.count ?? 0,
-    touchless: touchless.count ?? 0,
-    not_touchless: not_touchless.count ?? 0,
-    unclassified_with_website: unclassified_with.count ?? 0,
-    unclassified_no_website: unclassified_no.count ?? 0,
+    total: t + nt + uw + un,
+    touchless: t,
+    not_touchless: nt,
+    unclassified_with_website: uw,
+    unclassified_no_website: un,
     fetch_failed: fetch_failed.count ?? 0,
     classify_failed: classify_failed.count ?? 0,
-    unknown: unknown.count ?? 0,
+    unknown: unk,
   };
 }
 
