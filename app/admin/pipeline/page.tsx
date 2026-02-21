@@ -177,13 +177,12 @@ export default function PipelinePage() {
   useEffect(() => {
     statsTimerRef.current = setInterval(() => {
       if (runStateRef.current === 'running') {
-        refreshStats();
         refreshRecent(0);
         setRecentPage(0);
       }
     }, STATS_REFRESH_INTERVAL);
     return () => { if (statsTimerRef.current) clearInterval(statsTimerRef.current); };
-  }, [refreshStats, refreshRecent]);
+  }, [refreshRecent]);
 
   const addLog = useCallback((entry: LogEntry) => {
     setLog(prev => [entry, ...prev].slice(0, 50));
@@ -305,7 +304,7 @@ export default function PipelinePage() {
       if (batchsSinceRefreshRef.current >= 3 || now - lastStatsRefreshRef.current > 3000) {
         batchsSinceRefreshRef.current = 0;
         lastStatsRefreshRef.current = now;
-        await Promise.all([refreshStats(), refreshRecent(0)]);
+        await refreshRecent(0);
         setRecentPage(0);
       }
     }
