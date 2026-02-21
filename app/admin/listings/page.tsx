@@ -831,6 +831,35 @@ export default function AdminListingsPage() {
     setListings((prev) => prev.filter((l) => l.id !== id));
   };
 
+  const [savingTouchless, setSavingTouchless] = useState<Set<string>>(new Set());
+
+  const setTouchlessStatus = async (listing: Listing, value: boolean | null) => {
+    if (savingTouchless.has(listing.id)) return;
+    setSavingTouchless((prev) => new Set(prev).add(listing.id));
+    try {
+      const { error } = await supabase
+        .from('listings')
+        .update({
+          is_touchless: value,
+          crawl_status: value !== null ? 'crawled' : listing.crawl_status,
+          touchless_confidence: value !== null ? 'manual' : null,
+        })
+        .eq('id', listing.id);
+      if (error) throw error;
+      const updater = (l: Listing) =>
+        l.id === listing.id
+          ? { ...l, is_touchless: value, crawl_status: value !== null ? 'crawled' : l.crawl_status, touchless_confidence: value !== null ? 'manual' : null }
+          : l;
+      setListings((prev) => prev.map(updater));
+      setFilteredListings((prev) => prev.map(updater));
+      toast({ title: value === true ? 'Marked as Touchless' : value === false ? 'Marked as Not Touchless' : 'Cleared touchless status' });
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to update', variant: 'destructive' });
+    } finally {
+      setSavingTouchless((prev) => { const s = new Set(prev); s.delete(listing.id); return s; });
+    }
+  };
+
   const toggleFeatured = async (listing: Listing) => {
     const newValue = !listing.is_featured;
     const { error } = await supabase
@@ -1311,9 +1340,56 @@ export default function AdminListingsPage() {
                         </div>
                       </div>
 
-                      <div className="flex gap-2 mb-3">
+                      <div className="flex items-center gap-3 mb-3 flex-wrap">
                         {getCrawlStatusBadge(listing.crawl_status, listing.website)}
-                        {getTouchlessBadge(listing.is_touchless, listing.touchless_confidence)}
+                        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+                          <button
+                            onClick={() => listing.is_touchless !== true && setTouchlessStatus(listing, true)}
+                            disabled={savingTouchless.has(listing.id)}
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                              listing.is_touchless === true
+                                ? 'bg-green-500 text-white shadow-sm'
+                                : 'text-gray-500 hover:text-green-700 hover:bg-green-50'
+                            }`}
+                          >
+                            {savingTouchless.has(listing.id) && listing.is_touchless !== true ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="w-3 h-3" />
+                            )}
+                            Touchless
+                          </button>
+                          <button
+                            onClick={() => listing.is_touchless !== false && setTouchlessStatus(listing, false)}
+                            disabled={savingTouchless.has(listing.id)}
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                              listing.is_touchless === false
+                                ? 'bg-red-500 text-white shadow-sm'
+                                : 'text-gray-500 hover:text-red-700 hover:bg-red-50'
+                            }`}
+                          >
+                            {savingTouchless.has(listing.id) && listing.is_touchless !== false ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <XCircle className="w-3 h-3" />
+                            )}
+                            Not Touchless
+                          </button>
+                          {listing.is_touchless !== null && (
+                            <button
+                              onClick={() => setTouchlessStatus(listing, null)}
+                              disabled={savingTouchless.has(listing.id)}
+                              className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition-all"
+                              title="Clear / mark as unknown"
+                            >
+                              <XCircle className="w-3 h-3" />
+                              Clear
+                            </button>
+                          )}
+                        </div>
+                        {listing.touchless_confidence && listing.touchless_confidence !== 'manual' && (
+                          <span className="text-xs text-gray-400">confidence: {listing.touchless_confidence}</span>
+                        )}
                       </div>
 
                       {listing.crawl_notes && (
