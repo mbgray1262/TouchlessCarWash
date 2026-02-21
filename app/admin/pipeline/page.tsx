@@ -44,7 +44,7 @@ function StagePill({ color, label }: { color: string; label: string }) {
   const styles: Record<string, string> = {
     gray: 'bg-gray-100 text-gray-600 border-gray-200',
     blue: 'bg-blue-50 text-blue-700 border-blue-200',
-    amber: 'bg-amber-50 text-amber-700 border-amber-200',
+    amber: 'bg-blue-50 text-blue-700 border-blue-200',
     green: 'bg-green-50 text-green-700 border-green-200',
     red: 'bg-red-50 text-red-600 border-red-200',
   };
@@ -92,7 +92,7 @@ function BatchCard({
   const isClassifying = stage.label === 'Classifying' || isClassifyingThis;
 
   return (
-    <div className={`rounded-xl border p-4 space-y-3 ${isDone ? 'bg-green-50/40 border-green-200' : isClassifying ? 'bg-amber-50/40 border-amber-200' : isScraping ? 'bg-blue-50/30 border-blue-200' : 'bg-white border-gray-200'}`}>
+    <div className={`rounded-xl border p-4 space-y-3 ${isDone ? 'bg-green-50/40 border-green-200' : isClassifying ? 'bg-blue-50/30 border-blue-200' : isScraping ? 'bg-blue-50/30 border-blue-200' : 'bg-white border-gray-200'}`}>
       {/* Header row */}
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1 min-w-0">
@@ -108,7 +108,7 @@ function BatchCard({
         {(stage.canClassify || stage.label === 'Ready to Classify') && batch.firecrawl_job_id && (
           <Button
             size="sm"
-            className="bg-amber-500 hover:bg-amber-600 text-white shrink-0 h-8"
+            className="bg-[#0F2744] hover:bg-[#1a3a5c] text-white shrink-0 h-8"
             onClick={() => onClassify(batch.firecrawl_job_id!)}
             disabled={isClassifyingThis}
           >
@@ -145,27 +145,24 @@ function BatchCard({
         <div className="flex items-center justify-between text-xs text-gray-500">
           <span className="font-medium">
             {isClassifying ? (
-              <span className="text-amber-600 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Classifying with AI</span>
+              <span className="text-blue-600 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Classifying with AI</span>
             ) : isDone ? (
               <span className="text-green-600">Classified</span>
             ) : (
               <span className="text-gray-400">AI Classification</span>
             )}
           </span>
-          <span className={`tabular-nums font-semibold ${isDone ? 'text-green-600' : isClassifying ? 'text-amber-600' : 'text-gray-400'}`}>
+          <span className={`tabular-nums font-semibold ${isDone ? 'text-green-600' : isClassifying ? 'text-blue-600' : 'text-gray-400'}`}>
             {classifiedCount.toLocaleString()} / {total.toLocaleString()} &nbsp;{classifyPct}%
           </span>
         </div>
         <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
           <div
             className={`h-2 rounded-full transition-all duration-500 ${
-              isDone ? 'bg-green-500' : isClassifying ? 'bg-amber-400' : 'bg-gray-200'
+              isDone ? 'bg-green-500' : isClassifying ? 'bg-blue-500' : 'bg-gray-200'
             }`}
             style={{ width: `${classifyPct}%` }}
           />
-          {isClassifying && (
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-300/30 to-transparent animate-pulse" />
-          )}
         </div>
       </div>
 
@@ -315,20 +312,20 @@ export default function PipelinePage() {
     const count = classifyProgressMap[pollingJobId] ?? batch?.classified_count ?? 0;
     const total = batch?.total_urls ?? 0;
     bannerMsg = (
-      <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 flex items-center gap-3">
-        <Loader2 className="w-4 h-4 text-amber-600 animate-spin shrink-0" />
-        <div className="text-sm text-amber-800">
+      <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-4 flex items-center gap-3">
+        <Loader2 className="w-4 h-4 text-blue-600 animate-spin shrink-0" />
+        <div className="text-sm text-blue-800">
           <span className="font-semibold">AI classification running</span>
-          {total > 0 && <span className="ml-2 text-amber-700">{count.toLocaleString()} / {total.toLocaleString()} classified so far</span>}
-          <span className="ml-2 text-amber-600 text-xs">— do not close this tab</span>
+          {total > 0 && <span className="ml-2 text-blue-700">{count.toLocaleString()} / {total.toLocaleString()} classified so far</span>}
+          <span className="ml-2 text-blue-600 text-xs">— do not close this tab</span>
         </div>
       </div>
     );
   } else if (readyToClassify.length > 0 && classifyingBatches.length === 0) {
     bannerMsg = (
-      <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 flex items-center gap-3">
-        <Brain className="w-4 h-4 text-amber-600 shrink-0" />
-        <div className="text-sm text-amber-800">
+      <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-4 flex items-center gap-3">
+        <Brain className="w-4 h-4 text-blue-600 shrink-0" />
+        <div className="text-sm text-blue-800">
           <span className="font-semibold">{readyToClassify.length} batch{readyToClassify.length > 1 ? 'es' : ''} ready for AI classification.</span>{' '}
           Firecrawl scraping is complete. Click <strong>Classify Results</strong> on each batch below.
         </div>
@@ -346,9 +343,9 @@ export default function PipelinePage() {
     );
   } else if (classifyingBatches.length > 0 && !pollingJobId) {
     bannerMsg = (
-      <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 flex items-center gap-3">
-        <Brain className="w-4 h-4 text-amber-600 shrink-0" />
-        <div className="text-sm text-amber-800">
+      <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-4 flex items-center gap-3">
+        <Brain className="w-4 h-4 text-blue-600 shrink-0" />
+        <div className="text-sm text-blue-800">
           <span className="font-semibold">Classification is running</span> — results are being written to the database.
         </div>
       </div>
@@ -450,12 +447,12 @@ export default function PipelinePage() {
               </CardContent>
             </Card>
 
-            <Card className="border-amber-200 bg-amber-50">
+            <Card className="border-gray-200 bg-gray-50">
               <CardContent className="p-4 flex gap-2.5 items-start">
-                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <div className="text-xs text-amber-800 space-y-1">
+                <AlertCircle className="w-4 h-4 text-gray-500 shrink-0 mt-0.5" />
+                <div className="text-xs text-gray-600 space-y-1">
                   <p className="font-semibold">Safe to run multiple times</p>
-                  <p>Only listings with <code className="bg-amber-100 px-1 rounded">is_touchless = NULL</code> are queued. Existing classifications are never overwritten.</p>
+                  <p>Only listings with <code className="bg-gray-200 px-1 rounded">is_touchless = NULL</code> are queued. Existing classifications are never overwritten.</p>
                 </div>
               </CardContent>
             </Card>

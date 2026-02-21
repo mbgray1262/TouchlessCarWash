@@ -70,8 +70,8 @@ async function classifyWithClaude(markdown: string, apiKey: string): Promise<{
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 500,
+      model: 'claude-haiku-4-5',
+      max_tokens: 300,
       messages: [{
         role: 'user',
         content: `Analyze this car wash website content and return a JSON object.
@@ -381,14 +381,12 @@ Deno.serve(async (req: Request) => {
         listingMap.set(normalizeUrl(l.website), l);
       }
 
-      let totalProcessed = 0;
-
-      for (const item of items) {
+      // Process all items on this page in parallel for maximum speed
+      const results = await Promise.all(items.map(async (item) => {
         const sourceURL = item.metadata?.sourceURL ?? '';
         const statusCode = item.metadata?.statusCode ?? 0;
-
         const listing = listingMap.get(normalizeUrl(sourceURL));
-        if (!listing) continue;
+        if (!listing) return null;
 
         let crawl_status = 'success';
         let is_touchless: boolean | null = null;
@@ -415,6 +413,13 @@ Deno.serve(async (req: Request) => {
           }
         }
 
+        return { listing, crawl_status, is_touchless, touchless_evidence, amenities, description, images };
+      }));
+
+      // Write all results to DB in parallel
+      const processed = results.filter(Boolean) as NonNullable<typeof results[0]>[];
+
+      await Promise.all(processed.map(async ({ listing, crawl_status, is_touchless, touchless_evidence, amenities, description, images }) => {
         const filteredImages = filterImages(images);
 
         const updatePayload: Record<string, unknown> = {
@@ -437,23 +442,21 @@ Deno.serve(async (req: Request) => {
           updatePayload.amenities = amenities;
         }
 
-        const { error: updateErr } = await supabase.from('listings').update(updatePayload).eq('id', listing.id);
-        if (updateErr) console.error(`listings update failed for ${listing.id}:`, updateErr.message);
+        await Promise.all([
+          supabase.from('listings').update(updatePayload).eq('id', listing.id),
+          supabase.from('pipeline_runs').insert({
+            listing_id: listing.id,
+            batch_id: batch?.id ?? null,
+            crawl_status,
+            is_touchless,
+            touchless_evidence,
+            images_found: images.length,
+          }),
+          syncFilters(supabase, listing.id, is_touchless, amenities, filterMap),
+        ]);
+      }));
 
-        await supabase.from('pipeline_runs').insert({
-          listing_id: listing.id,
-          batch_id: batch?.id ?? null,
-          crawl_status,
-          is_touchless,
-          touchless_evidence,
-          raw_markdown: markdown.slice(0, 50000),
-          images_found: images.length,
-        });
-
-        await syncFilters(supabase, listing.id, is_touchless, amenities, filterMap);
-
-        totalProcessed++;
-      }
+      const totalProcessed = processed.length;
 
       const newCompleted = (batch?.completed_count ?? 0) + totalProcessed;
       const newClassified = (batch?.classified_count ?? 0) + totalProcessed;
