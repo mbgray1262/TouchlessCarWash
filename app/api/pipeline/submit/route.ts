@@ -5,17 +5,29 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
-  const appUrl = req.headers.get('origin') ?? req.nextUrl.origin;
+  const appUrl = req.nextUrl.origin;
 
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/firecrawl-pipeline`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ action: 'submit_batch', app_url: appUrl, ...body }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${SUPABASE_URL}/functions/v1/firecrawl-pipeline`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ action: 'submit_batch', app_url: appUrl, ...body }),
+    });
+  } catch (err) {
+    return NextResponse.json({ error: `Network error: ${(err as Error).message}` }, { status: 502 });
+  }
 
-  const data = await res.json();
+  const text = await res.text();
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = { error: text || `Edge function returned status ${res.status} with empty body` };
+  }
+
   return NextResponse.json(data, { status: res.ok ? 200 : 502 });
 }
