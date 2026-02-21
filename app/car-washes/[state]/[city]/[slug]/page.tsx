@@ -157,7 +157,22 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 max-w-5xl py-8">
+      <div className="container mx-auto px-4 max-w-5xl py-8 space-y-8">
+        {listing.latitude && listing.longitude && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6">
+            <h2 className="text-lg font-bold text-[#0F2744] mb-4 flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-[#22C55E]" />
+              Location
+            </h2>
+            <ListingMap
+              lat={listing.latitude as number}
+              lng={listing.longitude as number}
+              name={listing.name}
+              address={`${listing.address}, ${listing.city}, ${listing.state} ${listing.zip}`}
+            />
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
             {listing.amenities && listing.amenities.length > 0 && (
@@ -213,20 +228,6 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
               </div>
             )}
 
-            {listing.latitude && listing.longitude && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6">
-                <h2 className="text-lg font-bold text-[#0F2744] mb-4 flex items-center gap-2">
-                  <MapPin className="w-5 h-5 text-[#22C55E]" />
-                  Location
-                </h2>
-                <ListingMap
-                  lat={listing.latitude as number}
-                  lng={listing.longitude as number}
-                  name={listing.name}
-                  address={`${listing.address}, ${listing.city}, ${listing.state} ${listing.zip}`}
-                />
-              </div>
-            )}
           </div>
 
           <div className="space-y-5">
