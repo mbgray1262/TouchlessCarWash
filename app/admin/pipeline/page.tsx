@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, RefreshCw, SkipForward, Loader2, Zap, AlertCircle, ChevronRight, CheckCircle2, XCircle, Clock, BarChart3, Brain } from 'lucide-react';
+import { Play, RefreshCw, SkipForward, Loader2, Zap, AlertCircle, ChevronRight, CheckCircle2, XCircle, Clock, BarChart3, Brain, Search } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -198,6 +198,8 @@ export default function PipelinePage() {
   const [runsPage, setRunsPage] = useState(0);
   const [totalRuns, setTotalRuns] = useState(0);
   const [classifyProgressMap, setClassifyProgressMap] = useState<Record<string, number>>({});
+  const [fcStatusMap, setFcStatusMap] = useState<Record<string, { status: string; total: number; completed: number; credits_used: number } | { error: string }>>({});
+  const [checkingFcStatus, setCheckingFcStatus] = useState(false);
   const autoRefreshRef = useRef<NodeJS.Timeout | null>(null);
   const runsPageRef = useRef(runsPage);
   const loadStatusFnRef = useRef<((silent?: boolean) => Promise<void>) | null>(null);
@@ -266,6 +268,23 @@ export default function PipelinePage() {
       setUiState('idle');
     }
   }, [loadStatus, showToast]);
+
+  const checkFirecrawlStatus = useCallback(async () => {
+    setCheckingFcStatus(true);
+    const batchList = data?.batches ?? [];
+    const results: typeof fcStatusMap = {};
+    await Promise.all(batchList.map(async (batch) => {
+      if (!batch.firecrawl_job_id) return;
+      try {
+        const res = await fetch(`/api/pipeline/firecrawl-status?job_id=${batch.firecrawl_job_id}`);
+        results[batch.firecrawl_job_id] = await res.json();
+      } catch (e) {
+        results[batch.firecrawl_job_id] = { error: (e as Error).message };
+      }
+    }));
+    setFcStatusMap(results);
+    setCheckingFcStatus(false);
+  }, [data]);
 
   const handleClassify = useCallback(async (jobId: string) => {
     setPollingJobId(jobId);
@@ -464,6 +483,52 @@ export default function PipelinePage() {
             </Card>
           </div>
         </div>
+
+        {/* Firecrawl Job Status Debug Panel */}
+        {batches.length > 0 && (
+          <Card className="mb-6 border-gray-200">
+            <CardHeader className="pb-3 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-semibold text-[#0F2744] flex items-center gap-2">
+                  <Search className="w-4 h-4" />
+                  Firecrawl Job Status (Live from API)
+                </CardTitle>
+                <Button variant="outline" size="sm" onClick={checkFirecrawlStatus} disabled={checkingFcStatus}>
+                  {checkingFcStatus ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Checking…</> : <><Search className="w-3.5 h-3.5 mr-1.5" />Check Firecrawl Jobs</>}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4">
+              {Object.keys(fcStatusMap).length === 0 ? (
+                <p className="text-xs text-gray-400">Click &quot;Check Firecrawl Jobs&quot; to see real-time status from Firecrawl API.</p>
+              ) : (
+                <div className="space-y-2">
+                  {batches.map(batch => {
+                    const fc = batch.firecrawl_job_id ? fcStatusMap[batch.firecrawl_job_id] : null;
+                    if (!fc) return null;
+                    const hasError = 'error' in fc;
+                    return (
+                      <div key={batch.id} className="flex items-center gap-3 text-xs font-mono bg-gray-50 rounded-lg px-3 py-2">
+                        <span className="text-gray-400 truncate max-w-[200px]">{batch.firecrawl_job_id}</span>
+                        {hasError ? (
+                          <span className="text-red-600">Error: {(fc as {error:string}).error}</span>
+                        ) : (
+                          <>
+                            <span className={`font-semibold ${(fc as {status:string}).status === 'completed' ? 'text-green-600' : (fc as {status:string}).status === 'scraping' ? 'text-blue-600' : 'text-gray-600'}`}>
+                              {(fc as {status:string}).status}
+                            </span>
+                            <span className="text-gray-600">{(fc as {completed:number}).completed} / {(fc as {total:number}).total} scraped</span>
+                            <span className="text-gray-400">{(fc as {credits_used:number}).credits_used} credits</span>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="mb-6">
           <CardHeader className="pb-3 border-b border-gray-100">
