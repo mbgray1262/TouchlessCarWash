@@ -31,7 +31,7 @@ interface ProgressState {
   totalBatches: number;
 }
 
-const CHUNK = 200;
+const CHUNK = 2000;
 
 export default function ImportHoursPage() {
   const [status, setStatus] = useState<ImportStatus>('idle');

@@ -3,7 +3,6 @@ import { supabase } from '@/lib/supabase';
 
 export const maxDuration = 300;
 
-
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
 type HoursMap = Record<string, string>;
@@ -42,13 +41,6 @@ function parseWorkingHours(raw: unknown): HoursMap | null {
   return result;
 }
 
-function isEmpty(val: unknown): boolean {
-  if (val === null || val === undefined) return true;
-  if (typeof val === 'string' && val.trim() === '') return true;
-  if (typeof val === 'object' && !Array.isArray(val) && Object.keys(val as object).length === 0) return true;
-  return false;
-}
-
 function colStr(row: Record<string, unknown>, ...keys: string[]): string {
   for (const k of keys) {
     const v = row[k];
@@ -81,7 +73,7 @@ export async function POST(req: NextRequest) {
       errors: [] as string[],
     };
 
-    const candidates: { placeId: string; hours: HoursMap }[] = [];
+    const rpcRows: { place_id: string; working_hours: HoursMap }[] = [];
 
     for (const row of rawRows) {
       const placeId = colStr(row, 'place_id', 'Place ID', 'google_place_id', 'Google Place ID');
@@ -91,63 +83,24 @@ export async function POST(req: NextRequest) {
       const hours = parseWorkingHours(rawHours);
       if (!hours) { summary.skipped_no_hours_data++; continue; }
 
-      candidates.push({ placeId, hours });
+      rpcRows.push({ place_id: placeId, working_hours: hours });
     }
 
-    if (candidates.length === 0) {
+    if (rpcRows.length === 0) {
       return NextResponse.json(summary);
     }
 
-    const placeIds = candidates.map(c => c.placeId);
+    const { data: rpcResult, error: rpcErr } = await supabase
+      .rpc('bulk_import_hours', { rows: rpcRows });
 
-    const LOOKUP_BATCH = 100;
-    const allListings: { id: string; google_place_id: string; hours: unknown }[] = [];
-    for (let i = 0; i < placeIds.length; i += LOOKUP_BATCH) {
-      const batch = placeIds.slice(i, i + LOOKUP_BATCH);
-      const { data, error: fetchErr } = await supabase
-        .from('listings')
-        .select('id, google_place_id, hours')
-        .in('google_place_id', batch);
-      if (fetchErr) {
-        return NextResponse.json({ error: fetchErr.message }, { status: 500 });
-      }
-      allListings.push(...(data ?? []));
+    if (rpcErr) {
+      return NextResponse.json({ error: rpcErr.message }, { status: 500 });
     }
 
-    const listingMap = new Map<string, { id: string; hours: unknown }>();
-    for (const l of allListings) {
-      if (l.google_place_id) listingMap.set(l.google_place_id, { id: l.id, hours: l.hours });
-    }
-
-    const updates: { id: string; hours: HoursMap }[] = [];
-
-    for (const { placeId, hours } of candidates) {
-      const listing = listingMap.get(placeId);
-      if (!listing) { summary.skipped_no_match++; continue; }
-      if (!isEmpty(listing.hours)) { summary.skipped_already_has_hours++; continue; }
-      updates.push({ id: listing.id, hours });
-    }
-
-    const DB_BATCH = 200;
-    for (let i = 0; i < updates.length; i += DB_BATCH) {
-      const batch = updates.slice(i, i + DB_BATCH);
-
-      await Promise.all(
-        batch.map(({ id, hours }) =>
-          supabase
-            .from('listings')
-            .update({ hours })
-            .eq('id', id)
-            .then(({ error }) => {
-              if (error) {
-                if (summary.errors.length < 20) summary.errors.push(`id ${id}: ${error.message}`);
-              } else {
-                summary.hours_updated++;
-              }
-            })
-        )
-      );
-    }
+    const r = rpcResult as { matched: number; updated: number; skipped_already_has_hours: number; skipped_no_match: number };
+    summary.hours_updated = r.updated ?? 0;
+    summary.skipped_already_has_hours = r.skipped_already_has_hours ?? 0;
+    summary.skipped_no_match = r.skipped_no_match ?? 0;
 
     return NextResponse.json(summary);
   } catch (err) {
