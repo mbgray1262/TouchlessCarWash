@@ -186,15 +186,22 @@ Deno.serve(async (req: Request) => {
       updatePayload.amenities = classification.amenities;
     }
 
-    const { error: updateError } = await supabase
+    const { data: updateData, error: updateError, status: updateStatus, statusText: updateStatusText } = await supabase
       .from("listings")
       .update(updatePayload)
-      .eq("id", listing_id);
+      .eq("id", listing_id)
+      .select("id, is_touchless, crawl_status");
 
     if (updateError) {
       return Response.json({
         status: "update_failed",
         error: updateError.message,
+        error_details: updateError.details,
+        error_hint: updateError.hint,
+        error_code: updateError.code,
+        http_status: updateStatus,
+        http_status_text: updateStatusText,
+        payload_sent: updatePayload,
         is_touchless,
       }, { headers: corsHeaders });
     }
@@ -203,6 +210,8 @@ Deno.serve(async (req: Request) => {
       status: "classified",
       is_touchless,
       evidence: classification.evidence,
+      debug_rows_returned: updateData,
+      debug_update_status: updateStatus,
     }, { headers: corsHeaders });
 
   } catch (e) {
