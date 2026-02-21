@@ -11,6 +11,10 @@ const CHUNK_SIZE = 2000;
 const SKIP_DOMAINS = [
   'facebook.com', 'yelp.com', 'google.com', 'yellowpages.com',
   'bbb.org', 'instagram.com', 'twitter.com', 'tiktok.com',
+  'maps.apple.com', 'map.bp.com', 'mapquest.com', 'maps.google.com',
+  'linkedin.com', 'pinterest.com', 'nextdoor.com', 'foursquare.com',
+  'tripadvisor.com', 'angieslist.com', 'homeadvisor.com', 'thumbtack.com',
+  'citysearch.com', 'superpages.com', 'whitepages.com', 'manta.com',
 ];
 
 const AMENITY_TO_FILTER_SLUG: Record<string, string> = {
@@ -242,7 +246,7 @@ Deno.serve(async (req: Request) => {
       if (retryFailed) {
         query = supabase.from('listings')
           .select('id, website, name, google_subtypes')
-          .in('crawl_status', ['failed', 'timeout'])
+          .in('crawl_status', ['failed', 'timeout', 'no_content'])
           .not('website', 'is', null)
           .neq('website', '')
           .order('id');
@@ -254,10 +258,33 @@ Deno.serve(async (req: Request) => {
       if (listErr) return Response.json({ error: listErr.message }, { status: 500, headers: corsHeaders });
       if (!listings || listings.length === 0) return Response.json({ message: 'No listings to process', done: true }, { headers: corsHeaders });
 
-      const urls = listings.map((l: { id: string; website: string }) => l.website);
+      const allListings = listings as Array<{ id: string; website: string }>;
+
+      // Pre-filter listings whose websites are directory/social sites — mark them immediately and skip
+      const skippedListings = allListings.filter(l =>
+        SKIP_DOMAINS.some(d => l.website.toLowerCase().includes(d))
+      );
+      const goodListings = allListings.filter(l =>
+        !SKIP_DOMAINS.some(d => l.website.toLowerCase().includes(d))
+      );
+
+      if (skippedListings.length > 0) {
+        await Promise.all(skippedListings.map(l =>
+          supabase.from('listings').update({
+            crawl_status: 'redirect',
+            last_crawled_at: new Date().toISOString(),
+          }).eq('id', l.id)
+        ));
+      }
+
+      const urls = goodListings.map(l => l.website);
       const urlToId: Record<string, string> = {};
-      for (const l of listings as Array<{ id: string; website: string }>) {
+      for (const l of goodListings) {
         urlToId[l.website] = l.id;
+      }
+
+      if (urls.length === 0) {
+        return Response.json({ message: 'All listings in this chunk were skipped (directory/social URLs)', done: true, skipped: skippedListings.length }, { headers: corsHeaders });
       }
 
       const batchBody: Record<string, unknown> = {
@@ -433,7 +460,7 @@ Deno.serve(async (req: Request) => {
         const images = item.images ?? [];
 
         if (statusCode >= 400 || !markdown || markdown.trim().length < 50) {
-          crawl_status = statusCode >= 400 ? 'failed' : 'no_content';
+          crawl_status = statusCode >= 400 ? 'fetch_failed' : 'no_content';
         } else if (SKIP_DOMAINS.some(d => sourceURL.includes(d))) {
           crawl_status = 'redirect';
         } else {

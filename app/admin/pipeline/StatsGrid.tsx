@@ -1,13 +1,15 @@
 'use client';
 
-import { CheckCircle2, XCircle, HelpCircle, AlertTriangle, WifiOff, Globe } from 'lucide-react';
+import { CheckCircle2, XCircle, HelpCircle, AlertTriangle, WifiOff, Globe, Trash2 } from 'lucide-react';
 import type { ClassifyStats } from './types';
 
 interface Props {
   stats: ClassifyStats;
+  onDismissFetchFailed?: () => void;
+  dismissingFetchFailed?: boolean;
 }
 
-export function StatsGrid({ stats }: Props) {
+export function StatsGrid({ stats, onDismissFetchFailed, dismissingFetchFailed }: Props) {
   const classified = stats.touchless + stats.not_touchless;
   const total = stats.total;
   const classifyPct = total > 0 ? Math.round((classified / total) * 100) : 0;
@@ -50,12 +52,22 @@ export function StatsGrid({ stats }: Props) {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {cards.map(({ label, value, icon: Icon, color, bg }) => (
-          <div key={label} className={`border rounded-xl p-4 ${bg}`}>
+          <div key={label} className={`border rounded-xl p-4 ${bg} relative`}>
             <div className="flex items-center gap-2 mb-2">
               <Icon className={`w-4 h-4 ${color}`} />
               <p className="text-xs font-medium text-gray-600">{label}</p>
             </div>
             <p className={`text-2xl font-bold tabular-nums ${color}`}>{value.toLocaleString()}</p>
+            {label === 'Fetch Failed' && value > 0 && onDismissFetchFailed && (
+              <button
+                onClick={onDismissFetchFailed}
+                disabled={dismissingFetchFailed}
+                title="Mark all fetch-failed listings as no-website so they're excluded from future runs"
+                className="absolute top-3 right-3 text-orange-400 hover:text-orange-600 disabled:opacity-40 transition-colors"
+              >
+                <Trash2 className={`w-3.5 h-3.5 ${dismissingFetchFailed ? 'animate-pulse' : ''}`} />
+              </button>
+            )}
           </div>
         ))}
       </div>

@@ -25,7 +25,7 @@ async function fetchStats(): Promise<ClassifyStats> {
     supabase.from('listings').select('id', { count: 'exact', head: true }).eq('is_touchless', false),
     supabase.from('listings').select('id', { count: 'exact', head: true }).is('is_touchless', null).not('website', 'is', null).neq('website', ''),
     supabase.from('listings').select('id', { count: 'exact', head: true }).is('is_touchless', null).or('website.is.null,website.eq.'),
-    supabase.from('listings').select('id', { count: 'exact', head: true }).eq('crawl_status', 'failed'),
+    supabase.from('listings').select('id', { count: 'exact', head: true }).eq('crawl_status', 'fetch_failed'),
     supabase.from('listings').select('id', { count: 'exact', head: true }).eq('crawl_status', 'classify_failed'),
     supabase.from('listings').select('id', { count: 'exact', head: true }).eq('crawl_status', 'unknown'),
   ]);
@@ -117,6 +117,7 @@ export default function PipelinePage() {
   const [loadingStats, setLoadingStats] = useState(true);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
+  const [dismissingFetchFailed, setDismissingFetchFailed] = useState(false);
   const [runState, setRunState] = useState<'idle' | 'running' | 'paused' | 'done'>('idle');
   const [concurrency, setConcurrency] = useState(3);
   const [processedCount, setProcessedCount] = useState(0);
@@ -314,6 +315,24 @@ export default function PipelinePage() {
     runLoop();
   }, [runLoop]);
 
+  const handleDismissFetchFailed = useCallback(async () => {
+    if (!confirm(`Mark all ${stats?.fetch_failed ?? 0} fetch-failed listings as no-website? They will be excluded from future runs.`)) return;
+    setDismissingFetchFailed(true);
+    try {
+      const { error } = await supabase
+        .from('listings')
+        .update({ crawl_status: 'no_website', website: null })
+        .eq('crawl_status', 'fetch_failed');
+      if (error) throw error;
+      showToast('success', 'Fetch-failed listings cleared.');
+      await refreshStats();
+    } catch (e) {
+      showToast('error', `Failed: ${(e as Error).message}`);
+    } finally {
+      setDismissingFetchFailed(false);
+    }
+  }, [stats, refreshStats, showToast]);
+
   const handleRecentPageChange = useCallback((page: number) => {
     setRecentPage(page);
     refreshRecent(page);
@@ -377,7 +396,11 @@ export default function PipelinePage() {
                 <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
               </div>
             ) : stats ? (
-              <StatsGrid stats={stats} />
+              <StatsGrid
+                stats={stats}
+                onDismissFetchFailed={handleDismissFetchFailed}
+                dismissingFetchFailed={dismissingFetchFailed}
+              />
             ) : null}
           </div>
 

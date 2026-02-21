@@ -149,7 +149,7 @@ Deno.serve(async (req: Request) => {
 
     if (!fetched.ok || fetched.text.length < 50) {
       await supabase.from("listings").update({
-        crawl_status: "failed",
+        crawl_status: "fetch_failed",
         last_crawled_at: new Date().toISOString(),
       }).eq("id", listing_id);
       return Response.json({ status: "fetch_failed", error: fetched.error }, { headers: corsHeaders });
