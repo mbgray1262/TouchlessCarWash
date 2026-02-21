@@ -33,37 +33,21 @@ export default function BulkVerifyPage() {
   const fetchStats = useCallback(async () => {
     setStatsLoading(true);
     try {
-      const [statusRes, chainRes, nameMatchRes] = await Promise.all([
-        supabase.from('listings').select('verification_status').then(({ data }) => data ?? []),
-        supabase.from('listings').select('parent_chain').not('parent_chain', 'is', null).then(({ data }) => data ?? []),
-        supabase
-          .from('listings')
-          .select('id', { count: 'exact', head: true })
-          .in('classification_source', ['name_match', 'name_match_likely'])
-          .then(({ count }) => count ?? 0),
-      ]);
-
-      const counts: Record<string, number> = {};
-      for (const row of statusRes) {
-        const s = (row as { verification_status: string }).verification_status ?? 'unverified';
-        counts[s] = (counts[s] ?? 0) + 1;
-      }
-
-      const uniqueChains = new Set(
-        (chainRes as Array<{ parent_chain: string }>).map(r => r.parent_chain)
-      ).size;
-
-      const total = statusRes.length;
+      const { data, error } = await supabase.rpc('listing_stats');
+      if (error) throw error;
+      const d = data as Record<string, number>;
+      const total = d.total ?? 0;
+      const withChain = d.with_chain ?? 0;
       setStats({
         total,
-        unverified: counts['unverified'] ?? 0,
-        awaiting_classification: counts['crawled'] ?? 0,
-        auto_classified: counts['auto_classified'] ?? 0,
-        name_matched: nameMatchRes,
-        approved: counts['approved'] ?? 0,
-        crawl_failed: counts['crawl_failed'] ?? 0,
-        chains: uniqueChains,
-        standalone: total - (chainRes.length ?? 0),
+        unverified: (d.unverified ?? 0) + (d.pending ?? 0),
+        awaiting_classification: d.crawled ?? 0,
+        auto_classified: d.auto_classified ?? 0,
+        name_matched: d.name_matched ?? 0,
+        approved: d.approved ?? 0,
+        crawl_failed: d.crawl_failed ?? 0,
+        chains: d.chains ?? 0,
+        standalone: total - withChain,
       });
     } finally {
       setStatsLoading(false);
