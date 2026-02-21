@@ -3,9 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => ({}));
-
+async function handleRequest(jobId: string): Promise<NextResponse> {
   let res: Response;
   try {
     res = await fetch(`${SUPABASE_URL}/functions/v1/firecrawl-pipeline`, {
@@ -14,7 +12,7 @@ export async function POST(req: NextRequest) {
         Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ action: 'firecrawl_status', ...body }),
+      body: JSON.stringify({ action: 'firecrawl_status', job_id: jobId }),
     });
   } catch (err) {
     return NextResponse.json({ error: `Network error: ${(err as Error).message}` }, { status: 502 });
@@ -29,4 +27,17 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json(data, { status: res.ok ? 200 : 502 });
+}
+
+export async function GET(req: NextRequest) {
+  const jobId = req.nextUrl.searchParams.get('job_id');
+  if (!jobId) return NextResponse.json({ error: 'job_id required' }, { status: 400 });
+  return handleRequest(jobId);
+}
+
+export async function POST(req: NextRequest) {
+  const body = await req.json().catch(() => ({}));
+  const jobId = body.job_id;
+  if (!jobId) return NextResponse.json({ error: 'job_id required' }, { status: 400 });
+  return handleRequest(jobId);
 }

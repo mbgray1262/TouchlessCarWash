@@ -20,7 +20,7 @@ export interface PipelineBatch {
   chunk_index: number;
   created_at: string;
   updated_at: string;
-  classify_status: 'running' | 'completed' | 'failed' | null;
+  classify_status: 'running' | 'completed' | 'failed' | 'expired' | 'abandoned' | null;
   classified_count: number;
   classify_started_at: string | null;
   classify_completed_at: string | null;

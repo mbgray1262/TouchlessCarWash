@@ -274,13 +274,13 @@ export default function PipelinePage() {
     setCheckingFcStatus(true);
     const batchList = data?.batches ?? [];
     const results: typeof fcStatusMap = {};
-    await Promise.all(batchList.map(async (batch) => {
-      if (!batch.firecrawl_job_id) return;
+    const activeBatches = batchList.filter(b => b.firecrawl_job_id && b.status !== 'failed' && b.classify_status !== 'expired' && b.classify_status !== 'abandoned');
+    await Promise.all(activeBatches.map(async (batch) => {
       try {
         const res = await fetch(`/api/pipeline/firecrawl-status?job_id=${batch.firecrawl_job_id}`);
-        results[batch.firecrawl_job_id] = await res.json();
+        results[batch.firecrawl_job_id!] = await res.json();
       } catch (e) {
-        results[batch.firecrawl_job_id] = { error: (e as Error).message };
+        results[batch.firecrawl_job_id!] = { error: (e as Error).message };
       }
     }));
     setFcStatusMap(results);
