@@ -82,7 +82,7 @@ export default function ImportHoursPage() {
     try {
       await new Promise(r => setTimeout(r, 30));
       setStatusMessage('Parsing spreadsheet (this may take a moment for large files)…');
-      rawRows = await parseSpreadsheetFile(file, true) as Record<string, unknown>[];
+      rawRows = await parseSpreadsheetFile(file, false) as Record<string, unknown>[];
       setStatusMessage('Parsed successfully, preparing rows…');
     } catch (err) {
       setStatus('error');

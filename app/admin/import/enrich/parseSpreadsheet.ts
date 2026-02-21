@@ -1,12 +1,11 @@
 'use client';
 
-import { read as xlsxRead, utils as xlsxUtils } from 'xlsx';
 
 export interface RawRow {
   [key: string]: string | number | boolean | null | undefined;
 }
 
-const NEEDED_COLUMNS = new Set([
+const NEEDED_COLUMNS = [
   'place_id', 'Place ID',
   'photo', 'Photo',
   'logo', 'Logo',
@@ -25,14 +24,49 @@ const NEEDED_COLUMNS = new Set([
   'booking_appointment_link', 'Booking Appointment Link',
   'location_link', 'Location Link',
   'google_id', 'Google ID',
-]);
+  'working_hours', 'Working Hours',
+];
+
+const NEEDED_SET = new Set(NEEDED_COLUMNS);
 
 function slimRow(row: RawRow): RawRow {
   const slim: RawRow = {};
   for (const key of Object.keys(row)) {
-    if (NEEDED_COLUMNS.has(key)) slim[key] = row[key];
+    if (NEEDED_SET.has(key)) slim[key] = row[key];
   }
   return slim;
+}
+
+function parseXlsxViaWorker(buffer: ArrayBuffer, keepAllColumns: boolean): Promise<RawRow[]> {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker('/xlsx-worker.js');
+
+    const timeout = setTimeout(() => {
+      worker.terminate();
+      reject(new Error('Spreadsheet parsing timed out (> 3 minutes). Try a smaller file or CSV format.'));
+    }, 180_000);
+
+    worker.onmessage = (e) => {
+      clearTimeout(timeout);
+      worker.terminate();
+      if (e.data.ok) {
+        resolve(e.data.rows as RawRow[]);
+      } else {
+        reject(new Error(e.data.error || 'Worker parsing failed.'));
+      }
+    };
+
+    worker.onerror = (err) => {
+      clearTimeout(timeout);
+      worker.terminate();
+      reject(new Error(err.message || 'Worker error.'));
+    };
+
+    worker.postMessage(
+      { buffer, neededColumns: NEEDED_COLUMNS, keepAllColumns },
+      [buffer]
+    );
+  });
 }
 
 export async function parseSpreadsheetFile(file: File, keepAllColumns = false): Promise<RawRow[]> {
@@ -45,29 +79,7 @@ export async function parseSpreadsheetFile(file: File, keepAllColumns = false): 
   }
 
   const buffer = await file.arrayBuffer();
-
-  await new Promise(r => setTimeout(r, 0));
-
-  const wb = xlsxRead(buffer, {
-    type: 'array',
-    cellStyles: false,
-    cellHTML: false,
-    cellFormula: false,
-    bookVBA: false,
-    bookFiles: false,
-    bookProps: false,
-    sheetStubs: false,
-    dense: false,
-  });
-
-  await new Promise(r => setTimeout(r, 0));
-
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  const rows = xlsxUtils.sheet_to_json(ws, { defval: null, raw: true }) as RawRow[];
-
-  await new Promise(r => setTimeout(r, 0));
-
-  return keepAllColumns ? rows : rows.map(slimRow);
+  return parseXlsxViaWorker(buffer, keepAllColumns);
 }
 
 function parseCSVText(text: string): RawRow[] {
