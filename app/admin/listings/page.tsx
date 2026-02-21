@@ -824,7 +824,9 @@ export default function AdminListingsPage() {
   };
 
   const handleListingEdited = (updated: EditableListing) => {
-    setListings((prev) => prev.map((l) => (l.id === updated.id ? { ...l, ...updated } : l)));
+    const updater = (l: Listing) => (l.id === updated.id ? { ...l, ...updated } : l);
+    setListings((prev) => prev.map(updater));
+    setFilteredListings((prev) => prev.map(updater));
   };
 
   const handleListingDeleted = (id: string) => {
