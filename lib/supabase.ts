@@ -31,6 +31,23 @@ export type Listing = {
   logo_photo: string | null;
   parent_chain: string | null;
   blocked_photos: string[] | null;
+  google_photo_url: string | null;
+  google_logo_url: string | null;
+  street_view_url: string | null;
+  google_photos_count: number | null;
+  google_description: string | null;
+  google_about: Record<string, unknown> | null;
+  google_subtypes: string | null;
+  google_category: string | null;
+  business_status: string | null;
+  is_google_verified: boolean | null;
+  reviews_per_score: Record<string, number> | null;
+  popular_times: unknown | null;
+  typical_time_spent: string | null;
+  price_range: string | null;
+  booking_url: string | null;
+  google_maps_url: string | null;
+  google_id: string | null;
 };
 
 export type Review = {
