@@ -443,7 +443,7 @@ Deno.serve(async (req: Request) => {
             touchless_evidence = classification.touchless_evidence ?? '';
             amenities = classification.amenities ?? [];
             description = classification.description ?? null;
-            crawl_status = 'success';
+            crawl_status = 'classified';
           } catch {
             crawl_status = 'no_content';
           }

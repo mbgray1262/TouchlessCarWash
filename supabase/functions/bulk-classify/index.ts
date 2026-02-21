@@ -238,6 +238,7 @@ Deno.serve(async (req: Request) => {
 
         const updatePayload: Record<string, unknown> = {
           is_touchless: isTouchless,
+          crawl_status: "classified",
           touchless_confidence: classification.confidence > 66
             ? "high"
             : classification.confidence > 33
