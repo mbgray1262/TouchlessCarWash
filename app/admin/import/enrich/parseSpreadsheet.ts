@@ -37,7 +37,7 @@ function slimRow(row: RawRow): RawRow {
   return slim;
 }
 
-function parseXlsxViaWorker(buffer: ArrayBuffer, keepAllColumns: boolean): Promise<RawRow[]> {
+function parseXlsxViaWorker(buffer: ArrayBuffer, keepAllColumns: boolean, columnsOverride?: string[]): Promise<RawRow[]> {
   return new Promise((resolve, reject) => {
     const worker = new Worker('/xlsx-worker.js');
 
@@ -63,23 +63,31 @@ function parseXlsxViaWorker(buffer: ArrayBuffer, keepAllColumns: boolean): Promi
     };
 
     worker.postMessage(
-      { buffer, neededColumns: NEEDED_COLUMNS, keepAllColumns },
+      { buffer, neededColumns: columnsOverride ?? NEEDED_COLUMNS, keepAllColumns },
       [buffer]
     );
   });
 }
 
-export async function parseSpreadsheetFile(file: File, keepAllColumns = false): Promise<RawRow[]> {
+export async function parseSpreadsheetFile(file: File, keepAllColumns = false, columnsOverride?: string[]): Promise<RawRow[]> {
   const ext = file.name.toLowerCase().split('.').pop();
 
   if (ext === 'csv') {
     const text = await file.text();
     const rows = parseCSVText(text);
-    return keepAllColumns ? rows : rows.map(slimRow);
+    if (keepAllColumns) return rows;
+    const filterSet = new Set(columnsOverride ?? NEEDED_COLUMNS);
+    return rows.map(row => {
+      const slim: RawRow = {};
+      for (const key of Object.keys(row)) {
+        if (filterSet.has(key)) slim[key] = row[key];
+      }
+      return slim;
+    });
   }
 
   const buffer = await file.arrayBuffer();
-  return parseXlsxViaWorker(buffer, keepAllColumns);
+  return parseXlsxViaWorker(buffer, keepAllColumns, columnsOverride);
 }
 
 function parseCSVText(text: string): RawRow[] {

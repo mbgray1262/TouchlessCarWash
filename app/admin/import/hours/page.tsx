@@ -82,7 +82,8 @@ export default function ImportHoursPage() {
     try {
       await new Promise(r => setTimeout(r, 30));
       setStatusMessage('Parsing spreadsheet (this may take a moment for large files)…');
-      rawRows = await parseSpreadsheetFile(file, false) as Record<string, unknown>[];
+      const HOURS_COLUMNS = ['place_id', 'Place ID', 'google_place_id', 'Google Place ID', 'working_hours', 'Working Hours', 'hours', 'Hours'];
+      rawRows = await parseSpreadsheetFile(file, false, HOURS_COLUMNS) as Record<string, unknown>[];
       setStatusMessage('Parsed successfully, preparing rows…');
     } catch (err) {
       setStatus('error');
@@ -96,16 +97,7 @@ export default function ImportHoursPage() {
       return;
     }
 
-    const HOURS_KEYS = ['place_id', 'Place ID', 'google_place_id', 'Google Place ID', 'working_hours', 'Working Hours', 'hours', 'Hours'];
-    const slimmedRows = rawRows.map(row => {
-      const slim: Record<string, unknown> = {};
-      for (const k of HOURS_KEYS) {
-        if (row[k] !== undefined) slim[k] = row[k];
-      }
-      return slim;
-    });
-
-    const total = slimmedRows.length;
+    const total = rawRows.length;
     setTotalRows(total);
     setStatus('processing');
     setStatusMessage('Matching rows and updating hours…');
@@ -128,7 +120,7 @@ export default function ImportHoursPage() {
       for (let chunkIdx = 0; chunkIdx < total; chunkIdx += CHUNK) {
         if (ac.signal.aborted) return;
 
-        const chunk = slimmedRows.slice(chunkIdx, chunkIdx + CHUNK);
+        const chunk = rawRows.slice(chunkIdx, chunkIdx + CHUNK);
         const chunkNum = Math.floor(chunkIdx / CHUNK) + 1;
 
         setProgress({
