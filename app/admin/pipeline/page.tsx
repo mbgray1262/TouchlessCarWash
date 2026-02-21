@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, RefreshCw, SkipForward, Loader2, Zap, AlertCircle, ChevronRight, CheckCircle2, XCircle, Clock, BarChart3 } from 'lucide-react';
+import { Play, RefreshCw, SkipForward, Loader2, Zap, AlertCircle, ChevronRight, CheckCircle2, XCircle, Clock, BarChart3, Brain } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,162 +12,174 @@ import type { PipelineBatch, PipelineStatusResponse } from './types';
 
 type UIState = 'idle' | 'submitting' | 'polling' | 'refreshing';
 
-interface FirecrawlProgress {
-  status: string;
-  total: number;
-  completed: number;
-  credits_used: number;
+// Returns a simple label + color for each batch's current lifecycle stage
+function getBatchStage(batch: PipelineBatch): {
+  label: string;
+  sublabel: string;
+  color: 'gray' | 'blue' | 'amber' | 'green' | 'red';
+  canClassify: boolean;
+} {
+  if (batch.status === 'failed') {
+    return { label: 'Failed', sublabel: 'Scraping failed', color: 'red', canClassify: false };
+  }
+  if (batch.classify_status === 'completed' || batch.status === 'completed') {
+    return { label: 'Done', sublabel: 'Scraping + AI classification complete', color: 'green', canClassify: false };
+  }
+  if (batch.classify_status === 'running') {
+    return { label: 'Classifying', sublabel: 'AI is classifying scraped results…', color: 'amber', canClassify: false };
+  }
+  if (batch.status === 'running') {
+    // Scraping is still in progress — completed_count tells us how many Firecrawl has finished
+    const scraped = batch.completed_count;
+    const total = batch.total_urls;
+    if (scraped >= total) {
+      return { label: 'Ready to Classify', sublabel: `All ${total.toLocaleString()} pages scraped — click Classify to run AI`, color: 'amber', canClassify: true };
+    }
+    return { label: 'Scraping', sublabel: `Firecrawl is crawling websites…`, color: 'blue', canClassify: false };
+  }
+  return { label: 'Pending', sublabel: 'Waiting to start', color: 'gray', canClassify: false };
 }
 
-function StatusBadge({ status }: { status: PipelineBatch['status'] }) {
-  if (status === 'completed') return (
-    <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
-      <CheckCircle2 className="w-3 h-3" /> Completed
-    </span>
-  );
-  if (status === 'running') return (
-    <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5">
-      <Loader2 className="w-3 h-3 animate-spin" /> Running
-    </span>
-  );
-  if (status === 'failed') return (
-    <span className="inline-flex items-center gap-1 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">
-      <XCircle className="w-3 h-3" /> Failed
-    </span>
-  );
+function StagePill({ color, label }: { color: string; label: string }) {
+  const styles: Record<string, string> = {
+    gray: 'bg-gray-100 text-gray-600 border-gray-200',
+    blue: 'bg-blue-50 text-blue-700 border-blue-200',
+    amber: 'bg-amber-50 text-amber-700 border-amber-200',
+    green: 'bg-green-50 text-green-700 border-green-200',
+    red: 'bg-red-50 text-red-600 border-red-200',
+  };
+  const icons: Record<string, React.ReactNode> = {
+    gray: <Clock className="w-3 h-3" />,
+    blue: <Loader2 className="w-3 h-3 animate-spin" />,
+    amber: <Brain className="w-3 h-3" />,
+    green: <CheckCircle2 className="w-3 h-3" />,
+    red: <XCircle className="w-3 h-3" />,
+  };
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-full px-2 py-0.5">
-      <Clock className="w-3 h-3" /> Pending
+    <span className={`inline-flex items-center gap-1 text-xs font-semibold border rounded-full px-2.5 py-0.5 ${styles[color]}`}>
+      {icons[color]}
+      {label}
     </span>
   );
 }
 
-function BatchProgressCard({
+function BatchCard({
   batch,
-  onPoll,
-  polling,
-  fcProgress,
-  classifyCount,
+  onClassify,
+  isClassifyingThis,
+  liveClassifiedCount,
 }: {
   batch: PipelineBatch;
-  onPoll: (jobId: string) => void;
-  polling: string | null;
-  fcProgress: FirecrawlProgress | null;
-  classifyCount: number | null;
+  onClassify: (jobId: string) => void;
+  isClassifyingThis: boolean;
+  liveClassifiedCount: number | null;
 }) {
-  const scrapeTotal = fcProgress?.total ?? batch.total_urls;
-  const scrapeCompleted = fcProgress?.completed ?? batch.completed_count;
-  const pct = scrapeTotal > 0
-    ? Math.min(100, Math.round((scrapeCompleted / scrapeTotal) * 100))
-    : 0;
-  const isPolling = polling === batch.firecrawl_job_id;
-  const fcStatus = fcProgress?.status ?? batch.status;
-  const isLive = !!fcProgress;
-  const effectiveStatus: PipelineBatch['status'] =
-    fcStatus === 'completed' ? 'completed' :
-    fcStatus === 'failed' ? 'failed' :
-    batch.status;
+  const stage = getBatchStage(batch);
+  const total = batch.total_urls;
 
-  const isClassifying = isPolling && classifyCount !== null;
-  const classifyTotal = batch.total_urls > 0 ? batch.total_urls : scrapeTotal;
-  const classifyPct = isClassifying && classifyTotal > 0
-    ? Math.min(99, Math.round((classifyCount! / classifyTotal) * 100))
-    : null;
+  // Scrape progress bar
+  const scrapeCount = batch.completed_count;
+  const scrapePct = total > 0 ? Math.min(100, Math.round((scrapeCount / total) * 100)) : 0;
+
+  // Classify progress — use live in-memory count while actively polling, otherwise use DB value
+  const classifiedCount = isClassifyingThis && liveClassifiedCount !== null
+    ? liveClassifiedCount
+    : batch.classified_count;
+  const classifyPct = total > 0 ? Math.min(100, Math.round((classifiedCount / total) * 100)) : 0;
+
+  const isDone = stage.color === 'green';
+  const isScraping = stage.label === 'Scraping';
+  const isClassifying = stage.label === 'Classifying' || isClassifyingThis;
 
   return (
-    <div className="border border-gray-100 rounded-xl p-4 space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-xs font-mono text-gray-400 shrink-0">Chunk #{batch.chunk_index + 1}</span>
-          <StatusBadge status={effectiveStatus} />
-          {isLive && effectiveStatus !== batch.status && (
-            <span className="text-xs text-gray-400 font-medium">scraped, pending classify</span>
-          )}
-          <span className="text-xs text-gray-400 truncate hidden sm:block">
-            {batch.firecrawl_job_id ?? '—'}
-          </span>
+    <div className={`rounded-xl border p-4 space-y-3 ${isDone ? 'bg-green-50/40 border-green-200' : isClassifying ? 'bg-amber-50/40 border-amber-200' : isScraping ? 'bg-blue-50/30 border-blue-200' : 'bg-white border-gray-200'}`}>
+      {/* Header row */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-semibold text-[#0F2744]">Batch #{batch.chunk_index + 1}</span>
+            <StagePill color={stage.color} label={isClassifyingThis ? 'Classifying' : stage.label} />
+            <span className="text-xs text-gray-400 font-mono truncate hidden sm:block">{batch.firecrawl_job_id ?? '—'}</span>
+          </div>
+          <p className="text-xs text-gray-500">{isClassifyingThis ? 'AI is classifying scraped results…' : stage.sublabel}</p>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
-          <span className="text-xs text-gray-500 tabular-nums">
-            {scrapeCompleted.toLocaleString()} / {scrapeTotal.toLocaleString()}
-            {isLive && <span className="text-blue-500 ml-1">scraped</span>}
-          </span>
-          {batch.status === 'running' && batch.firecrawl_job_id && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 text-xs"
-              onClick={() => onPoll(batch.firecrawl_job_id!)}
-              disabled={isPolling}
-            >
-              {isPolling ? (
-                <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Classifying…</>
-              ) : effectiveStatus === 'completed' ? 'Classify Results' : 'Poll Status'}
-            </Button>
-          )}
-          <span className="text-xs text-gray-400 tabular-nums font-semibold w-10 text-right">{pct}%</span>
-        </div>
+
+        {/* Classify button — only shown when ready and not yet done */}
+        {(stage.canClassify || stage.label === 'Ready to Classify') && batch.firecrawl_job_id && (
+          <Button
+            size="sm"
+            className="bg-amber-500 hover:bg-amber-600 text-white shrink-0 h-8"
+            onClick={() => onClassify(batch.firecrawl_job_id!)}
+            disabled={isClassifyingThis}
+          >
+            {isClassifyingThis
+              ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Classifying…</>
+              : <><Brain className="w-3.5 h-3.5 mr-1.5" /> Classify Results</>
+            }
+          </Button>
+        )}
       </div>
 
-      <div className="relative h-2 rounded-full bg-gray-100 overflow-hidden">
-        <div
-          className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${
-            effectiveStatus === 'completed' ? 'bg-green-500' :
-            effectiveStatus === 'failed' ? 'bg-red-400' :
-            'bg-blue-500'
-          }`}
-          style={{ width: `${pct}%` }}
-        />
-        {effectiveStatus === 'running' && pct < 100 && pct > 0 && (
+      {/* Scrape progress */}
+      <div className="space-y-1">
+        <div className="flex items-center justify-between text-xs text-gray-500">
+          <span className="font-medium">
+            {isScraping ? (
+              <span className="text-blue-600 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Scraping</span>
+            ) : 'Scraped'}
+          </span>
+          <span className="tabular-nums font-semibold text-gray-700">{scrapeCount.toLocaleString()} / {total.toLocaleString()} &nbsp;{scrapePct}%</span>
+        </div>
+        <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
           <div
-            className="absolute inset-y-0 rounded-full bg-blue-300/40 animate-pulse"
-            style={{ left: `${pct}%`, width: '8%' }}
+            className={`h-2 rounded-full transition-all duration-500 ${
+              scrapePct >= 100 ? 'bg-blue-400' : 'bg-blue-500'
+            }`}
+            style={{ width: `${scrapePct}%` }}
           />
-        )}
-        {effectiveStatus === 'running' && pct === 0 && (
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-300/40 to-transparent animate-[shimmer_1.5s_infinite]" />
-        )}
+        </div>
       </div>
 
-      {isClassifying && (
-        <div className="space-y-1">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-amber-600 font-medium flex items-center gap-1">
-              <Loader2 className="w-3 h-3 animate-spin" /> Classifying with AI…
-            </span>
-            <span className="text-gray-500 tabular-nums">
-              {classifyCount!.toLocaleString()} / {classifyTotal.toLocaleString()} ({classifyPct}%)
-            </span>
-          </div>
-          <div className="relative h-2 rounded-full bg-amber-100 overflow-hidden">
-            <div
-              className="absolute inset-y-0 left-0 rounded-full bg-amber-400 transition-all duration-500"
-              style={{ width: `${classifyPct ?? 0}%` }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-300/40 to-transparent animate-[shimmer_1.5s_infinite]" />
-          </div>
+      {/* Classify progress — always shown so you can see how many have been classified */}
+      <div className="space-y-1">
+        <div className="flex items-center justify-between text-xs text-gray-500">
+          <span className="font-medium">
+            {isClassifying ? (
+              <span className="text-amber-600 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Classifying with AI</span>
+            ) : isDone ? (
+              <span className="text-green-600">Classified</span>
+            ) : (
+              <span className="text-gray-400">AI Classification</span>
+            )}
+          </span>
+          <span className={`tabular-nums font-semibold ${isDone ? 'text-green-600' : isClassifying ? 'text-amber-600' : 'text-gray-400'}`}>
+            {classifiedCount.toLocaleString()} / {total.toLocaleString()} &nbsp;{classifyPct}%
+          </span>
         </div>
-      )}
-
-      {isPolling && !isClassifying && (
-        <div className="flex items-center gap-2 text-xs text-amber-600">
-          <Loader2 className="w-3 h-3 animate-spin" />
-          <span>Fetching results from Firecrawl…</span>
+        <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+          <div
+            className={`h-2 rounded-full transition-all duration-500 ${
+              isDone ? 'bg-green-500' : isClassifying ? 'bg-amber-400' : 'bg-gray-200'
+            }`}
+            style={{ width: `${classifyPct}%` }}
+          />
+          {isClassifying && (
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-300/30 to-transparent animate-pulse" />
+          )}
         </div>
-      )}
+      </div>
 
-      <div className="flex items-center justify-between text-xs text-gray-400">
+      {/* Footer */}
+      <div className="flex items-center justify-between text-xs text-gray-400 pt-0.5">
         <span>
-          {new Date(batch.created_at).toLocaleString('en-US', {
-            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-          })}
+          Started {new Date(batch.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
         </span>
         <span className="flex items-center gap-3">
-          {isLive && fcStatus !== 'completed' && fcStatus !== 'failed' && (
-            <span className="text-blue-500 flex items-center gap-1"><Loader2 className="w-2.5 h-2.5 animate-spin" /> scraping</span>
-          )}
-          {(fcProgress?.credits_used ?? batch.credits_used) > 0 && (
-            <span>{(fcProgress?.credits_used ?? batch.credits_used).toLocaleString()} credits used</span>
+          {batch.credits_used > 0 && <span>{batch.credits_used.toLocaleString()} credits used</span>}
+          {batch.classify_completed_at && (
+            <span className="text-green-600">
+              Finished {new Date(batch.classify_completed_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            </span>
           )}
         </span>
       </div>
@@ -180,13 +192,10 @@ export default function PipelinePage() {
   const [uiState, setUiState] = useState<UIState>('idle');
   const [pollingJobId, setPollingJobId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
-  const [lastSubmitResult, setLastSubmitResult] = useState<{ jobId: string; urls: number } | null>(null);
   const [runsPage, setRunsPage] = useState(0);
   const [totalRuns, setTotalRuns] = useState(0);
-  const [fcProgressMap, setFcProgressMap] = useState<Record<string, FirecrawlProgress>>({});
   const [classifyProgressMap, setClassifyProgressMap] = useState<Record<string, number>>({});
   const autoRefreshRef = useRef<NodeJS.Timeout | null>(null);
-  const fcPollRef = useRef<NodeJS.Timeout | null>(null);
   const runsPageRef = useRef(runsPage);
   const loadStatusFnRef = useRef<((silent?: boolean) => Promise<void>) | null>(null);
 
@@ -222,13 +231,8 @@ export default function PipelinePage() {
     }
   }, [showToast]);
 
-  useEffect(() => {
-    loadStatusFnRef.current = loadStatus;
-  }, [loadStatus]);
-
-  useEffect(() => {
-    loadStatus();
-  }, [loadStatus]);
+  useEffect(() => { loadStatusFnRef.current = loadStatus; }, [loadStatus]);
+  useEffect(() => { loadStatus(); }, [loadStatus]);
 
   useEffect(() => {
     autoRefreshRef.current = setInterval(() => {
@@ -236,40 +240,6 @@ export default function PipelinePage() {
     }, 5_000);
     return () => { if (autoRefreshRef.current) clearInterval(autoRefreshRef.current); };
   }, []);
-
-  const fetchFcProgress = useCallback(async (batches: PipelineBatch[]) => {
-    const running = batches.filter(b => b.status === 'running' && b.firecrawl_job_id);
-    if (running.length === 0) return;
-    const results = await Promise.allSettled(
-      running.map(b =>
-        fetch('/api/pipeline/firecrawl-status', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ job_id: b.firecrawl_job_id }),
-        }).then(r => r.json()).then(j => ({ jobId: b.firecrawl_job_id!, progress: j as FirecrawlProgress & { error?: string } }))
-      )
-    );
-    setFcProgressMap(prev => {
-      const next = { ...prev };
-      for (const r of results) {
-        if (r.status === 'fulfilled' && !r.value.progress.error) {
-          next[r.value.jobId] = r.value.progress;
-        }
-      }
-      return next;
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!data) return;
-    fetchFcProgress(data.batches);
-    if (fcPollRef.current) clearInterval(fcPollRef.current);
-    const running = data.batches.filter(b => b.status === 'running');
-    if (running.length > 0) {
-      fcPollRef.current = setInterval(() => fetchFcProgress(data.batches), 10_000);
-    }
-    return () => { if (fcPollRef.current) clearInterval(fcPollRef.current); };
-  }, [data, fetchFcProgress]);
 
   const handleSubmitBatch = useCallback(async (retryFailed = false) => {
     setUiState('submitting');
@@ -284,8 +254,7 @@ export default function PipelinePage() {
       if (json.done) {
         showToast('success', 'No more listings to process — queue is empty.');
       } else {
-        setLastSubmitResult({ jobId: json.job_id, urls: json.urls_submitted });
-        showToast('success', `Batch submitted — ${json.urls_submitted?.toLocaleString()} URLs sent to Firecrawl.`);
+        showToast('success', `Batch submitted — ${json.urls_submitted?.toLocaleString()} URLs sent to Firecrawl for scraping.`);
       }
       await loadStatus();
     } catch (err) {
@@ -295,7 +264,7 @@ export default function PipelinePage() {
     }
   }, [loadStatus, showToast]);
 
-  const handlePollBatch = useCallback(async (jobId: string) => {
+  const handleClassify = useCallback(async (jobId: string) => {
     setPollingJobId(jobId);
     setUiState('polling');
 
@@ -331,12 +300,60 @@ export default function PipelinePage() {
   }, [loadStatus, showToast]);
 
   const isRunning = uiState !== 'idle';
-  const nextBatchNum = (data?.batches.length ?? 0) + 1;
-  const runningBatches = data?.batches.filter(b => b.status === 'running') ?? [];
-  const hasRunningBatches = runningBatches.length > 0;
-  const pendingClassifyCount = runningBatches.filter(b =>
-    b.firecrawl_job_id && fcProgressMap[b.firecrawl_job_id]?.status === 'completed'
-  ).length;
+  const batches = data?.batches ?? [];
+  const nextBatchNum = batches.length + 1;
+
+  // Derive a single clear status summary from actual DB state
+  const scrapingBatches = batches.filter(b => b.status === 'running' && !b.classify_status && b.completed_count < b.total_urls);
+  const readyToClassify = batches.filter(b => b.status === 'running' && !b.classify_status && b.completed_count >= b.total_urls);
+  const classifyingBatches = batches.filter(b => b.classify_status === 'running' || pollingJobId === b.firecrawl_job_id);
+  const doneBatches = batches.filter(b => b.classify_status === 'completed' || b.status === 'completed');
+
+  let bannerMsg: React.ReactNode = null;
+  if (pollingJobId) {
+    const batch = batches.find(b => b.firecrawl_job_id === pollingJobId);
+    const count = classifyProgressMap[pollingJobId] ?? batch?.classified_count ?? 0;
+    const total = batch?.total_urls ?? 0;
+    bannerMsg = (
+      <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 flex items-center gap-3">
+        <Loader2 className="w-4 h-4 text-amber-600 animate-spin shrink-0" />
+        <div className="text-sm text-amber-800">
+          <span className="font-semibold">AI classification running</span>
+          {total > 0 && <span className="ml-2 text-amber-700">{count.toLocaleString()} / {total.toLocaleString()} classified so far</span>}
+          <span className="ml-2 text-amber-600 text-xs">— do not close this tab</span>
+        </div>
+      </div>
+    );
+  } else if (readyToClassify.length > 0 && classifyingBatches.length === 0) {
+    bannerMsg = (
+      <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 flex items-center gap-3">
+        <Brain className="w-4 h-4 text-amber-600 shrink-0" />
+        <div className="text-sm text-amber-800">
+          <span className="font-semibold">{readyToClassify.length} batch{readyToClassify.length > 1 ? 'es' : ''} ready for AI classification.</span>{' '}
+          Firecrawl scraping is complete. Click <strong>Classify Results</strong> on each batch below.
+        </div>
+      </div>
+    );
+  } else if (scrapingBatches.length > 0) {
+    bannerMsg = (
+      <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-4 flex items-center gap-3">
+        <Loader2 className="w-4 h-4 text-blue-600 animate-spin shrink-0" />
+        <div className="text-sm text-blue-800">
+          <span className="font-semibold">{scrapingBatches.length} batch{scrapingBatches.length > 1 ? 'es' : ''} scraping.</span>{' '}
+          Firecrawl is crawling websites in the background. This page auto-refreshes every 5s.
+        </div>
+      </div>
+    );
+  } else if (classifyingBatches.length > 0 && !pollingJobId) {
+    bannerMsg = (
+      <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 flex items-center gap-3">
+        <Brain className="w-4 h-4 text-amber-600 shrink-0" />
+        <div className="text-sm text-amber-800">
+          <span className="font-semibold">Classification is running</span> — results are being written to the database.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -377,14 +394,9 @@ export default function PipelinePage() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
               </span>
-              Live — refreshing every 5s
+              Live — every 5s
             </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => loadStatus()}
-              disabled={isRunning}
-            >
+            <Button variant="outline" size="sm" onClick={() => loadStatus()} disabled={isRunning}>
               {uiState === 'refreshing'
                 ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Refreshing</>
                 : <><RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Refresh</>
@@ -393,38 +405,7 @@ export default function PipelinePage() {
           </div>
         </div>
 
-        {lastSubmitResult && (
-          <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-4 flex items-start gap-3">
-            <Loader2 className="w-4 h-4 text-blue-600 animate-spin shrink-0 mt-0.5" />
-            <div className="text-sm text-blue-800 space-y-1">
-              <p className="font-semibold">Batch running — {lastSubmitResult.urls.toLocaleString()} URLs submitted to Firecrawl</p>
-              <p className="font-mono text-xs text-blue-600">Job ID: {lastSubmitResult.jobId}</p>
-              <p className="text-xs text-blue-700">
-                Firecrawl is now scraping the websites in the background. Use "Poll Results" on the batch below to fetch completed scrapes and run AI classification.
-                The page auto-refreshes every 15 seconds.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {!lastSubmitResult && hasRunningBatches && (
-          <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-4 flex items-center gap-3">
-            <Loader2 className="w-4 h-4 text-blue-600 animate-spin shrink-0" />
-            <div className="text-sm text-blue-800">
-              {pendingClassifyCount > 0 ? (
-                <>
-                  <span className="font-semibold">{pendingClassifyCount} batch{pendingClassifyCount > 1 ? 'es' : ''} ready to classify.</span>{' '}
-                  Firecrawl scraping is complete — click "Classify Results" on each batch below to run AI classification.
-                </>
-              ) : (
-                <>
-                  <span className="font-semibold">{runningBatches.length} batch{runningBatches.length > 1 ? 'es' : ''} scraping.</span>{' '}
-                  Firecrawl is crawling websites in the background. The page auto-refreshes every 15s.
-                </>
-              )}
-            </div>
-          </div>
-        )}
+        {bannerMsg}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           <div className="lg:col-span-2">
@@ -458,17 +439,11 @@ export default function PipelinePage() {
                     }
                   </Button>
                 </div>
-
                 <div className="border-t border-gray-100 pt-3">
                   <p className="text-xs text-gray-500 mb-1.5">
                     Resubmit listings with status "failed" or "timeout".
                   </p>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => handleSubmitBatch(true)}
-                    disabled={isRunning}
-                  >
+                  <Button variant="outline" className="w-full" onClick={() => handleSubmitBatch(true)} disabled={isRunning}>
                     <SkipForward className="w-4 h-4 mr-2" /> Retry Failed
                   </Button>
                 </div>
@@ -493,29 +468,31 @@ export default function PipelinePage() {
               <CardTitle className="text-base font-semibold text-[#0F2744] flex items-center gap-2">
                 <BarChart3 className="w-4 h-4" />
                 Batches
+                {batches.length > 0 && (
+                  <span className="text-sm font-normal text-gray-400 ml-1">
+                    — {doneBatches.length} done, {classifyingBatches.length} classifying, {scrapingBatches.length} scraping
+                  </span>
+                )}
               </CardTitle>
-              {hasRunningBatches && (
-                <span className="text-xs text-gray-400 flex items-center gap-1">
-                  <Loader2 className="w-3 h-3 animate-spin" /> Auto-refreshing every 5s
-                </span>
-              )}
+              <span className="text-xs text-gray-400 flex items-center gap-1">
+                <Loader2 className="w-3 h-3 animate-spin" /> Auto-refreshing every 5s
+              </span>
             </div>
           </CardHeader>
           <CardContent className="p-4">
-            {!data || data.batches.length === 0 ? (
+            {!data || batches.length === 0 ? (
               <div className="text-center py-8 text-gray-400 text-sm">
                 No batches submitted yet. Click "Start Batch" to begin.
               </div>
             ) : (
               <div className="space-y-3">
-                {data.batches.map(batch => (
-                  <BatchProgressCard
+                {batches.map(batch => (
+                  <BatchCard
                     key={batch.id}
                     batch={batch}
-                    onPoll={handlePollBatch}
-                    polling={pollingJobId}
-                    fcProgress={batch.firecrawl_job_id ? (fcProgressMap[batch.firecrawl_job_id] ?? null) : null}
-                    classifyCount={batch.firecrawl_job_id ? (classifyProgressMap[batch.firecrawl_job_id] ?? null) : null}
+                    onClassify={handleClassify}
+                    isClassifyingThis={pollingJobId === batch.firecrawl_job_id}
+                    liveClassifiedCount={batch.firecrawl_job_id ? (classifyProgressMap[batch.firecrawl_job_id] ?? null) : null}
                   />
                 ))}
               </div>

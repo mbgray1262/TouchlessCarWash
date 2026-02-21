@@ -322,6 +322,14 @@ Deno.serve(async (req: Request) => {
       const { data: batch } = await supabase.from('pipeline_batches')
         .select('*').eq('firecrawl_job_id', jobId).maybeSingle();
 
+      // Mark classification as started if this is the first poll call
+      if (batch && !nextCursor && batch.classify_status !== 'running' && batch.classify_status !== 'completed') {
+        await supabase.from('pipeline_batches').update({
+          classify_status: 'running',
+          classify_started_at: new Date().toISOString(),
+        }).eq('id', batch.id);
+      }
+
       const { data: filterRows } = await supabase.from('filters').select('id, slug');
       const filterMap: FilterMap = {};
       for (const f of (filterRows ?? [])) filterMap[f.slug] = f.id;
@@ -448,12 +456,16 @@ Deno.serve(async (req: Request) => {
       }
 
       const newCompleted = (batch?.completed_count ?? 0) + totalProcessed;
+      const newClassified = (batch?.classified_count ?? 0) + totalProcessed;
       const isDone = !pollData.next;
 
       if (batch) {
         await supabase.from('pipeline_batches').update({
           status: isDone && batchStatus === 'completed' ? 'completed' : 'running',
           completed_count: newCompleted,
+          classified_count: newClassified,
+          classify_status: isDone ? 'completed' : 'running',
+          classify_completed_at: isDone ? new Date().toISOString() : null,
           credits_used: creditsUsed,
           updated_at: new Date().toISOString(),
         }).eq('id', batch.id);
