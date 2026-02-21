@@ -27,7 +27,7 @@ async function fetchStats(): Promise<ClassifyStats> {
     supabase.from('listings').select('id', { count: 'exact', head: true }).is('is_touchless', null).or('website.is.null,website.eq.'),
     supabase.from('listings').select('id', { count: 'exact', head: true }).eq('crawl_status', 'fetch_failed'),
     supabase.from('listings').select('id', { count: 'exact', head: true }).eq('crawl_status', 'classify_failed'),
-    supabase.from('listings').select('id', { count: 'exact', head: true }).eq('crawl_status', 'unknown'),
+    supabase.from('listings').select('id', { count: 'exact', head: true }).is('is_touchless', null).not('last_crawled_at', 'is', null),
   ]);
   return {
     total: total.count ?? 0,
