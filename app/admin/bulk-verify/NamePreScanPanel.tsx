@@ -1,23 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { Scan, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from './utils';
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-const TOUCHLESS_FILTER =
-  'name.ilike.%touchless%,' +
-  'name.ilike.%touch free%,' +
-  'name.ilike.%touchfree%,' +
-  'name.ilike.%brushless%,' +
-  'name.ilike.%laserwash%,' +
-  'name.ilike.%no touch%,' +
-  'name.ilike.%notouch%,' +
-  'name.ilike.%no-touch%,' +
-  'name.ilike.%friction free%,' +
-  'name.ilike.%frictionfree%';
 
 interface ScanResult {
   touchless: number;
@@ -39,57 +23,10 @@ export function NamePreScanPanel({ onComplete }: Props) {
     setResult(null);
 
     try {
-      const { count: touchlessCount, error: countErr1 } = await supabase
-        .from('listings')
-        .select('id', { count: 'exact', head: true })
-        .not('is_touchless', 'eq', true)
-        .in('verification_status', ['pending', 'unverified'])
-        .or(TOUCHLESS_FILTER);
-
-      if (countErr1) throw new Error(countErr1.message);
-
-      const { error: updateErr1 } = await supabase
-        .from('listings')
-        .update({
-          is_touchless: true,
-          verification_status: 'auto_classified',
-          classification_confidence: 95,
-          classification_source: 'name_match',
-        } as any)
-        .not('is_touchless', 'eq', true)
-        .in('verification_status', ['pending', 'unverified'])
-        .or(TOUCHLESS_FILTER);
-
-      if (updateErr1) throw new Error(updateErr1.message);
-
-      const { count: likelyCount, error: countErr2 } = await supabase
-        .from('listings')
-        .select('id', { count: 'exact', head: true })
-        .not('is_touchless', 'eq', true)
-        .in('verification_status', ['pending', 'unverified'])
-        .is('classification_source', null)
-        .ilike('name', '%laser%');
-
-      if (countErr2) throw new Error(countErr2.message);
-
-      const { error: updateErr2 } = await supabase
-        .from('listings')
-        .update({
-          verification_status: 'auto_classified',
-          classification_confidence: 70,
-          classification_source: 'name_match_likely',
-        } as any)
-        .not('is_touchless', 'eq', true)
-        .in('verification_status', ['pending', 'unverified'])
-        .is('classification_source', null)
-        .ilike('name', '%laser%');
-
-      if (updateErr2) throw new Error(updateErr2.message);
-
-      setResult({
-        touchless: touchlessCount ?? 0,
-        likelyTouchless: likelyCount ?? 0,
-      });
+      const res = await fetch('/api/name-pre-scan', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
+      setResult({ touchless: data.touchless, likelyTouchless: data.likelyTouchless });
       onComplete();
     } catch (e: any) {
       setError(e?.message ?? 'Unknown error');
