@@ -140,13 +140,23 @@ export default function ImportHoursPage() {
 
         if (!res.ok) {
           let msg = `Server error (${res.status}) on batch ${chunkNum}`;
-          try { const b = await res.json(); msg = b.error ?? msg; } catch { }
+          try {
+            const text = await res.text();
+            try { msg = (JSON.parse(text) as { error?: string }).error ?? msg; } catch { msg = text || msg; }
+          } catch { }
           setStatus('error');
           setErrorMsg(msg);
           return;
         }
 
-        const result: HoursSummary = await res.json();
+        let result: HoursSummary;
+        try {
+          result = await res.json();
+        } catch {
+          setStatus('error');
+          setErrorMsg(`Batch ${chunkNum}: server returned an unreadable response. Try a smaller file or re-upload.`);
+          return;
+        }
         accumulated.hours_updated += result.hours_updated ?? 0;
         accumulated.skipped_already_has_hours += result.skipped_already_has_hours ?? 0;
         accumulated.skipped_no_match += result.skipped_no_match ?? 0;

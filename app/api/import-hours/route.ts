@@ -8,6 +8,14 @@ const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'
 
 type HoursMap = Record<string, string>;
 
+function tryFixJson(s: string): string {
+  return s
+    .replace(/'/g, '"')
+    .replace(/None/g, 'null')
+    .replace(/True/g, 'true')
+    .replace(/False/g, 'false');
+}
+
 function parseWorkingHours(raw: unknown): HoursMap | null {
   if (!raw || typeof raw !== 'string' || raw.trim() === '') return null;
 
@@ -15,7 +23,11 @@ function parseWorkingHours(raw: unknown): HoursMap | null {
   try {
     parsed = JSON.parse(raw);
   } catch {
-    return null;
+    try {
+      parsed = JSON.parse(tryFixJson(raw));
+    } catch {
+      return null;
+    }
   }
 
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
