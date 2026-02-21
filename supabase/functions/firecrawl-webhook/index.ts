@@ -1,0 +1,202 @@
+import { createClient } from 'npm:@supabase/supabase-js@2';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
+};
+
+const SKIP_DOMAINS = [
+  'facebook.com', 'yelp.com', 'google.com', 'yellowpages.com',
+  'bbb.org', 'instagram.com', 'twitter.com', 'tiktok.com',
+];
+
+function filterImages(images: string[]): string[] {
+  return images.filter(url => {
+    const lower = url.toLowerCase();
+    if (lower.includes('favicon') || lower.includes('icon')) return false;
+    if (lower.includes('facebook.com') || lower.includes('twitter.com')) return false;
+    if (lower.includes('google-analytics') || lower.includes('pixel')) return false;
+    if (lower.includes('.svg') && lower.includes('logo')) return false;
+    if (lower.includes('1x1') || lower.includes('spacer')) return false;
+    return /\.(jpg|jpeg|png|webp)/i.test(lower);
+  }).slice(0, 10);
+}
+
+async function classifyWithClaude(markdown: string, apiKey: string): Promise<{
+  is_touchless: boolean | null;
+  touchless_evidence: string;
+  amenities: string[];
+  description: string | null;
+}> {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 500,
+      messages: [{
+        role: 'user',
+        content: `Analyze this car wash website content and return a JSON object.
+
+WEBSITE CONTENT:
+${markdown.slice(0, 8000)}
+
+Return ONLY a valid JSON object with these fields:
+{
+  "is_touchless": true/false/null,
+  "touchless_evidence": "brief explanation",
+  "amenities": ["list", "of", "amenities"],
+  "description": "1-2 sentence business description or null"
+}
+
+CLASSIFICATION RULES:
+- is_touchless = true if the site mentions: touchless, touch free, laser wash, no touch, friction free, self serve, wand wash, coin operated, bay wash
+- is_touchless = false if it ONLY mentions: soft touch, soft cloth, foam brush, brush wash, friction wash, hand wash, full service hand dry
+- is_touchless = true if it offers BOTH touchless AND brush options (they have a touchless option)
+- is_touchless = null if there's no clear evidence either way
+- For amenities, look for: vacuum, air freshener, towels, tire shine, wax, ceramic, membership/unlimited club, detailing, pet wash, RV/truck wash, self-serve bays, interior cleaning, underbody wash
+- Description should be a brief factual summary, not marketing copy`,
+      }],
+    }),
+  });
+
+  if (!res.ok) throw new Error(`Claude API error ${res.status}`);
+  const data = await res.json() as { content: Array<{ text: string }> };
+  const text = data.content?.[0]?.text ?? '';
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error('No JSON in Claude response');
+  return JSON.parse(jsonMatch[0]);
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 200, headers: corsHeaders });
+  }
+
+  try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+    const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
+    if (!anthropicKey) {
+      return Response.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500, headers: corsHeaders });
+    }
+
+    const payload = await req.json() as {
+      type: 'page' | 'completed';
+      jobId?: string;
+      data?: {
+        markdown?: string;
+        images?: string[];
+        metadata?: { title?: string; sourceURL?: string; statusCode?: number };
+      };
+      success?: boolean;
+      total?: number;
+      completed?: number;
+      creditsUsed?: number;
+    };
+
+    if (payload.type === 'completed') {
+      const jobId = payload.jobId;
+      if (jobId) {
+        await supabase.from('pipeline_batches').update({
+          status: 'completed',
+          credits_used: payload.creditsUsed ?? 0,
+          completed_count: payload.completed ?? 0,
+          updated_at: new Date().toISOString(),
+        }).eq('firecrawl_job_id', jobId);
+      }
+      return Response.json({ ok: true }, { headers: corsHeaders });
+    }
+
+    if (payload.type !== 'page' || !payload.data) {
+      return Response.json({ ok: true }, { headers: corsHeaders });
+    }
+
+    const item = payload.data;
+    const sourceURL = item.metadata?.sourceURL ?? '';
+    const statusCode = item.metadata?.statusCode ?? 0;
+    const markdown = item.markdown ?? '';
+    const images = item.images ?? [];
+
+    const { data: listings } = await supabase.from('listings')
+      .select('id, is_touchless, hero_image, description')
+      .eq('website', sourceURL)
+      .limit(1);
+
+    const listing = listings?.[0];
+    if (!listing) {
+      return Response.json({ ok: true, skipped: 'no matching listing' }, { headers: corsHeaders });
+    }
+
+    const { data: batch } = await supabase.from('pipeline_batches')
+      .select('id').eq('firecrawl_job_id', payload.jobId ?? '').maybeSingle();
+
+    let crawl_status = 'success';
+    let is_touchless: boolean | null = null;
+    let touchless_evidence = '';
+    let amenities: string[] = [];
+    let description: string | null = null;
+
+    if (statusCode >= 400 || !markdown || markdown.trim().length < 50) {
+      crawl_status = statusCode >= 400 ? 'failed' : 'no_content';
+    } else if (SKIP_DOMAINS.some(d => sourceURL.includes(d))) {
+      crawl_status = 'redirect';
+    } else {
+      try {
+        const classification = await classifyWithClaude(markdown, anthropicKey);
+        is_touchless = classification.is_touchless ?? null;
+        touchless_evidence = classification.touchless_evidence ?? '';
+        amenities = classification.amenities ?? [];
+        description = classification.description ?? null;
+        crawl_status = 'success';
+      } catch {
+        crawl_status = 'no_content';
+      }
+    }
+
+    const filteredImages = filterImages(images);
+
+    const updatePayload: Record<string, unknown> = {
+      last_crawled_at: new Date().toISOString(),
+      crawl_status,
+      touchless_evidence,
+      website_photos: filteredImages.length > 0 ? filteredImages : null,
+    };
+
+    if (listing.is_touchless === null && is_touchless !== null) {
+      updatePayload.is_touchless = is_touchless;
+    }
+    if (!listing.hero_image && filteredImages.length > 0) {
+      updatePayload.hero_image = filteredImages[0];
+    }
+    if (!listing.description && description) {
+      updatePayload.description = description;
+    }
+    if (amenities.length > 0) {
+      updatePayload.amenities = amenities;
+    }
+
+    await supabase.from('listings').update(updatePayload).eq('id', listing.id);
+
+    await supabase.from('pipeline_runs').insert({
+      listing_id: listing.id,
+      batch_id: batch?.id ?? null,
+      crawl_status,
+      is_touchless,
+      touchless_evidence,
+      raw_markdown: markdown.slice(0, 50000),
+      images_found: images.length,
+    });
+
+    return Response.json({ ok: true }, { headers: corsHeaders });
+  } catch (err) {
+    return Response.json({ error: (err as Error).message }, { status: 500, headers: corsHeaders });
+  }
+});
