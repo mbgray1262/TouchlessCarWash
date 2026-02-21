@@ -186,7 +186,6 @@ export default function PipelinePage() {
   const [classifyProgressMap, setClassifyProgressMap] = useState<Record<string, number>>({});
   const autoRefreshRef = useRef<NodeJS.Timeout | null>(null);
   const fcPollRef = useRef<NodeJS.Timeout | null>(null);
-  const classifyPollRef = useRef<NodeJS.Timeout | null>(null);
 
   const showToast = useCallback((type: 'success' | 'error', msg: string) => {
     setToast({ type, msg });
@@ -279,32 +278,31 @@ export default function PipelinePage() {
     setPollingJobId(jobId);
     setUiState('polling');
 
-    classifyPollRef.current = setInterval(async () => {
-      try {
-        const res = await fetch('/api/pipeline/status');
-        if (!res.ok) return;
-        const json: PipelineStatusResponse = await res.json();
-        const batch = json.batches.find(b => b.firecrawl_job_id === jobId);
-        if (batch) {
-          setClassifyProgressMap(prev => ({ ...prev, [jobId]: batch.completed_count }));
-        }
-      } catch { /* silent */ }
-    }, 2000);
+    let totalProcessed = 0;
+    let nextCursor: string | null = null;
 
     try {
-      const res = await fetch('/api/pipeline/poll', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ job_id: jobId }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? `Error ${res.status}`);
-      showToast('success', `Classified ${json.processed?.toLocaleString() ?? 0} results (${json.credits_used?.toLocaleString() ?? 0} credits used)`);
+      while (true) {
+        const res = await fetch('/api/pipeline/poll', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ job_id: jobId, next_cursor: nextCursor }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error ?? `Error ${res.status}`);
+
+        totalProcessed += json.processed ?? 0;
+        setClassifyProgressMap(prev => ({ ...prev, [jobId]: json.total_completed ?? totalProcessed }));
+
+        if (json.done) break;
+        nextCursor = json.next_cursor;
+      }
+
+      showToast('success', `Classified ${totalProcessed.toLocaleString()} results`);
       await loadStatus();
     } catch (err) {
       showToast('error', (err as Error).message);
     } finally {
-      if (classifyPollRef.current) clearInterval(classifyPollRef.current);
       setClassifyProgressMap(prev => { const n = { ...prev }; delete n[jobId]; return n; });
       setPollingJobId(null);
       setUiState('idle');

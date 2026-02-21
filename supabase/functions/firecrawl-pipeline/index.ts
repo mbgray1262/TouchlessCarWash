@@ -303,11 +303,16 @@ Deno.serve(async (req: Request) => {
     }
 
     // --- POLL BATCH ---
+    // Processes one page of Firecrawl results per call to avoid timeouts.
+    // The UI should call this repeatedly (passing next_cursor) until done=true.
     if (action === 'poll_batch') {
       if (!firecrawlKey || !anthropicKey) return Response.json({ error: 'API keys not configured' }, { status: 500, headers: corsHeaders });
 
       const jobId: string = body.job_id ?? url.searchParams.get('job_id');
       if (!jobId) return Response.json({ error: 'job_id required' }, { status: 400, headers: corsHeaders });
+
+      // next_cursor is the full Firecrawl pagination URL for the next page, or null to start from beginning
+      const nextCursor: string | null = body.next_cursor ?? null;
 
       const { data: batch } = await supabase.from('pipeline_batches')
         .select('*').eq('firecrawl_job_id', jobId).maybeSingle();
@@ -316,143 +321,148 @@ Deno.serve(async (req: Request) => {
       const filterMap: FilterMap = {};
       for (const f of (filterRows ?? [])) filterMap[f.slug] = f.id;
 
-      // Pre-load all listings with websites so we can match by normalized URL
-      const listingMap = new Map<string, { id: string; is_touchless: boolean | null; hero_image: string | null; description: string | null; website: string }>();
-      let listingOffset = 0;
-      while (true) {
-        const { data: chunk } = await supabase.from('listings')
-          .select('id, is_touchless, hero_image, description, website')
-          .not('website', 'is', null)
-          .neq('website', '')
-          .range(listingOffset, listingOffset + 999);
-        if (!chunk || chunk.length === 0) break;
-        for (const l of chunk) {
-          listingMap.set(normalizeUrl(l.website), l);
-        }
-        if (chunk.length < 1000) break;
-        listingOffset += 1000;
+      const pageUrl = nextCursor ?? `${FIRECRAWL_API}/batch/scrape/${jobId}`;
+      const pollRes = await fetch(pageUrl, {
+        headers: { 'Authorization': `Bearer ${firecrawlKey}` },
+      });
+
+      if (!pollRes.ok) {
+        const errText = await pollRes.text();
+        return Response.json({ error: `Firecrawl ${pollRes.status}: ${errText}` }, { status: 502, headers: corsHeaders });
       }
 
-      let nextUrl: string | null = `${FIRECRAWL_API}/batch/scrape/${jobId}`;
+      const pollData = await pollRes.json() as {
+        status: string;
+        total: number;
+        completed: number;
+        creditsUsed: number;
+        data: Array<{
+          markdown?: string;
+          images?: string[];
+          metadata?: { title?: string; sourceURL?: string; statusCode?: number };
+        }>;
+        next?: string;
+      };
+
+      const batchStatus = pollData.status;
+      const creditsUsed = pollData.creditsUsed ?? 0;
+      const items = pollData.data ?? [];
+
+      // Collect all sourceURLs from this page and look them up in bulk
+      const sourceURLs = items.map(i => i.metadata?.sourceURL ?? '').filter(Boolean);
+      const urlVariants = sourceURLs.flatMap(u => {
+        const norm = normalizeUrl(u);
+        return [
+          `https://${norm}`, `https://${norm}/`,
+          `http://${norm}`, `http://${norm}/`,
+          `https://www.${norm}`, `https://www.${norm}/`,
+        ];
+      });
+
+      const { data: matchedListings } = await supabase.from('listings')
+        .select('id, is_touchless, hero_image, description, website')
+        .in('website', urlVariants);
+
+      const listingMap = new Map<string, { id: string; is_touchless: boolean | null; hero_image: string | null; description: string | null; website: string }>();
+      for (const l of (matchedListings ?? [])) {
+        listingMap.set(normalizeUrl(l.website), l);
+      }
+
       let totalProcessed = 0;
-      let creditsUsed = 0;
-      let batchStatus = 'running';
 
-      while (nextUrl) {
-        const pollRes = await fetch(nextUrl, {
-          headers: { 'Authorization': `Bearer ${firecrawlKey}` },
-        });
+      for (const item of items) {
+        const sourceURL = item.metadata?.sourceURL ?? '';
+        const statusCode = item.metadata?.statusCode ?? 0;
 
-        if (!pollRes.ok) break;
+        const listing = listingMap.get(normalizeUrl(sourceURL));
+        if (!listing) continue;
 
-        const pollData = await pollRes.json() as {
-          status: string;
-          total: number;
-          completed: number;
-          creditsUsed: number;
-          data: Array<{
-            markdown?: string;
-            images?: string[];
-            metadata?: { title?: string; sourceURL?: string; statusCode?: number };
-          }>;
-          next?: string;
+        let crawl_status = 'success';
+        let is_touchless: boolean | null = null;
+        let touchless_evidence = '';
+        let amenities: string[] = [];
+        let description: string | null = null;
+        const markdown = item.markdown ?? '';
+        const images = item.images ?? [];
+
+        if (statusCode >= 400 || !markdown || markdown.trim().length < 50) {
+          crawl_status = statusCode >= 400 ? 'failed' : 'no_content';
+        } else if (SKIP_DOMAINS.some(d => sourceURL.includes(d))) {
+          crawl_status = 'redirect';
+        } else {
+          try {
+            const classification = await classifyWithClaude(markdown, anthropicKey);
+            is_touchless = classification.is_touchless ?? null;
+            touchless_evidence = classification.touchless_evidence ?? '';
+            amenities = classification.amenities ?? [];
+            description = classification.description ?? null;
+            crawl_status = 'success';
+          } catch {
+            crawl_status = 'no_content';
+          }
+        }
+
+        const filteredImages = filterImages(images);
+
+        const updatePayload: Record<string, unknown> = {
+          last_crawled_at: new Date().toISOString(),
+          crawl_status,
+          touchless_evidence,
+          website_photos: filteredImages.length > 0 ? filteredImages : null,
         };
 
-        batchStatus = pollData.status;
-        creditsUsed = pollData.creditsUsed ?? 0;
-
-        for (const item of (pollData.data ?? [])) {
-          const sourceURL = item.metadata?.sourceURL ?? '';
-          const statusCode = item.metadata?.statusCode ?? 0;
-
-          const listing = listingMap.get(normalizeUrl(sourceURL));
-          if (!listing) continue;
-
-          let crawl_status = 'success';
-          let is_touchless: boolean | null = null;
-          let touchless_evidence = '';
-          let amenities: string[] = [];
-          let description: string | null = null;
-          const markdown = item.markdown ?? '';
-          const images = item.images ?? [];
-
-          if (statusCode >= 400 || !markdown || markdown.trim().length < 50) {
-            crawl_status = statusCode >= 400 ? 'failed' : 'no_content';
-          } else if (SKIP_DOMAINS.some(d => sourceURL.includes(d))) {
-            crawl_status = 'redirect';
-          } else {
-            try {
-              const classification = await classifyWithClaude(markdown, anthropicKey);
-              is_touchless = classification.is_touchless ?? null;
-              touchless_evidence = classification.touchless_evidence ?? '';
-              amenities = classification.amenities ?? [];
-              description = classification.description ?? null;
-              crawl_status = 'success';
-            } catch {
-              crawl_status = 'no_content';
-            }
-          }
-
-          const filteredImages = filterImages(images);
-
-          const updatePayload: Record<string, unknown> = {
-            last_crawled_at: new Date().toISOString(),
-            crawl_status,
-            touchless_evidence,
-            website_photos: filteredImages.length > 0 ? filteredImages : null,
-          };
-
-          if (listing.is_touchless === null && is_touchless !== null) {
-            updatePayload.is_touchless = is_touchless;
-          }
-          if (!listing.hero_image && filteredImages.length > 0) {
-            updatePayload.hero_image = filteredImages[0];
-          }
-          if (!listing.description && description) {
-            updatePayload.description = description;
-          }
-          if (amenities.length > 0) {
-            updatePayload.amenities = amenities;
-          }
-
-          await supabase.from('listings').update(updatePayload).eq('id', listing.id);
-
-          await supabase.from('pipeline_runs').insert({
-            listing_id: listing.id,
-            batch_id: batch?.id ?? null,
-            crawl_status,
-            is_touchless,
-            touchless_evidence,
-            raw_markdown: markdown.slice(0, 50000),
-            images_found: images.length,
-          });
-
-          await syncFilters(supabase, listing.id, is_touchless, amenities, filterMap);
-
-          totalProcessed++;
-
-          if (batch && totalProcessed % 25 === 0) {
-            await supabase.from('pipeline_batches').update({
-              completed_count: batch.completed_count + totalProcessed,
-              credits_used: creditsUsed,
-              updated_at: new Date().toISOString(),
-            }).eq('id', batch.id);
-          }
+        if (listing.is_touchless === null && is_touchless !== null) {
+          updatePayload.is_touchless = is_touchless;
+        }
+        if (!listing.hero_image && filteredImages.length > 0) {
+          updatePayload.hero_image = filteredImages[0];
+        }
+        if (!listing.description && description) {
+          updatePayload.description = description;
+        }
+        if (amenities.length > 0) {
+          updatePayload.amenities = amenities;
         }
 
-        nextUrl = pollData.next ?? null;
+        await supabase.from('listings').update(updatePayload).eq('id', listing.id);
+
+        await supabase.from('pipeline_runs').insert({
+          listing_id: listing.id,
+          batch_id: batch?.id ?? null,
+          crawl_status,
+          is_touchless,
+          touchless_evidence,
+          raw_markdown: markdown.slice(0, 50000),
+          images_found: images.length,
+        });
+
+        await syncFilters(supabase, listing.id, is_touchless, amenities, filterMap);
+
+        totalProcessed++;
       }
+
+      const newCompleted = (batch?.completed_count ?? 0) + totalProcessed;
+      const isDone = !pollData.next;
 
       if (batch) {
         await supabase.from('pipeline_batches').update({
-          status: batchStatus === 'completed' ? 'completed' : 'running',
-          completed_count: batch.completed_count + totalProcessed,
+          status: isDone && batchStatus === 'completed' ? 'completed' : 'running',
+          completed_count: newCompleted,
           credits_used: creditsUsed,
           updated_at: new Date().toISOString(),
         }).eq('id', batch.id);
       }
 
-      return Response.json({ processed: totalProcessed, credits_used: creditsUsed, batch_status: batchStatus }, { headers: corsHeaders });
+      return Response.json({
+        processed: totalProcessed,
+        credits_used: creditsUsed,
+        batch_status: batchStatus,
+        next_cursor: pollData.next ?? null,
+        done: isDone,
+        page_size: items.length,
+        total_completed: newCompleted,
+        total_urls: batch?.total_urls ?? 0,
+      }, { headers: corsHeaders });
     }
 
     return Response.json({ error: 'Unknown action' }, { status: 400, headers: corsHeaders });
