@@ -167,27 +167,41 @@ Deno.serve(async (req: Request) => {
       return Response.json({ status: "classify_failed", error: (e as Error).message }, { headers: corsHeaders });
     }
 
-    const crawl_status = classification.is_touchless === null ? "unknown" : "classified";
+    const is_touchless = classification.is_touchless === true
+      ? true
+      : classification.is_touchless === false
+        ? false
+        : null;
+
+    const crawl_status = is_touchless === null ? "unknown" : "classified";
 
     const updatePayload: Record<string, unknown> = {
+      is_touchless,
       crawl_status,
       touchless_evidence: classification.evidence ?? "",
       last_crawled_at: new Date().toISOString(),
     };
 
-    if (classification.is_touchless !== null) {
-      updatePayload.is_touchless = classification.is_touchless;
-    }
-
     if (classification.amenities && classification.amenities.length > 0) {
       updatePayload.amenities = classification.amenities;
     }
 
-    await supabase.from("listings").update(updatePayload).eq("id", listing_id);
+    const { error: updateError } = await supabase
+      .from("listings")
+      .update(updatePayload)
+      .eq("id", listing_id);
+
+    if (updateError) {
+      return Response.json({
+        status: "update_failed",
+        error: updateError.message,
+        is_touchless,
+      }, { headers: corsHeaders });
+    }
 
     return Response.json({
       status: "classified",
-      is_touchless: classification.is_touchless,
+      is_touchless,
       evidence: classification.evidence,
     }, { headers: corsHeaders });
 
