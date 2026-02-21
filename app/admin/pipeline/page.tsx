@@ -301,6 +301,13 @@ export default function PipelinePage() {
           body: JSON.stringify({ job_id: jobId, next_cursor: nextCursor }),
         });
         const json = await res.json();
+
+        if (json.expired) {
+          showToast('error', 'Firecrawl job data has expired — these results are gone. Start a new batch to rescrape.');
+          await loadStatus();
+          return;
+        }
+
         if (!res.ok) throw new Error(json.error ?? `Error ${res.status}`);
 
         totalProcessed += json.processed ?? 0;

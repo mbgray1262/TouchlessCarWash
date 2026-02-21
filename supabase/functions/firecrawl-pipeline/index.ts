@@ -458,14 +458,37 @@ Deno.serve(async (req: Request) => {
 
       const totalProcessed = processed.length;
 
-      const newCompleted = (batch?.completed_count ?? 0) + totalProcessed;
+      // Use Firecrawl's actual completed count as the source of truth, not the accumulated DB value.
+      // This prevents stale DB values from causing incorrect counts on resume/restart.
+      const fcCompleted = pollData.completed ?? 0;
       const newClassified = (batch?.classified_count ?? 0) + totalProcessed;
-      const isDone = !pollData.next;
+
+      // Only mark as done if Firecrawl says there's no next page AND it actually returned data.
+      // If Firecrawl returns 0 items with no next page, the job data has expired — do NOT mark complete.
+      const hasNextPage = !!pollData.next;
+      const hasData = items.length > 0;
+      const isDone = !hasNextPage && hasData;
+      const isExpired = !hasNextPage && !hasData && fcCompleted === 0;
+
+      if (isExpired) {
+        if (batch) {
+          await supabase.from('pipeline_batches').update({
+            status: 'failed',
+            classify_status: 'expired',
+            updated_at: new Date().toISOString(),
+          }).eq('id', batch.id);
+        }
+        return Response.json({
+          error: 'Firecrawl job data has expired. Please start a new batch.',
+          expired: true,
+          done: true,
+        }, { status: 410, headers: corsHeaders });
+      }
 
       if (batch) {
         await supabase.from('pipeline_batches').update({
           status: isDone && batchStatus === 'completed' ? 'completed' : 'running',
-          completed_count: newCompleted,
+          completed_count: fcCompleted,
           classified_count: newClassified,
           classify_status: isDone ? 'completed' : 'running',
           classify_completed_at: isDone ? new Date().toISOString() : null,
@@ -481,7 +504,7 @@ Deno.serve(async (req: Request) => {
         next_cursor: pollData.next ?? null,
         done: isDone,
         page_size: items.length,
-        total_completed: newCompleted,
+        total_completed: fcCompleted,
         total_urls: batch?.total_urls ?? 0,
       }, { headers: corsHeaders });
     }
