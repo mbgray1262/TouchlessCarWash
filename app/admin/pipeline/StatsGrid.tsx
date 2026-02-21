@@ -1,88 +1,50 @@
 'use client';
 
-import { CheckCircle2, XCircle, HelpCircle, AlertTriangle, RefreshCcw, Globe } from 'lucide-react';
-import type { PipelineStats } from './types';
+import { CheckCircle2, XCircle, HelpCircle, AlertTriangle, WifiOff, Globe } from 'lucide-react';
+import type { ClassifyStats } from './types';
 
 interface Props {
-  stats: PipelineStats;
+  stats: ClassifyStats;
 }
 
 export function StatsGrid({ stats }: Props) {
-  const total = stats.total_with_websites > 0 ? stats.total_with_websites : stats.queue + stats.classified;
-  const inconclusive = Math.max(0, stats.classified - stats.touchless - stats.not_touchless);
-  const classifyPct = total > 0 ? Math.round((stats.classified / total) * 100) : 0;
+  const classified = stats.touchless + stats.not_touchless;
+  const total = stats.total;
+  const classifyPct = total > 0 ? Math.round((classified / total) * 100) : 0;
 
   const cards = [
-    {
-      label: 'Touchless',
-      value: stats.touchless,
-      icon: CheckCircle2,
-      color: 'text-green-600',
-      bg: 'bg-green-50 border-green-200',
-    },
-    {
-      label: 'Not Touchless',
-      value: stats.not_touchless,
-      icon: XCircle,
-      color: 'text-red-500',
-      bg: 'bg-red-50 border-red-200',
-    },
-    {
-      label: 'Inconclusive',
-      value: inconclusive,
-      icon: HelpCircle,
-      color: 'text-amber-500',
-      bg: 'bg-amber-50 border-amber-200',
-    },
-    {
-      label: 'Failed',
-      value: stats.failed,
-      icon: AlertTriangle,
-      color: 'text-orange-500',
-      bg: 'bg-orange-50 border-orange-200',
-    },
-    {
-      label: 'Redirects',
-      value: stats.redirects,
-      icon: RefreshCcw,
-      color: 'text-blue-500',
-      bg: 'bg-blue-50 border-blue-200',
-    },
-    {
-      label: 'Remaining',
-      value: stats.queue,
-      icon: Globe,
-      color: 'text-gray-500',
-      bg: 'bg-gray-50 border-gray-200',
-    },
+    { label: 'Touchless', value: stats.touchless, icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-50 border-green-200' },
+    { label: 'Not Touchless', value: stats.not_touchless, icon: XCircle, color: 'text-red-500', bg: 'bg-red-50 border-red-200' },
+    { label: 'Unknown', value: stats.unknown, icon: HelpCircle, color: 'text-amber-500', bg: 'bg-amber-50 border-amber-200' },
+    { label: 'Fetch Failed', value: stats.fetch_failed, icon: WifiOff, color: 'text-orange-500', bg: 'bg-orange-50 border-orange-200' },
+    { label: 'Classify Failed', value: stats.classify_failed, icon: AlertTriangle, color: 'text-rose-500', bg: 'bg-rose-50 border-rose-200' },
+    { label: 'No Website', value: stats.unclassified_no_website, icon: Globe, color: 'text-gray-400', bg: 'bg-gray-50 border-gray-200' },
   ];
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-white border border-gray-200 rounded-xl p-4 col-span-2">
-          <div className="flex items-end justify-between mb-2">
-            <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Classifications Complete</p>
-              <p className="text-2xl font-bold text-[#0F2744] mt-0.5">
-                {stats.classified.toLocaleString()}
-                <span className="text-sm font-normal text-gray-400 ml-1.5">/ {total.toLocaleString()} listings with websites</span>
-              </p>
-            </div>
-            <p className="text-lg font-bold text-[#0F2744] tabular-nums">{classifyPct}%</p>
+      <div className="bg-white border border-gray-200 rounded-xl p-4">
+        <div className="flex items-end justify-between mb-2">
+          <div>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Classifications Complete</p>
+            <p className="text-2xl font-bold text-[#0F2744] mt-0.5">
+              {classified.toLocaleString()}
+              <span className="text-sm font-normal text-gray-400 ml-1.5">/ {total.toLocaleString()} total listings</span>
+            </p>
           </div>
-          <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
-            <div
-              className="bg-green-500 h-2.5 rounded-full transition-all duration-500"
-              style={{ width: `${classifyPct}%` }}
-            />
-          </div>
-          <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
-            <span><span className="font-semibold text-green-600">{stats.touchless.toLocaleString()}</span> touchless</span>
-            <span><span className="font-semibold text-red-500">{stats.not_touchless.toLocaleString()}</span> not touchless</span>
-            {inconclusive > 0 && <span><span className="font-semibold text-amber-500">{inconclusive.toLocaleString()}</span> inconclusive</span>}
-            <span className="ml-auto"><span className="font-semibold text-gray-600">{stats.queue.toLocaleString()}</span> still to process</span>
-          </div>
+          <p className="text-lg font-bold text-[#0F2744] tabular-nums">{classifyPct}%</p>
+        </div>
+        <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+          <div
+            className="bg-green-500 h-2.5 rounded-full transition-all duration-500"
+            style={{ width: `${classifyPct}%` }}
+          />
+        </div>
+        <div className="flex items-center gap-4 mt-2 text-xs text-gray-400 flex-wrap">
+          <span><span className="font-semibold text-green-600">{stats.touchless.toLocaleString()}</span> touchless</span>
+          <span><span className="font-semibold text-red-500">{stats.not_touchless.toLocaleString()}</span> not touchless</span>
+          {stats.unknown > 0 && <span><span className="font-semibold text-amber-500">{stats.unknown.toLocaleString()}</span> unknown</span>}
+          <span className="ml-auto"><span className="font-semibold text-gray-600">{stats.unclassified_with_website.toLocaleString()}</span> still to process</span>
         </div>
       </div>
 

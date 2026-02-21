@@ -1,43 +1,40 @@
-export interface PipelineStats {
-  queue: number;
-  scraped: number;
-  classified: number;
+export interface ClassifyStats {
+  total: number;
   touchless: number;
   not_touchless: number;
-  failed: number;
-  redirects: number;
-  total_with_websites: number;
+  unclassified_with_website: number;
+  unclassified_no_website: number;
+  fetch_failed: number;
+  classify_failed: number;
+  unknown: number;
 }
 
-export interface PipelineBatch {
+export interface RecentListing {
   id: string;
-  firecrawl_job_id: string | null;
-  status: 'pending' | 'running' | 'completed' | 'failed';
-  total_urls: number;
-  completed_count: number;
-  failed_count: number;
-  credits_used: number;
-  chunk_index: number;
-  created_at: string;
-  updated_at: string;
-  classify_status: 'running' | 'completed' | 'failed' | 'expired' | 'abandoned' | null;
-  classified_count: number;
-  classify_started_at: string | null;
-  classify_completed_at: string | null;
-}
-
-export interface PipelineRun {
-  id: string;
-  crawl_status: string;
+  name: string;
+  city: string | null;
+  state: string | null;
   is_touchless: boolean | null;
   touchless_evidence: string | null;
-  images_found: number;
-  processed_at: string;
-  listing: { name: string; website: string } | null;
+  last_crawled_at: string | null;
+  website: string | null;
+  crawl_status: string | null;
 }
 
-export interface PipelineStatusResponse {
-  stats: PipelineStats;
-  batches: PipelineBatch[];
-  recent_runs: PipelineRun[];
+export interface QueueListing {
+  id: string;
+  name: string;
+  city: string | null;
+  state: string | null;
+  website: string;
+}
+
+export interface LogEntry {
+  listing_id: string;
+  name: string;
+  city: string | null;
+  state: string | null;
+  website: string;
+  status: 'touchless' | 'not_touchless' | 'unknown' | 'fetch_failed' | 'classify_failed' | 'already_classified';
+  evidence?: string;
 }
