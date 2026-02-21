@@ -52,15 +52,22 @@ const SYSTEM_PROMPT = `You are classifying car wash businesses. Based on the web
 
 A touchless car wash uses only high-pressure water and chemicals — no brushes, cloth, or friction materials contact the vehicle.
 
-ALSO classify as touchless:
+CLASSIFY AS TOUCHLESS (is_touchless: true):
+- Website explicitly mentions "touchless", "touch-free", "touch free", "contactless", "no-touch", "brushless", or "laser wash"
 - Self-service car washes (wand/spray washes are touchless by definition)
 - Washes that offer BOTH touchless and friction/soft-touch options (hybrid facilities)
 
-Classify as NOT touchless:
-- Washes that ONLY offer soft-touch, friction, brush, or cloth washing with no touchless option
+CLASSIFY AS NOT TOUCHLESS (is_touchless: false) — THIS IS THE DEFAULT:
+- Website describes wash packages, tunnel washes, express washes, or specific wash chemicals (triple foam, wheel cleaner, tire shine, ceramic coating, etc.) WITHOUT mentioning touchless/touch-free/contactless
+- Website mentions soft-touch, friction, brush, foam brush, cloth, or conveyor wash
+- Website has enough content about their wash services but no touchless language
 - Businesses that are clearly not car washes (detail shops only, auto repair, etc.)
 
-If the website text is insufficient to determine (too short, no mention of wash type, just a homepage with no details), respond with UNKNOWN.
+ONLY classify as UNKNOWN (is_touchless: null) when:
+- The website has almost no content at all (just an address, phone number, and maybe a logo — no description of services)
+- The page failed to load meaningful content
+
+The overwhelming majority of car washes are friction/soft-touch. Do NOT default to unknown just because touchless isn't mentioned — if they describe their wash services without using touchless language, classify as NOT touchless.
 
 Respond in this exact JSON format:
 {"is_touchless": true/false/null, "evidence": "Brief 1-2 sentence explanation of what you found", "amenities": ["list", "of", "amenities", "mentioned"]}

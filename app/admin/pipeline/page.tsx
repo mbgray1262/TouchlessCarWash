@@ -48,7 +48,6 @@ async function fetchQueue(offset: number): Promise<QueueListing[]> {
     .is('is_touchless', null)
     .not('website', 'is', null)
     .neq('website', '')
-    .not('crawl_status', 'in', '("failed","classify_failed","unknown","no_website")')
     .order('state', { ascending: true })
     .order('city', { ascending: true })
     .range(offset, offset + QUEUE_FETCH_SIZE - 1);
