@@ -71,20 +71,24 @@ function StagePill({ color, label }: { color: string; label: string }) {
 
 function BatchCard({
   batch,
+  batchNumber,
   onClassify,
   isClassifyingThis,
   liveClassifiedCount,
+  liveScrapeCount,
 }: {
   batch: PipelineBatch;
+  batchNumber: number;
   onClassify: (jobId: string) => void;
   isClassifyingThis: boolean;
   liveClassifiedCount: number | null;
+  liveScrapeCount: number | null;
 }) {
   const stage = getBatchStage(batch);
   const total = batch.total_urls;
 
-  // Scrape progress bar
-  const scrapeCount = batch.completed_count;
+  // Scrape progress bar — use live Firecrawl count while scraping, otherwise DB value
+  const scrapeCount = liveScrapeCount !== null ? liveScrapeCount : batch.completed_count;
   const scrapePct = total > 0 ? Math.min(100, Math.round((scrapeCount / total) * 100)) : 0;
 
   // Classify progress — use live in-memory count while actively polling, otherwise use DB value
@@ -103,7 +107,7 @@ function BatchCard({
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-semibold text-[#0F2744]">Batch #{batch.chunk_index + 1}</span>
+            <span className="text-sm font-semibold text-[#0F2744]">Batch #{batchNumber}</span>
             <StagePill color={stage.color} label={isClassifyingThis ? 'Classifying' : stage.label} />
             <span className="text-xs text-gray-400 font-mono truncate hidden sm:block">{batch.firecrawl_job_id ?? '—'}</span>
           </div>
@@ -200,6 +204,7 @@ export default function PipelinePage() {
   const [classifyProgressMap, setClassifyProgressMap] = useState<Record<string, number>>({});
   const [fcStatusMap, setFcStatusMap] = useState<Record<string, { status: string; total: number; completed: number; credits_used: number } | { error: string }>>({});
   const [checkingFcStatus, setCheckingFcStatus] = useState(false);
+  const [scrapeProgressMap, setScrapeProgressMap] = useState<Record<string, number>>({});
   const [reclassifyProgress, setReclassifyProgress] = useState<{ processed: number; remaining: number } | null>(null);
   const autoRefreshRef = useRef<NodeJS.Timeout | null>(null);
   const runsPageRef = useRef(runsPage);
@@ -222,6 +227,20 @@ export default function PipelinePage() {
     } catch { /* silent */ }
   }, []);
 
+  const pollLiveScrapeProgress = useCallback(async (batches: PipelineBatch[]) => {
+    const running = batches.filter(b => b.status === 'running' && !b.classify_status && b.completed_count < b.total_urls && b.firecrawl_job_id);
+    if (running.length === 0) return;
+    await Promise.all(running.map(async (batch) => {
+      try {
+        const res = await fetch(`/api/pipeline/firecrawl-status?job_id=${batch.firecrawl_job_id}`);
+        const json = await res.json();
+        if (json.completed !== undefined) {
+          setScrapeProgressMap(prev => ({ ...prev, [batch.firecrawl_job_id!]: json.completed }));
+        }
+      } catch { /* silent */ }
+    }));
+  }, []);
+
   const loadStatus = useCallback(async (silent = false) => {
     if (!silent) setUiState('refreshing');
     try {
@@ -230,12 +249,13 @@ export default function PipelinePage() {
       const json: PipelineStatusResponse & { total_runs?: number } = await res.json();
       setData(json);
       if (json.total_runs !== undefined) setTotalRuns(json.total_runs);
+      pollLiveScrapeProgress(json.batches ?? []);
     } catch (err) {
       if (!silent) showToast('error', (err as Error).message);
     } finally {
       if (!silent) setUiState('idle');
     }
-  }, [showToast]);
+  }, [showToast, pollLiveScrapeProgress]);
 
   useEffect(() => { loadStatusFnRef.current = loadStatus; }, [loadStatus]);
   useEffect(() => { loadStatus(); }, [loadStatus]);
@@ -625,13 +645,15 @@ export default function PipelinePage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {batches.map(batch => (
+                {batches.map((batch, idx) => (
                   <BatchCard
                     key={batch.id}
                     batch={batch}
+                    batchNumber={batches.length - idx}
                     onClassify={handleClassify}
                     isClassifyingThis={pollingJobId === batch.firecrawl_job_id}
                     liveClassifiedCount={batch.firecrawl_job_id ? (classifyProgressMap[batch.firecrawl_job_id] ?? null) : null}
+                    liveScrapeCount={batch.firecrawl_job_id ? (scrapeProgressMap[batch.firecrawl_job_id] ?? null) : null}
                   />
                 ))}
               </div>
