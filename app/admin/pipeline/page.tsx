@@ -133,6 +133,12 @@ export default function PipelinePage() {
   const statsTimerRef = useRef<NodeJS.Timeout | null>(null);
   const logRef = useRef<HTMLDivElement | null>(null);
 
+  const liveTouchlessRef = useRef(0);
+  const liveNotTouchlessRef = useRef(0);
+  const liveUnknownRef = useRef(0);
+  const liveFailedRef = useRef(0);
+  const [liveCounts, setLiveCounts] = useState({ touchless: 0, not_touchless: 0, unknown: 0, failed: 0 });
+
   const showToast = useCallback((type: 'success' | 'error', msg: string) => {
     setToast({ type, msg });
     setTimeout(() => setToast(null), 6000);
@@ -162,16 +168,19 @@ export default function PipelinePage() {
     init();
   }, [refreshStats, refreshRecent]);
 
+  const runStateRef = useRef(runState);
+  runStateRef.current = runState;
+
   useEffect(() => {
-    if (runState === 'running') {
-      statsTimerRef.current = setInterval(() => {
+    statsTimerRef.current = setInterval(() => {
+      if (runStateRef.current === 'running') {
         refreshStats();
         refreshRecent(0);
         setRecentPage(0);
-      }, STATS_REFRESH_INTERVAL);
-    }
+      }
+    }, STATS_REFRESH_INTERVAL);
     return () => { if (statsTimerRef.current) clearInterval(statsTimerRef.current); };
-  }, [runState, refreshStats, refreshRecent]);
+  }, [refreshStats, refreshRecent]);
 
   const addLog = useCallback((entry: LogEntry) => {
     setLog(prev => [entry, ...prev].slice(0, 50));
@@ -204,6 +213,10 @@ export default function PipelinePage() {
         status,
         evidence: json.evidence,
       });
+      if (status === 'touchless') liveTouchlessRef.current += 1;
+      else if (status === 'not_touchless') liveNotTouchlessRef.current += 1;
+      else if (status === 'unknown') liveUnknownRef.current += 1;
+      else if (status === 'fetch_failed' || status === 'classify_failed') liveFailedRef.current += 1;
     } catch {
       addLog({
         listing_id: listing.id,
@@ -213,7 +226,14 @@ export default function PipelinePage() {
         website: listing.website,
         status: 'fetch_failed',
       });
+      liveFailedRef.current += 1;
     }
+    setLiveCounts({
+      touchless: liveTouchlessRef.current,
+      not_touchless: liveNotTouchlessRef.current,
+      unknown: liveUnknownRef.current,
+      failed: liveFailedRef.current,
+    });
     processedRef.current += 1;
     setProcessedCount(processedRef.current);
     if (startTimeRef.current) {
@@ -255,11 +275,16 @@ export default function PipelinePage() {
     queueRef.current = [];
     queueOffsetRef.current = 0;
     processedRef.current = 0;
+    liveTouchlessRef.current = 0;
+    liveNotTouchlessRef.current = 0;
+    liveUnknownRef.current = 0;
+    liveFailedRef.current = 0;
     startTimeRef.current = Date.now();
     setProcessedCount(0);
     setTotalInQueue(0);
     setSpeed(0);
     setLog([]);
+    setLiveCounts({ touchless: 0, not_touchless: 0, unknown: 0, failed: 0 });
     setRunState('running');
 
     const initial = await fetchStats();
@@ -471,10 +496,10 @@ export default function PipelinePage() {
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                 {([
-                  { label: 'Touchless', count: log.filter(e => e.status === 'touchless').length, color: 'text-green-600' },
-                  { label: 'Not Touchless', count: log.filter(e => e.status === 'not_touchless').length, color: 'text-red-500' },
-                  { label: 'Unknown', count: log.filter(e => e.status === 'unknown').length, color: 'text-amber-500' },
-                  { label: 'Failed', count: log.filter(e => e.status === 'fetch_failed' || e.status === 'classify_failed').length, color: 'text-orange-500' },
+                  { label: 'Touchless', count: liveCounts.touchless, color: 'text-green-600' },
+                  { label: 'Not Touchless', count: liveCounts.not_touchless, color: 'text-red-500' },
+                  { label: 'Unknown', count: liveCounts.unknown, color: 'text-amber-500' },
+                  { label: 'Failed', count: liveCounts.failed, color: 'text-orange-500' },
                 ] as const).map(({ label, count, color }) => (
                   <div key={label} className="bg-white border border-gray-100 rounded-lg p-2">
                     <p className={`text-lg font-bold tabular-nums ${color}`}>{count}</p>
