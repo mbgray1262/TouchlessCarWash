@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { notFound } from 'next/navigation';
 import {
   Star, MapPin, Phone, Globe, Clock, CheckCircle, ArrowLeft,
@@ -9,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { supabase, type Listing } from '@/lib/supabase';
 import { US_STATES, getStateName, slugify } from '@/lib/constants';
 import type { Metadata } from 'next';
+
+const ListingMap = dynamic(() => import('@/components/ListingMap'), { ssr: false });
 
 interface ListingPageProps {
   params: {
@@ -206,6 +209,21 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {listing.latitude && listing.longitude && (
+              <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                <h2 className="text-lg font-bold text-[#0F2744] mb-4 flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-[#22C55E]" />
+                  Location
+                </h2>
+                <ListingMap
+                  lat={parseFloat(String(listing.latitude))}
+                  lng={parseFloat(String(listing.longitude))}
+                  name={listing.name}
+                  address={`${listing.address}, ${listing.city}, ${listing.state}`}
+                />
               </div>
             )}
           </div>
