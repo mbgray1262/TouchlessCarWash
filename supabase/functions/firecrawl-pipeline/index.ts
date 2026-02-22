@@ -53,13 +53,105 @@ function normalizeUrl(raw: string): string {
 function filterImages(images: string[]): string[] {
   return images.filter(url => {
     const lower = url.toLowerCase();
-    if (lower.includes('favicon') || lower.includes('icon')) return false;
+    if (lower.includes('favicon')) return false;
     if (lower.includes('facebook.com') || lower.includes('twitter.com')) return false;
     if (lower.includes('google-analytics') || lower.includes('pixel')) return false;
-    if (lower.includes('.svg') && lower.includes('logo')) return false;
     if (lower.includes('1x1') || lower.includes('spacer')) return false;
-    return /\.(jpg|jpeg|png|webp)/i.test(lower);
-  }).slice(0, 10);
+    return /\.(jpg|jpeg|png|webp|svg)/i.test(lower);
+  }).slice(0, 20);
+}
+
+async function fetchImageAsBase64(url: string): Promise<{ base64: string; mediaType: string } | null> {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return null;
+    const ct = res.headers.get('content-type') || 'image/jpeg';
+    const mediaType = ct.split(';')[0].trim();
+    if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(mediaType)) return null;
+    const buffer = await res.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+    return { base64: btoa(binary), mediaType };
+  } catch {
+    return null;
+  }
+}
+
+async function selectPhotosWithClaude(
+  allImages: string[],
+  knownLogoUrl: string | null,
+  listingName: string,
+  isTouchless: boolean | null,
+  apiKey: string,
+): Promise<{ hero_index: number; logo_index: number; gallery_indices: number[]; no_good_photos: boolean }> {
+  const MAX = 15;
+  const candidates = allImages.slice(0, MAX);
+  const imageResults = await Promise.allSettled(candidates.map(url => fetchImageAsBase64(url)));
+  const valid: Array<{ index: number; base64: string; mediaType: string }> = [];
+  for (let i = 0; i < candidates.length; i++) {
+    const r = imageResults[i];
+    if (r.status === 'fulfilled' && r.value) valid.push({ index: i, base64: r.value.base64, mediaType: r.value.mediaType });
+  }
+  if (valid.length === 0) return { hero_index: -1, logo_index: -1, gallery_indices: [], no_good_photos: true };
+
+  const knownLogoIndex = knownLogoUrl ? allImages.indexOf(knownLogoUrl) : -1;
+
+  const imageBlocks = valid.flatMap(({ index, base64, mediaType }) => [
+    { type: 'text', text: `Image ${index}:` },
+    { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+  ]);
+
+  const touchlessHint = isTouchless === true
+    ? 'This IS a touchless car wash — strongly prefer photos of the automated wash tunnel, equipment arms/nozzles, or cars moving through the wash.'
+    : '';
+
+  const logoHint = knownLogoIndex >= 0
+    ? `Image ${knownLogoIndex} is already known to be the business logo — treat it as the logo unless a clearly better logo exists at another index.`
+    : '';
+
+  const prompt = `You are a photo curator for TouchlessCarWash.com, a car wash business directory.
+
+Business: "${listingName}"
+${touchlessHint}
+${logoHint}
+
+Images provided (0-based indices: ${valid.map(v => v.index).join(', ')}):
+
+Tasks:
+1. HERO — pick the single best real photograph for the hero banner: exterior of the car wash building, or a car inside the wash tunnel. Landscape preferred. Must be a real photo, not a graphic/logo/illustration.
+2. LOGO — pick the business logo/wordmark if present (graphic, shield, badge, or brand mark). Use the known logo index hint above if relevant.
+3. GALLERY — pick up to 5 real photographs of the facility, equipment, cars in the wash, or property. Exclude logos, illustrations, clip art, banners, pricing boards, social screenshots, and low-quality images.
+
+Respond ONLY with JSON:
+{"hero_index":2,"logo_index":0,"gallery_indices":[1,3,4],"no_good_photos":false,"reason":"one sentence"}
+
+- hero_index: best hero photo index, or -1 if none
+- logo_index: logo index, or -1 if no logo
+- gallery_indices: up to 5 quality photo indices (may include hero; exclude logo)
+- no_good_photos: true only if zero real photographs exist`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5',
+      max_tokens: 256,
+      messages: [{ role: 'user', content: [...imageBlocks, { type: 'text', text: prompt }] }],
+    }),
+  });
+  if (!res.ok) throw new Error(`Claude vision error ${res.status}`);
+  const data = await res.json() as { content: Array<{ text: string }> };
+  const text = data.content?.[0]?.text ?? '';
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return { hero_index: 0, logo_index: knownLogoIndex, gallery_indices: valid.map(v => v.index).slice(0, 5), no_good_photos: false };
+  const parsed = JSON.parse(jsonMatch[0]);
+  return {
+    hero_index: typeof parsed.hero_index === 'number' ? parsed.hero_index : -1,
+    logo_index: typeof parsed.logo_index === 'number' ? parsed.logo_index : (knownLogoIndex >= 0 ? knownLogoIndex : -1),
+    gallery_indices: Array.isArray(parsed.gallery_indices) ? parsed.gallery_indices : [],
+    no_good_photos: parsed.no_good_photos === true,
+  };
 }
 
 async function classifyWithClaude(markdown: string, apiKey: string): Promise<{
@@ -1324,7 +1416,7 @@ Deno.serve(async (req: Request) => {
         normToIds.set(normalizeUrl(rawUrl), ids);
       }
 
-      type EnrichRow = { id: string; is_touchless: boolean | null; hero_image: string | null; website: string; amenities: string[] | null };
+      type EnrichRow = { id: string; name: string; is_touchless: boolean | null; hero_image: string | null; logo_photo: string | null; google_logo_url: string | null; google_photo_url: string | null; street_view_url: string | null; website: string; amenities: string[] | null };
       const listingById = new Map<string, EnrichRow>();
 
       const sourceURLs = items.map(i => i.metadata?.sourceURL ?? '').filter(Boolean);
@@ -1333,7 +1425,7 @@ Deno.serve(async (req: Request) => {
       const uniqueIds = [...new Set(allIds)];
       if (uniqueIds.length > 0) {
         const { data: matchedListings } = await supabase.from('listings')
-          .select('id, is_touchless, hero_image, website, amenities')
+          .select('id, name, is_touchless, hero_image, logo_photo, google_logo_url, google_photo_url, street_view_url, website, amenities')
           .in('id', uniqueIds);
         for (const l of (matchedListings ?? [])) listingById.set(l.id, l);
       }
@@ -1378,7 +1470,7 @@ Deno.serve(async (req: Request) => {
       let totalProcessed = 0;
 
       await Promise.all(processed.map(async ({ listings: rowListings, amenities, images }) => {
-        const filteredImages = filterImages(images);
+        const websiteImages = filterImages(images);
         totalProcessed += rowListings.length;
 
         await Promise.all(rowListings.map(async (listing) => {
@@ -1386,12 +1478,53 @@ Deno.serve(async (req: Request) => {
             last_crawled_at: new Date().toISOString(),
           };
 
-          if (filteredImages.length > 0) {
-            updatePayload.website_photos = filteredImages;
+          const knownLogoUrl = listing.google_logo_url ?? listing.logo_photo ?? null;
+          const extraPhotos = [
+            listing.google_photo_url,
+            listing.street_view_url,
+          ].filter(Boolean) as string[];
+
+          const allImages = [
+            ...(knownLogoUrl ? [knownLogoUrl] : []),
+            ...extraPhotos,
+            ...websiteImages,
+          ].filter((u, i, arr) => arr.indexOf(u) === i);
+
+          if (allImages.length > 0 && anthropicKey) {
+            try {
+              const sel = await selectPhotosWithClaude(
+                allImages,
+                knownLogoUrl,
+                listing.name ?? '',
+                listing.is_touchless ?? null,
+                anthropicKey,
+              );
+              if (!sel.no_good_photos) {
+                const galleryUrls = sel.gallery_indices
+                  .filter(i => i >= 0 && i < allImages.length)
+                  .map(i => allImages[i]);
+                if (galleryUrls.length > 0) updatePayload.website_photos = galleryUrls;
+                if (sel.hero_index >= 0 && sel.hero_index < allImages.length) {
+                  updatePayload.hero_image = allImages[sel.hero_index];
+                }
+                if (sel.logo_index >= 0 && sel.logo_index < allImages.length && !listing.logo_photo) {
+                  updatePayload.logo_photo = allImages[sel.logo_index];
+                }
+              } else if (websiteImages.length > 0) {
+                updatePayload.website_photos = websiteImages;
+                if (!listing.hero_image) updatePayload.hero_image = websiteImages[0];
+              }
+            } catch {
+              if (websiteImages.length > 0) {
+                updatePayload.website_photos = websiteImages;
+                if (!listing.hero_image) updatePayload.hero_image = websiteImages[0];
+              }
+            }
+          } else if (websiteImages.length > 0) {
+            updatePayload.website_photos = websiteImages;
+            if (!listing.hero_image) updatePayload.hero_image = websiteImages[0];
           }
-          if (!listing.hero_image && filteredImages.length > 0) {
-            updatePayload.hero_image = filteredImages[0];
-          }
+
           if (amenities.length > 0) {
             const existing = listing.amenities ?? [];
             const merged = [...existing, ...amenities.filter(a => !existing.includes(a))];
