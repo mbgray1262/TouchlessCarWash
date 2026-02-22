@@ -86,7 +86,7 @@ async function classifyWithClaude(text: string, apiKey: string): Promise<{ is_to
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      model: "claude-haiku-4-5-20251022",
+      model: "claude-sonnet-4-5-20250929",
       max_tokens: 300,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: text }],
