@@ -7,8 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-const BATCH_SIZE = 5;
-const FETCH_CHUNK = 200;
+const BATCH_SIZE = 10;
 
 function stripHtml(html: string): string {
   return html
@@ -31,7 +30,7 @@ function stripHtml(html: string): string {
 
 async function fetchWebsite(url: string): Promise<{ text: string; ok: boolean; error?: string }> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+  const timeout = setTimeout(() => controller.abort(), 12000);
   try {
     const res = await fetch(url, {
       signal: controller.signal,
@@ -86,7 +85,7 @@ async function classifyWithClaude(text: string, apiKey: string): Promise<{ is_to
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-5-20250929",
+      model: "claude-haiku-4-5",
       max_tokens: 300,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: text }],
@@ -158,6 +157,89 @@ async function classifyOne(
   return "unknown";
 }
 
+async function processBatch(
+  supabase: ReturnType<typeof createClient>,
+  jobId: string,
+  concurrency: number,
+  apiKey: string,
+  selfUrl: string,
+  anonKey: string,
+): Promise<void> {
+  const { data: jobCheck } = await supabase
+    .from("pipeline_jobs")
+    .select("status, offset")
+    .eq("id", jobId)
+    .single();
+
+  if (!jobCheck || jobCheck.status !== "running") return;
+
+  const offset = jobCheck.offset ?? 0;
+
+  const { data: listings } = await supabase
+    .from("listings")
+    .select("id, name, website")
+    .is("is_touchless", null)
+    .not("website", "is", null)
+    .neq("website", "")
+    .order("state", { ascending: true })
+    .order("city", { ascending: true })
+    .range(offset, offset + BATCH_SIZE - 1);
+
+  if (!listings || listings.length === 0) {
+    await supabase.from("pipeline_jobs").update({
+      status: "done",
+      finished_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq("id", jobId);
+    return;
+  }
+
+  const results = await Promise.all(
+    listings.map(l => classifyOne(supabase, l as { id: string; name: string; website: string }, apiKey))
+  );
+
+  let touchless = 0, not_touchless = 0, unknown = 0, failed = 0;
+  for (const r of results) {
+    if (r === "touchless") touchless++;
+    else if (r === "not_touchless") not_touchless++;
+    else if (r === "unknown") unknown++;
+    else failed++;
+  }
+
+  const newOffset = offset + listings.length;
+
+  await supabase.rpc("increment_pipeline_job_counts", {
+    p_job_id: jobId,
+    p_processed: results.length,
+    p_touchless: touchless,
+    p_not_touchless: not_touchless,
+    p_unknown: unknown,
+    p_failed: failed,
+    p_offset: newOffset,
+  });
+
+  // Re-check status before scheduling next batch (pause may have been triggered)
+  const { data: afterCheck } = await supabase
+    .from("pipeline_jobs")
+    .select("status")
+    .eq("id", jobId)
+    .single();
+
+  if (!afterCheck || afterCheck.status !== "running") return;
+
+  // Self-reschedule: fire next batch as a new request so we never exceed runtime limits
+  EdgeRuntime.waitUntil(
+    fetch(`${selfUrl}/functions/v1/classify-batch`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${anonKey}`,
+      },
+      body: JSON.stringify({ action: "tick", job_id: jobId, concurrency }),
+    }).catch(() => {})
+  );
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -173,6 +255,9 @@ Deno.serve(async (req: Request) => {
     if (!anthropicKey) {
       return Response.json({ error: "ANTHROPIC_API_KEY not configured" }, { status: 500, headers: corsHeaders });
     }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
     const body = await req.json().catch(() => ({}));
     const action = body.action as string;
@@ -214,9 +299,19 @@ Deno.serve(async (req: Request) => {
         return Response.json({ error: jobErr.message }, { status: 500, headers: corsHeaders });
       }
 
-      EdgeRuntime.waitUntil(runClassificationJob(supabase, job.id, concurrency, anthropicKey));
+      EdgeRuntime.waitUntil(processBatch(supabase, job.id, concurrency, anthropicKey, supabaseUrl, anonKey));
 
       return Response.json({ job_id: job.id, status: "started" }, { headers: corsHeaders });
+    }
+
+    // Internal tick: called by self-rescheduling to process next batch
+    if (action === "tick") {
+      const { job_id, concurrency = 3 } = body;
+      if (!job_id) return Response.json({ error: "job_id required" }, { status: 400, headers: corsHeaders });
+
+      EdgeRuntime.waitUntil(processBatch(supabase, job_id, concurrency, anthropicKey, supabaseUrl, anonKey));
+
+      return Response.json({ ok: true }, { headers: corsHeaders });
     }
 
     if (action === "pause") {
@@ -245,7 +340,7 @@ Deno.serve(async (req: Request) => {
         .update({ status: "running", updated_at: new Date().toISOString() })
         .eq("id", job_id);
 
-      EdgeRuntime.waitUntil(runClassificationJob(supabase, job.id, job.concurrency, anthropicKey));
+      EdgeRuntime.waitUntil(processBatch(supabase, job.id, job.concurrency, anthropicKey, supabaseUrl, anonKey));
 
       return Response.json({ ok: true }, { headers: corsHeaders });
     }
@@ -267,100 +362,3 @@ Deno.serve(async (req: Request) => {
     return Response.json({ error: (e as Error).message }, { status: 500, headers: corsHeaders });
   }
 });
-
-async function runClassificationJob(
-  supabase: ReturnType<typeof createClient>,
-  jobId: string,
-  concurrency: number,
-  apiKey: string,
-): Promise<void> {
-  try {
-    let offset = 0;
-
-    const { data: jobStart } = await supabase
-      .from("pipeline_jobs")
-      .select("offset, processed_count, touchless_count, not_touchless_count, unknown_count, failed_count")
-      .eq("id", jobId)
-      .single();
-
-    if (jobStart) {
-      offset = jobStart.offset;
-    }
-
-    while (true) {
-      const { data: jobCheck } = await supabase
-        .from("pipeline_jobs")
-        .select("status")
-        .eq("id", jobId)
-        .single();
-
-      if (!jobCheck || jobCheck.status !== "running") {
-        break;
-      }
-
-      const { data: listings } = await supabase
-        .from("listings")
-        .select("id, name, website")
-        .is("is_touchless", null)
-        .not("website", "is", null)
-        .neq("website", "")
-        .order("state", { ascending: true })
-        .order("city", { ascending: true })
-        .range(offset, offset + FETCH_CHUNK - 1);
-
-      if (!listings || listings.length === 0) {
-        await supabase.from("pipeline_jobs").update({
-          status: "done",
-          finished_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }).eq("id", jobId);
-        break;
-      }
-
-      const queue = [...listings];
-
-      while (queue.length > 0) {
-        const { data: pauseCheck } = await supabase
-          .from("pipeline_jobs")
-          .select("status")
-          .eq("id", jobId)
-          .single();
-
-        if (!pauseCheck || pauseCheck.status !== "running") {
-          return;
-        }
-
-        const batch = queue.splice(0, concurrency);
-        const results = await Promise.all(
-          batch.map(l => classifyOne(supabase, l as { id: string; name: string; website: string }, apiKey))
-        );
-
-        let touchless = 0, not_touchless = 0, unknown = 0, failed = 0;
-        for (const r of results) {
-          if (r === "touchless") touchless++;
-          else if (r === "not_touchless") not_touchless++;
-          else if (r === "unknown") unknown++;
-          else failed++;
-        }
-
-        await supabase.rpc("increment_pipeline_job_counts", {
-          p_job_id: jobId,
-          p_processed: results.length,
-          p_touchless: touchless,
-          p_not_touchless: not_touchless,
-          p_unknown: unknown,
-          p_failed: failed,
-          p_offset: offset + listings.length - queue.length,
-        });
-      }
-
-      offset += listings.length;
-    }
-  } catch (e) {
-    await supabase.from("pipeline_jobs").update({
-      status: "failed",
-      error: (e as Error).message.slice(0, 500),
-      updated_at: new Date().toISOString(),
-    }).eq("id", jobId);
-  }
-}
