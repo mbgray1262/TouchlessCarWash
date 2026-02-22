@@ -424,20 +424,27 @@ Deno.serve(async (req: Request) => {
         normToIds.set(normalizeUrl(url), ids);
       }
 
-      // Collect all listing IDs referenced by items on this page via sourceURL match
-      const pageSourceNorms = items.map(i => normalizeUrl(i.metadata?.sourceURL ?? ''));
-      const pageIds = pageSourceNorms.flatMap(n => normToIds.get(n) ?? []);
+      // Collect all listing IDs referenced by items on this page.
+      // Try both sourceURL (original submitted URL) and metadata.url (final URL after redirects).
+      // Firecrawl usually preserves sourceURL as the submitted URL, but some redirects may change it.
+      const pageAllNorms = items.flatMap(i => [
+        normalizeUrl(i.metadata?.sourceURL ?? ''),
+        normalizeUrl(i.metadata?.url ?? ''),
+      ]);
+      const pageIds = pageAllNorms.flatMap(n => normToIds.get(n) ?? []);
 
-      // Fetch listing rows for all IDs on this page + any matching by website variants
+      // Fetch listing rows for all IDs on this page
       const listingById = new Map<string, ListingRow>();
       if (pageIds.length > 0) {
+        const uniquePageIds = [...new Set(pageIds)];
         const { data: rows } = await supabase.from('listings')
           .select('id, is_touchless, hero_image, description, website')
-          .in('id', pageIds);
+          .in('id', uniquePageIds);
         for (const l of (rows ?? [])) listingById.set(l.id, l);
       } else if (!hasUrlMap) {
-        // Legacy fallback: match by website URL variants
-        const urlVariants = pageSourceNorms.flatMap(norm => [
+        // Legacy fallback for batches without url_to_id map: match by website URL variants
+        const uniqueNorms = [...new Set(pageAllNorms)];
+        const urlVariants = uniqueNorms.flatMap(norm => [
           `https://${norm}`, `https://${norm}/`,
           `http://${norm}`, `http://${norm}/`,
           `https://www.${norm}`, `https://www.${norm}/`,
@@ -447,7 +454,6 @@ Deno.serve(async (req: Request) => {
             .select('id, is_touchless, hero_image, description, website')
             .in('website', urlVariants);
           for (const l of (rows ?? [])) listingById.set(l.id, l);
-          // Build normToIds from DB results for legacy batches
           for (const l of (rows ?? [])) {
             const n = normalizeUrl(l.website);
             if (!normToIds.has(n)) normToIds.set(n, []);
@@ -456,10 +462,18 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      // Helper: given a sourceURL, return all listing rows for it
-      const resolveListings = (sourceURL: string): ListingRow[] => {
-        const ids = normToIds.get(normalizeUrl(sourceURL)) ?? [];
-        return ids.map(id => listingById.get(id)).filter(Boolean) as ListingRow[];
+      // Helper: given sourceURL and optional final URL, return all matching listing rows.
+      // Checks both URLs to handle redirect cases.
+      const resolveListings = (sourceURL: string, finalURL?: string): ListingRow[] => {
+        const ids = [
+          ...(normToIds.get(normalizeUrl(sourceURL)) ?? []),
+          ...(finalURL ? (normToIds.get(normalizeUrl(finalURL)) ?? []) : []),
+        ];
+        const seen = new Set<string>();
+        return ids
+          .filter(id => { if (seen.has(id)) return false; seen.add(id); return true; })
+          .map(id => listingById.get(id))
+          .filter(Boolean) as ListingRow[];
       };
 
       // Process all items on this page in parallel for maximum speed
@@ -475,11 +489,12 @@ Deno.serve(async (req: Request) => {
 
       const results = await Promise.all(items.map(async (item): Promise<ClassifiedResult | null> => {
         const sourceURL = item.metadata?.sourceURL ?? '';
+        const finalURL = item.metadata?.url ?? '';
         const statusCode = item.metadata?.statusCode ?? 0;
         const markdown = item.markdown ?? '';
         const images = item.images ?? [];
 
-        const listings = resolveListings(sourceURL);
+        const listings = resolveListings(sourceURL, finalURL);
         if (listings.length === 0) return null;
 
         let crawl_status = 'success';
