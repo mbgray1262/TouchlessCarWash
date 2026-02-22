@@ -220,7 +220,7 @@ export default function PipelinePage() {
     setCurrentListing(`${listing.name} — ${listing.website}`);
     let status: LogEntry['status'] = 'fetch_failed';
     try {
-      const res = await fetch('/api/classify-one', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/classify-one`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ listing_id: listing.id }),
