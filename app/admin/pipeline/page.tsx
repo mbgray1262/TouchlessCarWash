@@ -300,7 +300,7 @@ export default function PipelinePage() {
     const res = await fetch('/api/pipeline/poll', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ job_id: jobId, next_cursor: cursor }),
+      body: JSON.stringify({ job_id: jobId, next_cursor: cursor, page_limit: 20 }),
     });
     const data = await res.json();
     if (!res.ok) {

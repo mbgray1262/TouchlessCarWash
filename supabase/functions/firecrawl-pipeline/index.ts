@@ -352,6 +352,8 @@ Deno.serve(async (req: Request) => {
 
       // next_cursor is the full Firecrawl pagination URL for the next page, or null to start from beginning
       const nextCursor: string | null = body.next_cursor ?? null;
+      // Limit items per page to avoid edge function timeouts (each item requires a Claude API call)
+      const pageLimit: number = body.page_limit ?? 20;
 
       const { data: batch } = await supabase.from('pipeline_batches')
         .select('*').eq('firecrawl_job_id', jobId).maybeSingle();
@@ -372,10 +374,14 @@ Deno.serve(async (req: Request) => {
       const urlToId: Record<string, string> = (batch as unknown as { url_to_id?: Record<string, string> })?.url_to_id ?? {};
       const hasUrlMap = Object.keys(urlToId).length > 0;
 
-      const pageUrl = nextCursor ?? `${FIRECRAWL_API}/batch/scrape/${jobId}`;
+      const baseUrl = nextCursor ?? `${FIRECRAWL_API}/batch/scrape/${jobId}`;
+      const pageUrl = nextCursor
+        ? (nextCursor.includes('limit=') ? nextCursor : `${nextCursor}${nextCursor.includes('?') ? '&' : '?'}limit=${pageLimit}`)
+        : `${FIRECRAWL_API}/batch/scrape/${jobId}?limit=${pageLimit}`;
       const pollRes = await fetch(pageUrl, {
         headers: { 'Authorization': `Bearer ${firecrawlKey}` },
       });
+      void baseUrl;
 
       if (!pollRes.ok) {
         const errText = await pollRes.text();
