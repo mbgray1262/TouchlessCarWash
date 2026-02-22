@@ -764,9 +764,12 @@ Deno.serve(async (req: Request) => {
         return Response.json({ message: 'All listings were skipped (directory/social URLs)', done: true, skipped: skipped.length, batches: [] }, { headers: corsHeaders });
       }
 
-      const urls = good.map(l => l.website);
-      const urlToId: Record<string, string> = {};
-      for (const l of good) urlToId[l.website] = l.id;
+      const urlToIds: Record<string, string[]> = {};
+      for (const l of good) {
+        if (!urlToIds[l.website]) urlToIds[l.website] = [];
+        urlToIds[l.website].push(l.id);
+      }
+      const urls = Object.keys(urlToIds);
 
       const batchBody: Record<string, unknown> = {
         urls,
@@ -806,7 +809,7 @@ Deno.serve(async (req: Request) => {
         status: 'running',
         total_urls: urls.length,
         chunk_index: 0,
-        url_to_id: urlToId,
+        url_to_id: urlToIds,
       }).select().single();
 
       if (batchErr) return Response.json({ error: batchErr.message }, { status: 500, headers: corsHeaders });
