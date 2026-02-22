@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Sparkles, Clock, Wind, RefreshCw, Hand, Truck, ChevronRight, RefreshCcw, Loader2 } from 'lucide-react';
+import { Sparkles, Clock, Wind, RefreshCw, Hand, Truck, IdCard, Car, ChevronRight, RefreshCcw, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { AdminNav } from '@/components/AdminNav';
@@ -25,6 +25,8 @@ const ICON_MAP: Record<string, React.ElementType> = {
   'refresh-cw': RefreshCw,
   hand: Hand,
   truck: Truck,
+  'id-card': IdCard,
+  car: Car,
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -222,6 +224,7 @@ export default function FiltersPage() {
                   <span className="font-medium">Touchless</span> is set from <code className="bg-gray-100 px-1 rounded">is_touchless = true</code> on listings.{' '}
                   <span className="font-medium">Open 24 Hours</span> is derived from the hours JSON.{' '}
                   <span className="font-medium">Free Vacuum</span> and <span className="font-medium">Unlimited Wash Club</span> come from Google About data.{' '}
+                  <span className="font-medium">Membership</span> and <span className="font-medium">Undercarriage Cleaning</span> are matched from the amenities array (case-insensitive).{' '}
                   <span className="font-medium">Self-Serve Bays</span> and <span className="font-medium">RV / Oversized</span> will be populated as the Firecrawl pipeline runs.
                 </p>
               </CardContent>
