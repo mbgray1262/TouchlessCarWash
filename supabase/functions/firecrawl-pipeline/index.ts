@@ -1363,6 +1363,7 @@ Deno.serve(async (req: Request) => {
 
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
       const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+      const ENRICH_PAGE_LIMIT = 5;
 
       const { data: batch } = await supabase
         .from('pipeline_batches')
@@ -1377,11 +1378,10 @@ Deno.serve(async (req: Request) => {
       }
 
       const nextCursor: string | null = body.next_cursor ?? null;
-      const pageLimit = 20;
 
       const pageUrl = nextCursor
-        ? (nextCursor.includes('limit=') ? nextCursor : `${nextCursor}${nextCursor.includes('?') ? '&' : '?'}limit=${pageLimit}`)
-        : `${FIRECRAWL_API}/batch/scrape/${jobId}?limit=${pageLimit}`;
+        ? (nextCursor.includes('limit=') ? nextCursor : `${nextCursor}${nextCursor.includes('?') ? '&' : '?'}limit=${ENRICH_PAGE_LIMIT}`)
+        : `${FIRECRAWL_API}/batch/scrape/${jobId}?limit=${ENRICH_PAGE_LIMIT}`;
 
       const pollRes = await fetch(pageUrl, {
         headers: { 'Authorization': `Bearer ${firecrawlKey}` },
@@ -1481,41 +1481,33 @@ Deno.serve(async (req: Request) => {
           .filter(Boolean) as EnrichRow[];
       };
 
-      const results = await Promise.all(items.map(async (item) => {
+      type EnrichResult = { listings: EnrichRow[]; amenities: string[]; images: string[] };
+      const processed: EnrichResult[] = [];
+      for (const item of items) {
         const sourceURL = item.metadata?.sourceURL ?? '';
         const statusCode = item.metadata?.statusCode ?? 0;
         const allListings = resolveEnrichListings(sourceURL);
-        if (allListings.length === 0) return null;
+        if (allListings.length === 0) continue;
         const listings = allListings.filter(l => l.is_touchless === true);
-        if (listings.length === 0) return null;
-
+        if (listings.length === 0) continue;
         const markdown = item.markdown ?? '';
         const images = item.images ?? [];
-
-        if (statusCode >= 400 || !markdown || markdown.trim().length < 50) {
-          return null;
-        }
-
+        if (statusCode >= 400 || !markdown || markdown.trim().length < 50) continue;
         let amenities: string[] = [];
         try {
           const classification = await classifyWithClaude(markdown, anthropicKey);
           amenities = classification.amenities ?? [];
-        } catch {
-          // skip silently
-        }
+        } catch { /* skip */ }
+        processed.push({ listings, amenities, images });
+      }
 
-        return { listings, amenities, images };
-      }));
-
-      type EnrichResult = { listings: EnrichRow[]; amenities: string[]; images: string[] };
-      const processed = results.filter(Boolean) as EnrichResult[];
       let totalProcessed = 0;
 
-      await Promise.all(processed.map(async ({ listings: rowListings, amenities, images }) => {
+      for (const { listings: rowListings, amenities, images } of processed) {
         const websiteImages = filterImages(images);
         totalProcessed += rowListings.length;
 
-        await Promise.all(rowListings.map(async (listing) => {
+        for (const listing of rowListings) {
           const updatePayload: Record<string, unknown> = {
             last_crawled_at: new Date().toISOString(),
           };
@@ -1579,8 +1571,8 @@ Deno.serve(async (req: Request) => {
             supabase.from('listings').update(updatePayload).eq('id', listing.id),
             syncFilters(supabase, listing.id, true, amenities, filterMap),
           ]);
-        }));
-      }));
+        }
+      }
 
       const fcCompleted = pollData.completed ?? 0;
       const newClassified = (batch.classified_count ?? 0) + totalProcessed;
