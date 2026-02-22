@@ -100,6 +100,13 @@ export default function PipelinePage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [dismissingFetchFailed, setDismissingFetchFailed] = useState(false);
   const [retryingWithFirecrawl, setRetryingWithFirecrawl] = useState(false);
+  const [firecrawlJobId, setFirecrawlJobId] = useState<string | null>(null);
+  const [firecrawlJobTotal, setFirecrawlJobTotal] = useState(0);
+  const [firecrawlPolling, setFirecrawlPolling] = useState(false);
+  const [firecrawlPollCursor, setFirecrawlPollCursor] = useState<string | null>(null);
+  const [firecrawlProcessed, setFirecrawlProcessed] = useState(0);
+  const [firecrawlDone, setFirecrawlDone] = useState(false);
+  const firecrawlPollTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [kicking, setKicking] = useState(false);
   const [extractingRemaining, setExtractingRemaining] = useState(false);
   const [confirmExtract, setConfirmExtract] = useState(false);
@@ -271,14 +278,100 @@ export default function PipelinePage() {
       } else if (data.done) {
         showToast('success', 'No listings to retry — all caught up!');
       } else {
-        showToast('success', `Submitted ${data.urls_submitted.toLocaleString()} listings to Firecrawl (job ${data.job_id}). Use the Bulk Verify page to poll results.`);
+        setFirecrawlJobId(data.job_id);
+        setFirecrawlJobTotal(data.urls_submitted ?? 0);
+        setFirecrawlProcessed(0);
+        setFirecrawlPollCursor(null);
+        setFirecrawlDone(false);
+        showToast('success', `Submitted ${(data.urls_submitted ?? 0).toLocaleString()} listings to Firecrawl. Click "Poll for Results" below to process them.`);
       }
     } catch (e) {
       showToast('error', (e as Error).message);
     } finally {
       setRetryingWithFirecrawl(false);
     }
-  }, [stats, showToast]);
+  }, [showToast]);
+
+  const handleFirecrawlPollOnce = useCallback(async () => {
+    if (!firecrawlJobId || firecrawlPolling) return;
+    setFirecrawlPolling(true);
+    try {
+      const res = await fetch('/api/pipeline/poll', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ job_id: firecrawlJobId, next_cursor: firecrawlPollCursor }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.expired) {
+          setFirecrawlDone(true);
+          showToast('error', 'Firecrawl job data expired. Results window has closed.');
+        } else {
+          showToast('error', data.error ?? 'Poll failed');
+        }
+        return;
+      }
+      setFirecrawlProcessed(p => p + (data.processed ?? 0));
+      setFirecrawlPollCursor(data.next_cursor ?? null);
+      if (data.done) {
+        setFirecrawlDone(true);
+        await refreshStats();
+        showToast('success', `Done! Processed all results from Firecrawl.`);
+      }
+    } catch (e) {
+      showToast('error', (e as Error).message);
+    } finally {
+      setFirecrawlPolling(false);
+    }
+  }, [firecrawlJobId, firecrawlPolling, firecrawlPollCursor, refreshStats, showToast]);
+
+  const handleFirecrawlAutoPoll = useCallback(async () => {
+    if (!firecrawlJobId) return;
+    if (firecrawlPollTimerRef.current) clearInterval(firecrawlPollTimerRef.current);
+
+    const poll = async (cursor: string | null, accumulated: number): Promise<void> => {
+      setFirecrawlPolling(true);
+      try {
+        const res = await fetch('/api/pipeline/poll', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ job_id: firecrawlJobId, next_cursor: cursor }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          if (data.expired) {
+            setFirecrawlDone(true);
+            showToast('error', 'Firecrawl job data expired.');
+          } else {
+            showToast('error', data.error ?? 'Poll failed');
+          }
+          setFirecrawlPolling(false);
+          return;
+        }
+        const newTotal = accumulated + (data.processed ?? 0);
+        setFirecrawlProcessed(newTotal);
+        setFirecrawlPollCursor(data.next_cursor ?? null);
+        if (data.done) {
+          setFirecrawlDone(true);
+          setFirecrawlPolling(false);
+          await refreshStats();
+          showToast('success', `Done! Classified ${newTotal.toLocaleString()} listings from Firecrawl.`);
+          return;
+        }
+        setFirecrawlPolling(false);
+        firecrawlPollTimerRef.current = setTimeout(() => poll(data.next_cursor ?? null, newTotal), 2000);
+      } catch (e) {
+        showToast('error', (e as Error).message);
+        setFirecrawlPolling(false);
+      }
+    };
+
+    poll(firecrawlPollCursor, firecrawlProcessed);
+  }, [firecrawlJobId, firecrawlPollCursor, firecrawlProcessed, refreshStats, showToast]);
+
+  useEffect(() => {
+    return () => { if (firecrawlPollTimerRef.current) clearTimeout(firecrawlPollTimerRef.current); };
+  }, []);
 
   const handleExtractRemaining = useCallback(async () => {
     const count = stats?.never_attempted ?? 0;
@@ -518,6 +611,45 @@ export default function PipelinePage() {
                         : <><Zap className="w-3.5 h-3.5 mr-1.5" /> Retry with Firecrawl</>
                       }
                     </Button>
+                  </div>
+                )}
+
+                {firecrawlJobId && !firecrawlDone && (
+                  <div className="border border-blue-200 rounded-lg bg-blue-50 p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-blue-800 font-semibold">Firecrawl job ready</p>
+                      <span className="text-xs text-blue-500 font-mono truncate max-w-[120px]">{firecrawlJobId.slice(0, 12)}…</span>
+                    </div>
+                    {firecrawlProcessed > 0 && (
+                      <p className="text-xs text-blue-700">{firecrawlProcessed.toLocaleString()} of {firecrawlJobTotal.toLocaleString()} processed so far</p>
+                    )}
+                    <div className="flex gap-1.5">
+                      <Button
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs h-8"
+                        onClick={handleFirecrawlAutoPoll}
+                        disabled={firecrawlPolling}
+                      >
+                        {firecrawlPolling
+                          ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Processing…</>
+                          : <><Zap className="w-3 h-3 mr-1" /> Auto-Process All</>
+                        }
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="text-xs h-8 px-2 border-blue-300 text-blue-700"
+                        onClick={handleFirecrawlPollOnce}
+                        disabled={firecrawlPolling}
+                      >
+                        Step
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {firecrawlJobId && firecrawlDone && (
+                  <div className="border border-green-200 rounded-lg bg-green-50 p-3 flex items-center gap-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                    <p className="text-xs text-green-800 font-medium">Firecrawl batch complete — {firecrawlProcessed.toLocaleString()} listings processed.</p>
                   </div>
                 )}
 
