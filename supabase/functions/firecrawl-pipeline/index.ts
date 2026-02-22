@@ -660,7 +660,7 @@ Deno.serve(async (req: Request) => {
 
       const chunkIndex = body.chunk_index ?? 0;
       const appUrl = body.app_url ?? Deno.env.get('APP_URL') ?? '';
-      const targetStatuses: string[] = body.statuses ?? ['fetch_failed', 'unknown'];
+      const targetStatuses: string[] = body.statuses ?? ['fetch_failed', 'unknown', 'classify_failed'];
 
       const offset = chunkIndex * CHUNK_SIZE;
       const { data: listings, error: listErr } = await supabase

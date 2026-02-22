@@ -658,13 +658,13 @@ export default function PipelinePage() {
                   </div>
                 )}
 
-                {isDone && ((stats?.fetch_failed ?? 0) + (stats?.unknown ?? 0)) > 0 && (
+                {isDone && ((stats?.fetch_failed ?? 0) + (stats?.unknown ?? 0) + (stats?.classify_failed ?? 0)) > 0 && (
                   <div className="border border-blue-100 rounded-lg bg-blue-50 p-3 space-y-2">
                     <p className="text-xs text-blue-800 font-medium">
-                      {((stats?.fetch_failed ?? 0) + (stats?.unknown ?? 0)).toLocaleString()} listings need a retry
+                      {((stats?.fetch_failed ?? 0) + (stats?.unknown ?? 0) + (stats?.classify_failed ?? 0)).toLocaleString()} listings need a retry
                     </p>
                     <p className="text-xs text-blue-700">
-                      {stats?.fetch_failed ?? 0} fetch failed + {stats?.unknown ?? 0} unknown. Firecrawl can resolve most of these using JS rendering and proxy rotation.
+                      {stats?.fetch_failed ?? 0} fetch failed + {stats?.unknown ?? 0} unknown + {stats?.classify_failed ?? 0} classify failed. Firecrawl can resolve most of these using JS rendering and proxy rotation.
                     </p>
                     <Button
                       type="button"
