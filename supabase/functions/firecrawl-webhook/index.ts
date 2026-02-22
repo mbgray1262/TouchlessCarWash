@@ -165,31 +165,58 @@ Deno.serve(async (req: Request) => {
     const markdown = item.markdown ?? '';
     const images = item.images ?? [];
 
-    const { data: listings } = await supabase.from('listings')
-      .select('id, is_touchless, hero_image, description')
-      .eq('website', sourceURL)
-      .limit(1);
+    const { data: batch } = await supabase.from('pipeline_batches')
+      .select('id, url_to_id').eq('firecrawl_job_id', payload.jobId ?? '').maybeSingle();
 
-    const listing = listings?.[0];
-    if (!listing) {
+    function normalizeUrl(url: string): string {
+      return url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '').toLowerCase();
+    }
+
+    const rawUrlMap = (batch as unknown as { url_to_id?: Record<string, unknown> })?.url_to_id ?? {};
+    const normToIds = new Map<string, string[]>();
+    for (const [url, val] of Object.entries(rawUrlMap)) {
+      const ids = Array.isArray(val) ? val as string[] : (typeof val === 'string' && val ? [val] : []);
+      if (ids.length > 0) {
+        const norm = normalizeUrl(url);
+        const existing = normToIds.get(norm) ?? [];
+        normToIds.set(norm, [...new Set([...existing, ...ids])]);
+      }
+    }
+
+    const normSrc = normalizeUrl(sourceURL);
+    let listingIds: string[] = normToIds.get(normSrc) ?? [];
+
+    if (listingIds.length === 0) {
+      const urlVariants = [
+        sourceURL, sourceURL.replace(/\/$/, ''), sourceURL + '/',
+        sourceURL.replace(/^https?:\/\//, 'https://www.'),
+        sourceURL.replace(/^https?:\/\/www\./, 'https://'),
+      ];
+      const { data: fallbackRows } = await supabase.from('listings')
+        .select('id').in('website', urlVariants);
+      listingIds = (fallbackRows ?? []).map((r: { id: string }) => r.id);
+    }
+
+    if (listingIds.length === 0) {
       return Response.json({ ok: true, skipped: 'no matching listing' }, { headers: corsHeaders });
     }
 
-    const { data: batch } = await supabase.from('pipeline_batches')
-      .select('id').eq('firecrawl_job_id', payload.jobId ?? '').maybeSingle();
+    const { data: matchedListings } = await supabase.from('listings')
+      .select('id, is_touchless, hero_image')
+      .in('id', listingIds);
+    const listingRows = matchedListings ?? [];
 
     const { data: filterRows } = await supabase.from('filters').select('id, slug');
     const filterMap: FilterMap = {};
     for (const f of (filterRows ?? [])) filterMap[f.slug] = f.id;
 
-    let crawl_status = 'success';
+    let crawl_status = 'classified';
     let is_touchless: boolean | null = null;
     let touchless_evidence = '';
     let amenities: string[] = [];
-    let description: string | null = null;
 
     if (statusCode >= 400 || !markdown || markdown.trim().length < 50) {
-      crawl_status = statusCode >= 400 ? 'failed' : 'no_content';
+      crawl_status = statusCode >= 400 ? 'fetch_failed' : 'no_content';
     } else if (SKIP_DOMAINS.some(d => sourceURL.includes(d))) {
       crawl_status = 'redirect';
     } else {
@@ -198,50 +225,38 @@ Deno.serve(async (req: Request) => {
         is_touchless = classification.is_touchless ?? null;
         touchless_evidence = classification.touchless_evidence ?? '';
         amenities = classification.amenities ?? [];
-        description = classification.description ?? null;
-        crawl_status = 'success';
       } catch {
-        crawl_status = 'no_content';
+        crawl_status = 'classify_failed';
       }
     }
 
     const filteredImages = filterImages(images);
 
-    const updatePayload: Record<string, unknown> = {
-      last_crawled_at: new Date().toISOString(),
-      crawl_status,
-      touchless_evidence,
-      website_photos: filteredImages.length > 0 ? filteredImages : null,
-    };
+    await Promise.all(listingRows.map(async (listing: { id: string; is_touchless: boolean | null; hero_image: string | null }) => {
+      const updatePayload: Record<string, unknown> = {
+        last_crawled_at: new Date().toISOString(),
+        crawl_status,
+        touchless_evidence,
+        website_photos: filteredImages.length > 0 ? filteredImages : null,
+      };
+      if (listing.is_touchless === null && is_touchless !== null) updatePayload.is_touchless = is_touchless;
+      if (!listing.hero_image && filteredImages.length > 0) updatePayload.hero_image = filteredImages[0];
+      if (amenities.length > 0) updatePayload.amenities = amenities;
 
-    if (listing.is_touchless === null && is_touchless !== null) {
-      updatePayload.is_touchless = is_touchless;
-    }
-    if (!listing.hero_image && filteredImages.length > 0) {
-      updatePayload.hero_image = filteredImages[0];
-    }
-    if (!listing.description && description) {
-      updatePayload.description = description;
-    }
-    if (amenities.length > 0) {
-      updatePayload.amenities = amenities;
-    }
+      await supabase.from('listings').update(updatePayload).eq('id', listing.id);
+      await supabase.from('pipeline_runs').insert({
+        listing_id: listing.id,
+        batch_id: batch?.id ?? null,
+        crawl_status,
+        is_touchless,
+        touchless_evidence,
+        raw_markdown: markdown.slice(0, 50000),
+        images_found: images.length,
+      });
+      await syncFilters(supabase, listing.id, is_touchless, amenities, filterMap);
+    }));
 
-    await supabase.from('listings').update(updatePayload).eq('id', listing.id);
-
-    await supabase.from('pipeline_runs').insert({
-      listing_id: listing.id,
-      batch_id: batch?.id ?? null,
-      crawl_status,
-      is_touchless,
-      touchless_evidence,
-      raw_markdown: markdown.slice(0, 50000),
-      images_found: images.length,
-    });
-
-    await syncFilters(supabase, listing.id, is_touchless, amenities, filterMap);
-
-    return Response.json({ ok: true }, { headers: corsHeaders });
+    return Response.json({ ok: true, updated: listingRows.length }, { headers: corsHeaders });
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 500, headers: corsHeaders });
   }

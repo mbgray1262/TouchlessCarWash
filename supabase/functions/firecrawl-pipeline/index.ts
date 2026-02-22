@@ -418,7 +418,7 @@ Deno.serve(async (req: Request) => {
 
       // Build a normalized lookup: submittedUrlNorm -> listing IDs[]
       // This is the source of truth — keys are exactly what was submitted to Firecrawl
-      type ListingRow = { id: string; is_touchless: boolean | null; hero_image: string | null; description: string | null; website: string };
+      type ListingRow = { id: string; is_touchless: boolean | null; hero_image: string | null; website: string };
       const normToIds = new Map<string, string[]>();
       for (const [url, ids] of Object.entries(urlToIds)) {
         normToIds.set(normalizeUrl(url), ids);
@@ -435,15 +435,19 @@ Deno.serve(async (req: Request) => {
 
       // Fetch listing rows for all IDs on this page
       const listingById = new Map<string, ListingRow>();
+      let dbError: string | null = null;
       if (pageIds.length > 0) {
         const uniquePageIds = [...new Set(pageIds)];
-        const { data: rows } = await supabase.from('listings')
-          .select('id, is_touchless, hero_image, description, website')
+        const { data: rows, error: rowsErr } = await supabase.from('listings')
+          .select('id, is_touchless, hero_image, website')
           .in('id', uniquePageIds);
+        if (rowsErr) dbError = rowsErr.message;
         for (const l of (rows ?? [])) listingById.set(l.id, l);
-      } else if (!hasUrlMap) {
-        // Legacy fallback for batches without url_to_id map: match by website URL variants
-        const uniqueNorms = [...new Set(pageAllNorms)];
+      }
+      // URL-based fallback: runs when ID lookup found nothing (covers normalization mismatches,
+      // legacy batches without url_to_id, and any DB query issues)
+      if (listingById.size === 0 && pageAllNorms.filter(n => n).length > 0) {
+        const uniqueNorms = [...new Set(pageAllNorms.filter(n => n))];
         const urlVariants = uniqueNorms.flatMap(norm => [
           `https://${norm}`, `https://${norm}/`,
           `http://${norm}`, `http://${norm}/`,
@@ -451,7 +455,7 @@ Deno.serve(async (req: Request) => {
         ]);
         if (urlVariants.length > 0) {
           const { data: rows } = await supabase.from('listings')
-            .select('id, is_touchless, hero_image, description, website')
+            .select('id, is_touchless, hero_image, website')
             .in('website', urlVariants);
           for (const l of (rows ?? [])) listingById.set(l.id, l);
           for (const l of (rows ?? [])) {
@@ -483,7 +487,6 @@ Deno.serve(async (req: Request) => {
         is_touchless: boolean | null;
         touchless_evidence: string;
         amenities: string[];
-        description: string | null;
         images: string[];
       };
 
@@ -501,7 +504,6 @@ Deno.serve(async (req: Request) => {
         let is_touchless: boolean | null = null;
         let touchless_evidence = '';
         let amenities: string[] = [];
-        let description: string | null = null;
 
         if (statusCode >= 400 || !markdown || markdown.trim().length < 50) {
           crawl_status = statusCode >= 400 ? 'fetch_failed' : 'no_content';
@@ -513,21 +515,20 @@ Deno.serve(async (req: Request) => {
             is_touchless = classification.is_touchless ?? null;
             touchless_evidence = classification.touchless_evidence ?? '';
             amenities = classification.amenities ?? [];
-            description = classification.description ?? null;
             crawl_status = 'classified';
           } catch {
             crawl_status = 'no_content';
           }
         }
 
-        return { listings, crawl_status, is_touchless, touchless_evidence, amenities, description, images };
+        return { listings, crawl_status, is_touchless, touchless_evidence, amenities, images };
       }));
 
       // Write all results to DB — apply each classification to ALL listings sharing that URL
       const processedItems = results.filter(Boolean) as ClassifiedResult[];
       let totalProcessed = 0;
 
-      await Promise.all(processedItems.map(async ({ listings, crawl_status, is_touchless, touchless_evidence, amenities, description, images }) => {
+      await Promise.all(processedItems.map(async ({ listings, crawl_status, is_touchless, touchless_evidence, amenities, images }) => {
         const filteredImages = filterImages(images);
         totalProcessed += listings.length;
 
@@ -544,9 +545,6 @@ Deno.serve(async (req: Request) => {
           }
           if (!listing.hero_image && filteredImages.length > 0) {
             updatePayload.hero_image = filteredImages[0];
-          }
-          if (!listing.description && description) {
-            updatePayload.description = description;
           }
           if (amenities.length > 0) {
             updatePayload.amenities = amenities;
@@ -615,6 +613,15 @@ Deno.serve(async (req: Request) => {
         page_size: items.length,
         total_completed: fcCompleted,
         total_urls: batch?.total_urls ?? 0,
+        _debug: items.length > 0 ? {
+          sample_sourceURL: items[0].metadata?.sourceURL,
+          page_norms: pageAllNorms.slice(0, 4),
+          map_size: normToIds.size,
+          page_ids_found: pageIds.length,
+          sample_ids: [...new Set(pageIds)].slice(0, 3),
+          listing_by_id_size: listingById.size,
+          db_error: dbError,
+        } : null,
       }, { headers: corsHeaders });
     }
 
@@ -661,7 +668,7 @@ Deno.serve(async (req: Request) => {
 
         try {
           const classification = await classifyWithClaude(markdown, anthropicKey);
-          const { is_touchless, touchless_evidence, amenities, description } = classification;
+          const { is_touchless, touchless_evidence, amenities } = classification;
 
           await Promise.all([
             supabase.from('pipeline_runs').update({
@@ -673,7 +680,6 @@ Deno.serve(async (req: Request) => {
             supabase.from('listings').update({
               is_touchless: is_touchless ?? null,
               touchless_evidence: touchless_evidence ?? '',
-              ...(description ? { description } : {}),
               ...(amenities?.length ? { amenities } : {}),
               last_crawled_at: new Date().toISOString(),
             }).eq('id', run.listing_id).is('is_touchless', null),
@@ -925,7 +931,7 @@ Deno.serve(async (req: Request) => {
         normalizedUrlToId[normalizeUrl(url)] = id;
       }
 
-      let listingMap = new Map<string, { id: string; is_touchless: boolean | null; hero_image: string | null; description: string | null; website: string }>();
+      let listingMap = new Map<string, { id: string; is_touchless: boolean | null; hero_image: string | null; website: string }>();
 
       if (hasUrlMap) {
         const sourceURLs = items.map(i => i.metadata?.sourceURL ?? '').filter(Boolean);
@@ -937,7 +943,7 @@ Deno.serve(async (req: Request) => {
 
         if (listingIds.length > 0) {
           const { data: matchedListings } = await supabase.from('listings')
-            .select('id, is_touchless, hero_image, description, website')
+            .select('id, is_touchless, hero_image, website')
             .in('id', listingIds);
           for (const l of (matchedListings ?? [])) listingMap.set(l.id, l);
         }
@@ -948,7 +954,7 @@ Deno.serve(async (req: Request) => {
           return [`https://${norm}`, `https://${norm}/`, `http://${norm}`, `http://${norm}/`, `https://www.${norm}`, `https://www.${norm}/`];
         });
         const { data: matchedListings } = await supabase.from('listings')
-          .select('id, is_touchless, hero_image, description, website')
+          .select('id, is_touchless, hero_image, website')
           .in('website', urlVariants);
         const byUrl = new Map<string, typeof listingMap extends Map<string, infer V> ? V : never>();
         for (const l of (matchedListings ?? [])) byUrl.set(normalizeUrl(l.website), l);
@@ -958,7 +964,7 @@ Deno.serve(async (req: Request) => {
       const results = await Promise.all(items.map(async (item) => {
         const sourceURL = item.metadata?.sourceURL ?? '';
         const statusCode = item.metadata?.statusCode ?? 0;
-        let listing: { id: string; is_touchless: boolean | null; hero_image: string | null; description: string | null; website: string } | undefined;
+        let listing: { id: string; is_touchless: boolean | null; hero_image: string | null; website: string } | undefined;
 
         if (hasUrlMap) {
           const listingId = urlToId[sourceURL] ?? urlToId[sourceURL.replace(/\/$/, '')] ?? urlToId[sourceURL + '/'] ?? normalizedUrlToId[normalizeUrl(sourceURL)];
@@ -972,7 +978,6 @@ Deno.serve(async (req: Request) => {
         let is_touchless: boolean | null = null;
         let touchless_evidence = '';
         let amenities: string[] = [];
-        let description: string | null = null;
         const markdown = item.markdown ?? '';
         const images = item.images ?? [];
 
@@ -986,19 +991,18 @@ Deno.serve(async (req: Request) => {
             is_touchless = classification.is_touchless ?? null;
             touchless_evidence = classification.touchless_evidence ?? '';
             amenities = classification.amenities ?? [];
-            description = classification.description ?? null;
             crawl_status = 'classified';
           } catch {
             crawl_status = 'no_content';
           }
         }
 
-        return { listing, crawl_status, is_touchless, touchless_evidence, amenities, description, images };
+        return { listing, crawl_status, is_touchless, touchless_evidence, amenities, images };
       }));
 
       const processed = results.filter(Boolean) as NonNullable<typeof results[0]>[];
 
-      await Promise.all(processed.map(async ({ listing, crawl_status, is_touchless, touchless_evidence, amenities, description, images }) => {
+      await Promise.all(processed.map(async ({ listing, crawl_status, is_touchless, touchless_evidence, amenities, images }) => {
         const filteredImages = filterImages(images);
         const updatePayload: Record<string, unknown> = {
           last_crawled_at: new Date().toISOString(),
@@ -1008,7 +1012,6 @@ Deno.serve(async (req: Request) => {
         };
         if (listing.is_touchless === null && is_touchless !== null) updatePayload.is_touchless = is_touchless;
         if (!listing.hero_image && filteredImages.length > 0) updatePayload.hero_image = filteredImages[0];
-        if (!listing.description && description) updatePayload.description = description;
         if (amenities.length > 0) updatePayload.amenities = amenities;
 
         await Promise.all([
