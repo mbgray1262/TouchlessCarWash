@@ -602,6 +602,7 @@ export default function PipelinePage() {
                       {stats?.fetch_failed ?? 0} fetch failed + {stats?.unknown ?? 0} unknown. Firecrawl can resolve most of these using JS rendering and proxy rotation.
                     </p>
                     <Button
+                      type="button"
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs h-8"
                       onClick={handleFirecrawlRetry}
                       disabled={retryingWithFirecrawl}
@@ -628,6 +629,7 @@ export default function PipelinePage() {
                     )}
                     <div className="flex gap-1.5">
                       <Button
+                        type="button"
                         className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs h-8"
                         onClick={handleFirecrawlAutoPoll}
                         disabled={firecrawlPolling}
@@ -638,6 +640,7 @@ export default function PipelinePage() {
                         }
                       </Button>
                       <Button
+                        type="button"
                         variant="outline"
                         className="text-xs h-8 px-2 border-blue-300 text-blue-700"
                         onClick={handleFirecrawlPollOnce}
