@@ -1,0 +1,1 @@
+UPDATE pipeline_jobs SET status = 'failed', finished_at = now() WHERE status = 'running';
