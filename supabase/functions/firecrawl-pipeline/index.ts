@@ -497,7 +497,11 @@ Deno.serve(async (req: Request) => {
         const markdown = item.markdown ?? '';
         const images = item.images ?? [];
 
-        const listings = resolveListings(sourceURL, finalURL);
+        const allListings = resolveListings(sourceURL, finalURL);
+        if (allListings.length === 0) return null;
+
+        // Skip listings already classified — only process ones still unclassified
+        const listings = allListings.filter(l => l.is_touchless === null);
         if (listings.length === 0) return null;
 
         let crawl_status = 'success';
