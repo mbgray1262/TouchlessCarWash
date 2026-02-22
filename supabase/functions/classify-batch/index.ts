@@ -345,6 +345,26 @@ Deno.serve(async (req: Request) => {
       return Response.json({ ok: true }, { headers: corsHeaders });
     }
 
+    if (action === "kick") {
+      const { job_id } = body;
+      if (!job_id) return Response.json({ error: "job_id required" }, { status: 400, headers: corsHeaders });
+
+      const { data: job } = await supabase
+        .from("pipeline_jobs")
+        .select("*")
+        .eq("id", job_id)
+        .eq("status", "running")
+        .maybeSingle();
+
+      if (!job) {
+        return Response.json({ error: "Job not found or not in running state" }, { status: 404, headers: corsHeaders });
+      }
+
+      EdgeRuntime.waitUntil(processBatch(supabase, job.id, job.concurrency, anthropicKey, supabaseUrl, anonKey));
+
+      return Response.json({ ok: true, message: "Processing loop restarted" }, { headers: corsHeaders });
+    }
+
     if (action === "status") {
       const { data: job } = await supabase
         .from("pipeline_jobs")

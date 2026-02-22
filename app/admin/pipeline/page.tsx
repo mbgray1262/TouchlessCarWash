@@ -98,6 +98,7 @@ export default function PipelinePage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [dismissingFetchFailed, setDismissingFetchFailed] = useState(false);
   const [retryingWithFirecrawl, setRetryingWithFirecrawl] = useState(false);
+  const [kicking, setKicking] = useState(false);
 
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
   const statsTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -228,6 +229,25 @@ export default function PipelinePage() {
     }
   }, [stats, refreshStats, showToast]);
 
+  const handleKick = useCallback(async () => {
+    if (!job) return;
+    setKicking(true);
+    try {
+      const res = await callBatchFn({ action: 'kick', job_id: job.id });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast('error', data.error ?? 'Failed to restart processing loop');
+      } else {
+        showToast('success', 'Processing loop restarted.');
+        await pollJob();
+      }
+    } catch (e) {
+      showToast('error', (e as Error).message);
+    } finally {
+      setKicking(false);
+    }
+  }, [job, pollJob, showToast]);
+
   const handleFirecrawlRetry = useCallback(async () => {
     const retryCount = (stats?.fetch_failed ?? 0) + (stats?.unknown ?? 0);
     if (!confirm(`Submit ${retryCount.toLocaleString()} fetch-failed and unknown listings to Firecrawl for a second attempt?\n\nFirecrawl uses JS rendering and proxy rotation which resolves most failures. This will use Firecrawl credits.`)) return;
@@ -269,6 +289,10 @@ export default function PipelinePage() {
   const isDone = job?.status === 'done';
   const isFailed = job?.status === 'failed';
   const isActive = isRunning || isPaused;
+
+  const isStalled = isRunning && job?.updated_at
+    ? (Date.now() - new Date(job.updated_at).getTime()) > 5 * 60 * 1000
+    : false;
 
   const progressPct = job && job.total_queue > 0
     ? Math.round((job.processed_count / job.total_queue) * 100)
@@ -366,15 +390,33 @@ export default function PipelinePage() {
                     {isDone ? 'Run Again' : isFailed ? 'Retry' : 'Start Classification'}
                   </Button>
                 ) : isRunning ? (
-                  <Button
-                    variant="outline"
-                    className="w-full border-amber-300 text-amber-700 hover:bg-amber-50"
-                    onClick={handlePause}
-                    disabled={actionLoading}
-                  >
-                    {actionLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Pause className="w-4 h-4 mr-2" />}
-                    Pause
-                  </Button>
+                  <div className="space-y-2">
+                    <Button
+                      variant="outline"
+                      className="w-full border-amber-300 text-amber-700 hover:bg-amber-50"
+                      onClick={handlePause}
+                      disabled={actionLoading}
+                    >
+                      {actionLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Pause className="w-4 h-4 mr-2" />}
+                      Pause
+                    </Button>
+                    {isStalled && (
+                      <div className="space-y-2">
+                        <div className="border border-red-100 rounded-lg bg-red-50 p-3">
+                          <p className="text-xs text-red-800 font-medium mb-0.5">Processing loop stalled</p>
+                          <p className="text-xs text-red-700">No progress in over 5 minutes. The self-scheduling chain has broken.</p>
+                        </div>
+                        <Button
+                          className="w-full bg-red-600 hover:bg-red-700 text-white"
+                          onClick={handleKick}
+                          disabled={kicking}
+                        >
+                          {kicking ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RotateCcw className="w-4 h-4 mr-2" />}
+                          Restart Processing Loop
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <div className="space-y-2">
                     <Button
