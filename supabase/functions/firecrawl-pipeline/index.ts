@@ -402,11 +402,24 @@ Deno.serve(async (req: Request) => {
       // Build listing lookup: prefer stored url_to_id map (exact match), fall back to normalization
       let listingMap = new Map<string, { id: string; is_touchless: boolean | null; hero_image: string | null; description: string | null; website: string }>();
 
+      // Build normalized-key version up front so it's accessible in both the batch lookup and per-item lookup
+      const normalizedUrlToId: Record<string, string> = {};
+      for (const [url, id] of Object.entries(urlToId)) {
+        normalizedUrlToId[normalizeUrl(url)] = id;
+      }
+
       if (hasUrlMap) {
         // Collect all listing IDs for this page's sourceURLs using the stored map
+        // Try: exact match → trailing-slash variants → normalized URL (handles redirects)
         const sourceURLs = items.map(i => i.metadata?.sourceURL ?? '').filter(Boolean);
         const listingIds = sourceURLs
-          .map(u => urlToId[u] ?? urlToId[u.replace(/\/$/, '')] ?? urlToId[u + '/'] ?? null)
+          .map(u =>
+            urlToId[u] ??
+            urlToId[u.replace(/\/$/, '')] ??
+            urlToId[u + '/'] ??
+            normalizedUrlToId[normalizeUrl(u)] ??
+            null
+          )
           .filter(Boolean) as string[];
 
         if (listingIds.length > 0) {
@@ -446,7 +459,11 @@ Deno.serve(async (req: Request) => {
         // Look up listing: by id (new batches with url_to_id map) or by normalized URL (legacy)
         let listing: { id: string; is_touchless: boolean | null; hero_image: string | null; description: string | null; website: string } | undefined;
         if (hasUrlMap) {
-          const listingId = urlToId[sourceURL] ?? urlToId[sourceURL.replace(/\/$/, '')] ?? urlToId[sourceURL + '/'];
+          const listingId =
+            urlToId[sourceURL] ??
+            urlToId[sourceURL.replace(/\/$/, '')] ??
+            urlToId[sourceURL + '/'] ??
+            normalizedUrlToId[normalizeUrl(sourceURL)];
           if (listingId) listing = listingMap.get(listingId);
         } else {
           listing = listingMap.get(normalizeUrl(sourceURL));
