@@ -63,13 +63,13 @@ async function fetchStats(): Promise<ClassifyStats> {
     supabase.from('listings').select('id', { count: 'exact', head: true }),
     supabase.from('listings').select('id', { count: 'exact', head: true }).eq('is_touchless', true),
     supabase.from('listings').select('id', { count: 'exact', head: true }).eq('is_touchless', false),
-    supabase.from('listings').select('id', { count: 'exact', head: true }).is('is_touchless', null).or('website.is.null,website.eq.'),
-    supabase.from('listings').select('id', { count: 'exact', head: true }).is('is_touchless', null).not('website', 'is', null).neq('website', '').eq('crawl_status', 'fetch_failed'),
-    supabase.from('listings').select('id', { count: 'exact', head: true }).is('is_touchless', null).not('website', 'is', null).neq('website', '').eq('crawl_status', 'classify_failed'),
-    supabase.from('listings').select('id', { count: 'exact', head: true }).is('is_touchless', null).not('website', 'is', null).neq('website', '').eq('crawl_status', 'unknown'),
+    supabase.from('listings').select('id', { count: 'exact', head: true }).is('is_touchless', null).or('website.is.null,website.eq.,crawl_status.eq.no_website'),
+    supabase.from('listings').select('id', { count: 'exact', head: true }).is('is_touchless', null).not('website', 'is', null).neq('website', '').neq('crawl_status', 'no_website').eq('crawl_status', 'fetch_failed'),
+    supabase.from('listings').select('id', { count: 'exact', head: true }).is('is_touchless', null).not('website', 'is', null).neq('website', '').neq('crawl_status', 'no_website').eq('crawl_status', 'classify_failed'),
+    supabase.from('listings').select('id', { count: 'exact', head: true }).is('is_touchless', null).not('website', 'is', null).neq('website', '').neq('crawl_status', 'no_website').eq('crawl_status', 'unknown'),
     supabase.from('listings').select('id', { count: 'exact', head: true }).is('is_touchless', null).not('website', 'is', null).neq('website', '').is('crawl_status', null),
-    supabase.from('listings').select('id', { count: 'exact', head: true }).is('is_touchless', null).not('website', 'is', null).neq('website', '').eq('crawl_status', 'classified'),
-    supabase.from('listings').select('id', { count: 'exact', head: true }).is('is_touchless', null).not('website', 'is', null).neq('website', '').not('crawl_status', 'in', '("fetch_failed","classify_failed","unknown","classified")').not('crawl_status', 'is', null),
+    supabase.from('listings').select('id', { count: 'exact', head: true }).is('is_touchless', null).not('website', 'is', null).neq('website', '').neq('crawl_status', 'no_website').eq('crawl_status', 'classified'),
+    supabase.from('listings').select('id', { count: 'exact', head: true }).is('is_touchless', null).not('website', 'is', null).neq('website', '').not('crawl_status', 'in', '("fetch_failed","classify_failed","unknown","classified","no_website")').not('crawl_status', 'is', null),
   ]);
 
   const ff = fetch_failed.count ?? 0;
