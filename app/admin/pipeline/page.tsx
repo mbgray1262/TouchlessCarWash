@@ -102,6 +102,7 @@ export default function PipelinePage() {
   const [retryingWithFirecrawl, setRetryingWithFirecrawl] = useState(false);
   const [kicking, setKicking] = useState(false);
   const [extractingRemaining, setExtractingRemaining] = useState(false);
+  const [confirmExtract, setConfirmExtract] = useState(false);
 
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
   const statsTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -215,7 +216,6 @@ export default function PipelinePage() {
   }, [job, pollJob, showToast]);
 
   const handleDismissFetchFailed = useCallback(async () => {
-    if (!confirm(`Mark all ${stats?.fetch_failed ?? 0} fetch-failed listings as no-website? They will be excluded from future runs.`)) return;
     setDismissingFetchFailed(true);
     try {
       const { error } = await supabase
@@ -252,8 +252,6 @@ export default function PipelinePage() {
   }, [job, pollJob, showToast]);
 
   const handleFirecrawlRetry = useCallback(async () => {
-    const retryCount = (stats?.fetch_failed ?? 0) + (stats?.unknown ?? 0);
-    if (!confirm(`Submit ${retryCount.toLocaleString()} fetch-failed and unknown listings to Firecrawl for a second attempt?\n\nFirecrawl uses JS rendering and proxy rotation which resolves most failures. This will use Firecrawl credits.`)) return;
     setRetryingWithFirecrawl(true);
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/firecrawl-pipeline`, {
@@ -284,8 +282,8 @@ export default function PipelinePage() {
 
   const handleExtractRemaining = useCallback(async () => {
     const count = stats?.never_attempted ?? 0;
-    if (!confirm(`Start classification for ${count.toLocaleString()} listings that have never been attempted?\n\nThis will ONLY process sites with no crawl history — already-failed and already-classified listings are unaffected.`)) return;
     setExtractingRemaining(true);
+    setConfirmExtract(false);
     try {
       const res = await callBatchFn({ action: 'start', concurrency, never_attempted_only: true });
       const data = await res.json();
@@ -414,17 +412,43 @@ export default function PipelinePage() {
                       {isDone ? 'Run Again' : isFailed ? 'Retry' : 'Start Classification'}
                     </Button>
                     {(stats?.never_attempted ?? 0) > 0 && (
-                      <Button
-                        variant="outline"
-                        className="w-full border-teal-300 text-teal-700 hover:bg-teal-50"
-                        onClick={handleExtractRemaining}
-                        disabled={actionLoading || extractingRemaining}
-                      >
-                        {extractingRemaining
-                          ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Starting…</>
-                          : <><Play className="w-4 h-4 mr-2" /> Extract Remaining ({(stats?.never_attempted ?? 0).toLocaleString()})</>
-                        }
-                      </Button>
+                      confirmExtract ? (
+                        <div className="border border-teal-200 rounded-lg bg-teal-50 p-3 space-y-2">
+                          <p className="text-xs text-teal-800 font-medium">
+                            Process {(stats?.never_attempted ?? 0).toLocaleString()} never-attempted listings?
+                          </p>
+                          <p className="text-xs text-teal-700">
+                            Only sites with no crawl history will be processed. Already-failed and classified listings are unaffected.
+                          </p>
+                          <div className="flex gap-2">
+                            <Button
+                              className="flex-1 bg-teal-600 hover:bg-teal-700 text-white text-xs h-8"
+                              onClick={handleExtractRemaining}
+                              disabled={extractingRemaining}
+                            >
+                              {extractingRemaining ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : null}
+                              Confirm
+                            </Button>
+                            <Button
+                              variant="outline"
+                              className="flex-1 text-xs h-8"
+                              onClick={() => setConfirmExtract(false)}
+                              disabled={extractingRemaining}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          className="w-full border-teal-300 text-teal-700 hover:bg-teal-50"
+                          onClick={() => setConfirmExtract(true)}
+                          disabled={actionLoading || extractingRemaining}
+                        >
+                          <Play className="w-4 h-4 mr-2" /> Extract Remaining ({(stats?.never_attempted ?? 0).toLocaleString()})
+                        </Button>
+                      )
                     )}
                   </div>
                 ) : isRunning ? (
