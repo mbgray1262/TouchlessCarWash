@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Play, Pause, RotateCcw, RefreshCw, Loader2, AlertCircle,
-  ChevronRight, CheckCircle2, XCircle, HelpCircle, WifiOff, Brain, Server, Zap, Sparkles,
+  ChevronRight, CheckCircle2, XCircle, HelpCircle, WifiOff, Brain, Server, Zap,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -130,15 +130,6 @@ export default function PipelinePage() {
   const [kicking, setKicking] = useState(false);
   const [extractingRemaining, setExtractingRemaining] = useState(false);
   const [confirmExtract, setConfirmExtract] = useState(false);
-
-  const [enrichTestLimit, setEnrichTestLimit] = useState<number>(20);
-  const [enrichMode, setEnrichMode] = useState<'test' | 'full'>('test');
-  const [enrichSubmitting, setEnrichSubmitting] = useState(false);
-  const [enrichJobId, setEnrichJobId] = useState<string | null>(null);
-  const [enrichPolling, setEnrichPolling] = useState(false);
-  const [enrichAllDone, setEnrichAllDone] = useState(false);
-  const [enrichProgress, setEnrichProgress] = useState<{ classified: number; total: number; status: string } | null>(null);
-  const enrichProgressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
   const statsTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -467,80 +458,6 @@ export default function PipelinePage() {
       setExtractingRemaining(false);
     }
   }, [stats, concurrency, pollJob, showToast]);
-
-  const pollEnrichProgress = useCallback(async (jobId: string) => {
-    const { data: rows } = await supabase
-      .from('pipeline_batches')
-      .select('firecrawl_job_id, classify_status, classified_count, total_urls')
-      .eq('firecrawl_job_id', jobId)
-      .maybeSingle();
-
-    if (!rows) return;
-    setEnrichProgress({
-      classified: rows.classified_count ?? 0,
-      total: rows.total_urls ?? 0,
-      status: rows.classify_status ?? 'running',
-    });
-
-    if (rows.classify_status === 'completed' || rows.classify_status === 'expired') {
-      if (enrichProgressTimerRef.current) clearInterval(enrichProgressTimerRef.current);
-      setEnrichPolling(false);
-      setEnrichAllDone(true);
-      await refreshStats();
-      showToast('success', `Enrichment complete — ${rows.classified_count ?? 0} listings updated with photos & amenities.`);
-    }
-  }, [refreshStats, showToast]);
-
-  const handleEnrichSubmit = useCallback(async () => {
-    setEnrichSubmitting(true);
-    try {
-      const limit = enrichMode === 'test' ? enrichTestLimit : 0;
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/firecrawl-pipeline`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
-        body: JSON.stringify({
-          action: 'enrich_touchless',
-          limit,
-          app_url: window.location.origin,
-        }),
-      });
-      const data = await res.json();
-      if (res.status === 409 && data.already_running) {
-        showToast('error', 'A Firecrawl batch is already running. Wait for it to finish first.');
-        return;
-      }
-      if (!res.ok) throw new Error(data.error ?? 'Failed to submit enrichment batch');
-      setEnrichJobId(data.job_id);
-      setEnrichProgress({ classified: 0, total: data.urls_submitted ?? 0, status: 'running' });
-      setEnrichAllDone(false);
-      setEnrichPolling(false);
-      showToast('success', `Submitted ${data.urls_submitted} URLs to Firecrawl for enrichment.`);
-    } catch (e) {
-      showToast('error', (e as Error).message);
-    } finally {
-      setEnrichSubmitting(false);
-    }
-  }, [enrichMode, enrichTestLimit, showToast]);
-
-  const handleEnrichAutoPoll = useCallback(async () => {
-    if (!enrichJobId) return;
-    if (enrichProgressTimerRef.current) clearInterval(enrichProgressTimerRef.current);
-    setEnrichPolling(true);
-    setEnrichAllDone(false);
-
-    await fetch(`${SUPABASE_URL}/functions/v1/firecrawl-pipeline`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
-      body: JSON.stringify({ action: 'enrich_auto_poll', job_id: enrichJobId }),
-    }).catch(() => {});
-
-    enrichProgressTimerRef.current = setInterval(() => pollEnrichProgress(enrichJobId), 5000);
-    pollEnrichProgress(enrichJobId);
-  }, [enrichJobId, pollEnrichProgress]);
-
-  useEffect(() => {
-    return () => { if (enrichProgressTimerRef.current) clearInterval(enrichProgressTimerRef.current); };
-  }, []);
 
   const handleRecentPageChange = useCallback((page: number) => {
     setRecentPage(page);
@@ -918,148 +835,6 @@ export default function PipelinePage() {
             </CardContent>
           </Card>
         ) : null}
-
-        {/* Enrich Touchless Listings */}
-        <Card className="mb-6">
-          <CardHeader className="pb-3 border-b border-gray-100">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-teal-600" />
-              <CardTitle className="text-base font-semibold text-[#0F2744]">Enrich Touchless Listings</CardTitle>
-              <span className="ml-auto text-xs text-gray-400 font-normal">Photos + amenities backfill</span>
-            </div>
-          </CardHeader>
-          <CardContent className="p-4">
-            {enrichAllDone ? (
-              <div className="flex items-center gap-2 p-3 bg-teal-50 border border-teal-200 rounded-lg">
-                <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0" />
-                <p className="text-sm text-teal-800 font-medium">
-                  Enrichment complete — {enrichProgress?.classified ?? 0} listings updated with photos &amp; amenities.
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="ml-auto border-teal-300 text-teal-700 hover:bg-teal-50 text-xs"
-                  onClick={() => { setEnrichAllDone(false); setEnrichJobId(null); setEnrichProgress(null); }}
-                >
-                  Run Again
-                </Button>
-              </div>
-            ) : enrichJobId && enrichProgress ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">
-                    {enrichPolling ? 'Enriching listings…' : 'Firecrawl batch submitted'}
-                  </span>
-                  <span className="text-xs text-gray-400 font-mono">
-                    {enrichProgress.classified}/{enrichProgress.total} processed
-                  </span>
-                </div>
-                <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="bg-teal-500 h-2 rounded-full transition-all duration-500"
-                    style={{ width: enrichProgress.total > 0 ? `${Math.min(99, Math.round((enrichProgress.classified / enrichProgress.total) * 100))}%` : '0%' }}
-                  />
-                </div>
-                {enrichPolling ? (
-                  <div className="flex items-center gap-1.5 text-xs text-teal-600">
-                    <span className="relative flex h-2 w-2 shrink-0">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-500" />
-                    </span>
-                    Running on server — safe to close this tab
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <p className="text-xs text-gray-500">Firecrawl is scraping the sites. Click below when ready to process results.</p>
-                    <Button
-                      className="w-full bg-teal-600 hover:bg-teal-700 text-white text-sm"
-                      onClick={handleEnrichAutoPoll}
-                      disabled={enrichPolling}
-                    >
-                      <Zap className="w-4 h-4 mr-2" /> Fetch &amp; Apply Enrichment Results
-                    </Button>
-                    <p className="text-xs text-gray-400">Tip: wait 1-2 minutes for Firecrawl to finish scraping first.</p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <p className="text-sm text-gray-600">
-                  Crawls all {stats?.touchless?.toLocaleString() ?? '…'} touchless listings to backfill <strong>website photos</strong> and <strong>amenities</strong>. Never changes touchless status — purely additive.
-                </p>
-
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setEnrichMode('test')}
-                    className={`flex-1 py-2.5 px-3 rounded-lg border text-sm font-medium transition-all ${
-                      enrichMode === 'test'
-                        ? 'bg-teal-50 border-teal-400 text-teal-800'
-                        : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
-                    }`}
-                  >
-                    Test Mode
-                    <span className="block text-xs font-normal mt-0.5 opacity-70">Small batch to verify it works</span>
-                  </button>
-                  <button
-                    onClick={() => setEnrichMode('full')}
-                    className={`flex-1 py-2.5 px-3 rounded-lg border text-sm font-medium transition-all ${
-                      enrichMode === 'full'
-                        ? 'bg-teal-50 border-teal-400 text-teal-800'
-                        : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
-                    }`}
-                  >
-                    Full Run
-                    <span className="block text-xs font-normal mt-0.5 opacity-70">All {stats?.touchless?.toLocaleString() ?? '…'} touchless listings</span>
-                  </button>
-                </div>
-
-                {enrichMode === 'test' && (
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-gray-600">Number of listings to test</label>
-                    <div className="flex items-center gap-2">
-                      {[10, 20, 50, 100].map(n => (
-                        <button
-                          key={n}
-                          onClick={() => setEnrichTestLimit(n)}
-                          className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
-                            enrichTestLimit === n
-                              ? 'bg-teal-600 border-teal-600 text-white'
-                              : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
-                          }`}
-                        >
-                          {n}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-xs text-gray-400">
-                      Will crawl the first {enrichTestLimit} touchless listings and add photos/amenities if found.
-                    </p>
-                  </div>
-                )}
-
-                {enrichMode === 'full' && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                    <p className="text-xs text-amber-800 font-medium">Full run uses Firecrawl credits</p>
-                    <p className="text-xs text-amber-700 mt-0.5">
-                      Will submit all {stats?.touchless?.toLocaleString() ?? '…'} touchless listings. Run a test first to confirm enrichment is working.
-                    </p>
-                  </div>
-                )}
-
-                <Button
-                  className="w-full bg-teal-600 hover:bg-teal-700 text-white"
-                  onClick={handleEnrichSubmit}
-                  disabled={enrichSubmitting}
-                >
-                  {enrichSubmitting
-                    ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Submitting to Firecrawl…</>
-                    : <><Sparkles className="w-4 h-4 mr-2" /> {enrichMode === 'test' ? `Run Test (${enrichTestLimit} listings)` : 'Start Full Enrichment'}</>
-                  }
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
 
         <Card>
           <CardHeader className="pb-3 border-b border-gray-100">
