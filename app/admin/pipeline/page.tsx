@@ -107,6 +107,8 @@ export default function PipelinePage() {
   const [firecrawlTotalProcessed, setFirecrawlTotalProcessed] = useState(0);
   const [firecrawlPolling, setFirecrawlPolling] = useState(false);
   const [firecrawlAllDone, setFirecrawlAllDone] = useState(false);
+  const [firecrawlPollError, setFirecrawlPollError] = useState<string | null>(null);
+  const [firecrawlConsecErrors, setFirecrawlConsecErrors] = useState(0);
   const firecrawlPollTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [kicking, setKicking] = useState(false);
@@ -319,11 +321,15 @@ export default function PipelinePage() {
     if (firecrawlJobs.length === 0) return;
     if (firecrawlPollTimerRef.current) clearTimeout(firecrawlPollTimerRef.current);
     setFirecrawlPolling(true);
+    setFirecrawlPollError(null);
+    setFirecrawlConsecErrors(0);
 
     const cursors: Record<string, string | null> = { ...firecrawlJobCursors };
     const done: Record<string, boolean> = { ...firecrawlJobDone };
     const scraped: Record<string, number> = { ...firecrawlJobScraped };
     let totalProcessed = firecrawlTotalProcessed;
+
+    let consecErrors = 0;
 
     const pollRound = async (): Promise<void> => {
       const pendingJobs = firecrawlJobs.filter(j => !done[j.job_id]);
@@ -341,16 +347,41 @@ export default function PipelinePage() {
       );
 
       let anyWaiting = false;
+      let anySuccess = false;
+      const errorMessages: string[] = [];
       for (let i = 0; i < pendingJobs.length; i++) {
         const job = pendingJobs[i];
         const result = results[i];
         if (result.status === 'fulfilled') {
           const r = result.value;
+          anySuccess = true;
           totalProcessed += r.processed;
           cursors[job.job_id] = r.next_cursor;
           scraped[job.job_id] = r.total_completed;
           if (r.done) done[job.job_id] = true;
           if (r.waiting) anyWaiting = true;
+        } else {
+          errorMessages.push(result.reason?.message ?? 'Unknown error');
+          if ((result.reason as { expired?: boolean })?.expired) {
+            setFirecrawlPolling(false);
+            showToast('error', 'Firecrawl job data expired. Please retry with Firecrawl.');
+            return;
+          }
+        }
+      }
+
+      if (anySuccess) {
+        consecErrors = 0;
+        setFirecrawlPollError(null);
+      } else if (errorMessages.length > 0) {
+        consecErrors++;
+        const errMsg = errorMessages[0];
+        setFirecrawlPollError(errMsg);
+        setFirecrawlConsecErrors(consecErrors);
+        if (consecErrors >= 5) {
+          setFirecrawlPolling(false);
+          showToast('error', `Polling stopped after 5 consecutive errors: ${errMsg}`);
+          return;
         }
       }
 
@@ -368,7 +399,7 @@ export default function PipelinePage() {
         return;
       }
 
-      const delay = anyWaiting ? 5000 : 1500;
+      const delay = anyWaiting ? 5000 : consecErrors > 0 ? 8000 : 1500;
       firecrawlPollTimerRef.current = setTimeout(pollRound, delay);
     };
 
@@ -658,6 +689,12 @@ export default function PipelinePage() {
                           })}
                         </div>
                         <p className="text-[10px] text-blue-500">{firecrawlTotalProcessed.toLocaleString()} classified so far across all batches</p>
+                        {firecrawlPollError && (
+                          <div className="flex items-start gap-1.5 text-[10px] text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1.5">
+                            <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
+                            <span>Error ({firecrawlConsecErrors}/5): {firecrawlPollError}</span>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <p className="text-xs text-blue-700">
