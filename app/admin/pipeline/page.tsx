@@ -106,6 +106,8 @@ export default function PipelinePage() {
   const [firecrawlPollCursor, setFirecrawlPollCursor] = useState<string | null>(null);
   const [firecrawlProcessed, setFirecrawlProcessed] = useState(0);
   const [firecrawlDone, setFirecrawlDone] = useState(false);
+  const [firecrawlScrapedCompleted, setFirecrawlScrapedCompleted] = useState(0);
+  const [firecrawlWaiting, setFirecrawlWaiting] = useState(false);
   const firecrawlPollTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [kicking, setKicking] = useState(false);
   const [extractingRemaining, setExtractingRemaining] = useState(false);
@@ -329,8 +331,10 @@ export default function PipelinePage() {
     if (!firecrawlJobId) return;
     if (firecrawlPollTimerRef.current) clearInterval(firecrawlPollTimerRef.current);
 
+    setFirecrawlPolling(true);
+    setFirecrawlWaiting(false);
+
     const poll = async (cursor: string | null, accumulated: number): Promise<void> => {
-      setFirecrawlPolling(true);
       try {
         const res = await fetch('/api/pipeline/poll', {
           method: 'POST',
@@ -346,23 +350,33 @@ export default function PipelinePage() {
             showToast('error', data.error ?? 'Poll failed');
           }
           setFirecrawlPolling(false);
+          setFirecrawlWaiting(false);
           return;
         }
+
         const newTotal = accumulated + (data.processed ?? 0);
         setFirecrawlProcessed(newTotal);
         setFirecrawlPollCursor(data.next_cursor ?? null);
+        if (data.total_completed != null) setFirecrawlScrapedCompleted(data.total_completed);
+        if (data.total_urls != null && data.total_urls > 0) setFirecrawlJobTotal(data.total_urls);
+
         if (data.done) {
           setFirecrawlDone(true);
           setFirecrawlPolling(false);
+          setFirecrawlWaiting(false);
           await refreshStats();
           showToast('success', `Done! Classified ${newTotal.toLocaleString()} listings from Firecrawl.`);
           return;
         }
-        setFirecrawlPolling(false);
-        firecrawlPollTimerRef.current = setTimeout(() => poll(data.next_cursor ?? null, newTotal), 2000);
+
+        // If this page had 0 items, Firecrawl is still scraping — wait longer before retrying
+        const delay = (data.page_size ?? 0) === 0 ? 5000 : 1500;
+        setFirecrawlWaiting((data.page_size ?? 0) === 0);
+        firecrawlPollTimerRef.current = setTimeout(() => poll(data.next_cursor ?? cursor, newTotal), delay);
       } catch (e) {
         showToast('error', (e as Error).message);
         setFirecrawlPolling(false);
+        setFirecrawlWaiting(false);
       }
     };
 
@@ -616,17 +630,49 @@ export default function PipelinePage() {
                 )}
 
                 {firecrawlJobId && !firecrawlDone && (
-                  <div className="border border-blue-200 rounded-lg bg-blue-50 p-3 space-y-2">
+                  <div className="border border-blue-200 rounded-lg bg-blue-50 p-3 space-y-2.5">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs text-blue-800 font-semibold">Scraping in progress</p>
-                      <span className="text-xs text-blue-500 font-mono truncate max-w-[120px]">{firecrawlJobId.slice(0, 12)}…</span>
+                      <p className="text-xs text-blue-800 font-semibold">
+                        {firecrawlPolling ? (firecrawlWaiting ? 'Waiting for Firecrawl…' : 'Classifying results…') : 'Firecrawl batch ready'}
+                      </p>
+                      <span className="text-xs text-blue-400 font-mono truncate max-w-[120px]">{firecrawlJobId.slice(0, 12)}…</span>
                     </div>
-                    <p className="text-xs text-blue-700">
-                      Firecrawl is scraping {firecrawlJobTotal.toLocaleString()} sites in the background. Once they&apos;re ready, click below to pull and classify the results.
-                    </p>
-                    {firecrawlProcessed > 0 && (
-                      <p className="text-xs text-blue-600 font-medium">{firecrawlProcessed.toLocaleString()} of {firecrawlJobTotal.toLocaleString()} classified so far</p>
+
+                    {firecrawlPolling ? (
+                      <div className="space-y-1.5">
+                        {firecrawlWaiting ? (
+                          <p className="text-xs text-blue-700">Firecrawl is still scraping sites. Checking for new results every 5 seconds…</p>
+                        ) : (
+                          <p className="text-xs text-blue-700">Pulling scraped content and classifying with AI…</p>
+                        )}
+
+                        {firecrawlJobTotal > 0 && (
+                          <>
+                            <div className="flex justify-between text-[10px] text-blue-600 font-medium">
+                              <span>{firecrawlScrapedCompleted.toLocaleString()} of {firecrawlJobTotal.toLocaleString()} scraped by Firecrawl</span>
+                              <span>{Math.round((firecrawlScrapedCompleted / firecrawlJobTotal) * 100)}%</span>
+                            </div>
+                            <div className="w-full bg-blue-200 rounded-full h-1.5">
+                              <div
+                                className="bg-blue-500 h-1.5 rounded-full transition-all duration-500"
+                                style={{ width: `${Math.min(100, Math.round((firecrawlScrapedCompleted / firecrawlJobTotal) * 100))}%` }}
+                              />
+                            </div>
+                            <div className="flex justify-between text-[10px] text-blue-500">
+                              <span>{firecrawlProcessed.toLocaleString()} classified so far</span>
+                              <span>{firecrawlJobTotal - firecrawlProcessed > 0 ? `${(firecrawlJobTotal - firecrawlProcessed).toLocaleString()} remaining` : 'almost done'}</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-blue-700">
+                        {firecrawlProcessed > 0
+                          ? `${firecrawlProcessed.toLocaleString()} classified so far. Click below to continue.`
+                          : `Firecrawl is scraping ${firecrawlJobTotal.toLocaleString()} sites in the background. Once they're ready, click below.`}
+                      </p>
                     )}
+
                     <div className="flex gap-1.5">
                       <Button
                         type="button"
@@ -635,7 +681,7 @@ export default function PipelinePage() {
                         disabled={firecrawlPolling}
                       >
                         {firecrawlPolling
-                          ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Fetching &amp; classifying…</>
+                          ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> {firecrawlWaiting ? 'Waiting…' : 'Classifying…'}</>
                           : <><Zap className="w-3 h-3 mr-1" /> Fetch &amp; Classify Results</>
                         }
                       </Button>
@@ -649,7 +695,7 @@ export default function PipelinePage() {
                         Step
                       </Button>
                     </div>
-                    <p className="text-[10px] text-blue-500">Tip: wait a minute or two for Firecrawl to finish scraping before clicking.</p>
+                    {!firecrawlPolling && <p className="text-[10px] text-blue-400">Tip: wait a minute or two for Firecrawl to finish scraping before clicking.</p>}
                   </div>
                 )}
 
