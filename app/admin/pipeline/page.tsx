@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Play, Pause, RotateCcw, RefreshCw, Loader2, AlertCircle,
-  ChevronRight, CheckCircle2, XCircle, HelpCircle, WifiOff, Brain, Server,
+  ChevronRight, CheckCircle2, XCircle, HelpCircle, WifiOff, Brain, Server, Zap,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -97,6 +97,7 @@ export default function PipelinePage() {
   const [job, setJob] = useState<PipelineJob | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [dismissingFetchFailed, setDismissingFetchFailed] = useState(false);
+  const [retryingWithFirecrawl, setRetryingWithFirecrawl] = useState(false);
 
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
   const statsTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -226,6 +227,37 @@ export default function PipelinePage() {
       setDismissingFetchFailed(false);
     }
   }, [stats, refreshStats, showToast]);
+
+  const handleFirecrawlRetry = useCallback(async () => {
+    const retryCount = (stats?.fetch_failed ?? 0) + (stats?.unknown ?? 0);
+    if (!confirm(`Submit ${retryCount.toLocaleString()} fetch-failed and unknown listings to Firecrawl for a second attempt?\n\nFirecrawl uses JS rendering and proxy rotation which resolves most failures. This will use Firecrawl credits.`)) return;
+    setRetryingWithFirecrawl(true);
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/firecrawl-pipeline`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          action: 'retry_classify_failures',
+          app_url: window.location.origin,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast('error', data.error ?? 'Failed to submit Firecrawl retry batch');
+      } else if (data.done) {
+        showToast('success', 'No listings to retry — all caught up!');
+      } else {
+        showToast('success', `Submitted ${data.urls_submitted.toLocaleString()} listings to Firecrawl (job ${data.job_id}). Use the Bulk Verify page to poll results.`);
+      }
+    } catch (e) {
+      showToast('error', (e as Error).message);
+    } finally {
+      setRetryingWithFirecrawl(false);
+    }
+  }, [stats, showToast]);
 
   const handleRecentPageChange = useCallback((page: number) => {
     setRecentPage(page);
@@ -360,6 +392,27 @@ export default function PipelinePage() {
                       disabled={actionLoading}
                     >
                       <RotateCcw className="w-4 h-4 mr-2" /> Restart from Beginning
+                    </Button>
+                  </div>
+                )}
+
+                {isDone && ((stats?.fetch_failed ?? 0) + (stats?.unknown ?? 0)) > 0 && (
+                  <div className="border border-blue-100 rounded-lg bg-blue-50 p-3 space-y-2">
+                    <p className="text-xs text-blue-800 font-medium">
+                      {((stats?.fetch_failed ?? 0) + (stats?.unknown ?? 0)).toLocaleString()} listings need a retry
+                    </p>
+                    <p className="text-xs text-blue-700">
+                      {stats?.fetch_failed ?? 0} fetch failed + {stats?.unknown ?? 0} unknown. Firecrawl can resolve most of these using JS rendering and proxy rotation.
+                    </p>
+                    <Button
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs h-8"
+                      onClick={handleFirecrawlRetry}
+                      disabled={retryingWithFirecrawl}
+                    >
+                      {retryingWithFirecrawl
+                        ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Submitting to Firecrawl…</>
+                        : <><Zap className="w-3.5 h-3.5 mr-1.5" /> Retry with Firecrawl</>
+                      }
                     </Button>
                   </div>
                 )}

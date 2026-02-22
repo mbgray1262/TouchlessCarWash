@@ -652,6 +652,126 @@ Deno.serve(async (req: Request) => {
       }, { headers: corsHeaders });
     }
 
+    // --- RETRY CLASSIFY FAILURES WITH FIRECRAWL ---
+    // Submits listings with crawl_status = 'fetch_failed' or 'unknown' to Firecrawl
+    // for a second attempt using JS rendering and proxy rotation.
+    if (action === 'retry_classify_failures') {
+      if (!firecrawlKey) return Response.json({ error: 'FIRECRAWL_API_KEY not configured' }, { status: 500, headers: corsHeaders });
+
+      const chunkIndex = body.chunk_index ?? 0;
+      const appUrl = body.app_url ?? Deno.env.get('APP_URL') ?? '';
+      const targetStatuses: string[] = body.statuses ?? ['fetch_failed', 'unknown'];
+
+      const offset = chunkIndex * CHUNK_SIZE;
+      const { data: listings, error: listErr } = await supabase
+        .from('listings')
+        .select('id, website, name')
+        .in('crawl_status', targetStatuses)
+        .not('website', 'is', null)
+        .neq('website', '')
+        .order('id')
+        .range(offset, offset + CHUNK_SIZE - 1);
+
+      if (listErr) return Response.json({ error: listErr.message }, { status: 500, headers: corsHeaders });
+      if (!listings || listings.length === 0) {
+        return Response.json({ message: 'No listings to retry', done: true }, { headers: corsHeaders });
+      }
+
+      const allListings = listings as Array<{ id: string; website: string }>;
+
+      const skippedListings = allListings.filter(l =>
+        SKIP_DOMAINS.some(d => l.website.toLowerCase().includes(d))
+      );
+      const goodListings = allListings.filter(l =>
+        !SKIP_DOMAINS.some(d => l.website.toLowerCase().includes(d))
+      );
+
+      if (skippedListings.length > 0) {
+        await Promise.all(skippedListings.map(l =>
+          supabase.from('listings').update({
+            crawl_status: 'redirect',
+            last_crawled_at: new Date().toISOString(),
+          }).eq('id', l.id)
+        ));
+      }
+
+      const urls = goodListings.map(l => l.website);
+      const urlToId: Record<string, string> = {};
+      for (const l of goodListings) urlToId[l.website] = l.id;
+
+      if (urls.length === 0) {
+        return Response.json({ message: 'All listings in this chunk were skipped (directory/social URLs)', done: true, skipped: skippedListings.length }, { headers: corsHeaders });
+      }
+
+      const { data: countRow } = await supabase
+        .from('listings')
+        .select('id', { count: 'exact', head: true })
+        .in('crawl_status', targetStatuses)
+        .not('website', 'is', null)
+        .neq('website', '');
+      const totalRetryCount = (countRow as unknown as { count: number } | null)?.count ?? 0;
+
+      const batchBody: Record<string, unknown> = {
+        urls,
+        formats: ['markdown', 'images'],
+        onlyMainContent: true,
+        ignoreInvalidURLs: true,
+        maxConcurrency: 50,
+        timeout: 30000,
+        blockAds: true,
+        skipTlsVerification: true,
+        removeBase64Images: true,
+        location: { country: 'US', languages: ['en-US'] },
+        proxy: 'auto',
+        storeInCache: false,
+      };
+
+      if (appUrl) {
+        batchBody.webhook = {
+          url: `${appUrl}/api/firecrawl-webhook`,
+          events: ['page', 'completed'],
+        };
+      }
+
+      const fcRes = await fetch(`${FIRECRAWL_API}/batch/scrape`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${firecrawlKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(batchBody),
+      });
+
+      if (!fcRes.ok) {
+        const errText = await fcRes.text();
+        return Response.json({ error: `Firecrawl error ${fcRes.status}: ${errText}` }, { status: 502, headers: corsHeaders });
+      }
+
+      const fcData = await fcRes.json() as { success: boolean; id: string };
+      if (!fcData.success || !fcData.id) {
+        return Response.json({ error: 'Firecrawl did not return a job ID' }, { status: 502, headers: corsHeaders });
+      }
+
+      const { data: batch, error: batchErr } = await supabase.from('pipeline_batches').insert({
+        firecrawl_job_id: fcData.id,
+        status: 'running',
+        total_urls: urls.length,
+        chunk_index: chunkIndex,
+        url_to_id: urlToId,
+      }).select().single();
+
+      if (batchErr) return Response.json({ error: batchErr.message }, { status: 500, headers: corsHeaders });
+
+      return Response.json({
+        batch,
+        job_id: fcData.id,
+        urls_submitted: urls.length,
+        skipped: skippedListings.length,
+        total_to_retry: totalRetryCount,
+        chunks_remaining: Math.max(0, Math.ceil(totalRetryCount / CHUNK_SIZE) - chunkIndex - 1),
+      }, { headers: corsHeaders });
+    }
+
     return Response.json({ error: 'Unknown action' }, { status: 400, headers: corsHeaders });
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 500, headers: corsHeaders });
