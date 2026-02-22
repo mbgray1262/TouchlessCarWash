@@ -655,63 +655,57 @@ Deno.serve(async (req: Request) => {
     }
 
     // --- RETRY CLASSIFY FAILURES WITH FIRECRAWL ---
-    // Submits listings with crawl_status = 'fetch_failed' or 'unknown' to Firecrawl
-    // for a second attempt using JS rendering and proxy rotation.
-    if (action === 'retry_classify_failures') {
+    // Fetches ALL eligible listings and submits them in a single Firecrawl batch.
+    // Firecrawl's batch/scrape endpoint has no documented URL limit.
+    // Supabase returns max 1000 rows per query, so we paginate the fetch then
+    // submit all URLs in one shot.
+    if (action === 'retry_classify_failures' || action === 'retry_all_chunks') {
       if (!firecrawlKey) return Response.json({ error: 'FIRECRAWL_API_KEY not configured' }, { status: 500, headers: corsHeaders });
 
-      const chunkIndex = body.chunk_index ?? 0;
       const appUrl = body.app_url ?? Deno.env.get('APP_URL') ?? '';
       const targetStatuses: string[] = body.statuses ?? ['fetch_failed', 'unknown', 'classify_failed'];
 
-      const offset = chunkIndex * CHUNK_SIZE;
-      const { data: listings, error: listErr } = await supabase
-        .from('listings')
-        .select('id, website, name')
-        .in('crawl_status', targetStatuses)
-        .not('website', 'is', null)
-        .neq('website', '')
-        .order('id')
-        .range(offset, offset + CHUNK_SIZE - 1);
-
-      if (listErr) return Response.json({ error: listErr.message }, { status: 500, headers: corsHeaders });
-      if (!listings || listings.length === 0) {
-        return Response.json({ message: 'No listings to retry', done: true }, { headers: corsHeaders });
+      // Paginate Supabase to collect all matching listings (max 1000/page)
+      const PAGE = 1000;
+      let allListings: Array<{ id: string; website: string }> = [];
+      let offset = 0;
+      while (true) {
+        const { data, error: fetchErr } = await supabase
+          .from('listings')
+          .select('id, website')
+          .in('crawl_status', targetStatuses)
+          .not('website', 'is', null)
+          .neq('website', '')
+          .order('id')
+          .range(offset, offset + PAGE - 1);
+        if (fetchErr) return Response.json({ error: fetchErr.message }, { status: 500, headers: corsHeaders });
+        const rows = (data ?? []) as Array<{ id: string; website: string }>;
+        allListings = allListings.concat(rows);
+        if (rows.length < PAGE) break;
+        offset += PAGE;
       }
 
-      const allListings = listings as Array<{ id: string; website: string }>;
+      if (allListings.length === 0) {
+        return Response.json({ message: 'No listings to retry', done: true, batches: [] }, { headers: corsHeaders });
+      }
 
-      const skippedListings = allListings.filter(l =>
-        SKIP_DOMAINS.some(d => l.website.toLowerCase().includes(d))
-      );
-      const goodListings = allListings.filter(l =>
-        !SKIP_DOMAINS.some(d => l.website.toLowerCase().includes(d))
-      );
+      // Mark directory/social URLs as no_website and skip them
+      const skipped = allListings.filter(l => SKIP_DOMAINS.some(d => l.website.toLowerCase().includes(d)));
+      const good = allListings.filter(l => !SKIP_DOMAINS.some(d => l.website.toLowerCase().includes(d)));
 
-      if (skippedListings.length > 0) {
-        await Promise.all(skippedListings.map(l =>
-          supabase.from('listings').update({
-            crawl_status: 'no_website',
-            last_crawled_at: new Date().toISOString(),
-          }).eq('id', l.id)
+      if (skipped.length > 0) {
+        await Promise.all(skipped.map(l =>
+          supabase.from('listings').update({ crawl_status: 'no_website', last_crawled_at: new Date().toISOString() }).eq('id', l.id)
         ));
       }
 
-      const urls = goodListings.map(l => l.website);
-      const urlToId: Record<string, string> = {};
-      for (const l of goodListings) urlToId[l.website] = l.id;
-
-      if (urls.length === 0) {
-        return Response.json({ message: 'All listings in this chunk were skipped (directory/social URLs)', done: true, skipped: skippedListings.length }, { headers: corsHeaders });
+      if (good.length === 0) {
+        return Response.json({ message: 'All listings were skipped (directory/social URLs)', done: true, skipped: skipped.length, batches: [] }, { headers: corsHeaders });
       }
 
-      const { data: countRow } = await supabase
-        .from('listings')
-        .select('id', { count: 'exact', head: true })
-        .in('crawl_status', targetStatuses)
-        .not('website', 'is', null)
-        .neq('website', '');
-      const totalRetryCount = (countRow as unknown as { count: number } | null)?.count ?? 0;
+      const urls = good.map(l => l.website);
+      const urlToId: Record<string, string> = {};
+      for (const l of good) urlToId[l.website] = l.id;
 
       const batchBody: Record<string, unknown> = {
         urls,
@@ -729,18 +723,12 @@ Deno.serve(async (req: Request) => {
       };
 
       if (appUrl) {
-        batchBody.webhook = {
-          url: `${appUrl}/api/firecrawl-webhook`,
-          events: ['page', 'completed'],
-        };
+        batchBody.webhook = { url: `${appUrl}/api/firecrawl-webhook`, events: ['page', 'completed'] };
       }
 
       const fcRes = await fetch(`${FIRECRAWL_API}/batch/scrape`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${firecrawlKey}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(batchBody),
       });
 
@@ -750,159 +738,25 @@ Deno.serve(async (req: Request) => {
       }
 
       const fcData = await fcRes.json() as { success: boolean; id: string };
-      if (!fcData.success || !fcData.id) {
-        return Response.json({ error: 'Firecrawl did not return a job ID' }, { status: 502, headers: corsHeaders });
-      }
+      if (!fcData.success || !fcData.id) return Response.json({ error: 'Firecrawl did not return a job ID' }, { status: 502, headers: corsHeaders });
 
       const { data: batch, error: batchErr } = await supabase.from('pipeline_batches').insert({
         firecrawl_job_id: fcData.id,
         status: 'running',
         total_urls: urls.length,
-        chunk_index: chunkIndex,
+        chunk_index: 0,
         url_to_id: urlToId,
       }).select().single();
 
       if (batchErr) return Response.json({ error: batchErr.message }, { status: 500, headers: corsHeaders });
 
       return Response.json({
-        batch,
+        batches: [{ chunk_index: 0, job_id: fcData.id, urls_submitted: urls.length, batch_id: batch?.id ?? null }],
         job_id: fcData.id,
         urls_submitted: urls.length,
-        skipped: skippedListings.length,
-        total_to_retry: totalRetryCount,
-        chunks_remaining: Math.max(0, Math.ceil(totalRetryCount / CHUNK_SIZE) - chunkIndex - 1),
-      }, { headers: corsHeaders });
-    }
-
-    // --- RETRY ALL CHUNKS IN PARALLEL ---
-    // Submits every chunk to Firecrawl simultaneously (up to CHUNK_SIZE=2000 URLs each).
-    // Returns an array of { job_id, urls_submitted, chunk_index } for the UI to poll in parallel.
-    if (action === 'retry_all_chunks') {
-      if (!firecrawlKey) return Response.json({ error: 'FIRECRAWL_API_KEY not configured' }, { status: 500, headers: corsHeaders });
-
-      const appUrl = body.app_url ?? Deno.env.get('APP_URL') ?? '';
-      const targetStatuses: string[] = body.statuses ?? ['fetch_failed', 'unknown', 'classify_failed'];
-
-      // Fetch total count first
-      const { count: totalCount } = await supabase
-        .from('listings')
-        .select('id', { count: 'exact', head: true })
-        .in('crawl_status', targetStatuses)
-        .not('website', 'is', null)
-        .neq('website', '');
-
-      if (!totalCount || totalCount === 0) {
-        return Response.json({ message: 'No listings to retry', done: true, batches: [] }, { headers: corsHeaders });
-      }
-
-      const totalChunks = Math.ceil(totalCount / CHUNK_SIZE);
-
-      // Fetch all chunks in parallel
-      const chunkFetches = Array.from({ length: totalChunks }, (_, i) => {
-        const offset = i * CHUNK_SIZE;
-        return supabase
-          .from('listings')
-          .select('id, website, name')
-          .in('crawl_status', targetStatuses)
-          .not('website', 'is', null)
-          .neq('website', '')
-          .order('id')
-          .range(offset, offset + CHUNK_SIZE - 1)
-          .then(r => ({ chunkIndex: i, listings: r.data ?? [] }));
-      });
-
-      const chunks = await Promise.all(chunkFetches);
-
-      // Submit each chunk to Firecrawl in parallel
-      const submittedBatches = await Promise.all(
-        chunks.map(async ({ chunkIndex, listings }) => {
-          const allListings = listings as Array<{ id: string; website: string }>;
-
-          const skippedListings = allListings.filter(l =>
-            SKIP_DOMAINS.some(d => l.website.toLowerCase().includes(d))
-          );
-          const goodListings = allListings.filter(l =>
-            !SKIP_DOMAINS.some(d => l.website.toLowerCase().includes(d))
-          );
-
-          if (skippedListings.length > 0) {
-            await Promise.all(skippedListings.map(l =>
-              supabase.from('listings').update({
-                crawl_status: 'no_website',
-                last_crawled_at: new Date().toISOString(),
-              }).eq('id', l.id)
-            ));
-          }
-
-          if (goodListings.length === 0) return null;
-
-          const urls = goodListings.map(l => l.website);
-          const urlToId: Record<string, string> = {};
-          for (const l of goodListings) urlToId[l.website] = l.id;
-
-          const batchBody: Record<string, unknown> = {
-            urls,
-            formats: ['markdown', 'images'],
-            onlyMainContent: true,
-            ignoreInvalidURLs: true,
-            maxConcurrency: 50,
-            timeout: 30000,
-            blockAds: true,
-            skipTlsVerification: true,
-            removeBase64Images: true,
-            location: { country: 'US', languages: ['en-US'] },
-            proxy: 'auto',
-            storeInCache: false,
-          };
-
-          if (appUrl) {
-            batchBody.webhook = {
-              url: `${appUrl}/api/firecrawl-webhook`,
-              events: ['page', 'completed'],
-            };
-          }
-
-          try {
-            const fcRes = await fetch(`${FIRECRAWL_API}/batch/scrape`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${firecrawlKey}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(batchBody),
-            });
-
-            if (!fcRes.ok) {
-              const errText = await fcRes.text();
-              return { chunkIndex, error: `Firecrawl error ${fcRes.status}: ${errText}` };
-            }
-
-            const fcData = await fcRes.json() as { success: boolean; id: string };
-            if (!fcData.success || !fcData.id) return { chunkIndex, error: 'No job ID returned' };
-
-            const { data: batch } = await supabase.from('pipeline_batches').insert({
-              firecrawl_job_id: fcData.id,
-              status: 'running',
-              total_urls: urls.length,
-              chunk_index: chunkIndex,
-              url_to_id: urlToId,
-            }).select().single();
-
-            return { chunkIndex, job_id: fcData.id, urls_submitted: urls.length, batch_id: batch?.id ?? null };
-          } catch (e) {
-            return { chunkIndex, error: (e as Error).message };
-          }
-        })
-      );
-
-      const successful = submittedBatches.filter(b => b && !('error' in b));
-      const failed = submittedBatches.filter(b => b && 'error' in b);
-
-      return Response.json({
-        batches: successful,
-        failed,
-        total_submitted: successful.reduce((sum, b) => sum + (b?.urls_submitted ?? 0), 0),
-        total_chunks: totalChunks,
+        skipped: skipped.length,
+        total_submitted: urls.length,
+        total_chunks: 1,
       }, { headers: corsHeaders });
     }
 
