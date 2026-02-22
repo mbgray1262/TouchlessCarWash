@@ -100,18 +100,15 @@ export default function PipelinePage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [dismissingFetchFailed, setDismissingFetchFailed] = useState(false);
   const [retryingWithFirecrawl, setRetryingWithFirecrawl] = useState(false);
-  const [firecrawlJobId, setFirecrawlJobId] = useState<string | null>(null);
-  const [firecrawlJobTotal, setFirecrawlJobTotal] = useState(0);
+  const [firecrawlJobs, setFirecrawlJobs] = useState<Array<{ job_id: string; chunk_index: number; urls_submitted: number }>>([]);
+  const [firecrawlJobCursors, setFirecrawlJobCursors] = useState<Record<string, string | null>>({});
+  const [firecrawlJobDone, setFirecrawlJobDone] = useState<Record<string, boolean>>({});
+  const [firecrawlJobScraped, setFirecrawlJobScraped] = useState<Record<string, number>>({});
+  const [firecrawlTotalProcessed, setFirecrawlTotalProcessed] = useState(0);
   const [firecrawlPolling, setFirecrawlPolling] = useState(false);
-  const [firecrawlPollCursor, setFirecrawlPollCursor] = useState<string | null>(null);
-  const [firecrawlProcessed, setFirecrawlProcessed] = useState(0);
-  const [firecrawlDone, setFirecrawlDone] = useState(false);
-  const [firecrawlScrapedCompleted, setFirecrawlScrapedCompleted] = useState(0);
-  const [firecrawlWaiting, setFirecrawlWaiting] = useState(false);
-  const [firecrawlOverallTotal, setFirecrawlOverallTotal] = useState(0);
-  const [firecrawlChunkIndex, setFirecrawlChunkIndex] = useState(0);
-  const [firecrawlChunksRemaining, setFirecrawlChunksRemaining] = useState(0);
+  const [firecrawlAllDone, setFirecrawlAllDone] = useState(false);
   const firecrawlPollTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   const [kicking, setKicking] = useState(false);
   const [extractingRemaining, setExtractingRemaining] = useState(false);
   const [confirmExtract, setConfirmExtract] = useState(false);
@@ -263,176 +260,120 @@ export default function PipelinePage() {
     }
   }, [job, pollJob, showToast]);
 
-  const submitFirecrawlRetryChunk = useCallback(async (chunkIndex: number): Promise<{ job_id: string; urls_submitted: number; chunks_remaining: number; total_to_retry: number } | null> => {
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/firecrawl-pipeline`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-      },
-      body: JSON.stringify({
-        action: 'retry_classify_failures',
-        app_url: window.location.origin,
-        chunk_index: chunkIndex,
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error ?? 'Failed to submit Firecrawl retry batch');
-    if (data.done) return null;
-    return {
-      job_id: data.job_id,
-      urls_submitted: data.urls_submitted ?? 0,
-      chunks_remaining: data.chunks_remaining ?? 0,
-      total_to_retry: data.total_to_retry ?? data.urls_submitted ?? 0,
-    };
-  }, []);
-
   const handleFirecrawlRetry = useCallback(async () => {
     setRetryingWithFirecrawl(true);
     try {
-      const result = await submitFirecrawlRetryChunk(0);
-      if (!result) {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/firecrawl-pipeline`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ action: 'retry_all_chunks', app_url: window.location.origin }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Failed to submit Firecrawl batches');
+      if (data.done || !data.batches || data.batches.length === 0) {
         showToast('success', 'No listings to retry — all caught up!');
         return;
       }
-      setFirecrawlJobId(result.job_id);
-      setFirecrawlJobTotal(result.urls_submitted);
-      setFirecrawlOverallTotal(result.total_to_retry);
-      setFirecrawlChunkIndex(0);
-      setFirecrawlChunksRemaining(result.chunks_remaining);
-      setFirecrawlProcessed(0);
-      setFirecrawlPollCursor(null);
-      setFirecrawlDone(false);
-      setFirecrawlScrapedCompleted(0);
-      const chunksTotal = result.chunks_remaining + 1;
-      showToast('success', `Submitted batch 1 of ${chunksTotal} (${result.urls_submitted.toLocaleString()} URLs). ${result.total_to_retry.toLocaleString()} total to retry across all batches.`);
+      const batches = data.batches as Array<{ job_id: string; chunk_index: number; urls_submitted: number }>;
+      setFirecrawlJobs(batches);
+      setFirecrawlJobCursors({});
+      setFirecrawlJobDone({});
+      setFirecrawlJobScraped({});
+      setFirecrawlTotalProcessed(0);
+      setFirecrawlAllDone(false);
+      setFirecrawlPolling(false);
+      const totalUrls = data.total_submitted ?? batches.reduce((s: number, b: { urls_submitted: number }) => s + b.urls_submitted, 0);
+      showToast('success', `Submitted ${batches.length} batch${batches.length > 1 ? 'es' : ''} to Firecrawl (${totalUrls.toLocaleString()} URLs total). All running in parallel.`);
     } catch (e) {
       showToast('error', (e as Error).message);
     } finally {
       setRetryingWithFirecrawl(false);
     }
-  }, [submitFirecrawlRetryChunk, showToast]);
+  }, [showToast]);
 
-  const handleFirecrawlPollOnce = useCallback(async () => {
-    if (!firecrawlJobId || firecrawlPolling) return;
-    setFirecrawlPolling(true);
-    try {
-      const res = await fetch('/api/pipeline/poll', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ job_id: firecrawlJobId, next_cursor: firecrawlPollCursor }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        if (data.expired) {
-          setFirecrawlDone(true);
-          showToast('error', 'Firecrawl job data expired. Results window has closed.');
-        } else {
-          showToast('error', data.error ?? 'Poll failed');
-        }
-        return;
-      }
-      setFirecrawlProcessed(p => p + (data.processed ?? 0));
-      setFirecrawlPollCursor(data.next_cursor ?? null);
-      if (data.done) {
-        setFirecrawlDone(true);
-        await refreshStats();
-        showToast('success', `Done! Processed all results from Firecrawl.`);
-      }
-    } catch (e) {
-      showToast('error', (e as Error).message);
-    } finally {
-      setFirecrawlPolling(false);
+  const pollSingleJob = useCallback(async (
+    jobId: string,
+    cursor: string | null,
+  ): Promise<{ processed: number; next_cursor: string | null; done: boolean; total_completed: number; total_urls: number; waiting: boolean }> => {
+    const res = await fetch('/api/pipeline/poll', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ job_id: jobId, next_cursor: cursor }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      if (data.expired) throw Object.assign(new Error('Firecrawl job data expired.'), { expired: true });
+      throw new Error(data.error ?? 'Poll failed');
     }
-  }, [firecrawlJobId, firecrawlPolling, firecrawlPollCursor, refreshStats, showToast]);
+    return {
+      processed: data.processed ?? 0,
+      next_cursor: data.next_cursor ?? null,
+      done: !!data.done,
+      total_completed: data.total_completed ?? 0,
+      total_urls: data.total_urls ?? 0,
+      waiting: (data.page_size ?? 0) === 0,
+    };
+  }, []);
 
   const handleFirecrawlAutoPoll = useCallback(async () => {
-    if (!firecrawlJobId) return;
-    if (firecrawlPollTimerRef.current) clearInterval(firecrawlPollTimerRef.current);
-
+    if (firecrawlJobs.length === 0) return;
+    if (firecrawlPollTimerRef.current) clearTimeout(firecrawlPollTimerRef.current);
     setFirecrawlPolling(true);
-    setFirecrawlWaiting(false);
 
-    const poll = async (jobId: string, cursor: string | null, accumulated: number, chunkIdx: number, chunksLeft: number): Promise<void> => {
-      try {
-        const res = await fetch('/api/pipeline/poll', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ job_id: jobId, next_cursor: cursor }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          if (data.expired) {
-            setFirecrawlDone(true);
-            showToast('error', 'Firecrawl job data expired.');
-          } else {
-            showToast('error', data.error ?? 'Poll failed');
-          }
-          setFirecrawlPolling(false);
-          setFirecrawlWaiting(false);
-          return;
-        }
+    const cursors: Record<string, string | null> = { ...firecrawlJobCursors };
+    const done: Record<string, boolean> = { ...firecrawlJobDone };
+    const scraped: Record<string, number> = { ...firecrawlJobScraped };
+    let totalProcessed = firecrawlTotalProcessed;
 
-        const newTotal = accumulated + (data.processed ?? 0);
-        setFirecrawlProcessed(newTotal);
-        setFirecrawlPollCursor(data.next_cursor ?? null);
-        if (data.total_completed != null) setFirecrawlScrapedCompleted(data.total_completed);
-        if (data.total_urls != null && data.total_urls > 0) setFirecrawlJobTotal(data.total_urls);
-
-        if (data.done) {
-          // This batch is done — check if there are more chunks to submit
-          if (chunksLeft > 0) {
-            const nextChunkIdx = chunkIdx + 1;
-            setFirecrawlChunkIndex(nextChunkIdx);
-            setFirecrawlChunksRemaining(chunksLeft - 1);
-            showToast('success', `Batch ${nextChunkIdx} done. Submitting next batch (${chunksLeft} remaining)…`);
-            try {
-              const nextBatch = await submitFirecrawlRetryChunk(nextChunkIdx);
-              if (!nextBatch) {
-                setFirecrawlDone(true);
-                setFirecrawlPolling(false);
-                setFirecrawlWaiting(false);
-                await refreshStats();
-                showToast('success', `All done! Classified ${newTotal.toLocaleString()} listings total.`);
-                return;
-              }
-              setFirecrawlJobId(nextBatch.job_id);
-              setFirecrawlJobTotal(nextBatch.urls_submitted);
-              setFirecrawlScrapedCompleted(0);
-              // Continue polling the new batch
-              firecrawlPollTimerRef.current = setTimeout(
-                () => poll(nextBatch.job_id, null, newTotal, nextChunkIdx, nextBatch.chunks_remaining),
-                3000
-              );
-            } catch (e) {
-              showToast('error', `Next batch failed: ${(e as Error).message}`);
-              setFirecrawlPolling(false);
-              setFirecrawlWaiting(false);
-            }
-            return;
-          }
-
-          setFirecrawlDone(true);
-          setFirecrawlPolling(false);
-          setFirecrawlWaiting(false);
-          await refreshStats();
-          showToast('success', `Done! Classified ${newTotal.toLocaleString()} listings from Firecrawl.`);
-          return;
-        }
-
-        // If this page had 0 items, Firecrawl is still scraping — wait longer before retrying
-        const delay = (data.page_size ?? 0) === 0 ? 5000 : 1500;
-        setFirecrawlWaiting((data.page_size ?? 0) === 0);
-        firecrawlPollTimerRef.current = setTimeout(() => poll(jobId, data.next_cursor ?? cursor, newTotal, chunkIdx, chunksLeft), delay);
-      } catch (e) {
-        showToast('error', (e as Error).message);
+    const pollRound = async (): Promise<void> => {
+      const pendingJobs = firecrawlJobs.filter(j => !done[j.job_id]);
+      if (pendingJobs.length === 0) {
+        setFirecrawlAllDone(true);
         setFirecrawlPolling(false);
-        setFirecrawlWaiting(false);
+        setFirecrawlJobDone({ ...done });
+        await refreshStats();
+        showToast('success', `All done! Classified ${totalProcessed.toLocaleString()} listings from Firecrawl.`);
+        return;
       }
+
+      const results = await Promise.allSettled(
+        pendingJobs.map(j => pollSingleJob(j.job_id, cursors[j.job_id] ?? null))
+      );
+
+      let anyWaiting = false;
+      for (let i = 0; i < pendingJobs.length; i++) {
+        const job = pendingJobs[i];
+        const result = results[i];
+        if (result.status === 'fulfilled') {
+          const r = result.value;
+          totalProcessed += r.processed;
+          cursors[job.job_id] = r.next_cursor;
+          scraped[job.job_id] = r.total_completed;
+          if (r.done) done[job.job_id] = true;
+          if (r.waiting) anyWaiting = true;
+        }
+      }
+
+      setFirecrawlTotalProcessed(totalProcessed);
+      setFirecrawlJobCursors({ ...cursors });
+      setFirecrawlJobDone({ ...done });
+      setFirecrawlJobScraped({ ...scraped });
+
+      const allFinished = firecrawlJobs.every(j => done[j.job_id]);
+      if (allFinished) {
+        setFirecrawlAllDone(true);
+        setFirecrawlPolling(false);
+        await refreshStats();
+        showToast('success', `All done! Classified ${totalProcessed.toLocaleString()} listings from Firecrawl.`);
+        return;
+      }
+
+      const delay = anyWaiting ? 5000 : 1500;
+      firecrawlPollTimerRef.current = setTimeout(pollRound, delay);
     };
 
-    poll(firecrawlJobId, firecrawlPollCursor, firecrawlProcessed, firecrawlChunkIndex, firecrawlChunksRemaining);
-  }, [firecrawlJobId, firecrawlPollCursor, firecrawlProcessed, firecrawlChunkIndex, firecrawlChunksRemaining, submitFirecrawlRetryChunk, refreshStats, showToast]);
+    pollRound();
+  }, [firecrawlJobs, firecrawlJobCursors, firecrawlJobDone, firecrawlJobScraped, firecrawlTotalProcessed, pollSingleJob, refreshStats, showToast]);
 
   useEffect(() => {
     return () => { if (firecrawlPollTimerRef.current) clearTimeout(firecrawlPollTimerRef.current); };
@@ -680,89 +621,71 @@ export default function PipelinePage() {
                   </div>
                 )}
 
-                {firecrawlJobId && !firecrawlDone && (
+                {firecrawlJobs.length > 0 && !firecrawlAllDone && (
                   <div className="border border-blue-200 rounded-lg bg-blue-50 p-3 space-y-2.5">
                     <div className="flex items-center justify-between">
                       <p className="text-xs text-blue-800 font-semibold">
-                        {firecrawlPolling ? (firecrawlWaiting ? 'Waiting for Firecrawl…' : 'Classifying results…') : 'Firecrawl batch ready'}
+                        {firecrawlPolling ? 'Classifying results…' : 'Firecrawl batches ready'}
                       </p>
-                      {firecrawlOverallTotal > 0 && firecrawlChunksRemaining > 0 ? (
-                        <span className="text-xs text-blue-500 font-medium">Batch {firecrawlChunkIndex + 1} of {firecrawlChunkIndex + firecrawlChunksRemaining + 1}</span>
-                      ) : (
-                        <span className="text-xs text-blue-400 font-mono truncate max-w-[120px]">{(firecrawlJobId ?? '').slice(0, 12)}…</span>
-                      )}
+                      <span className="text-xs text-blue-500 font-medium">
+                        {firecrawlJobs.length} batch{firecrawlJobs.length > 1 ? 'es' : ''} in parallel
+                      </span>
                     </div>
 
                     {firecrawlPolling ? (
                       <div className="space-y-1.5">
-                        {firecrawlWaiting ? (
-                          <p className="text-xs text-blue-700">Firecrawl is still scraping sites. Checking for new results every 5 seconds…</p>
-                        ) : (
-                          <p className="text-xs text-blue-700">Pulling scraped content and classifying with AI…</p>
-                        )}
-
-                        {firecrawlJobTotal > 0 && (
-                          <>
-                            <div className="flex justify-between text-[10px] text-blue-600 font-medium">
-                              <span>{firecrawlScrapedCompleted.toLocaleString()} of {firecrawlJobTotal.toLocaleString()} scraped (this batch)</span>
-                              <span>{Math.round((firecrawlScrapedCompleted / firecrawlJobTotal) * 100)}%</span>
-                            </div>
-                            <div className="w-full bg-blue-200 rounded-full h-1.5">
-                              <div
-                                className="bg-blue-500 h-1.5 rounded-full transition-all duration-500"
-                                style={{ width: `${Math.min(100, Math.round((firecrawlScrapedCompleted / firecrawlJobTotal) * 100))}%` }}
-                              />
-                            </div>
-                            <div className="flex justify-between text-[10px] text-blue-500">
-                              <span>{firecrawlProcessed.toLocaleString()} classified so far</span>
-                              {firecrawlOverallTotal > 0
-                                ? <span>{firecrawlOverallTotal.toLocaleString()} total to process</span>
-                                : <span>{firecrawlJobTotal - firecrawlProcessed > 0 ? `${(firecrawlJobTotal - firecrawlProcessed).toLocaleString()} remaining` : 'almost done'}</span>
-                              }
-                            </div>
-                          </>
-                        )}
+                        <p className="text-xs text-blue-700">Polling all {firecrawlJobs.length} Firecrawl jobs simultaneously and classifying with AI…</p>
+                        <div className="space-y-1">
+                          {firecrawlJobs.map(j => {
+                            const isDoneJob = firecrawlJobDone[j.job_id] ?? false;
+                            const scraped = firecrawlJobScraped[j.job_id] ?? 0;
+                            const pct = j.urls_submitted > 0 ? Math.min(100, Math.round((scraped / j.urls_submitted) * 100)) : 0;
+                            return (
+                              <div key={j.job_id} className="flex items-center gap-2">
+                                <span className="text-[10px] text-blue-600 w-14 shrink-0">Batch {j.chunk_index + 1}</span>
+                                <div className="flex-1 bg-blue-200 rounded-full h-1.5">
+                                  <div
+                                    className={`h-1.5 rounded-full transition-all duration-500 ${isDoneJob ? 'bg-green-500' : 'bg-blue-500'}`}
+                                    style={{ width: `${isDoneJob ? 100 : pct}%` }}
+                                  />
+                                </div>
+                                {isDoneJob
+                                  ? <CheckCircle2 className="w-3 h-3 text-green-500 shrink-0" />
+                                  : <span className="text-[10px] text-blue-500 w-7 text-right shrink-0">{pct}%</span>
+                                }
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <p className="text-[10px] text-blue-500">{firecrawlTotalProcessed.toLocaleString()} classified so far across all batches</p>
                       </div>
                     ) : (
                       <p className="text-xs text-blue-700">
-                        {firecrawlProcessed > 0
-                          ? `${firecrawlProcessed.toLocaleString()} classified so far. Click below to continue.`
-                          : firecrawlOverallTotal > 0
-                            ? `${firecrawlOverallTotal.toLocaleString()} listings queued across ${firecrawlChunkIndex + firecrawlChunksRemaining + 1} batches. Click below to start.`
-                            : `${firecrawlJobTotal.toLocaleString()} listings in this batch. Click below when Firecrawl is done scraping.`}
+                        {firecrawlTotalProcessed > 0
+                          ? `${firecrawlTotalProcessed.toLocaleString()} classified so far. Click below to continue.`
+                          : `${firecrawlJobs.reduce((s, j) => s + j.urls_submitted, 0).toLocaleString()} listings across ${firecrawlJobs.length} parallel batch${firecrawlJobs.length > 1 ? 'es' : ''}. Click below when Firecrawl is done scraping.`}
                       </p>
                     )}
 
-                    <div className="flex gap-1.5">
-                      <Button
-                        type="button"
-                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs h-8"
-                        onClick={handleFirecrawlAutoPoll}
-                        disabled={firecrawlPolling}
-                      >
-                        {firecrawlPolling
-                          ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> {firecrawlWaiting ? 'Waiting…' : 'Classifying…'}</>
-                          : <><Zap className="w-3 h-3 mr-1" /> Fetch &amp; Classify Results</>
-                        }
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="text-xs h-8 px-2 border-blue-300 text-blue-700"
-                        onClick={handleFirecrawlPollOnce}
-                        disabled={firecrawlPolling}
-                      >
-                        Step
-                      </Button>
-                    </div>
+                    <Button
+                      type="button"
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs h-8"
+                      onClick={handleFirecrawlAutoPoll}
+                      disabled={firecrawlPolling}
+                    >
+                      {firecrawlPolling
+                        ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Classifying all batches…</>
+                        : <><Zap className="w-3 h-3 mr-1" /> Fetch &amp; Classify All Results</>
+                      }
+                    </Button>
                     {!firecrawlPolling && <p className="text-[10px] text-blue-400">Tip: wait a minute or two for Firecrawl to finish scraping before clicking.</p>}
                   </div>
                 )}
 
-                {firecrawlJobId && firecrawlDone && (
+                {firecrawlJobs.length > 0 && firecrawlAllDone && (
                   <div className="border border-green-200 rounded-lg bg-green-50 p-3 flex items-center gap-2">
                     <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
-                    <p className="text-xs text-green-800 font-medium">Firecrawl batch complete — {firecrawlProcessed.toLocaleString()} listings processed.</p>
+                    <p className="text-xs text-green-800 font-medium">All Firecrawl batches complete — {firecrawlTotalProcessed.toLocaleString()} listings processed.</p>
                   </div>
                 )}
 
