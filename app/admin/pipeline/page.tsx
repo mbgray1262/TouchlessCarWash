@@ -152,14 +152,44 @@ export default function PipelinePage() {
     } catch { /* silent */ }
   }, [refreshStats, refreshRecent]);
 
+  const loadActiveBatch = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from('pipeline_batches')
+        .select('firecrawl_job_id, total_urls, status, classify_status')
+        .eq('status', 'running')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (data && data.firecrawl_job_id) {
+        const alreadyLoaded = firecrawlJobs.some(j => j.job_id === data.firecrawl_job_id);
+        if (!alreadyLoaded) {
+          setFirecrawlJobs([{
+            job_id: data.firecrawl_job_id,
+            chunk_index: 0,
+            urls_submitted: data.total_urls ?? 8148,
+          }]);
+          setFirecrawlJobCursors({});
+          setFirecrawlJobDone({});
+          setFirecrawlJobScraped({});
+          setFirecrawlTotalProcessed(0);
+          setFirecrawlAllDone(false);
+          setFirecrawlPolling(false);
+        }
+      }
+    } catch { /* silent */ }
+  }, [firecrawlJobs]);
+
   useEffect(() => {
     const init = async () => {
       setLoadingStats(true);
-      await Promise.all([refreshStats(), refreshRecent(0), pollJob()]);
+      await Promise.all([refreshStats(), refreshRecent(0), pollJob(), loadActiveBatch()]);
       setLoadingStats(false);
     };
     init();
-  }, [refreshStats, refreshRecent, pollJob]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     pollTimerRef.current = setInterval(pollJob, POLL_INTERVAL);
