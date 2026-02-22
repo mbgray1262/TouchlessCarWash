@@ -800,6 +800,240 @@ Deno.serve(async (req: Request) => {
       }, { headers: corsHeaders });
     }
 
+    // --- AUTO POLL (server-driven, tab-independent) ---
+    if (action === 'auto_poll') {
+      if (!firecrawlKey || !anthropicKey) {
+        return Response.json({ error: 'API keys not configured' }, { status: 500, headers: corsHeaders });
+      }
+
+      const jobId: string = body.job_id;
+      if (!jobId) return Response.json({ error: 'job_id required' }, { status: 400, headers: corsHeaders });
+
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+      const { data: batch } = await supabase
+        .from('pipeline_batches')
+        .select('id, status, classify_status, classified_count, total_urls, url_to_id')
+        .eq('firecrawl_job_id', jobId)
+        .maybeSingle();
+
+      if (!batch) return Response.json({ error: 'Batch not found' }, { status: 404, headers: corsHeaders });
+
+      if (batch.classify_status === 'completed' || batch.classify_status === 'expired') {
+        return Response.json({ done: true, classify_status: batch.classify_status }, { headers: corsHeaders });
+      }
+
+      const nextCursor: string | null = body.next_cursor ?? null;
+      const pageLimit = 20;
+
+      const pageUrl = nextCursor
+        ? (nextCursor.includes('limit=') ? nextCursor : `${nextCursor}${nextCursor.includes('?') ? '&' : '?'}limit=${pageLimit}`)
+        : `${FIRECRAWL_API}/batch/scrape/${jobId}?limit=${pageLimit}`;
+
+      const pollRes = await fetch(pageUrl, {
+        headers: { 'Authorization': `Bearer ${firecrawlKey}` },
+      });
+
+      if (!pollRes.ok) {
+        const errText = await pollRes.text();
+        await supabase.from('pipeline_batches').update({
+          classify_status: 'failed',
+          updated_at: new Date().toISOString(),
+        }).eq('id', batch.id);
+        return Response.json({ error: `Firecrawl ${pollRes.status}: ${errText}` }, { status: 502, headers: corsHeaders });
+      }
+
+      const pollData = await pollRes.json() as {
+        status: string;
+        total: number;
+        completed: number;
+        creditsUsed: number;
+        data: Array<{
+          markdown?: string;
+          images?: string[];
+          metadata?: { title?: string; sourceURL?: string; statusCode?: number };
+        }>;
+        next?: string;
+      };
+
+      const batchStatus = pollData.status;
+      const creditsUsed = pollData.creditsUsed ?? 0;
+      const items = pollData.data ?? [];
+
+      const isExpired = !pollData.next && items.length === 0 && (pollData.completed ?? 0) === 0;
+      if (isExpired) {
+        await supabase.from('pipeline_batches').update({
+          status: 'failed',
+          classify_status: 'expired',
+          updated_at: new Date().toISOString(),
+        }).eq('id', batch.id);
+        return Response.json({ done: true, expired: true }, { headers: corsHeaders });
+      }
+
+      if (items.length === 0 && batchStatus !== 'completed') {
+        await supabase.from('pipeline_batches').update({
+          classify_status: 'waiting',
+          updated_at: new Date().toISOString(),
+        }).eq('id', batch.id);
+
+        EdgeRuntime.waitUntil(
+          new Promise<void>(resolve => setTimeout(resolve, 8000)).then(() =>
+            fetch(`${supabaseUrl}/functions/v1/firecrawl-pipeline`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anonKey}` },
+              body: JSON.stringify({ action: 'auto_poll', job_id: jobId, next_cursor: nextCursor }),
+            }).catch(() => {})
+          )
+        );
+
+        return Response.json({ waiting: true, done: false }, { headers: corsHeaders });
+      }
+
+      const { data: filterRows } = await supabase.from('filters').select('id, slug');
+      const filterMap: FilterMap = {};
+      for (const f of (filterRows ?? [])) filterMap[f.slug] = f.id;
+
+      const urlToId: Record<string, string> = (batch as unknown as { url_to_id?: Record<string, string> })?.url_to_id ?? {};
+      const hasUrlMap = Object.keys(urlToId).length > 0;
+      const normalizedUrlToId: Record<string, string> = {};
+      for (const [url, id] of Object.entries(urlToId)) {
+        normalizedUrlToId[normalizeUrl(url)] = id;
+      }
+
+      let listingMap = new Map<string, { id: string; is_touchless: boolean | null; hero_image: string | null; description: string | null; website: string }>();
+
+      if (hasUrlMap) {
+        const sourceURLs = items.map(i => i.metadata?.sourceURL ?? '').filter(Boolean);
+        const listingIds = sourceURLs
+          .map(u =>
+            urlToId[u] ?? urlToId[u.replace(/\/$/, '')] ?? urlToId[u + '/'] ?? normalizedUrlToId[normalizeUrl(u)] ?? null
+          )
+          .filter(Boolean) as string[];
+
+        if (listingIds.length > 0) {
+          const { data: matchedListings } = await supabase.from('listings')
+            .select('id, is_touchless, hero_image, description, website')
+            .in('id', listingIds);
+          for (const l of (matchedListings ?? [])) listingMap.set(l.id, l);
+        }
+      } else {
+        const sourceURLs = items.map(i => i.metadata?.sourceURL ?? '').filter(Boolean);
+        const urlVariants = sourceURLs.flatMap(u => {
+          const norm = normalizeUrl(u);
+          return [`https://${norm}`, `https://${norm}/`, `http://${norm}`, `http://${norm}/`, `https://www.${norm}`, `https://www.${norm}/`];
+        });
+        const { data: matchedListings } = await supabase.from('listings')
+          .select('id, is_touchless, hero_image, description, website')
+          .in('website', urlVariants);
+        const byUrl = new Map<string, typeof listingMap extends Map<string, infer V> ? V : never>();
+        for (const l of (matchedListings ?? [])) byUrl.set(normalizeUrl(l.website), l);
+        listingMap = byUrl as typeof listingMap;
+      }
+
+      const results = await Promise.all(items.map(async (item) => {
+        const sourceURL = item.metadata?.sourceURL ?? '';
+        const statusCode = item.metadata?.statusCode ?? 0;
+        let listing: { id: string; is_touchless: boolean | null; hero_image: string | null; description: string | null; website: string } | undefined;
+
+        if (hasUrlMap) {
+          const listingId = urlToId[sourceURL] ?? urlToId[sourceURL.replace(/\/$/, '')] ?? urlToId[sourceURL + '/'] ?? normalizedUrlToId[normalizeUrl(sourceURL)];
+          if (listingId) listing = listingMap.get(listingId);
+        } else {
+          listing = listingMap.get(normalizeUrl(sourceURL));
+        }
+        if (!listing) return null;
+
+        let crawl_status = 'success';
+        let is_touchless: boolean | null = null;
+        let touchless_evidence = '';
+        let amenities: string[] = [];
+        let description: string | null = null;
+        const markdown = item.markdown ?? '';
+        const images = item.images ?? [];
+
+        if (statusCode >= 400 || !markdown || markdown.trim().length < 50) {
+          crawl_status = statusCode >= 400 ? 'fetch_failed' : 'no_content';
+        } else if (SKIP_DOMAINS.some(d => sourceURL.includes(d))) {
+          crawl_status = 'redirect';
+        } else {
+          try {
+            const classification = await classifyWithClaude(markdown, anthropicKey);
+            is_touchless = classification.is_touchless ?? null;
+            touchless_evidence = classification.touchless_evidence ?? '';
+            amenities = classification.amenities ?? [];
+            description = classification.description ?? null;
+            crawl_status = 'classified';
+          } catch {
+            crawl_status = 'no_content';
+          }
+        }
+
+        return { listing, crawl_status, is_touchless, touchless_evidence, amenities, description, images };
+      }));
+
+      const processed = results.filter(Boolean) as NonNullable<typeof results[0]>[];
+
+      await Promise.all(processed.map(async ({ listing, crawl_status, is_touchless, touchless_evidence, amenities, description, images }) => {
+        const filteredImages = filterImages(images);
+        const updatePayload: Record<string, unknown> = {
+          last_crawled_at: new Date().toISOString(),
+          crawl_status,
+          touchless_evidence,
+          website_photos: filteredImages.length > 0 ? filteredImages : null,
+        };
+        if (listing.is_touchless === null && is_touchless !== null) updatePayload.is_touchless = is_touchless;
+        if (!listing.hero_image && filteredImages.length > 0) updatePayload.hero_image = filteredImages[0];
+        if (!listing.description && description) updatePayload.description = description;
+        if (amenities.length > 0) updatePayload.amenities = amenities;
+
+        await Promise.all([
+          supabase.from('listings').update(updatePayload).eq('id', listing.id),
+          supabase.from('pipeline_runs').insert({
+            listing_id: listing.id,
+            batch_id: batch.id,
+            crawl_status,
+            is_touchless,
+            touchless_evidence,
+            images_found: images.length,
+          }),
+          syncFilters(supabase, listing.id, is_touchless, amenities, filterMap),
+        ]);
+      }));
+
+      const fcCompleted = pollData.completed ?? 0;
+      const newClassified = (batch.classified_count ?? 0) + processed.length;
+      const hasNextPage = !!pollData.next;
+      const isDone = !hasNextPage && items.length > 0;
+
+      await supabase.from('pipeline_batches').update({
+        status: isDone && batchStatus === 'completed' ? 'completed' : 'running',
+        completed_count: fcCompleted,
+        classified_count: newClassified,
+        classify_status: isDone ? 'completed' : 'running',
+        classify_completed_at: isDone ? new Date().toISOString() : null,
+        credits_used: creditsUsed,
+        updated_at: new Date().toISOString(),
+      }).eq('id', batch.id);
+
+      if (!isDone) {
+        EdgeRuntime.waitUntil(
+          fetch(`${supabaseUrl}/functions/v1/firecrawl-pipeline`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anonKey}` },
+            body: JSON.stringify({ action: 'auto_poll', job_id: jobId, next_cursor: pollData.next ?? null }),
+          }).catch(() => {})
+        );
+      }
+
+      return Response.json({
+        processed: processed.length,
+        classified: newClassified,
+        done: isDone,
+        next_cursor: pollData.next ?? null,
+      }, { headers: corsHeaders });
+    }
+
     return Response.json({ error: 'Unknown action' }, { status: 400, headers: corsHeaders });
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 500, headers: corsHeaders });
