@@ -104,6 +104,8 @@ export default function PipelinePage() {
   const [firecrawlJobCursors, setFirecrawlJobCursors] = useState<Record<string, string | null>>({});
   const [firecrawlJobDone, setFirecrawlJobDone] = useState<Record<string, boolean>>({});
   const [firecrawlJobScraped, setFirecrawlJobScraped] = useState<Record<string, number>>({});
+  const [firecrawlJobPagesClassified, setFirecrawlJobPagesClassified] = useState<Record<string, number>>({});
+  const [firecrawlJobTotalPages, setFirecrawlJobTotalPages] = useState<Record<string, number>>({});
   const [firecrawlTotalProcessed, setFirecrawlTotalProcessed] = useState(0);
   const [firecrawlPolling, setFirecrawlPolling] = useState(false);
   const [firecrawlAllDone, setFirecrawlAllDone] = useState(false);
@@ -173,6 +175,8 @@ export default function PipelinePage() {
           setFirecrawlJobCursors({});
           setFirecrawlJobDone({});
           setFirecrawlJobScraped({});
+          setFirecrawlJobPagesClassified({});
+          setFirecrawlJobTotalPages({});
           setFirecrawlTotalProcessed(0);
           setFirecrawlAllDone(false);
           setFirecrawlPolling(false);
@@ -370,6 +374,8 @@ export default function PipelinePage() {
     const cursors: Record<string, string | null> = { ...firecrawlJobCursors };
     const done: Record<string, boolean> = { ...firecrawlJobDone };
     const scraped: Record<string, number> = { ...firecrawlJobScraped };
+    const pagesClassified: Record<string, number> = { ...firecrawlJobPagesClassified };
+    const totalPages: Record<string, number> = { ...firecrawlJobTotalPages };
     let totalProcessed = firecrawlTotalProcessed;
 
     let consecErrors = 0;
@@ -401,6 +407,10 @@ export default function PipelinePage() {
           totalProcessed += r.processed;
           cursors[job.job_id] = r.next_cursor;
           scraped[job.job_id] = r.total_completed;
+          pagesClassified[job.job_id] = (pagesClassified[job.job_id] ?? 0) + 1;
+          if (!totalPages[job.job_id] && r.total_urls > 0) {
+            totalPages[job.job_id] = Math.ceil(r.total_urls / 20);
+          }
           if (r.done) done[job.job_id] = true;
           if (r.waiting) anyWaiting = true;
         } else {
@@ -432,6 +442,8 @@ export default function PipelinePage() {
       setFirecrawlJobCursors({ ...cursors });
       setFirecrawlJobDone({ ...done });
       setFirecrawlJobScraped({ ...scraped });
+      setFirecrawlJobPagesClassified({ ...pagesClassified });
+      setFirecrawlJobTotalPages({ ...totalPages });
 
       const allFinished = firecrawlJobs.every(j => done[j.job_id]);
       if (allFinished) {
@@ -447,7 +459,7 @@ export default function PipelinePage() {
     };
 
     pollRound();
-  }, [firecrawlJobs, firecrawlJobCursors, firecrawlJobDone, firecrawlJobScraped, firecrawlTotalProcessed, pollSingleJob, refreshStats, showToast]);
+  }, [firecrawlJobs, firecrawlJobCursors, firecrawlJobDone, firecrawlJobScraped, firecrawlJobPagesClassified, firecrawlJobTotalPages, firecrawlTotalProcessed, pollSingleJob, refreshStats, showToast]);
 
   useEffect(() => {
     return () => { if (firecrawlPollTimerRef.current) clearTimeout(firecrawlPollTimerRef.current); };
@@ -712,8 +724,9 @@ export default function PipelinePage() {
                         <div className="space-y-1">
                           {firecrawlJobs.map(j => {
                             const isDoneJob = firecrawlJobDone[j.job_id] ?? false;
-                            const scraped = firecrawlJobScraped[j.job_id] ?? 0;
-                            const pct = j.urls_submitted > 0 ? Math.min(100, Math.round((scraped / j.urls_submitted) * 100)) : 0;
+                            const pages = firecrawlJobPagesClassified[j.job_id] ?? 0;
+                            const total = firecrawlJobTotalPages[j.job_id] ?? Math.ceil(j.urls_submitted / 20);
+                            const pct = total > 0 ? Math.min(99, Math.round((pages / total) * 100)) : 0;
                             return (
                               <div key={j.job_id} className="flex items-center gap-2">
                                 <span className="text-[10px] text-blue-600 w-14 shrink-0">Batch {j.chunk_index + 1}</span>
