@@ -271,6 +271,19 @@ export default function PipelinePage() {
         body: JSON.stringify({ action: 'retry_all_chunks', app_url: window.location.origin }),
       });
       const data = await res.json();
+      if (res.status === 409 && data.already_running) {
+        // A batch is already running — load it into state so the poll UI appears
+        showToast('error', 'A Firecrawl batch is already running. Resuming polling of existing job.');
+        const existingJobId = data.existing_job_id as string;
+        setFirecrawlJobs([{ job_id: existingJobId, chunk_index: 0, urls_submitted: 8148 }]);
+        setFirecrawlJobCursors({});
+        setFirecrawlJobDone({});
+        setFirecrawlJobScraped({});
+        setFirecrawlTotalProcessed(0);
+        setFirecrawlAllDone(false);
+        setFirecrawlPolling(false);
+        return;
+      }
       if (!res.ok) throw new Error(data.error ?? 'Failed to submit Firecrawl batches');
       if (data.done || !data.batches || data.batches.length === 0) {
         showToast('success', 'No listings to retry — all caught up!');

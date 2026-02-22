@@ -685,6 +685,23 @@ Deno.serve(async (req: Request) => {
     if (action === 'retry_classify_failures' || action === 'retry_all_chunks') {
       if (!firecrawlKey) return Response.json({ error: 'FIRECRAWL_API_KEY not configured' }, { status: 500, headers: corsHeaders });
 
+      // DEDUPLICATION GUARD: reject if any batch is already running to prevent double-billing
+      const { data: existingRunning } = await supabase
+        .from('pipeline_batches')
+        .select('id, firecrawl_job_id, total_urls, created_at')
+        .eq('status', 'running')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existingRunning && !body.force) {
+        return Response.json({
+          error: `A Firecrawl batch is already running (job ${existingRunning.firecrawl_job_id}, ${existingRunning.total_urls} URLs). Cancel it before starting a new one, or pass force:true to override.`,
+          existing_job_id: existingRunning.firecrawl_job_id,
+          already_running: true,
+        }, { status: 409, headers: corsHeaders });
+      }
+
       const appUrl = body.app_url ?? Deno.env.get('APP_URL') ?? '';
       const targetStatuses: string[] = body.statuses ?? ['fetch_failed', 'unknown', 'classify_failed'];
 
