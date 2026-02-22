@@ -230,6 +230,7 @@ export default function PipelinePage() {
       if (json.status === 'already_classified') status = 'already_classified';
       else if (json.status === 'fetch_failed') status = 'fetch_failed';
       else if (json.status === 'classify_failed') status = 'classify_failed';
+      else if (json.status === 'update_failed') status = 'classify_failed';
       else if (json.is_touchless === true) status = 'touchless';
       else if (json.is_touchless === false) status = 'not_touchless';
       else status = 'unknown';
