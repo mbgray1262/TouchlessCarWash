@@ -418,7 +418,7 @@ Deno.serve(async (req: Request) => {
 
       // Build a normalized lookup: submittedUrlNorm -> listing IDs[]
       // This is the source of truth — keys are exactly what was submitted to Firecrawl
-      type ListingRow = { id: string; is_touchless: boolean | null; hero_image: string | null; website: string };
+      type ListingRow = { id: string; is_touchless: boolean | null; hero_image: string | null; website: string; amenities: string[] | null };
       const normToIds = new Map<string, string[]>();
       for (const [url, ids] of Object.entries(urlToIds)) {
         normToIds.set(normalizeUrl(url), ids);
@@ -439,7 +439,7 @@ Deno.serve(async (req: Request) => {
       if (pageIds.length > 0) {
         const uniquePageIds = [...new Set(pageIds)];
         const { data: rows, error: rowsErr } = await supabase.from('listings')
-          .select('id, is_touchless, hero_image, website')
+          .select('id, is_touchless, hero_image, website, amenities')
           .in('id', uniquePageIds);
         if (rowsErr) dbError = rowsErr.message;
         for (const l of (rows ?? [])) listingById.set(l.id, l);
@@ -455,7 +455,7 @@ Deno.serve(async (req: Request) => {
         ]);
         if (urlVariants.length > 0) {
           const { data: rows } = await supabase.from('listings')
-            .select('id, is_touchless, hero_image, website')
+            .select('id, is_touchless, hero_image, website, amenities')
             .in('website', urlVariants);
           for (const l of (rows ?? [])) listingById.set(l.id, l);
           for (const l of (rows ?? [])) {
@@ -500,8 +500,8 @@ Deno.serve(async (req: Request) => {
         const allListings = resolveListings(sourceURL, finalURL);
         if (allListings.length === 0) return null;
 
-        // Skip listings already classified — only process ones still unclassified
-        const listings = allListings.filter(l => l.is_touchless === null);
+        // Process unclassified listings, plus already-confirmed touchless ones (for enrichment)
+        const listings = allListings.filter(l => l.is_touchless === null || l.is_touchless === true);
         if (listings.length === 0) return null;
 
         let crawl_status = 'success';
@@ -537,21 +537,32 @@ Deno.serve(async (req: Request) => {
         totalProcessed += listings.length;
 
         await Promise.all(listings.map(async (listing) => {
+          const effectiveTouchless = listing.is_touchless === true ? true : is_touchless;
+
           const updatePayload: Record<string, unknown> = {
             last_crawled_at: new Date().toISOString(),
             crawl_status,
             touchless_evidence,
-            website_photos: filteredImages.length > 0 ? filteredImages : null,
           };
 
           if (listing.is_touchless === null && is_touchless !== null) {
             updatePayload.is_touchless = is_touchless;
           }
-          if (!listing.hero_image && filteredImages.length > 0) {
-            updatePayload.hero_image = filteredImages[0];
-          }
-          if (amenities.length > 0) {
-            updatePayload.amenities = amenities;
+
+          if (effectiveTouchless === true) {
+            if (filteredImages.length > 0) {
+              updatePayload.website_photos = filteredImages;
+            }
+            if (!listing.hero_image && filteredImages.length > 0) {
+              updatePayload.hero_image = filteredImages[0];
+            }
+            if (amenities.length > 0) {
+              const existing = listing.amenities ?? [];
+              const merged = [...existing, ...amenities.filter(a => !existing.includes(a))];
+              if (merged.length > existing.length) {
+                updatePayload.amenities = merged;
+              }
+            }
           }
 
           await Promise.all([
