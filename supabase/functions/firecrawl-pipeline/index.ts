@@ -1095,6 +1095,350 @@ Deno.serve(async (req: Request) => {
       }, { headers: corsHeaders });
     }
 
+    // --- ENRICH TOUCHLESS (submit batch) ---
+    // Crawls touchless listings to backfill photos and amenities.
+    // Never modifies is_touchless — purely additive enrichment.
+    if (action === 'enrich_touchless') {
+      if (!firecrawlKey) return Response.json({ error: 'FIRECRAWL_API_KEY not configured' }, { status: 500, headers: corsHeaders });
+
+      const limit: number = body.limit ?? 0;
+      const appUrl = body.app_url ?? Deno.env.get('APP_URL') ?? '';
+
+      // DEDUPLICATION GUARD
+      const { data: existingRunning } = await supabase
+        .from('pipeline_batches')
+        .select('id, firecrawl_job_id, total_urls, created_at')
+        .eq('status', 'running')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existingRunning && !body.force) {
+        return Response.json({
+          error: `A Firecrawl batch is already running (job ${existingRunning.firecrawl_job_id}, ${existingRunning.total_urls} URLs). Pass force:true to override.`,
+          existing_job_id: existingRunning.firecrawl_job_id,
+          already_running: true,
+        }, { status: 409, headers: corsHeaders });
+      }
+
+      const PAGE = 1000;
+      let allListings: Array<{ id: string; website: string }> = [];
+      let offset = 0;
+      while (true) {
+        let query = supabase
+          .from('listings')
+          .select('id, website')
+          .eq('is_touchless', true)
+          .not('website', 'is', null)
+          .neq('website', '')
+          .order('id')
+          .range(offset, offset + PAGE - 1);
+
+        const { data, error: fetchErr } = await query;
+        if (fetchErr) return Response.json({ error: fetchErr.message }, { status: 500, headers: corsHeaders });
+        const rows = (data ?? []) as Array<{ id: string; website: string }>;
+        allListings = allListings.concat(rows);
+        if (rows.length < PAGE) break;
+        offset += PAGE;
+        if (limit > 0 && allListings.length >= limit) break;
+      }
+
+      if (limit > 0) allListings = allListings.slice(0, limit);
+
+      if (allListings.length === 0) {
+        return Response.json({ message: 'No touchless listings with websites found', done: true }, { headers: corsHeaders });
+      }
+
+      const good = allListings.filter(l => !SKIP_DOMAINS.some(d => l.website.toLowerCase().includes(d)));
+
+      if (good.length === 0) {
+        return Response.json({ message: 'All listings had directory/social URLs', done: true }, { headers: corsHeaders });
+      }
+
+      const urlToIds: Record<string, string[]> = {};
+      for (const l of good) {
+        if (!urlToIds[l.website]) urlToIds[l.website] = [];
+        urlToIds[l.website].push(l.id);
+      }
+      const urls = Object.keys(urlToIds);
+
+      const batchBody: Record<string, unknown> = {
+        urls,
+        formats: ['markdown', 'images'],
+        onlyMainContent: true,
+        ignoreInvalidURLs: true,
+        maxConcurrency: 50,
+        timeout: 30000,
+        blockAds: true,
+        skipTlsVerification: true,
+        removeBase64Images: true,
+        location: { country: 'US', languages: ['en-US'] },
+        proxy: 'auto',
+        storeInCache: true,
+      };
+
+      if (appUrl) {
+        batchBody.webhook = { url: `${appUrl}/api/firecrawl-webhook`, events: ['page', 'completed'] };
+      }
+
+      const fcRes = await fetch(`${FIRECRAWL_API}/batch/scrape`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(batchBody),
+      });
+
+      if (!fcRes.ok) {
+        const errText = await fcRes.text();
+        return Response.json({ error: `Firecrawl error ${fcRes.status}: ${errText}` }, { status: 502, headers: corsHeaders });
+      }
+
+      const fcData = await fcRes.json() as { success: boolean; id: string };
+      if (!fcData.success || !fcData.id) return Response.json({ error: 'Firecrawl did not return a job ID' }, { status: 502, headers: corsHeaders });
+
+      const { data: batch, error: batchErr } = await supabase.from('pipeline_batches').insert({
+        firecrawl_job_id: fcData.id,
+        status: 'running',
+        total_urls: urls.length,
+        chunk_index: 0,
+        url_to_id: urlToIds,
+        batch_type: 'enrich_touchless',
+      }).select().single();
+
+      if (batchErr) return Response.json({ error: batchErr.message }, { status: 500, headers: corsHeaders });
+
+      return Response.json({
+        job_id: fcData.id,
+        batch_id: (batch as { id: string } | null)?.id ?? null,
+        urls_submitted: urls.length,
+        listings_count: good.length,
+        batches: [{ chunk_index: 0, job_id: fcData.id, urls_submitted: urls.length }],
+        total_submitted: urls.length,
+      }, { headers: corsHeaders });
+    }
+
+    // --- ENRICH TOUCHLESS POLL (auto_poll for enrichment batches) ---
+    // Same as auto_poll but only updates photos/amenities, never is_touchless.
+    if (action === 'enrich_auto_poll') {
+      if (!firecrawlKey || !anthropicKey) {
+        return Response.json({ error: 'API keys not configured' }, { status: 500, headers: corsHeaders });
+      }
+
+      const jobId: string = body.job_id;
+      if (!jobId) return Response.json({ error: 'job_id required' }, { status: 400, headers: corsHeaders });
+
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+      const { data: batch } = await supabase
+        .from('pipeline_batches')
+        .select('id, status, classify_status, classified_count, total_urls, url_to_id')
+        .eq('firecrawl_job_id', jobId)
+        .maybeSingle();
+
+      if (!batch) return Response.json({ error: 'Batch not found' }, { status: 404, headers: corsHeaders });
+
+      if (batch.classify_status === 'completed' || batch.classify_status === 'expired') {
+        return Response.json({ done: true, classify_status: batch.classify_status }, { headers: corsHeaders });
+      }
+
+      const nextCursor: string | null = body.next_cursor ?? null;
+      const pageLimit = 20;
+
+      const pageUrl = nextCursor
+        ? (nextCursor.includes('limit=') ? nextCursor : `${nextCursor}${nextCursor.includes('?') ? '&' : '?'}limit=${pageLimit}`)
+        : `${FIRECRAWL_API}/batch/scrape/${jobId}?limit=${pageLimit}`;
+
+      const pollRes = await fetch(pageUrl, {
+        headers: { 'Authorization': `Bearer ${firecrawlKey}` },
+      });
+
+      if (!pollRes.ok) {
+        const errText = await pollRes.text();
+        await supabase.from('pipeline_batches').update({
+          classify_status: 'failed',
+          updated_at: new Date().toISOString(),
+        }).eq('id', batch.id);
+        return Response.json({ error: `Firecrawl ${pollRes.status}: ${errText}` }, { status: 502, headers: corsHeaders });
+      }
+
+      const pollData = await pollRes.json() as {
+        status: string;
+        total: number;
+        completed: number;
+        creditsUsed: number;
+        data: Array<{
+          markdown?: string;
+          images?: string[];
+          metadata?: { title?: string; sourceURL?: string; statusCode?: number };
+        }>;
+        next?: string;
+      };
+
+      const batchStatus = pollData.status;
+      const creditsUsed = pollData.creditsUsed ?? 0;
+      const items = pollData.data ?? [];
+
+      const isExpired = !pollData.next && items.length === 0 && (pollData.completed ?? 0) === 0;
+      if (isExpired) {
+        await supabase.from('pipeline_batches').update({
+          status: 'failed',
+          classify_status: 'expired',
+          updated_at: new Date().toISOString(),
+        }).eq('id', batch.id);
+        return Response.json({ done: true, expired: true }, { headers: corsHeaders });
+      }
+
+      if (items.length === 0 && batchStatus !== 'completed') {
+        await supabase.from('pipeline_batches').update({
+          classify_status: 'waiting',
+          updated_at: new Date().toISOString(),
+        }).eq('id', batch.id);
+
+        EdgeRuntime.waitUntil(
+          new Promise<void>(resolve => setTimeout(resolve, 8000)).then(() =>
+            fetch(`${supabaseUrl}/functions/v1/firecrawl-pipeline`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anonKey}` },
+              body: JSON.stringify({ action: 'enrich_auto_poll', job_id: jobId, next_cursor: nextCursor }),
+            }).catch(() => {})
+          )
+        );
+
+        return Response.json({ waiting: true, done: false }, { headers: corsHeaders });
+      }
+
+      const { data: filterRows } = await supabase.from('filters').select('id, slug');
+      const filterMap: FilterMap = {};
+      for (const f of (filterRows ?? [])) filterMap[f.slug] = f.id;
+
+      const rawUrlToId = (batch as unknown as { url_to_id?: Record<string, unknown> })?.url_to_id ?? {};
+      const urlToIds: Record<string, string[]> = {};
+      for (const [rawUrl, val] of Object.entries(rawUrlToId)) {
+        if (Array.isArray(val)) urlToIds[rawUrl] = val as string[];
+        else if (typeof val === 'string' && val) urlToIds[rawUrl] = [val];
+      }
+
+      const normToIds = new Map<string, string[]>();
+      for (const [rawUrl, ids] of Object.entries(urlToIds)) {
+        normToIds.set(normalizeUrl(rawUrl), ids);
+      }
+
+      type EnrichRow = { id: string; is_touchless: boolean | null; hero_image: string | null; website: string; amenities: string[] | null };
+      const listingById = new Map<string, EnrichRow>();
+
+      const sourceURLs = items.map(i => i.metadata?.sourceURL ?? '').filter(Boolean);
+      const pageNorms = sourceURLs.map(u => normalizeUrl(u));
+      const allIds = pageNorms.flatMap(n => normToIds.get(n) ?? []);
+      const uniqueIds = [...new Set(allIds)];
+      if (uniqueIds.length > 0) {
+        const { data: matchedListings } = await supabase.from('listings')
+          .select('id, is_touchless, hero_image, website, amenities')
+          .in('id', uniqueIds);
+        for (const l of (matchedListings ?? [])) listingById.set(l.id, l);
+      }
+
+      const resolveEnrichListings = (sourceURL: string): EnrichRow[] => {
+        const ids = normToIds.get(normalizeUrl(sourceURL)) ?? [];
+        const seen = new Set<string>();
+        return ids
+          .filter(id => { if (seen.has(id)) return false; seen.add(id); return true; })
+          .map(id => listingById.get(id))
+          .filter(Boolean) as EnrichRow[];
+      };
+
+      const results = await Promise.all(items.map(async (item) => {
+        const sourceURL = item.metadata?.sourceURL ?? '';
+        const statusCode = item.metadata?.statusCode ?? 0;
+        const allListings = resolveEnrichListings(sourceURL);
+        if (allListings.length === 0) return null;
+        const listings = allListings.filter(l => l.is_touchless === true);
+        if (listings.length === 0) return null;
+
+        const markdown = item.markdown ?? '';
+        const images = item.images ?? [];
+
+        if (statusCode >= 400 || !markdown || markdown.trim().length < 50) {
+          return null;
+        }
+
+        let amenities: string[] = [];
+        try {
+          const classification = await classifyWithClaude(markdown, anthropicKey);
+          amenities = classification.amenities ?? [];
+        } catch {
+          // skip silently
+        }
+
+        return { listings, amenities, images };
+      }));
+
+      type EnrichResult = { listings: EnrichRow[]; amenities: string[]; images: string[] };
+      const processed = results.filter(Boolean) as EnrichResult[];
+      let totalProcessed = 0;
+
+      await Promise.all(processed.map(async ({ listings: rowListings, amenities, images }) => {
+        const filteredImages = filterImages(images);
+        totalProcessed += rowListings.length;
+
+        await Promise.all(rowListings.map(async (listing) => {
+          const updatePayload: Record<string, unknown> = {
+            last_crawled_at: new Date().toISOString(),
+          };
+
+          if (filteredImages.length > 0) {
+            updatePayload.website_photos = filteredImages;
+          }
+          if (!listing.hero_image && filteredImages.length > 0) {
+            updatePayload.hero_image = filteredImages[0];
+          }
+          if (amenities.length > 0) {
+            const existing = listing.amenities ?? [];
+            const merged = [...existing, ...amenities.filter(a => !existing.includes(a))];
+            if (merged.length > existing.length) {
+              updatePayload.amenities = merged;
+            }
+          }
+
+          await Promise.all([
+            supabase.from('listings').update(updatePayload).eq('id', listing.id),
+            syncFilters(supabase, listing.id, true, amenities, filterMap),
+          ]);
+        }));
+      }));
+
+      const fcCompleted = pollData.completed ?? 0;
+      const newClassified = (batch.classified_count ?? 0) + totalProcessed;
+      const hasNextPage = !!pollData.next;
+      const isDone = !hasNextPage && items.length > 0;
+
+      await supabase.from('pipeline_batches').update({
+        status: isDone && batchStatus === 'completed' ? 'completed' : 'running',
+        completed_count: fcCompleted,
+        classified_count: newClassified,
+        classify_status: isDone ? 'completed' : 'running',
+        classify_completed_at: isDone ? new Date().toISOString() : null,
+        credits_used: creditsUsed,
+        updated_at: new Date().toISOString(),
+      }).eq('id', batch.id);
+
+      if (!isDone) {
+        EdgeRuntime.waitUntil(
+          fetch(`${supabaseUrl}/functions/v1/firecrawl-pipeline`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anonKey}` },
+            body: JSON.stringify({ action: 'enrich_auto_poll', job_id: jobId, next_cursor: pollData.next ?? null }),
+          }).catch(() => {})
+        );
+      }
+
+      return Response.json({
+        processed: totalProcessed,
+        enriched: newClassified,
+        done: isDone,
+        next_cursor: pollData.next ?? null,
+      }, { headers: corsHeaders });
+    }
+
     return Response.json({ error: 'Unknown action' }, { status: 400, headers: corsHeaders });
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 500, headers: corsHeaders });
