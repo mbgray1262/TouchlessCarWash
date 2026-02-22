@@ -279,11 +279,15 @@ Deno.serve(async (req: Request) => {
         ));
       }
 
-      const urls = goodListings.map(l => l.website);
-      const urlToId: Record<string, string> = {};
+      // Build url_to_ids: map each unique URL to ALL listing IDs that share it
+      // This handles chains where many locations share the same homepage URL
+      const urlToIds: Record<string, string[]> = {};
       for (const l of goodListings) {
-        urlToId[l.website] = l.id;
+        if (!urlToIds[l.website]) urlToIds[l.website] = [];
+        urlToIds[l.website].push(l.id);
       }
+      // Submit only unique URLs to Firecrawl (deduped) — results apply to all matching listings
+      const urls = Object.keys(urlToIds);
 
       if (urls.length === 0) {
         return Response.json({ message: 'All listings in this chunk were skipped (directory/social URLs)', done: true, skipped: skippedListings.length }, { headers: corsHeaders });
@@ -333,7 +337,7 @@ Deno.serve(async (req: Request) => {
         status: 'running',
         total_urls: urls.length,
         chunk_index: chunkIndex,
-        url_to_id: urlToId,
+        url_to_id: urlToIds,
       }).select().single();
 
       if (batchErr) return Response.json({ error: batchErr.message }, { status: 500, headers: corsHeaders });
@@ -370,9 +374,16 @@ Deno.serve(async (req: Request) => {
       const filterMap: FilterMap = {};
       for (const f of (filterRows ?? [])) filterMap[f.slug] = f.id;
 
-      // url_to_id maps original submitted URL -> listing_id, stored when batch was created
-      const urlToId: Record<string, string> = (batch as unknown as { url_to_id?: Record<string, string> })?.url_to_id ?? {};
-      const hasUrlMap = Object.keys(urlToId).length > 0;
+      // url_to_id stores either Record<string, string[]> (new) or Record<string, string> (legacy)
+      // Keys are original submitted URLs; values are listing ID(s)
+      const rawUrlMap = (batch as unknown as { url_to_id?: Record<string, unknown> })?.url_to_id ?? {};
+      // Normalize to always be Record<string, string[]>
+      const urlToIds: Record<string, string[]> = {};
+      for (const [url, val] of Object.entries(rawUrlMap)) {
+        if (Array.isArray(val)) urlToIds[url] = val as string[];
+        else if (typeof val === 'string' && val) urlToIds[url] = [val];
+      }
+      const hasUrlMap = Object.keys(urlToIds).length > 0;
 
       const baseUrl = nextCursor ?? `${FIRECRAWL_API}/batch/scrape/${jobId}`;
       const pageUrl = nextCursor
@@ -405,71 +416,50 @@ Deno.serve(async (req: Request) => {
       const creditsUsed = pollData.creditsUsed ?? 0;
       const items = pollData.data ?? [];
 
-      // Build a map from normalized URL -> all listings with that website
-      // This handles chains where many listings share the same homepage URL
+      // Build a normalized lookup: submittedUrlNorm -> listing IDs[]
+      // This is the source of truth — keys are exactly what was submitted to Firecrawl
       type ListingRow = { id: string; is_touchless: boolean | null; hero_image: string | null; description: string | null; website: string };
-      const listingsByNormUrl = new Map<string, ListingRow[]>();
-
-      // Collect all candidate URLs from this page (sourceURL + original submitted URL from map keys)
-      const pageNormUrls = new Set<string>();
-      for (const item of items) {
-        const sourceURL = item.metadata?.sourceURL ?? '';
-        const originalURL = item.metadata?.url ?? '';
-        if (sourceURL) pageNormUrls.add(normalizeUrl(sourceURL));
-        if (originalURL) pageNormUrls.add(normalizeUrl(originalURL));
+      const normToIds = new Map<string, string[]>();
+      for (const [url, ids] of Object.entries(urlToIds)) {
+        normToIds.set(normalizeUrl(url), ids);
       }
 
-      // Build normalized map from url_to_id keys (submitted URLs) -> also index by norm
-      const normalizedUrlToId: Record<string, string> = {};
-      for (const [url, id] of Object.entries(urlToId)) {
-        normalizedUrlToId[normalizeUrl(url)] = id;
-      }
+      // Collect all listing IDs referenced by items on this page via sourceURL match
+      const pageSourceNorms = items.map(i => normalizeUrl(i.metadata?.sourceURL ?? ''));
+      const pageIds = pageSourceNorms.flatMap(n => normToIds.get(n) ?? []);
 
-      // Collect all listing IDs relevant to this page
-      // Strategy: look up by normalized URL in the url_to_id map (submitted URLs),
-      // then also fetch ALL listings sharing those normalized websites from DB (handles chains)
-      const relevantNormUrls = Array.from(pageNormUrls).filter(n => normalizedUrlToId[n]);
-
-      if (relevantNormUrls.length > 0 || !hasUrlMap) {
-        // Build website variants to query
-        const urlVariants = (hasUrlMap ? relevantNormUrls : Array.from(pageNormUrls)).flatMap(norm => [
+      // Fetch listing rows for all IDs on this page + any matching by website variants
+      const listingById = new Map<string, ListingRow>();
+      if (pageIds.length > 0) {
+        const { data: rows } = await supabase.from('listings')
+          .select('id, is_touchless, hero_image, description, website')
+          .in('id', pageIds);
+        for (const l of (rows ?? [])) listingById.set(l.id, l);
+      } else if (!hasUrlMap) {
+        // Legacy fallback: match by website URL variants
+        const urlVariants = pageSourceNorms.flatMap(norm => [
           `https://${norm}`, `https://${norm}/`,
           `http://${norm}`, `http://${norm}/`,
           `https://www.${norm}`, `https://www.${norm}/`,
         ]);
-
-        // Also include exact IDs from url_to_id map for precise matching when available
-        const exactIds = relevantNormUrls
-          .map(n => normalizedUrlToId[n])
-          .filter(Boolean);
-
-        let q = supabase.from('listings')
-          .select('id, is_touchless, hero_image, description, website')
-          .in('website', urlVariants);
-        if (exactIds.length > 0) {
-          q = supabase.from('listings')
+        if (urlVariants.length > 0) {
+          const { data: rows } = await supabase.from('listings')
             .select('id, is_touchless, hero_image, description, website')
-            .or(`website.in.(${urlVariants.join(',')}),id.in.(${exactIds.join(',')})`);
-        }
-        const { data: matchedListings } = await q;
-
-        for (const l of (matchedListings ?? [])) {
-          const norm = normalizeUrl(l.website);
-          if (!listingsByNormUrl.has(norm)) listingsByNormUrl.set(norm, []);
-          listingsByNormUrl.get(norm)!.push(l);
+            .in('website', urlVariants);
+          for (const l of (rows ?? [])) listingById.set(l.id, l);
+          // Build normToIds from DB results for legacy batches
+          for (const l of (rows ?? [])) {
+            const n = normalizeUrl(l.website);
+            if (!normToIds.has(n)) normToIds.set(n, []);
+            normToIds.get(n)!.push(l.id);
+          }
         }
       }
 
-      // Helper: given a Firecrawl item, find the normalized URL that resolves to listings
-      const resolveNormUrl = (sourceURL: string, originalURL: string): string | null => {
-        const sNorm = normalizeUrl(sourceURL);
-        const oNorm = normalizeUrl(originalURL);
-        if (listingsByNormUrl.has(sNorm) && (listingsByNormUrl.get(sNorm)?.length ?? 0) > 0) return sNorm;
-        if (listingsByNormUrl.has(oNorm) && (listingsByNormUrl.get(oNorm)?.length ?? 0) > 0) return oNorm;
-        // Also try matching by exact ID from url_to_id (find the norm key that maps to this listing)
-        if (normalizedUrlToId[sNorm]) return sNorm;
-        if (normalizedUrlToId[oNorm]) return oNorm;
-        return null;
+      // Helper: given a sourceURL, return all listing rows for it
+      const resolveListings = (sourceURL: string): ListingRow[] => {
+        const ids = normToIds.get(normalizeUrl(sourceURL)) ?? [];
+        return ids.map(id => listingById.get(id)).filter(Boolean) as ListingRow[];
       };
 
       // Process all items on this page in parallel for maximum speed
@@ -485,13 +475,11 @@ Deno.serve(async (req: Request) => {
 
       const results = await Promise.all(items.map(async (item): Promise<ClassifiedResult | null> => {
         const sourceURL = item.metadata?.sourceURL ?? '';
-        const originalURL = item.metadata?.url ?? '';
         const statusCode = item.metadata?.statusCode ?? 0;
         const markdown = item.markdown ?? '';
         const images = item.images ?? [];
 
-        const normUrl = resolveNormUrl(sourceURL, originalURL);
-        const listings = normUrl ? (listingsByNormUrl.get(normUrl) ?? []) : [];
+        const listings = resolveListings(sourceURL);
         if (listings.length === 0) return null;
 
         let crawl_status = 'success';
