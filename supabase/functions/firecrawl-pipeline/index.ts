@@ -10,11 +10,13 @@ const FIRECRAWL_API = 'https://api.firecrawl.dev/v2';
 const CHUNK_SIZE = 2000;
 const SKIP_DOMAINS = [
   'facebook.com', 'yelp.com', 'google.com', 'yellowpages.com',
-  'bbb.org', 'instagram.com', 'twitter.com', 'tiktok.com',
-  'maps.apple.com', 'map.bp.com', 'mapquest.com', 'maps.google.com',
+  'bbb.org', 'instagram.com', 'twitter.com', 'x.com', 'tiktok.com',
+  'youtube.com', 'maps.apple.com', 'map.bp.com', 'mapquest.com',
+  'maps.google.com', 'goo.gl/maps', 'maps.app.goo.gl',
   'linkedin.com', 'pinterest.com', 'nextdoor.com', 'foursquare.com',
   'tripadvisor.com', 'angieslist.com', 'homeadvisor.com', 'thumbtack.com',
   'citysearch.com', 'superpages.com', 'whitepages.com', 'manta.com',
+  'waze.com',
 ];
 
 const AMENITY_TO_FILTER_SLUG: Record<string, string> = {
@@ -271,7 +273,7 @@ Deno.serve(async (req: Request) => {
       if (skippedListings.length > 0) {
         await Promise.all(skippedListings.map(l =>
           supabase.from('listings').update({
-            crawl_status: 'redirect',
+            crawl_status: 'no_website',
             last_crawled_at: new Date().toISOString(),
           }).eq('id', l.id)
         ));
@@ -689,7 +691,7 @@ Deno.serve(async (req: Request) => {
       if (skippedListings.length > 0) {
         await Promise.all(skippedListings.map(l =>
           supabase.from('listings').update({
-            crawl_status: 'redirect',
+            crawl_status: 'no_website',
             last_crawled_at: new Date().toISOString(),
           }).eq('id', l.id)
         ));
