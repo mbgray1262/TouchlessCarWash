@@ -617,11 +617,14 @@ export default function PipelinePage() {
                 {firecrawlJobId && !firecrawlDone && (
                   <div className="border border-blue-200 rounded-lg bg-blue-50 p-3 space-y-2">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs text-blue-800 font-semibold">Firecrawl job ready</p>
+                      <p className="text-xs text-blue-800 font-semibold">Scraping in progress</p>
                       <span className="text-xs text-blue-500 font-mono truncate max-w-[120px]">{firecrawlJobId.slice(0, 12)}…</span>
                     </div>
+                    <p className="text-xs text-blue-700">
+                      Firecrawl is scraping {firecrawlJobTotal.toLocaleString()} sites in the background. Once they&apos;re ready, click below to pull and classify the results.
+                    </p>
                     {firecrawlProcessed > 0 && (
-                      <p className="text-xs text-blue-700">{firecrawlProcessed.toLocaleString()} of {firecrawlJobTotal.toLocaleString()} processed so far</p>
+                      <p className="text-xs text-blue-600 font-medium">{firecrawlProcessed.toLocaleString()} of {firecrawlJobTotal.toLocaleString()} classified so far</p>
                     )}
                     <div className="flex gap-1.5">
                       <Button
@@ -630,8 +633,8 @@ export default function PipelinePage() {
                         disabled={firecrawlPolling}
                       >
                         {firecrawlPolling
-                          ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Processing…</>
-                          : <><Zap className="w-3 h-3 mr-1" /> Auto-Process All</>
+                          ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Fetching &amp; classifying…</>
+                          : <><Zap className="w-3 h-3 mr-1" /> Fetch &amp; Classify Results</>
                         }
                       </Button>
                       <Button
@@ -643,6 +646,7 @@ export default function PipelinePage() {
                         Step
                       </Button>
                     </div>
+                    <p className="text-[10px] text-blue-500">Tip: wait a minute or two for Firecrawl to finish scraping before clicking.</p>
                   </div>
                 )}
 
