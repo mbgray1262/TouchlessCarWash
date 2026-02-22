@@ -1104,11 +1104,12 @@ Deno.serve(async (req: Request) => {
       const limit: number = body.limit ?? 0;
       const appUrl = body.app_url ?? Deno.env.get('APP_URL') ?? '';
 
-      // DEDUPLICATION GUARD
+      // DEDUPLICATION GUARD — only block if another enrich_touchless batch is actively running
       const { data: existingRunning } = await supabase
         .from('pipeline_batches')
         .select('id, firecrawl_job_id, total_urls, created_at')
         .eq('status', 'running')
+        .eq('batch_type', 'enrich_touchless')
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
