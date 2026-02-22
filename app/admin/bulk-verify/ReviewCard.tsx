@@ -132,15 +132,21 @@ export function ReviewCard({ listing, onUpdate }: Props) {
             )}
           </div>
 
-          {listing.touchless_evidence && listing.touchless_evidence.length > 0 && (
+          {listing.touchless_evidence && listing.touchless_evidence.length > 0 && (() => {
+            const evidence = typeof listing.touchless_evidence === 'string'
+              ? (() => { try { return JSON.parse(listing.touchless_evidence); } catch { return []; } })()
+              : listing.touchless_evidence;
+            if (!Array.isArray(evidence) || evidence.length === 0) return null;
+            return (
             <div className="mt-1.5 flex flex-wrap gap-1">
-              {listing.touchless_evidence.slice(0, 4).map((e, i) => (
+              {evidence.slice(0, 4).map((e: { keyword: string }, i: number) => (
                 <span key={i} className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-100 rounded px-1.5 py-0.5 font-mono">
                   {e.keyword}
                 </span>
               ))}
             </div>
-          )}
+            );
+          })()}
         </div>
 
         <div className="flex flex-col gap-1.5 shrink-0">
