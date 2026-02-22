@@ -1401,22 +1401,29 @@ export default function AdminListingsPage() {
                         </div>
                       )}
 
-                      {listing.touchless_evidence && listing.touchless_evidence.length > 0 && (
+                      {listing.touchless_evidence && (
                         <div className="bg-green-50 border border-green-200 rounded p-3 text-sm">
                           <p className="font-medium text-green-900 mb-2">Evidence Found:</p>
-                          <div className="space-y-2">
-                            {listing.touchless_evidence.map((evidence, idx) => (
-                              <div key={idx} className="bg-white rounded p-2 border border-green-100">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <CheckCircle2 className="w-3 h-3 text-green-600" />
-                                  <span className="font-medium text-green-800 text-xs uppercase">
-                                    Keyword: "{evidence.keyword}"
-                                  </span>
+                          {typeof listing.touchless_evidence === 'string' ? (
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 className="w-3 h-3 text-green-600 flex-shrink-0" />
+                              <p className="text-green-800 text-xs">{listing.touchless_evidence}</p>
+                            </div>
+                          ) : Array.isArray(listing.touchless_evidence) && listing.touchless_evidence.length > 0 && (
+                            <div className="space-y-2">
+                              {listing.touchless_evidence.map((evidence, idx) => (
+                                <div key={idx} className="bg-white rounded p-2 border border-green-100">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <CheckCircle2 className="w-3 h-3 text-green-600" />
+                                    <span className="font-medium text-green-800 text-xs uppercase">
+                                      Keyword: "{evidence.keyword}"
+                                    </span>
+                                  </div>
+                                  <p className="text-gray-700 text-xs leading-relaxed pl-5">{evidence.snippet}</p>
                                 </div>
-                                <p className="text-gray-700 text-xs leading-relaxed pl-5">{evidence.snippet}</p>
-                              </div>
-                            ))}
-                          </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
 
