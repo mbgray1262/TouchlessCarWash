@@ -101,17 +101,12 @@ export default function PipelinePage() {
   const [dismissingFetchFailed, setDismissingFetchFailed] = useState(false);
   const [retryingWithFirecrawl, setRetryingWithFirecrawl] = useState(false);
   const [firecrawlJobs, setFirecrawlJobs] = useState<Array<{ job_id: string; chunk_index: number; urls_submitted: number }>>([]);
-  const [firecrawlJobCursors, setFirecrawlJobCursors] = useState<Record<string, string | null>>({});
   const [firecrawlJobDone, setFirecrawlJobDone] = useState<Record<string, boolean>>({});
-  const [firecrawlJobScraped, setFirecrawlJobScraped] = useState<Record<string, number>>({});
-  const [firecrawlJobPagesClassified, setFirecrawlJobPagesClassified] = useState<Record<string, number>>({});
-  const [firecrawlJobTotalPages, setFirecrawlJobTotalPages] = useState<Record<string, number>>({});
+  const [firecrawlJobProgress, setFirecrawlJobProgress] = useState<Record<string, { classified: number; total: number; status: string }>>({});
   const [firecrawlTotalProcessed, setFirecrawlTotalProcessed] = useState(0);
   const [firecrawlPolling, setFirecrawlPolling] = useState(false);
   const [firecrawlAllDone, setFirecrawlAllDone] = useState(false);
-  const [firecrawlPollError, setFirecrawlPollError] = useState<string | null>(null);
-  const [firecrawlConsecErrors, setFirecrawlConsecErrors] = useState(0);
-  const firecrawlPollTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const firecrawlProgressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [kicking, setKicking] = useState(false);
   const [extractingRemaining, setExtractingRemaining] = useState(false);
@@ -172,11 +167,8 @@ export default function PipelinePage() {
             chunk_index: 0,
             urls_submitted: data.total_urls ?? 8148,
           }]);
-          setFirecrawlJobCursors({});
           setFirecrawlJobDone({});
-          setFirecrawlJobScraped({});
-          setFirecrawlJobPagesClassified({});
-          setFirecrawlJobTotalPages({});
+          setFirecrawlJobProgress({});
           setFirecrawlTotalProcessed(0);
           setFirecrawlAllDone(false);
           setFirecrawlPolling(false);
@@ -310,9 +302,8 @@ export default function PipelinePage() {
         showToast('error', 'A Firecrawl batch is already running. Resuming polling of existing job.');
         const existingJobId = data.existing_job_id as string;
         setFirecrawlJobs([{ job_id: existingJobId, chunk_index: 0, urls_submitted: 8148 }]);
-        setFirecrawlJobCursors({});
         setFirecrawlJobDone({});
-        setFirecrawlJobScraped({});
+        setFirecrawlJobProgress({});
         setFirecrawlTotalProcessed(0);
         setFirecrawlAllDone(false);
         setFirecrawlPolling(false);
@@ -325,9 +316,8 @@ export default function PipelinePage() {
       }
       const batches = data.batches as Array<{ job_id: string; chunk_index: number; urls_submitted: number }>;
       setFirecrawlJobs(batches);
-      setFirecrawlJobCursors({});
       setFirecrawlJobDone({});
-      setFirecrawlJobScraped({});
+      setFirecrawlJobProgress({});
       setFirecrawlTotalProcessed(0);
       setFirecrawlAllDone(false);
       setFirecrawlPolling(false);
@@ -340,141 +330,94 @@ export default function PipelinePage() {
     }
   }, [showToast]);
 
-  const pollSingleJob = useCallback(async (
-    jobId: string,
-    cursor: string | null,
-  ): Promise<{ processed: number; next_cursor: string | null; done: boolean; total_completed: number; total_urls: number; waiting: boolean }> => {
-    const res = await fetch('/api/pipeline/poll', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ job_id: jobId, next_cursor: cursor, page_limit: 20 }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      if (data.expired) throw Object.assign(new Error('Firecrawl job data expired.'), { expired: true });
-      throw new Error(data.error ?? 'Poll failed');
+  // Poll DB every 5s to get live progress from the server-side auto_poll loop
+  const pollFirecrawlProgress = useCallback(async () => {
+    if (firecrawlJobs.length === 0) return;
+    const jobIds = firecrawlJobs.map(j => j.job_id);
+    const { data: rows } = await supabase
+      .from('pipeline_batches')
+      .select('firecrawl_job_id, classify_status, classified_count, total_urls')
+      .in('firecrawl_job_id', jobIds);
+
+    if (!rows) return;
+
+    const progress: Record<string, { classified: number; total: number; status: string }> = {};
+    const done: Record<string, boolean> = {};
+    let total = 0;
+    for (const row of rows) {
+      progress[row.firecrawl_job_id] = {
+        classified: row.classified_count ?? 0,
+        total: row.total_urls ?? 0,
+        status: row.classify_status ?? 'running',
+      };
+      total += row.classified_count ?? 0;
+      if (row.classify_status === 'completed' || row.classify_status === 'expired') {
+        done[row.firecrawl_job_id] = true;
+      }
     }
-    return {
-      processed: data.processed ?? 0,
-      next_cursor: data.next_cursor ?? null,
-      done: !!data.done,
-      total_completed: data.total_completed ?? 0,
-      total_urls: data.total_urls ?? 0,
-      waiting: (data.page_size ?? 0) === 0,
-    };
-  }, []);
+
+    setFirecrawlJobProgress(progress);
+    setFirecrawlJobDone(done);
+    setFirecrawlTotalProcessed(total);
+
+    const allDone = jobIds.every(id => done[id]);
+    if (allDone) {
+      if (firecrawlProgressTimerRef.current) clearInterval(firecrawlProgressTimerRef.current);
+      setFirecrawlPolling(false);
+      setFirecrawlAllDone(true);
+      await refreshStats();
+      showToast('success', `All done! Classified ${total.toLocaleString()} listings from Firecrawl.`);
+    }
+  }, [firecrawlJobs, refreshStats, showToast]);
 
   const handleFirecrawlAutoPoll = useCallback(async () => {
     if (firecrawlJobs.length === 0) return;
-    if (firecrawlPollTimerRef.current) clearTimeout(firecrawlPollTimerRef.current);
-    setFirecrawlPolling(true);
-    setFirecrawlPollError(null);
-    setFirecrawlConsecErrors(0);
+    if (firecrawlProgressTimerRef.current) clearInterval(firecrawlProgressTimerRef.current);
 
-    const cursors: Record<string, string | null> = { ...firecrawlJobCursors };
-    const done: Record<string, boolean> = { ...firecrawlJobDone };
-
-    // Pre-mark any batches that are already fully classified so we don't re-run Claude on them
+    // Check which jobs are already done — skip them
     const jobIds = firecrawlJobs.map(j => j.job_id);
     const { data: batchRows } = await supabase
       .from('pipeline_batches')
       .select('firecrawl_job_id, classify_status')
       .in('firecrawl_job_id', jobIds);
+
+    const alreadyDone = new Set<string>();
     for (const row of (batchRows ?? [])) {
       if (row.classify_status === 'completed' || row.classify_status === 'expired') {
-        done[row.firecrawl_job_id] = true;
+        alreadyDone.add(row.firecrawl_job_id);
       }
     }
-    const scraped: Record<string, number> = { ...firecrawlJobScraped };
-    const pagesClassified: Record<string, number> = { ...firecrawlJobPagesClassified };
-    const totalPages: Record<string, number> = { ...firecrawlJobTotalPages };
-    let totalProcessed = firecrawlTotalProcessed;
 
-    let consecErrors = 0;
+    const jobsToStart = firecrawlJobs.filter(j => !alreadyDone.has(j.job_id));
 
-    const pollRound = async (): Promise<void> => {
-      const pendingJobs = firecrawlJobs.filter(j => !done[j.job_id]);
-      if (pendingJobs.length === 0) {
-        setFirecrawlAllDone(true);
-        setFirecrawlPolling(false);
-        setFirecrawlJobDone({ ...done });
-        await refreshStats();
-        showToast('success', `All done! Classified ${totalProcessed.toLocaleString()} listings from Firecrawl.`);
-        return;
-      }
+    if (jobsToStart.length === 0) {
+      showToast('success', 'All batches already classified — nothing left to do!');
+      setFirecrawlAllDone(true);
+      return;
+    }
 
-      const results = await Promise.allSettled(
-        pendingJobs.map(j => pollSingleJob(j.job_id, cursors[j.job_id] ?? null))
-      );
+    setFirecrawlPolling(true);
+    setFirecrawlAllDone(false);
 
-      let anyWaiting = false;
-      let anySuccess = false;
-      const errorMessages: string[] = [];
-      for (let i = 0; i < pendingJobs.length; i++) {
-        const job = pendingJobs[i];
-        const result = results[i];
-        if (result.status === 'fulfilled') {
-          const r = result.value;
-          anySuccess = true;
-          totalProcessed += r.processed;
-          cursors[job.job_id] = r.next_cursor;
-          scraped[job.job_id] = r.total_completed;
-          pagesClassified[job.job_id] = (pagesClassified[job.job_id] ?? 0) + 1;
-          if (!totalPages[job.job_id] && r.total_urls > 0) {
-            totalPages[job.job_id] = Math.ceil(r.total_urls / 20);
-          }
-          if (r.done) done[job.job_id] = true;
-          if (r.waiting) anyWaiting = true;
-        } else {
-          errorMessages.push(result.reason?.message ?? 'Unknown error');
-          if ((result.reason as { expired?: boolean })?.expired) {
-            setFirecrawlPolling(false);
-            showToast('error', 'Firecrawl job data expired. Please retry with Firecrawl.');
-            return;
-          }
-        }
-      }
+    // Kick off server-side auto_poll for each pending job — this is self-scheduling
+    // via EdgeRuntime.waitUntil and continues even after the browser tab is closed
+    await Promise.allSettled(
+      jobsToStart.map(j =>
+        fetch(`${SUPABASE_URL}/functions/v1/firecrawl-pipeline`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+          body: JSON.stringify({ action: 'auto_poll', job_id: j.job_id }),
+        }).catch(() => {})
+      )
+    );
 
-      if (anySuccess) {
-        consecErrors = 0;
-        setFirecrawlPollError(null);
-      } else if (errorMessages.length > 0) {
-        consecErrors++;
-        const errMsg = errorMessages[0];
-        setFirecrawlPollError(errMsg);
-        setFirecrawlConsecErrors(consecErrors);
-        if (consecErrors >= 5) {
-          setFirecrawlPolling(false);
-          showToast('error', `Polling stopped after 5 consecutive errors: ${errMsg}`);
-          return;
-        }
-      }
-
-      setFirecrawlTotalProcessed(totalProcessed);
-      setFirecrawlJobCursors({ ...cursors });
-      setFirecrawlJobDone({ ...done });
-      setFirecrawlJobScraped({ ...scraped });
-      setFirecrawlJobPagesClassified({ ...pagesClassified });
-      setFirecrawlJobTotalPages({ ...totalPages });
-
-      const allFinished = firecrawlJobs.every(j => done[j.job_id]);
-      if (allFinished) {
-        setFirecrawlAllDone(true);
-        setFirecrawlPolling(false);
-        await refreshStats();
-        showToast('success', `All done! Classified ${totalProcessed.toLocaleString()} listings from Firecrawl.`);
-        return;
-      }
-
-      const delay = anyWaiting ? 5000 : consecErrors > 0 ? 8000 : 1500;
-      firecrawlPollTimerRef.current = setTimeout(pollRound, delay);
-    };
-
-    pollRound();
-  }, [firecrawlJobs, firecrawlJobCursors, firecrawlJobDone, firecrawlJobScraped, firecrawlJobPagesClassified, firecrawlJobTotalPages, firecrawlTotalProcessed, pollSingleJob, refreshStats, showToast]);
+    // Poll DB every 5s to show live progress — safe to navigate away, server handles the rest
+    firecrawlProgressTimerRef.current = setInterval(pollFirecrawlProgress, 5000);
+    pollFirecrawlProgress();
+  }, [firecrawlJobs, pollFirecrawlProgress, showToast]);
 
   useEffect(() => {
-    return () => { if (firecrawlPollTimerRef.current) clearTimeout(firecrawlPollTimerRef.current); };
+    return () => { if (firecrawlProgressTimerRef.current) clearInterval(firecrawlProgressTimerRef.current); };
   }, []);
 
   const handleExtractRemaining = useCallback(async () => {
@@ -732,19 +675,27 @@ export default function PipelinePage() {
 
                     {firecrawlPolling ? (
                       <div className="space-y-1.5">
-                        <p className="text-xs text-blue-700">Polling all {firecrawlJobs.length} Firecrawl jobs simultaneously and classifying with AI…</p>
+                        <div className="flex items-center gap-1.5 text-[10px] text-blue-600">
+                          <span className="relative flex h-2 w-2 shrink-0">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
+                          </span>
+                          Running on server — safe to close this tab
+                        </div>
                         <div className="space-y-1">
                           {firecrawlJobs.map(j => {
                             const isDoneJob = firecrawlJobDone[j.job_id] ?? false;
-                            const pages = firecrawlJobPagesClassified[j.job_id] ?? 0;
-                            const total = firecrawlJobTotalPages[j.job_id] ?? Math.ceil(j.urls_submitted / 20);
-                            const pct = total > 0 ? Math.min(99, Math.round((pages / total) * 100)) : 0;
+                            const prog = firecrawlJobProgress[j.job_id];
+                            const classified = prog?.classified ?? 0;
+                            const total = prog?.total ?? j.urls_submitted;
+                            const pct = total > 0 ? Math.min(99, Math.round((classified / total) * 100)) : 0;
+                            const statusLabel = prog?.status ?? 'running';
                             return (
                               <div key={j.job_id} className="flex items-center gap-2">
                                 <span className="text-[10px] text-blue-600 w-14 shrink-0">Batch {j.chunk_index + 1}</span>
                                 <div className="flex-1 bg-blue-200 rounded-full h-1.5">
                                   <div
-                                    className={`h-1.5 rounded-full transition-all duration-500 ${isDoneJob ? 'bg-green-500' : 'bg-blue-500'}`}
+                                    className={`h-1.5 rounded-full transition-all duration-500 ${isDoneJob ? 'bg-green-500' : statusLabel === 'waiting' ? 'bg-amber-400' : 'bg-blue-500'}`}
                                     style={{ width: `${isDoneJob ? 100 : pct}%` }}
                                   />
                                 </div>
@@ -757,17 +708,11 @@ export default function PipelinePage() {
                           })}
                         </div>
                         <p className="text-[10px] text-blue-500">{firecrawlTotalProcessed.toLocaleString()} classified so far across all batches</p>
-                        {firecrawlPollError && (
-                          <div className="flex items-start gap-1.5 text-[10px] text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1.5">
-                            <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
-                            <span>Error ({firecrawlConsecErrors}/5): {firecrawlPollError}</span>
-                          </div>
-                        )}
                       </div>
                     ) : (
                       <p className="text-xs text-blue-700">
                         {firecrawlTotalProcessed > 0
-                          ? `${firecrawlTotalProcessed.toLocaleString()} classified so far. Click below to continue.`
+                          ? `${firecrawlTotalProcessed.toLocaleString()} classified so far. Click below to resume.`
                           : `${firecrawlJobs.reduce((s, j) => s + j.urls_submitted, 0).toLocaleString()} listings across ${firecrawlJobs.length} parallel batch${firecrawlJobs.length > 1 ? 'es' : ''}. Click below when Firecrawl is done scraping.`}
                       </p>
                     )}
@@ -794,12 +739,14 @@ export default function PipelinePage() {
                   </div>
                 )}
 
-                <div className="border border-green-100 rounded-lg bg-green-50 p-3 flex gap-2 items-start">
-                  <Server className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" />
-                  <p className="text-xs text-green-700">
-                    Classification runs on the server. You can close this tab and it will continue.
-                  </p>
-                </div>
+                {firecrawlPolling && (
+                  <div className="border border-green-100 rounded-lg bg-green-50 p-3 flex gap-2 items-start">
+                    <Server className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" />
+                    <p className="text-xs text-green-700">
+                      Classification runs on the server. You can close this tab and it will continue.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
