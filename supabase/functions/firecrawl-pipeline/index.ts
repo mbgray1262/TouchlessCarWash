@@ -396,7 +396,7 @@ Deno.serve(async (req: Request) => {
         data: Array<{
           markdown?: string;
           images?: string[];
-          metadata?: { title?: string; sourceURL?: string; statusCode?: number };
+          metadata?: { title?: string; sourceURL?: string; url?: string; statusCode?: number };
         }>;
         next?: string;
       };
@@ -414,18 +414,25 @@ Deno.serve(async (req: Request) => {
         normalizedUrlToId[normalizeUrl(url)] = id;
       }
 
+      // Helper: try all URL variants to find a listing ID
+      const resolveListing = (u: string): string | null => {
+        if (!u) return null;
+        return urlToId[u] ??
+          urlToId[u.replace(/\/$/, '')] ??
+          urlToId[u + '/'] ??
+          normalizedUrlToId[normalizeUrl(u)] ??
+          null;
+      };
+
       if (hasUrlMap) {
-        // Collect all listing IDs for this page's sourceURLs using the stored map
-        // Try: exact match → trailing-slash variants → normalized URL (handles redirects)
-        const sourceURLs = items.map(i => i.metadata?.sourceURL ?? '').filter(Boolean);
+        // Use both sourceURL (final after redirect) and metadata.url (original submitted URL)
+        const sourceURLs = items.map(i => {
+          const sourceURL = i.metadata?.sourceURL ?? '';
+          const originalURL = i.metadata?.url ?? '';
+          return resolveListing(sourceURL) ? sourceURL : (resolveListing(originalURL) ? originalURL : sourceURL);
+        }).filter(Boolean);
         const listingIds = sourceURLs
-          .map(u =>
-            urlToId[u] ??
-            urlToId[u.replace(/\/$/, '')] ??
-            urlToId[u + '/'] ??
-            normalizedUrlToId[normalizeUrl(u)] ??
-            null
-          )
+          .map(u => resolveListing(u))
           .filter(Boolean) as string[];
 
         if (listingIds.length > 0) {
@@ -465,11 +472,8 @@ Deno.serve(async (req: Request) => {
         // Look up listing: by id (new batches with url_to_id map) or by normalized URL (legacy)
         let listing: { id: string; is_touchless: boolean | null; hero_image: string | null; description: string | null; website: string } | undefined;
         if (hasUrlMap) {
-          const listingId =
-            urlToId[sourceURL] ??
-            urlToId[sourceURL.replace(/\/$/, '')] ??
-            urlToId[sourceURL + '/'] ??
-            normalizedUrlToId[normalizeUrl(sourceURL)];
+          const originalURL = item.metadata?.url ?? '';
+          const listingId = resolveListing(sourceURL) ?? resolveListing(originalURL);
           if (listingId) listing = listingMap.get(listingId);
         } else {
           listing = listingMap.get(normalizeUrl(sourceURL));
