@@ -23,8 +23,41 @@ export function ReviewCard({ listing, onUpdate }: Props) {
 
   const classification = inferClassificationFromListing(listing);
   const hero = heroOverride ?? listing.hero_image;
-  const logo = logoOverride ?? listing.logo_url;
-  const allPhotos = (listing.photos ?? []).filter(p => !(listing.blocked_photos ?? []).includes(p));
+  const logo = logoOverride ?? listing.logo_photo ?? listing.google_logo_url ?? listing.logo_url;
+  const blocked = listing.blocked_photos ?? [];
+
+  type LabeledPhoto = { url: string; source: 'google-logo' | 'google-photo' | 'street-view' | 'website' | 'legacy' };
+  const labeledPhotos: LabeledPhoto[] = [];
+  if (listing.google_logo_url && !blocked.includes(listing.google_logo_url)) {
+    labeledPhotos.push({ url: listing.google_logo_url, source: 'google-logo' });
+  }
+  if (listing.google_photo_url && !blocked.includes(listing.google_photo_url)) {
+    labeledPhotos.push({ url: listing.google_photo_url, source: 'google-photo' });
+  }
+  if (listing.street_view_url && !blocked.includes(listing.street_view_url)) {
+    labeledPhotos.push({ url: listing.street_view_url, source: 'street-view' });
+  }
+  const websitePhotos = (listing.website_photos ?? listing.photos ?? []).filter(p => !blocked.includes(p));
+  for (const url of websitePhotos) {
+    if (!labeledPhotos.some(lp => lp.url === url)) {
+      labeledPhotos.push({ url, source: 'website' });
+    }
+  }
+
+  const sourceLabel: Record<LabeledPhoto['source'], string> = {
+    'google-logo': 'G-Logo',
+    'google-photo': 'Google',
+    'street-view': 'Street',
+    'website': 'Web',
+    'legacy': 'Photo',
+  };
+  const sourceBadgeClass: Record<LabeledPhoto['source'], string> = {
+    'google-logo': 'bg-blue-600',
+    'google-photo': 'bg-blue-500',
+    'street-view': 'bg-teal-600',
+    'website': 'bg-gray-600',
+    'legacy': 'bg-gray-500',
+  };
 
   async function handleApprove() {
     setSaving(true);
@@ -190,22 +223,21 @@ export function ReviewCard({ listing, onUpdate }: Props) {
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-gray-500 mb-1">Extracted Amenities ({listing.amenities.length})</p>
                 <div className="flex flex-wrap gap-1">
-                  {listing.amenities.slice(0, 8).map((a, i) => (
+                  {listing.amenities.map((a, i) => (
                     <span key={i} className="text-xs bg-white border border-gray-200 rounded px-1.5 py-0.5 text-gray-600">{a}</span>
                   ))}
-                  {listing.amenities.length > 8 && (
-                    <span className="text-xs text-gray-400">+{listing.amenities.length - 8} more</span>
-                  )}
                 </div>
               </div>
             )}
           </div>
 
-          {allPhotos.length > 0 && (
+          {labeledPhotos.length > 0 && (
             <div>
-              <p className="text-xs font-medium text-gray-500 mb-2">Photos — click to set as hero or logo</p>
+              <p className="text-xs font-medium text-gray-500 mb-2">
+                All Photos ({labeledPhotos.length}) — click to set as hero or logo
+              </p>
               <div className="grid grid-cols-6 gap-1.5">
-                {allPhotos.slice(0, 12).map((url, i) => (
+                {labeledPhotos.map(({ url, source }, i) => (
                   <div key={i} className="relative group">
                     <img
                       src={url}
@@ -215,6 +247,15 @@ export function ReviewCard({ listing, onUpdate }: Props) {
                       }`}
                       onClick={() => handleSetHero(url)}
                     />
+                    <span className={`absolute top-1 left-1 text-[9px] font-bold text-white px-1 py-0.5 rounded ${sourceBadgeClass[source]}`}>
+                      {sourceLabel[source]}
+                    </span>
+                    {url === hero && (
+                      <span className="absolute top-1 right-1 text-[9px] font-bold text-white bg-emerald-500 px-1 py-0.5 rounded">Hero</span>
+                    )}
+                    {url === logo && (
+                      <span className="absolute top-1 right-1 text-[9px] font-bold text-white bg-blue-500 px-1 py-0.5 rounded">Logo</span>
+                    )}
                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex flex-col items-center justify-center gap-1">
                       <button onClick={() => handleSetHero(url)}
                         className="text-white text-[10px] bg-emerald-600 rounded px-1.5 py-0.5">Hero</button>

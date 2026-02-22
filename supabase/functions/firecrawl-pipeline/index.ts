@@ -110,7 +110,7 @@ async function selectPhotosWithClaude(
     ? `Image ${knownLogoIndex} is already known to be the business logo — treat it as the logo unless a clearly better logo exists at another index.`
     : '';
 
-  const prompt = `You are a photo curator for TouchlessCarWash.com, a car wash business directory.
+  const prompt = `You are a strict photo curator for TouchlessCarWash.com, a car wash business directory.
 
 Business: "${listingName}"
 ${touchlessHint}
@@ -118,18 +118,37 @@ ${logoHint}
 
 Images provided (0-based indices: ${valid.map(v => v.index).join(', ')}):
 
-Tasks:
-1. HERO — pick the single best real photograph for the hero banner: exterior of the car wash building, or a car inside the wash tunnel. Landscape preferred. Must be a real photo, not a graphic/logo/illustration.
-2. LOGO — pick the business logo/wordmark if present (graphic, shield, badge, or brand mark). Use the known logo index hint above if relevant.
-3. GALLERY — pick up to 5 real photographs of the facility, equipment, cars in the wash, or property. Exclude logos, illustrations, clip art, banners, pricing boards, social screenshots, and low-quality images.
+## Tasks
 
-Respond ONLY with JSON:
+### HERO
+Pick the single best REAL PHOTOGRAPH for the hero banner. Must show the exterior of the car wash building/property, or a car inside the wash tunnel. Landscape orientation preferred.
+REJECT as hero: logos, icons, illustrations, clip art, pricing signs, social media screenshots, maps, badges, product labels, testimonial graphics, coupons, or any non-photographic image.
+
+### LOGO
+Pick the PRIMARY BUSINESS LOGO — the wordmark, shield, badge, or brand graphic of THIS business.
+Use the known logo hint if provided.
+Set logo_index = -1 if no clear business logo exists.
+NEVER pick: Facebook logo, Google icon, payment badge, product manufacturer logo, or any generic icon.
+
+### GALLERY
+Pick up to 5 REAL PHOTOGRAPHS of the facility, equipment, cars in the wash, or property exterior.
+STRICT EXCLUSIONS — exclude any image that is:
+- A logo, icon, or brand graphic of ANY kind (including this business's own logo)
+- A Facebook / Instagram / Twitter / social media icon or screenshot
+- A payment processor badge (Visa, Mastercard, etc.)
+- A product manufacturer logo (Armor All, Rain-X, etc.)
+- Clip art, illustration, or computer-generated graphic
+- A pricing board, coupon, or text-heavy promotional graphic
+- Blurry, very small, or clearly low quality
+- A generic stock image not of THIS specific location
+
+Respond ONLY with compact JSON (no markdown, no explanation):
 {"hero_index":2,"logo_index":0,"gallery_indices":[1,3,4],"no_good_photos":false,"reason":"one sentence"}
 
-- hero_index: best hero photo index, or -1 if none
-- logo_index: logo index, or -1 if no logo
-- gallery_indices: up to 5 quality photo indices (may include hero; exclude logo)
-- no_good_photos: true only if zero real photographs exist`;
+- hero_index: integer index of best hero photo, -1 if none qualifies
+- logo_index: integer index of business logo, -1 if none
+- gallery_indices: array of up to 5 quality facility photo indices (may include hero; NEVER include logo index)
+- no_good_photos: true ONLY if zero real facility photographs exist`;
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -510,7 +529,7 @@ Deno.serve(async (req: Request) => {
 
       // Build a normalized lookup: submittedUrlNorm -> listing IDs[]
       // This is the source of truth — keys are exactly what was submitted to Firecrawl
-      type ListingRow = { id: string; is_touchless: boolean | null; hero_image: string | null; website: string; amenities: string[] | null };
+      type ListingRow = { id: string; name: string; is_touchless: boolean | null; hero_image: string | null; logo_photo: string | null; google_logo_url: string | null; google_photo_url: string | null; street_view_url: string | null; website: string; amenities: string[] | null };
       const normToIds = new Map<string, string[]>();
       for (const [url, ids] of Object.entries(urlToIds)) {
         normToIds.set(normalizeUrl(url), ids);
@@ -531,7 +550,7 @@ Deno.serve(async (req: Request) => {
       if (pageIds.length > 0) {
         const uniquePageIds = [...new Set(pageIds)];
         const { data: rows, error: rowsErr } = await supabase.from('listings')
-          .select('id, is_touchless, hero_image, website, amenities')
+          .select('id, name, is_touchless, hero_image, logo_photo, google_logo_url, google_photo_url, street_view_url, website, amenities')
           .in('id', uniquePageIds);
         if (rowsErr) dbError = rowsErr.message;
         for (const l of (rows ?? [])) listingById.set(l.id, l);
@@ -547,7 +566,7 @@ Deno.serve(async (req: Request) => {
         ]);
         if (urlVariants.length > 0) {
           const { data: rows } = await supabase.from('listings')
-            .select('id, is_touchless, hero_image, website, amenities')
+            .select('id, name, is_touchless, hero_image, logo_photo, google_logo_url, google_photo_url, street_view_url, website, amenities')
             .in('website', urlVariants);
           for (const l of (rows ?? [])) listingById.set(l.id, l);
           for (const l of (rows ?? [])) {
@@ -642,18 +661,41 @@ Deno.serve(async (req: Request) => {
           }
 
           if (effectiveTouchless === true) {
-            if (filteredImages.length > 0) {
+            const knownLogoUrl = listing.google_logo_url ?? listing.logo_photo ?? null;
+            const extraPhotos = [listing.google_photo_url, listing.street_view_url].filter(Boolean) as string[];
+            const allImages = [
+              ...(knownLogoUrl ? [knownLogoUrl] : []),
+              ...extraPhotos,
+              ...filteredImages,
+            ].filter((u, i, arr) => arr.indexOf(u) === i);
+
+            if (allImages.length > 0 && anthropicKey) {
+              try {
+                const sel = await selectPhotosWithClaude(allImages, knownLogoUrl, listing.name ?? '', effectiveTouchless, anthropicKey);
+                if (!sel.no_good_photos) {
+                  const galleryUrls = sel.gallery_indices.filter(i => i >= 0 && i < allImages.length).map(i => allImages[i]);
+                  if (galleryUrls.length > 0) updatePayload.website_photos = galleryUrls;
+                  if (sel.hero_index >= 0 && sel.hero_index < allImages.length) updatePayload.hero_image = allImages[sel.hero_index];
+                  if (sel.logo_index >= 0 && sel.logo_index < allImages.length && !listing.logo_photo) updatePayload.logo_photo = allImages[sel.logo_index];
+                } else if (filteredImages.length > 0) {
+                  updatePayload.website_photos = filteredImages;
+                  if (!listing.hero_image) updatePayload.hero_image = filteredImages[0];
+                }
+              } catch {
+                if (filteredImages.length > 0) {
+                  updatePayload.website_photos = filteredImages;
+                  if (!listing.hero_image) updatePayload.hero_image = filteredImages[0];
+                }
+              }
+            } else if (filteredImages.length > 0) {
               updatePayload.website_photos = filteredImages;
+              if (!listing.hero_image) updatePayload.hero_image = filteredImages[0];
             }
-            if (!listing.hero_image && filteredImages.length > 0) {
-              updatePayload.hero_image = filteredImages[0];
-            }
+
             if (amenities.length > 0) {
               const existing = listing.amenities ?? [];
               const merged = [...existing, ...amenities.filter(a => !existing.includes(a))];
-              if (merged.length > existing.length) {
-                updatePayload.amenities = merged;
-              }
+              if (merged.length > existing.length) updatePayload.amenities = merged;
             }
           }
 

@@ -31,7 +31,12 @@ export interface PipelineListing {
   touchless_evidence: Array<{ keyword: string; snippet: string; type: string }> | null;
   hero_image: string | null;
   logo_url: string | null;
+  logo_photo: string | null;
+  google_logo_url: string | null;
+  google_photo_url: string | null;
+  street_view_url: string | null;
   photos: string[];
+  website_photos: string[];
   blocked_photos: string[] | null;
   amenities: string[];
   is_approved: boolean;

@@ -62,7 +62,7 @@ export function ReviewPanel({ refreshTrigger, filterClassification, onFilterChan
         .eq('verification_status', 'auto_classified');
       let dataQuery = supabase
         .from('listings')
-        .select('id,name,address,city,state,website,parent_chain,verification_status,crawl_status,crawl_notes,is_touchless,touchless_confidence,classification_confidence,classification_source,touchless_evidence,hero_image,logo_url,photos,blocked_photos,amenities,is_approved,last_crawled_at')
+        .select('id,name,address,city,state,website,parent_chain,verification_status,crawl_status,crawl_notes,is_touchless,touchless_confidence,classification_confidence,classification_source,touchless_evidence,hero_image,logo_url,logo_photo,google_logo_url,google_photo_url,street_view_url,photos,website_photos,blocked_photos,amenities,is_approved,last_crawled_at')
         .eq('verification_status', 'auto_classified')
         .order('classification_confidence', { ascending: true, nullsFirst: true })
         .range(pageNum * PAGE_SIZE, pageNum * PAGE_SIZE + PAGE_SIZE - 1);
