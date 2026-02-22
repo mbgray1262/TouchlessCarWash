@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, XCircle, HelpCircle, AlertTriangle, WifiOff, Globe, Trash2 } from 'lucide-react';
+import { CheckCircle2, XCircle, HelpCircle, AlertTriangle, WifiOff, Globe, Trash2, Clock } from 'lucide-react';
 import type { ClassifyStats } from './types';
 
 interface Props {
@@ -17,6 +17,7 @@ export function StatsGrid({ stats, onDismissFetchFailed, dismissingFetchFailed }
   const cards = [
     { label: 'Touchless', value: stats.touchless, icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-50 border-green-200' },
     { label: 'Not Touchless', value: stats.not_touchless, icon: XCircle, color: 'text-red-500', bg: 'bg-red-50 border-red-200' },
+    { label: 'Never Attempted', value: stats.never_attempted, icon: Clock, color: 'text-teal-600', bg: 'bg-teal-50 border-teal-200' },
     { label: 'Unknown', value: stats.unknown, icon: HelpCircle, color: 'text-amber-500', bg: 'bg-amber-50 border-amber-200' },
     { label: 'Fetch Failed', value: stats.fetch_failed, icon: WifiOff, color: 'text-orange-500', bg: 'bg-orange-50 border-orange-200' },
     { label: 'Classify Failed', value: stats.classify_failed, icon: AlertTriangle, color: 'text-rose-500', bg: 'bg-rose-50 border-rose-200' },
@@ -50,7 +51,7 @@ export function StatsGrid({ stats, onDismissFetchFailed, dismissingFetchFailed }
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         {cards.map(({ label, value, icon: Icon, color, bg }) => (
           <div key={label} className={`border rounded-xl p-4 ${bg} relative`}>
             <div className="flex items-center gap-2 mb-2">

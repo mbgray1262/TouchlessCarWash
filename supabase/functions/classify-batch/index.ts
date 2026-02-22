@@ -167,15 +167,16 @@ async function processBatch(
 ): Promise<void> {
   const { data: jobCheck } = await supabase
     .from("pipeline_jobs")
-    .select("status, offset")
+    .select("status, offset, never_attempted_only")
     .eq("id", jobId)
     .single();
 
   if (!jobCheck || jobCheck.status !== "running") return;
 
   const offset = jobCheck.offset ?? 0;
+  const neverAttemptedOnly: boolean = jobCheck.never_attempted_only ?? false;
 
-  const { data: listings } = await supabase
+  let query = supabase
     .from("listings")
     .select("id, name, website")
     .is("is_touchless", null)
@@ -184,6 +185,12 @@ async function processBatch(
     .order("state", { ascending: true })
     .order("city", { ascending: true })
     .range(offset, offset + BATCH_SIZE - 1);
+
+  if (neverAttemptedOnly) {
+    query = query.is("crawl_status", null);
+  }
+
+  const { data: listings } = await query;
 
   if (!listings || listings.length === 0) {
     await supabase.from("pipeline_jobs").update({
@@ -218,7 +225,6 @@ async function processBatch(
     p_offset: newOffset,
   });
 
-  // Re-check status before scheduling next batch (pause may have been triggered)
   const { data: afterCheck } = await supabase
     .from("pipeline_jobs")
     .select("status")
@@ -227,7 +233,6 @@ async function processBatch(
 
   if (!afterCheck || afterCheck.status !== "running") return;
 
-  // Self-reschedule: fire next batch as a new request so we never exceed runtime limits
   EdgeRuntime.waitUntil(
     fetch(`${selfUrl}/functions/v1/classify-batch`, {
       method: "POST",
@@ -264,6 +269,7 @@ Deno.serve(async (req: Request) => {
 
     if (action === "start") {
       const concurrency: number = body.concurrency ?? 3;
+      const neverAttemptedOnly: boolean = body.never_attempted_only === true;
 
       const { data: existing } = await supabase
         .from("pipeline_jobs")
@@ -275,12 +281,18 @@ Deno.serve(async (req: Request) => {
         return Response.json({ error: "A job is already running", job_id: existing.id }, { status: 409, headers: corsHeaders });
       }
 
-      const { count: totalQueue } = await supabase
+      let countQuery = supabase
         .from("listings")
         .select("id", { count: "exact", head: true })
         .is("is_touchless", null)
         .not("website", "is", null)
         .neq("website", "");
+
+      if (neverAttemptedOnly) {
+        countQuery = countQuery.is("crawl_status", null);
+      }
+
+      const { count: totalQueue } = await countQuery;
 
       const { data: job, error: jobErr } = await supabase
         .from("pipeline_jobs")
@@ -289,6 +301,7 @@ Deno.serve(async (req: Request) => {
           concurrency,
           total_queue: totalQueue ?? 0,
           offset: 0,
+          never_attempted_only: neverAttemptedOnly,
           started_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
@@ -304,7 +317,6 @@ Deno.serve(async (req: Request) => {
       return Response.json({ job_id: job.id, status: "started" }, { headers: corsHeaders });
     }
 
-    // Internal tick: called by self-rescheduling to process next batch
     if (action === "tick") {
       const { job_id, concurrency = 3 } = body;
       if (!job_id) return Response.json({ error: "job_id required" }, { status: 400, headers: corsHeaders });

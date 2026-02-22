@@ -48,7 +48,7 @@ async function callBatchFn(body: Record<string, unknown>): Promise<Response> {
 }
 
 async function fetchStats(): Promise<ClassifyStats> {
-  const [touchless, not_touchless, unclassified_with, unclassified_no, fetch_failed, classify_failed, unknown] = await Promise.all([
+  const [touchless, not_touchless, unclassified_with, unclassified_no, fetch_failed, classify_failed, unknown, never_attempted] = await Promise.all([
     supabase.from('listings').select('id', { count: 'exact', head: true }).eq('is_touchless', true),
     supabase.from('listings').select('id', { count: 'exact', head: true }).eq('is_touchless', false),
     supabase.from('listings').select('id', { count: 'exact', head: true }).is('is_touchless', null).not('website', 'is', null).neq('website', ''),
@@ -56,6 +56,7 @@ async function fetchStats(): Promise<ClassifyStats> {
     supabase.from('listings').select('id', { count: 'exact', head: true }).eq('crawl_status', 'fetch_failed'),
     supabase.from('listings').select('id', { count: 'exact', head: true }).eq('crawl_status', 'classify_failed'),
     supabase.from('listings').select('id', { count: 'exact', head: true }).eq('crawl_status', 'unknown'),
+    supabase.from('listings').select('id', { count: 'exact', head: true }).is('is_touchless', null).not('website', 'is', null).neq('website', '').is('crawl_status', null),
   ]);
   const t = touchless.count ?? 0;
   const nt = not_touchless.count ?? 0;
@@ -71,6 +72,7 @@ async function fetchStats(): Promise<ClassifyStats> {
     fetch_failed: fetch_failed.count ?? 0,
     classify_failed: classify_failed.count ?? 0,
     unknown: unk,
+    never_attempted: never_attempted.count ?? 0,
   };
 }
 
@@ -99,6 +101,7 @@ export default function PipelinePage() {
   const [dismissingFetchFailed, setDismissingFetchFailed] = useState(false);
   const [retryingWithFirecrawl, setRetryingWithFirecrawl] = useState(false);
   const [kicking, setKicking] = useState(false);
+  const [extractingRemaining, setExtractingRemaining] = useState(false);
 
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
   const statsTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -279,6 +282,26 @@ export default function PipelinePage() {
     }
   }, [stats, showToast]);
 
+  const handleExtractRemaining = useCallback(async () => {
+    const count = stats?.never_attempted ?? 0;
+    if (!confirm(`Start classification for ${count.toLocaleString()} listings that have never been attempted?\n\nThis will ONLY process sites with no crawl history — already-failed and already-classified listings are unaffected.`)) return;
+    setExtractingRemaining(true);
+    try {
+      const res = await callBatchFn({ action: 'start', concurrency, never_attempted_only: true });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast('error', data.error ?? 'Failed to start');
+      } else {
+        showToast('success', `Started classification for ${count.toLocaleString()} never-attempted listings.`);
+        await pollJob();
+      }
+    } catch (e) {
+      showToast('error', (e as Error).message);
+    } finally {
+      setExtractingRemaining(false);
+    }
+  }, [stats, concurrency, pollJob, showToast]);
+
   const handleRecentPageChange = useCallback((page: number) => {
     setRecentPage(page);
     refreshRecent(page);
@@ -381,14 +404,29 @@ export default function PipelinePage() {
                 </div>
 
                 {!isActive ? (
-                  <Button
-                    className="w-full bg-[#0F2744] hover:bg-[#1a3a5c] text-white"
-                    onClick={handleStart}
-                    disabled={actionLoading}
-                  >
-                    {actionLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
-                    {isDone ? 'Run Again' : isFailed ? 'Retry' : 'Start Classification'}
-                  </Button>
+                  <div className="space-y-2">
+                    <Button
+                      className="w-full bg-[#0F2744] hover:bg-[#1a3a5c] text-white"
+                      onClick={handleStart}
+                      disabled={actionLoading || extractingRemaining}
+                    >
+                      {actionLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
+                      {isDone ? 'Run Again' : isFailed ? 'Retry' : 'Start Classification'}
+                    </Button>
+                    {(stats?.never_attempted ?? 0) > 0 && (
+                      <Button
+                        variant="outline"
+                        className="w-full border-teal-300 text-teal-700 hover:bg-teal-50"
+                        onClick={handleExtractRemaining}
+                        disabled={actionLoading || extractingRemaining}
+                      >
+                        {extractingRemaining
+                          ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Starting…</>
+                          : <><Play className="w-4 h-4 mr-2" /> Extract Remaining ({(stats?.never_attempted ?? 0).toLocaleString()})</>
+                        }
+                      </Button>
+                    )}
+                  </div>
                 ) : isRunning ? (
                   <div className="space-y-2">
                     <Button

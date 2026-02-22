@@ -7,6 +7,7 @@ export interface ClassifyStats {
   fetch_failed: number;
   classify_failed: number;
   unknown: number;
+  never_attempted: number;
 }
 
 export interface RecentListing {
