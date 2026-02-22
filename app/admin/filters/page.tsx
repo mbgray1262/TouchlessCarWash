@@ -29,15 +29,10 @@ const ICON_MAP: Record<string, React.ElementType> = {
   car: Car,
 };
 
-const CATEGORY_COLORS: Record<string, string> = {
-  feature: 'bg-blue-50 border-blue-200 text-blue-700',
-  amenity: 'bg-green-50 border-green-200 text-green-700',
-};
 
 function FilterRow({ filter, total }: { filter: FilterCount; total: number }) {
   const Icon = ICON_MAP[filter.icon ?? ''] ?? Sparkles;
   const pct = total > 0 ? Math.round((filter.count / total) * 100) : 0;
-  const categoryColor = CATEGORY_COLORS[filter.category] ?? 'bg-gray-50 border-gray-200 text-gray-600';
 
   return (
     <tr className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors last:border-0">
@@ -51,11 +46,6 @@ function FilterRow({ filter, total }: { filter: FilterCount; total: number }) {
             <p className="text-xs text-gray-400 font-mono">{filter.slug}</p>
           </div>
         </div>
-      </td>
-      <td className="py-3.5 px-4">
-        <span className={`inline-flex items-center text-xs font-medium border rounded-full px-2 py-0.5 ${categoryColor}`}>
-          {filter.category}
-        </span>
       </td>
       <td className="py-3.5 px-4">
         <div className="flex items-center gap-3">
@@ -96,8 +86,9 @@ export default function FiltersPage() {
         filterRows.map(async f => {
           const { count } = await supabase
             .from('listing_filters')
-            .select('listing_id', { count: 'exact', head: true })
-            .eq('filter_id', f.id);
+            .select('listing_id, listings!inner(is_touchless)', { count: 'exact', head: true })
+            .eq('filter_id', f.id)
+            .eq('listings.is_touchless', true);
           return { ...f, count: count ?? 0 };
         })
       );
@@ -112,8 +103,6 @@ export default function FiltersPage() {
   useEffect(() => { loadFilters(false); }, [loadFilters]);
 
   const total = filters.reduce((sum, f) => sum + f.count, 0);
-  const featureFilters = filters.filter(f => f.category === 'feature');
-  const amenityFilters = filters.filter(f => f.category === 'amenity');
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -169,46 +158,21 @@ export default function FiltersPage() {
               })}
             </div>
 
-            {featureFilters.length > 0 && (
+            {filters.length > 0 && (
               <Card>
                 <CardHeader className="pb-2 border-b border-gray-100">
-                  <CardTitle className="text-sm font-semibold text-[#0F2744]">Feature Filters</CardTitle>
+                  <CardTitle className="text-sm font-semibold text-[#0F2744]">Filters</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-gray-100">
                         <th className="text-left py-2.5 px-4 text-xs font-medium text-gray-500">Filter</th>
-                        <th className="text-left py-2.5 px-4 text-xs font-medium text-gray-500">Category</th>
-                        <th className="text-left py-2.5 px-4 text-xs font-medium text-gray-500">Listings</th>
+                        <th className="text-left py-2.5 px-4 text-xs font-medium text-gray-500">Listings (touchless only)</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {featureFilters.map(f => (
-                        <FilterRow key={f.id} filter={f} total={total} />
-                      ))}
-                    </tbody>
-                  </table>
-                </CardContent>
-              </Card>
-            )}
-
-            {amenityFilters.length > 0 && (
-              <Card>
-                <CardHeader className="pb-2 border-b border-gray-100">
-                  <CardTitle className="text-sm font-semibold text-[#0F2744]">Amenity Filters</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-100">
-                        <th className="text-left py-2.5 px-4 text-xs font-medium text-gray-500">Filter</th>
-                        <th className="text-left py-2.5 px-4 text-xs font-medium text-gray-500">Category</th>
-                        <th className="text-left py-2.5 px-4 text-xs font-medium text-gray-500">Listings</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {amenityFilters.map(f => (
+                      {filters.map(f => (
                         <FilterRow key={f.id} filter={f} total={total} />
                       ))}
                     </tbody>
@@ -221,11 +185,11 @@ export default function FiltersPage() {
               <CardContent className="p-4">
                 <p className="text-xs text-gray-500 leading-relaxed">
                   <span className="font-semibold text-gray-700">How filters are populated:</span>{' '}
-                  <span className="font-medium">Touchless</span> is set from <code className="bg-gray-100 px-1 rounded">is_touchless = true</code> on listings.{' '}
                   <span className="font-medium">Open 24 Hours</span> is derived from the hours JSON.{' '}
                   <span className="font-medium">Free Vacuum</span> and <span className="font-medium">Unlimited Wash Club</span> come from Google About data.{' '}
                   <span className="font-medium">Membership</span> and <span className="font-medium">Undercarriage Cleaning</span> are matched from the amenities array (case-insensitive).{' '}
-                  <span className="font-medium">Self-Serve Bays</span> and <span className="font-medium">RV / Oversized</span> will be populated as the Firecrawl pipeline runs.
+                  <span className="font-medium">Self-Serve Bays</span> and <span className="font-medium">RV / Oversized</span> will be populated as the Firecrawl pipeline runs.{' '}
+                  All counts reflect touchless-only listings (<code className="bg-gray-100 px-1 rounded">is_touchless = true</code>).
                 </p>
               </CardContent>
             </Card>

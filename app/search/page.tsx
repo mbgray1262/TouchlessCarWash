@@ -128,9 +128,6 @@ export default function SearchPage() {
     });
   }
 
-  const featureFilters = filters.filter(f => f.category === 'feature');
-  const amenityFilters = filters.filter(f => f.category === 'amenity');
-
   const resultLabel = activeFilters.size > 0 || query
     ? listings.length > 0
       ? `Found ${listings.length} car wash${listings.length !== 1 ? 'es' : ''}`
@@ -153,56 +150,26 @@ export default function SearchPage() {
       <div className="container mx-auto px-4 max-w-6xl py-8">
         {filters.length > 0 && (
           <div className="mb-8">
-            {featureFilters.length > 0 && (
-              <div className="mb-4">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Features</p>
-                <div className="flex flex-wrap gap-2">
-                  {featureFilters.map(f => {
-                    const Icon = ICON_MAP[f.icon ?? ''] ?? Sparkles;
-                    const active = activeFilters.has(f.id);
-                    return (
-                      <button
-                        key={f.id}
-                        onClick={() => toggleFilter(f.id)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
-                          active
-                            ? 'bg-[#0F2744] border-[#0F2744] text-white'
-                            : 'bg-white border-gray-200 text-gray-700 hover:border-[#0F2744] hover:text-[#0F2744]'
-                        }`}
-                      >
-                        <Icon className="w-3.5 h-3.5" />
-                        {f.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-            {amenityFilters.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Amenities</p>
-                <div className="flex flex-wrap gap-2">
-                  {amenityFilters.map(f => {
-                    const Icon = ICON_MAP[f.icon ?? ''] ?? Sparkles;
-                    const active = activeFilters.has(f.id);
-                    return (
-                      <button
-                        key={f.id}
-                        onClick={() => toggleFilter(f.id)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
-                          active
-                            ? 'bg-[#0F2744] border-[#0F2744] text-white'
-                            : 'bg-white border-gray-200 text-gray-700 hover:border-[#0F2744] hover:text-[#0F2744]'
-                        }`}
-                      >
-                        <Icon className="w-3.5 h-3.5" />
-                        {f.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+            <div className="flex flex-wrap gap-2">
+              {filters.map(f => {
+                const Icon = ICON_MAP[f.icon ?? ''] ?? Sparkles;
+                const active = activeFilters.has(f.id);
+                return (
+                  <button
+                    key={f.id}
+                    onClick={() => toggleFilter(f.id)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
+                      active
+                        ? 'bg-[#0F2744] border-[#0F2744] text-white'
+                        : 'bg-white border-gray-200 text-gray-700 hover:border-[#0F2744] hover:text-[#0F2744]'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    {f.name}
+                  </button>
+                );
+              })}
+            </div>
             {activeFilters.size > 0 && (
               <button
                 onClick={() => setActiveFilters(new Set())}
