@@ -928,28 +928,34 @@ Deno.serve(async (req: Request) => {
       const filterMap: FilterMap = {};
       for (const f of (filterRows ?? [])) filterMap[f.slug] = f.id;
 
-      const urlToId: Record<string, string> = (batch as unknown as { url_to_id?: Record<string, string> })?.url_to_id ?? {};
-      const hasUrlMap = Object.keys(urlToId).length > 0;
-      const normalizedUrlToId: Record<string, string> = {};
-      for (const [url, id] of Object.entries(urlToId)) {
-        normalizedUrlToId[normalizeUrl(url)] = id;
+      // Normalize url_to_id to always be Record<string, string[]> (handles both legacy string and new array format)
+      const rawUrlToId = (batch as unknown as { url_to_id?: Record<string, unknown> })?.url_to_id ?? {};
+      const urlToIds: Record<string, string[]> = {};
+      for (const [url, val] of Object.entries(rawUrlToId)) {
+        if (Array.isArray(val)) urlToIds[url] = val as string[];
+        else if (typeof val === 'string' && val) urlToIds[url] = [val];
+      }
+      const hasUrlMap = Object.keys(urlToIds).length > 0;
+
+      // Build normalized lookup: normalizedUrl -> listing IDs[]
+      const normToIds = new Map<string, string[]>();
+      for (const [url, ids] of Object.entries(urlToIds)) {
+        normToIds.set(normalizeUrl(url), ids);
       }
 
-      let listingMap = new Map<string, { id: string; is_touchless: boolean | null; hero_image: string | null; website: string }>();
+      type ListingRowAP = { id: string; is_touchless: boolean | null; hero_image: string | null; website: string };
+      const listingById = new Map<string, ListingRowAP>();
 
       if (hasUrlMap) {
         const sourceURLs = items.map(i => i.metadata?.sourceURL ?? '').filter(Boolean);
-        const listingIds = sourceURLs
-          .map(u =>
-            urlToId[u] ?? urlToId[u.replace(/\/$/, '')] ?? urlToId[u + '/'] ?? normalizedUrlToId[normalizeUrl(u)] ?? null
-          )
-          .filter(Boolean) as string[];
-
-        if (listingIds.length > 0) {
+        const pageNorms = sourceURLs.map(u => normalizeUrl(u));
+        const allIds = pageNorms.flatMap(n => normToIds.get(n) ?? []);
+        const uniqueIds = [...new Set(allIds)];
+        if (uniqueIds.length > 0) {
           const { data: matchedListings } = await supabase.from('listings')
             .select('id, is_touchless, hero_image, website')
-            .in('id', listingIds);
-          for (const l of (matchedListings ?? [])) listingMap.set(l.id, l);
+            .in('id', uniqueIds);
+          for (const l of (matchedListings ?? [])) listingById.set(l.id, l);
         }
       } else {
         const sourceURLs = items.map(i => i.metadata?.sourceURL ?? '').filter(Boolean);
@@ -960,23 +966,30 @@ Deno.serve(async (req: Request) => {
         const { data: matchedListings } = await supabase.from('listings')
           .select('id, is_touchless, hero_image, website')
           .in('website', urlVariants);
-        const byUrl = new Map<string, typeof listingMap extends Map<string, infer V> ? V : never>();
-        for (const l of (matchedListings ?? [])) byUrl.set(normalizeUrl(l.website), l);
-        listingMap = byUrl as typeof listingMap;
+        for (const l of (matchedListings ?? [])) {
+          listingById.set(l.id, l);
+          const n = normalizeUrl(l.website);
+          if (!normToIds.has(n)) normToIds.set(n, []);
+          normToIds.get(n)!.push(l.id);
+        }
       }
+
+      const resolveListingsAP = (sourceURL: string): ListingRowAP[] => {
+        const ids = normToIds.get(normalizeUrl(sourceURL)) ?? [];
+        const seen = new Set<string>();
+        return ids
+          .filter(id => { if (seen.has(id)) return false; seen.add(id); return true; })
+          .map(id => listingById.get(id))
+          .filter(Boolean) as ListingRowAP[];
+      };
 
       const results = await Promise.all(items.map(async (item) => {
         const sourceURL = item.metadata?.sourceURL ?? '';
         const statusCode = item.metadata?.statusCode ?? 0;
-        let listing: { id: string; is_touchless: boolean | null; hero_image: string | null; website: string } | undefined;
-
-        if (hasUrlMap) {
-          const listingId = urlToId[sourceURL] ?? urlToId[sourceURL.replace(/\/$/, '')] ?? urlToId[sourceURL + '/'] ?? normalizedUrlToId[normalizeUrl(sourceURL)];
-          if (listingId) listing = listingMap.get(listingId);
-        } else {
-          listing = listingMap.get(normalizeUrl(sourceURL));
-        }
-        if (!listing) return null;
+        const allListings = resolveListingsAP(sourceURL);
+        if (allListings.length === 0) return null;
+        const listings = allListings.filter(l => l.is_touchless === null);
+        if (listings.length === 0) return null;
 
         let crawl_status = 'success';
         let is_touchless: boolean | null = null;
@@ -1001,39 +1014,45 @@ Deno.serve(async (req: Request) => {
           }
         }
 
-        return { listing, crawl_status, is_touchless, touchless_evidence, amenities, images };
+        return { listings, crawl_status, is_touchless, touchless_evidence, amenities, images };
       }));
 
-      const processed = results.filter(Boolean) as NonNullable<typeof results[0]>[];
+      type APResult = { listings: ListingRowAP[]; crawl_status: string; is_touchless: boolean | null; touchless_evidence: string; amenities: string[]; images: string[] };
+      const processed = results.filter(Boolean) as APResult[];
+      let totalProcessedAP = 0;
 
-      await Promise.all(processed.map(async ({ listing, crawl_status, is_touchless, touchless_evidence, amenities, images }) => {
+      await Promise.all(processed.map(async ({ listings: rowListings, crawl_status, is_touchless, touchless_evidence, amenities, images }) => {
         const filteredImages = filterImages(images);
-        const updatePayload: Record<string, unknown> = {
-          last_crawled_at: new Date().toISOString(),
-          crawl_status,
-          touchless_evidence,
-          website_photos: filteredImages.length > 0 ? filteredImages : null,
-        };
-        if (listing.is_touchless === null && is_touchless !== null) updatePayload.is_touchless = is_touchless;
-        if (!listing.hero_image && filteredImages.length > 0) updatePayload.hero_image = filteredImages[0];
-        if (amenities.length > 0) updatePayload.amenities = amenities;
+        totalProcessedAP += rowListings.length;
 
-        await Promise.all([
-          supabase.from('listings').update(updatePayload).eq('id', listing.id),
-          supabase.from('pipeline_runs').insert({
-            listing_id: listing.id,
-            batch_id: batch.id,
+        await Promise.all(rowListings.map(async (listing) => {
+          const updatePayload: Record<string, unknown> = {
+            last_crawled_at: new Date().toISOString(),
             crawl_status,
-            is_touchless,
             touchless_evidence,
-            images_found: images.length,
-          }),
-          syncFilters(supabase, listing.id, is_touchless, amenities, filterMap),
-        ]);
+            website_photos: filteredImages.length > 0 ? filteredImages : null,
+          };
+          if (listing.is_touchless === null && is_touchless !== null) updatePayload.is_touchless = is_touchless;
+          if (!listing.hero_image && filteredImages.length > 0) updatePayload.hero_image = filteredImages[0];
+          if (amenities.length > 0) updatePayload.amenities = amenities;
+
+          await Promise.all([
+            supabase.from('listings').update(updatePayload).eq('id', listing.id),
+            supabase.from('pipeline_runs').insert({
+              listing_id: listing.id,
+              batch_id: batch.id,
+              crawl_status,
+              is_touchless,
+              touchless_evidence,
+              images_found: images.length,
+            }),
+            syncFilters(supabase, listing.id, is_touchless, amenities, filterMap),
+          ]);
+        }));
       }));
 
       const fcCompleted = pollData.completed ?? 0;
-      const newClassified = (batch.classified_count ?? 0) + processed.length;
+      const newClassified = (batch.classified_count ?? 0) + totalProcessedAP;
       const hasNextPage = !!pollData.next;
       const isDone = !hasNextPage && items.length > 0;
 
@@ -1058,7 +1077,7 @@ Deno.serve(async (req: Request) => {
       }
 
       return Response.json({
-        processed: processed.length,
+        processed: totalProcessedAP,
         classified: newClassified,
         done: isDone,
         next_cursor: pollData.next ?? null,
