@@ -42,27 +42,16 @@ async function getCityListings(stateCode: string, citySlug: string): Promise<Lis
 }
 
 async function getCitiesInState(stateCode: string, excludeCitySlug: string): Promise<{ city: string; count: number; slug: string }[]> {
-  const { data, error } = await supabase
-    .from('listings')
-    .select('city')
-    .eq('is_touchless', true)
-    .eq('state', stateCode);
-
+  const { data, error } = await supabase.rpc('cities_in_state_with_counts', { p_state: stateCode });
   if (error || !data) return [];
 
-  const cityMap: Record<string, number> = {};
-  for (const row of data) {
-    if (row.city) cityMap[row.city] = (cityMap[row.city] ?? 0) + 1;
-  }
-
-  return Object.entries(cityMap)
-    .map(([city, count]) => ({
+  return (data as { city: string; count: number }[])
+    .map(({ city, count }) => ({
       city,
       count,
       slug: city.toLowerCase().replace(/\s+/g, '-'),
     }))
-    .filter(c => c.slug !== excludeCitySlug)
-    .sort((a, b) => b.count - a.count);
+    .filter(c => c.slug !== excludeCitySlug);
 }
 
 export async function generateMetadata({ params }: CityPageProps): Promise<Metadata> {

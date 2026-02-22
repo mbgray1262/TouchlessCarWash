@@ -12,18 +12,9 @@ export const metadata: Metadata = {
 };
 
 async function getStateListingCounts(): Promise<Record<string, number>> {
-  const { data, error } = await supabase
-    .from('listings')
-    .select('state')
-    .eq('is_touchless', true);
-
+  const { data, error } = await supabase.rpc('state_listing_counts');
   if (error || !data) return {};
-
-  const counts: Record<string, number> = {};
-  for (const row of data) {
-    counts[row.state] = (counts[row.state] || 0) + 1;
-  }
-  return counts;
+  return data as Record<string, number>;
 }
 
 export default async function StatesPage() {

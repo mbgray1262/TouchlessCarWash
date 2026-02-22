@@ -78,13 +78,9 @@ async function getStateListings(stateCode: string): Promise<Listing[]> {
 }
 
 async function getStatesWithListings(): Promise<string[]> {
-  const { data, error } = await supabase
-    .from('listings')
-    .select('state')
-    .eq('is_touchless', true);
-
+  const { data, error } = await supabase.rpc('states_with_touchless_listings');
   if (error || !data) return [];
-  return Array.from(new Set(data.map((l: { state: string }) => l.state))).sort() as string[];
+  return data as string[];
 }
 
 export default async function StatePage({ params }: StatePageProps) {
