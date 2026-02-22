@@ -54,10 +54,12 @@ interface VendorOption {
 
 interface DbStats {
   total: number;
-  pending: number;
-  verified: number;
-  failed: number;
   touchless: number;
+  notTouchless: number;
+  classified: number;
+  unprocessed: number;
+  fetchFailed: number;
+  classifyFailed: number;
   noWebsite: number;
   featured: number;
   chains: number;
@@ -72,7 +74,7 @@ export default function AdminListingsPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  const [dbStats, setDbStats] = useState<DbStats>({ total: 0, pending: 0, verified: 0, failed: 0, touchless: 0, noWebsite: 0, featured: 0, chains: 0, chainsMissingLocationUrl: 0 });
+  const [dbStats, setDbStats] = useState<DbStats>({ total: 0, touchless: 0, notTouchless: 0, classified: 0, unprocessed: 0, fetchFailed: 0, classifyFailed: 0, noWebsite: 0, featured: 0, chains: 0, chainsMissingLocationUrl: 0 });
   const [chainNames, setChainNames] = useState<string[]>([]);
   const [verifying, setVerifying] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
@@ -148,18 +150,20 @@ export default function AdminListingsPage() {
       q = q.or(`name.ilike.${term},city.ilike.${term},state.ilike.${term},parent_chain.ilike.${term}`);
     }
 
-    if (statusFilter === 'pending') {
-      q = q.or('crawl_status.eq.pending,crawl_status.is.null').not('website', 'is', null);
-    } else if (statusFilter === 'crawled') {
-      q = q.eq('crawl_status', 'crawled');
-    } else if (statusFilter === 'failed') {
-      q = q.eq('crawl_status', 'failed');
-    } else if (statusFilter === 'no_website') {
-      q = q.or('website.is.null,crawl_status.eq.no_website');
-    } else if (statusFilter === 'touchless') {
+    if (statusFilter === 'touchless') {
       q = q.eq('is_touchless', true);
     } else if (statusFilter === 'not_touchless') {
       q = q.eq('is_touchless', false);
+    } else if (statusFilter === 'classified') {
+      q = q.eq('crawl_status', 'classified');
+    } else if (statusFilter === 'unprocessed') {
+      q = q.is('crawl_status', null).not('website', 'is', null);
+    } else if (statusFilter === 'fetch_failed') {
+      q = q.eq('crawl_status', 'fetch_failed');
+    } else if (statusFilter === 'classify_failed') {
+      q = q.or('crawl_status.eq.classify_failed,crawl_status.eq.unknown');
+    } else if (statusFilter === 'no_website') {
+      q = q.or('website.is.null,crawl_status.eq.no_website');
     }
 
     if (featuredFilter) {
@@ -871,26 +875,46 @@ export default function AdminListingsPage() {
       return <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300">No Website</Badge>;
     }
     switch (status) {
-      case 'pending':
+      case 'classified':
         return (
-          <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
-            <Clock className="w-3 h-3 mr-1" />Pending
+          <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">
+            <CheckCircle2 className="w-3 h-3 mr-1" />Classified
+          </Badge>
+        );
+      case 'fetch_failed':
+        return (
+          <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300">
+            <XCircle className="w-3 h-3 mr-1" />Fetch Failed
+          </Badge>
+        );
+      case 'classify_failed':
+        return (
+          <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300">
+            <XCircle className="w-3 h-3 mr-1" />Classify Failed
+          </Badge>
+        );
+      case 'unknown':
+        return (
+          <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-300">
+            <AlertCircle className="w-3 h-3 mr-1" />Unknown
           </Badge>
         );
       case 'crawled':
         return (
           <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">
-            <CheckCircle2 className="w-3 h-3 mr-1" />Verified
+            <CheckCircle2 className="w-3 h-3 mr-1" />Crawled
           </Badge>
         );
-      case 'failed':
+      case 'no_website':
+        return <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300">No Website</Badge>;
+      case null:
         return (
-          <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300">
-            <XCircle className="w-3 h-3 mr-1" />Failed
+          <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
+            <Clock className="w-3 h-3 mr-1" />Unprocessed
           </Badge>
         );
       default:
-        return <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300">Unknown</Badge>;
+        return <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300">{status}</Badge>;
     }
   };
 
@@ -986,13 +1010,13 @@ export default function AdminListingsPage() {
               </div>
               <Button
                 onClick={verifyBatch}
-                disabled={batchVerifying || dbStats.pending === 0}
+                disabled={batchVerifying || dbStats.unprocessed === 0}
                 className="bg-[#22C55E] hover:bg-[#16A34A] text-white"
               >
                 {batchVerifying ? (
                   <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Verifying...</>
                 ) : (
-                  `Verify Next ${Math.min(dbStats.pending, batchSize)}`
+                  `Verify Next ${Math.min(dbStats.unprocessed, batchSize)}`
                 )}
               </Button>
               <Button asChild variant="outline">
@@ -1007,27 +1031,31 @@ export default function AdminListingsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-8 gap-4 mb-6">
+        <div className="grid grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
           <Card
             className="cursor-pointer hover:border-[#0F2744] transition-colors"
             onClick={() => { setStatusFilter('all'); setChainFilter('all'); setFeaturedFilter(false); }}
-          ><CardContent className="pt-6"><div className={`text-2xl font-bold text-[#0F2744]`}>{dbStats.total.toLocaleString()}</div><div className="text-sm text-gray-600">Total Listings</div>{statusFilter === 'all' && chainFilter === 'all' && !featuredFilter && <div className="mt-2 h-0.5 bg-[#0F2744] rounded-full" />}</CardContent></Card>
-          <Card
-            className="cursor-pointer hover:border-yellow-400 transition-colors"
-            onClick={() => { setStatusFilter(statusFilter === 'pending' ? 'all' : 'pending'); setChainFilter('all'); }}
-          ><CardContent className="pt-6"><div className="text-2xl font-bold text-yellow-600">{dbStats.pending.toLocaleString()}</div><div className="text-sm text-gray-600">Pending Verification</div>{statusFilter === 'pending' && <div className="mt-2 h-0.5 bg-yellow-400 rounded-full" />}</CardContent></Card>
-          <Card
-            className="cursor-pointer hover:border-blue-400 transition-colors"
-            onClick={() => { setStatusFilter(statusFilter === 'crawled' ? 'all' : 'crawled'); setChainFilter('all'); }}
-          ><CardContent className="pt-6"><div className="text-2xl font-bold text-blue-600">{dbStats.verified.toLocaleString()}</div><div className="text-sm text-gray-600">Verified</div>{statusFilter === 'crawled' && <div className="mt-2 h-0.5 bg-blue-400 rounded-full" />}</CardContent></Card>
-          <Card
-            className="cursor-pointer hover:border-red-400 transition-colors"
-            onClick={() => { setStatusFilter(statusFilter === 'failed' ? 'all' : 'failed'); setChainFilter('all'); }}
-          ><CardContent className="pt-6"><div className="text-2xl font-bold text-red-500">{dbStats.failed.toLocaleString()}</div><div className="text-sm text-gray-600">Failed</div>{statusFilter === 'failed' && <div className="mt-2 h-0.5 bg-red-400 rounded-full" />}</CardContent></Card>
+          ><CardContent className="pt-6"><div className="text-2xl font-bold text-[#0F2744]">{dbStats.total.toLocaleString()}</div><div className="text-sm text-gray-600">Total</div>{statusFilter === 'all' && chainFilter === 'all' && !featuredFilter && <div className="mt-2 h-0.5 bg-[#0F2744] rounded-full" />}</CardContent></Card>
           <Card
             className="cursor-pointer hover:border-green-400 transition-colors"
             onClick={() => { setStatusFilter(statusFilter === 'touchless' ? 'all' : 'touchless'); setChainFilter('all'); }}
           ><CardContent className="pt-6"><div className="text-2xl font-bold text-[#22C55E]">{dbStats.touchless.toLocaleString()}</div><div className="text-sm text-gray-600">Touchless</div>{statusFilter === 'touchless' && <div className="mt-2 h-0.5 bg-[#22C55E] rounded-full" />}</CardContent></Card>
+          <Card
+            className="cursor-pointer hover:border-red-400 transition-colors"
+            onClick={() => { setStatusFilter(statusFilter === 'not_touchless' ? 'all' : 'not_touchless'); setChainFilter('all'); }}
+          ><CardContent className="pt-6"><div className="text-2xl font-bold text-red-500">{dbStats.notTouchless.toLocaleString()}</div><div className="text-sm text-gray-600">Not Touchless</div>{statusFilter === 'not_touchless' && <div className="mt-2 h-0.5 bg-red-400 rounded-full" />}</CardContent></Card>
+          <Card
+            className="cursor-pointer hover:border-blue-400 transition-colors"
+            onClick={() => { setStatusFilter(statusFilter === 'classified' ? 'all' : 'classified'); setChainFilter('all'); }}
+          ><CardContent className="pt-6"><div className="text-2xl font-bold text-blue-600">{dbStats.classified.toLocaleString()}</div><div className="text-sm text-gray-600">Classified</div>{statusFilter === 'classified' && <div className="mt-2 h-0.5 bg-blue-400 rounded-full" />}</CardContent></Card>
+          <Card
+            className="cursor-pointer hover:border-yellow-400 transition-colors"
+            onClick={() => { setStatusFilter(statusFilter === 'unprocessed' ? 'all' : 'unprocessed'); setChainFilter('all'); }}
+          ><CardContent className="pt-6"><div className="text-2xl font-bold text-yellow-600">{dbStats.unprocessed.toLocaleString()}</div><div className="text-sm text-gray-600">Unprocessed</div>{statusFilter === 'unprocessed' && <div className="mt-2 h-0.5 bg-yellow-400 rounded-full" />}</CardContent></Card>
+          <Card
+            className="cursor-pointer hover:border-orange-400 transition-colors"
+            onClick={() => { setStatusFilter(statusFilter === 'fetch_failed' ? 'all' : 'fetch_failed'); setChainFilter('all'); }}
+          ><CardContent className="pt-6"><div className="text-2xl font-bold text-orange-500">{dbStats.fetchFailed.toLocaleString()}</div><div className="text-sm text-gray-600">Fetch Failed</div>{statusFilter === 'fetch_failed' && <div className="mt-2 h-0.5 bg-orange-400 rounded-full" />}</CardContent></Card>
           <Card
             className="cursor-pointer hover:border-gray-400 transition-colors"
             onClick={() => { setStatusFilter(statusFilter === 'no_website' ? 'all' : 'no_website'); setChainFilter('all'); }}
@@ -1046,16 +1074,6 @@ export default function AdminListingsPage() {
                 </div>
               )}
               {chainFilter === 'chains_only' && <div className="mt-2 h-0.5 bg-[#0F2744] rounded-full" />}
-            </CardContent>
-          </Card>
-          <Card
-            className="cursor-pointer hover:border-amber-400 transition-colors"
-            onClick={() => setFeaturedFilter((prev) => !prev)}
-          >
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold text-amber-600">{dbStats.featured.toLocaleString()}</div>
-              <div className="text-sm text-gray-600">Featured</div>
-              {featuredFilter && <div className="mt-2 h-0.5 bg-amber-400 rounded-full" />}
             </CardContent>
           </Card>
         </div>
@@ -1077,12 +1095,13 @@ export default function AdminListingsPage() {
                 onChange={(e) => { setStatusFilter(e.target.value); setChainFilter('all'); }}
                 className="border rounded-md px-4 py-2 text-sm"
               >
-                <option value="all">All Status</option>
-                <option value="pending">Pending Verification</option>
-                <option value="crawled">Verified</option>
-                <option value="failed">Failed</option>
+                <option value="all">All Listings</option>
                 <option value="touchless">Touchless</option>
                 <option value="not_touchless">Not Touchless</option>
+                <option value="classified">Classified</option>
+                <option value="unprocessed">Unprocessed</option>
+                <option value="fetch_failed">Fetch Failed</option>
+                <option value="classify_failed">Classify Failed / Unknown</option>
                 <option value="no_website">No Website</option>
               </select>
               <select
@@ -1424,7 +1443,7 @@ export default function AdminListingsPage() {
                         >
                           <Pencil className="w-4 h-4 mr-2" />Edit
                         </Button>
-                        {listing.website && listing.crawl_status === 'pending' && (
+                        {listing.website && listing.crawl_status === null && (
                           <Button
                             size="sm"
                             onClick={() => verifySingleListing(listing.id)}
@@ -1436,7 +1455,7 @@ export default function AdminListingsPage() {
                             ) : 'Verify'}
                           </Button>
                         )}
-                        {(listing.crawl_status === 'crawled' || listing.crawl_status === 'failed') && listing.website && (
+                        {(listing.crawl_status === 'classified' || listing.crawl_status === 'crawled' || listing.crawl_status === 'fetch_failed' || listing.crawl_status === 'classify_failed') && listing.website && (
                           <>
                             {listing.crawl_status === 'crawled' && (!listing.photos || listing.photos.length === 0) && (
                               <Button
