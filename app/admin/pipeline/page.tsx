@@ -373,6 +373,18 @@ export default function PipelinePage() {
 
     const cursors: Record<string, string | null> = { ...firecrawlJobCursors };
     const done: Record<string, boolean> = { ...firecrawlJobDone };
+
+    // Pre-mark any batches that are already fully classified so we don't re-run Claude on them
+    const jobIds = firecrawlJobs.map(j => j.job_id);
+    const { data: batchRows } = await supabase
+      .from('pipeline_batches')
+      .select('firecrawl_job_id, classify_status')
+      .in('firecrawl_job_id', jobIds);
+    for (const row of (batchRows ?? [])) {
+      if (row.classify_status === 'completed' || row.classify_status === 'expired') {
+        done[row.firecrawl_job_id] = true;
+      }
+    }
     const scraped: Record<string, number> = { ...firecrawlJobScraped };
     const pagesClassified: Record<string, number> = { ...firecrawlJobPagesClassified };
     const totalPages: Record<string, number> = { ...firecrawlJobTotalPages };
