@@ -184,10 +184,12 @@ async function processBatch(
     .neq("website", "")
     .order("state", { ascending: true })
     .order("city", { ascending: true })
-    .range(offset, offset + BATCH_SIZE - 1);
+    .limit(BATCH_SIZE);
 
   if (neverAttemptedOnly) {
     query = query.is("crawl_status", null);
+  } else {
+    query = query.range(offset, offset + BATCH_SIZE - 1);
   }
 
   const { data: listings } = await query;
@@ -213,7 +215,7 @@ async function processBatch(
     else failed++;
   }
 
-  const newOffset = offset + listings.length;
+  const newOffset = neverAttemptedOnly ? offset : offset + listings.length;
 
   await supabase.rpc("increment_pipeline_job_counts", {
     p_job_id: jobId,
