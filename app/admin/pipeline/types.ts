@@ -2,12 +2,14 @@ export interface ClassifyStats {
   total: number;
   touchless: number;
   not_touchless: number;
-  unclassified_with_website: number;
-  unclassified_no_website: number;
+  no_website: number;
   fetch_failed: number;
   classify_failed: number;
   unknown: number;
+  null_result: number;
   never_attempted: number;
+  other_unclassified: number;
+  unclassified_with_website: number;
 }
 
 export interface RecentListing {
