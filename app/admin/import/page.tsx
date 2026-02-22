@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   ArrowLeft, Link2, Loader2, CheckCircle2, XCircle, ExternalLink,
   MapPin, Phone, Globe, Star, Clock, Sparkles, Image as ImageIcon,
-  AlertCircle, ChevronRight, Images
+  AlertCircle, ChevronRight, Images, Tag
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -163,6 +163,20 @@ export default function ImportPage() {
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               Bulk Import (CSV/Excel)
+            </Link>
+            <Link
+              href="/admin/import/enrich-photos"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-teal-600 hover:text-teal-800 border border-teal-200 hover:border-teal-400 rounded-lg px-3 py-2 bg-teal-50 hover:bg-teal-100 transition-colors"
+            >
+              <ImageIcon className="w-4 h-4" />
+              Photo Enrichment
+            </Link>
+            <Link
+              href="/admin/import/amenity-backfill"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-teal-600 hover:text-teal-800 border border-teal-200 hover:border-teal-400 rounded-lg px-3 py-2 bg-teal-50 hover:bg-teal-100 transition-colors"
+            >
+              <Tag className="w-4 h-4" />
+              Amenity Backfill
             </Link>
             <Link
               href="/admin/import/hours"
