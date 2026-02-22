@@ -105,6 +105,10 @@ function mapRowToListing(row: RawRow) {
 
   const placeId = col(row, 'place_id', 'Place ID', 'google_place_id', 'Google Place ID') || null;
 
+  const website = col(row, 'website', 'Website', 'url', 'URL', 'website_url') || null;
+  const isTouchlessCol = col(row, 'is_touchless', 'Is Touchless').toUpperCase();
+  const isTouchlessFromCol = isTouchlessCol === 'YES' ? true : isTouchlessCol === 'NO' ? false : null;
+
   const listing: Record<string, unknown> = {
     name,
     slug: makeSlug(row),
@@ -113,7 +117,7 @@ function mapRowToListing(row: RawRow) {
     state: state.toUpperCase().slice(0, 2),
     zip: zip.replace(/^(\d{4})$/, '0$1'),
     phone: col(row, 'phone', 'Phone', 'phone_number', 'Phone Number') || null,
-    website: col(row, 'website', 'Website', 'url', 'URL', 'website_url') || null,
+    website,
     rating: numCol(row, 'rating', 'Rating', 'stars', 'Stars'),
     review_count: Math.round(numCol(row, 'review_count', 'Review Count', 'reviews', 'Reviews', 'num_reviews')),
     latitude: numColOrNull(row, 'latitude', 'Latitude', 'lat', 'Lat'),
@@ -125,8 +129,15 @@ function mapRowToListing(row: RawRow) {
     photos: safeJsonArray(row, 'photos', 'Photos'),
     amenities: safeJsonArray(row, 'amenities', 'Amenities'),
     wash_packages: safeJsonArray(row, 'wash_packages', 'Wash Packages'),
-    hours: safeJsonObject(row, 'hours', 'Hours'),
+    hours: safeJsonObject(row, 'hours', 'Hours', 'working_hours', 'Working Hours'),
+    crawl_status: website ? null : 'no_website',
   };
+
+  if (isTouchlessFromCol !== null) {
+    listing.is_touchless = isTouchlessFromCol;
+    listing.touchless_confidence = isTouchlessFromCol ? 'high' : 'low';
+    listing.touchless_evidence = 'Name-based classification';
+  }
 
   const googlePhotoUrl = col(row, 'photo', 'Photo');
   if (googlePhotoUrl) listing.google_photo_url = googlePhotoUrl;
