@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import { slugify } from '@/lib/constants';
+import { supabase } from '@/lib/supabase';
 import {
   ChevronRight, Images, Loader2, CheckCircle2, AlertCircle,
-  RefreshCw, XCircle, ChevronDown, ChevronUp,
+  RefreshCw, XCircle, ImageIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +15,8 @@ import { AdminNav } from '@/components/AdminNav';
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const STORAGE_KEY = 'gallery_backfill_last_job';
+const MIN_GALLERY_TARGET = 3;
+const MAX_GALLERY_PHOTOS = 5;
 
 type JobStatus = 'idle' | 'running' | 'done' | 'cancelled' | 'error';
 
@@ -57,6 +61,16 @@ interface TaskTrace {
   finished_at: string | null;
 }
 
+interface ListingDetail {
+  id: string;
+  name: string;
+  city: string;
+  state: string;
+  slug: string | null;
+  photos: string[] | null;
+  hero_image: string | null;
+}
+
 function Pill({ label, color }: { label: string; color: string }) {
   return (
     <span className={`inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-semibold ${color}`}>
@@ -65,62 +79,84 @@ function Pill({ label, color }: { label: string; color: string }) {
   );
 }
 
-function TraceRow({ task }: { task: TaskTrace }) {
-  const [open, setOpen] = useState(false);
-  const gained = task.photos_after - task.photos_before;
+function ResultCard({ trace, listing }: { trace: TaskTrace; listing: ListingDetail | null }) {
+  const gained = trace.photos_after - trace.photos_before;
+  const photos = listing?.photos ?? [];
+  const href = listing?.slug && listing?.city && listing?.state
+    ? `/car-washes/${slugify(listing.state)}/${slugify(listing.city)}/${listing.slug}`
+    : null;
 
-  return (
-    <div className="border border-gray-100 rounded-lg overflow-hidden">
-      <button
-        onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 transition-colors"
-      >
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-[#0F2744] truncate">{task.listing_name}</p>
-          <p className="text-[10px] text-gray-400 truncate mt-0.5">Place ID: {task.google_place_id}</p>
-        </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          {gained > 0
-            ? <Pill label={`+${gained} photos`} color="bg-teal-50 text-teal-700 border-teal-200" />
-            : <Pill label="No new photos" color="bg-gray-100 text-gray-500 border-gray-200" />
-          }
-          {open ? <ChevronUp className="w-3.5 h-3.5 text-gray-400" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-400" />}
-        </div>
-      </button>
-
-      {open && (
-        <div className="px-3 pb-3 space-y-2.5 border-t border-gray-100 pt-3 bg-gray-50/50">
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Photos</p>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <Pill label={`${task.photos_before} before`} color="bg-gray-100 text-gray-600 border-gray-200" />
-                <Pill
-                  label={`${task.photos_after} after`}
-                  color={task.photos_after > task.photos_before ? 'bg-teal-50 text-teal-700 border-teal-200' : 'bg-gray-100 text-gray-600 border-gray-200'}
+  const inner = (
+    <>
+      <div className="relative aspect-video bg-gray-100 rounded-t-lg overflow-hidden">
+        {photos.length > 0 ? (
+          <div className={`grid h-full ${photos.length === 1 ? 'grid-cols-1' : photos.length === 2 ? 'grid-cols-2' : 'grid-cols-2'} gap-px`}>
+            {photos.slice(0, Math.min(photos.length, 4)).map((url, i) => (
+              <div
+                key={i}
+                className={`relative overflow-hidden bg-gray-100 ${photos.length === 3 && i === 0 ? 'row-span-2' : ''}`}
+              >
+                <img
+                  src={url}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
                 />
               </div>
-            </div>
-            <div className="space-y-1">
-              <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">API Results</p>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <Pill label={`${task.place_photos_fetched} fetched`} color="bg-gray-100 text-gray-600 border-gray-200" />
-                <Pill label={`${task.place_photos_screened} screened`} color="bg-gray-100 text-gray-600 border-gray-200" />
-                <Pill
-                  label={`${task.place_photos_approved} approved`}
-                  color={task.place_photos_approved > 0 ? 'bg-teal-50 text-teal-700 border-teal-200' : 'bg-gray-100 text-gray-500 border-gray-200'}
-                />
-              </div>
-            </div>
+            ))}
           </div>
-
-          {task.fallback_reason && (
-            <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 leading-relaxed">
-              {task.fallback_reason}
-            </p>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <ImageIcon className="w-8 h-8 text-gray-300" />
+          </div>
+        )}
+        <div className="absolute top-1.5 left-1.5">
+          {gained > 0 ? (
+            <Pill label={`+${gained} new`} color="bg-teal-600 text-white border-teal-600" />
+          ) : (
+            <Pill label="No new" color="bg-gray-800/70 text-gray-100 border-transparent" />
           )}
         </div>
-      )}
+        {photos.length > 0 && (
+          <div className="absolute bottom-1.5 right-1.5">
+            <Pill label={`${photos.length} total`} color="bg-black/60 text-white border-transparent" />
+          </div>
+        )}
+      </div>
+      <div className="p-2.5">
+        <p className="text-xs font-semibold text-[#0F2744] truncate group-hover:underline">{trace.listing_name}</p>
+        {listing && (
+          <p className="text-[10px] text-gray-400 truncate mt-0.5">{listing.city}, {listing.state}</p>
+        )}
+        <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+          <Pill label={`${trace.place_photos_fetched} fetched`} color="bg-gray-100 text-gray-500 border-gray-200" />
+          <Pill label={`${trace.place_photos_approved} approved`} color={trace.place_photos_approved > 0 ? 'bg-teal-50 text-teal-700 border-teal-200' : 'bg-gray-100 text-gray-500 border-gray-200'} />
+        </div>
+        {trace.fallback_reason && (
+          <p className="text-[10px] text-amber-700 mt-1.5 leading-snug truncate" title={trace.fallback_reason}>
+            {trace.fallback_reason}
+          </p>
+        )}
+      </div>
+    </>
+  );
+
+  if (href) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group bg-white rounded-lg border border-gray-200 overflow-hidden hover:border-teal-300 hover:shadow-sm transition-all block"
+      >
+        {inner}
+      </a>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      {inner}
     </div>
   );
 }
@@ -132,8 +168,9 @@ export default function GalleryBackfillPage() {
   const [jobStatus, setJobStatus] = useState<JobStatus>('idle');
   const [jobProgress, setJobProgress] = useState<JobProgress | null>(null);
   const [traces, setTraces] = useState<TaskTrace[]>([]);
-  const [showTraces, setShowTraces] = useState(false);
-  const [loadingTraces, setLoadingTraces] = useState(false);
+  const [listingDetails, setListingDetails] = useState<Record<string, ListingDetail>>({});
+  const [showResults, setShowResults] = useState(false);
+  const [loadingResults, setLoadingResults] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; msg: string } | null>(null);
   const jobIdRef = useRef<number | null>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
@@ -159,17 +196,30 @@ export default function GalleryBackfillPage() {
     }
   }, [callFn]);
 
-  const loadTraces = useCallback(async (jobId: number) => {
-    setLoadingTraces(true);
+  const loadResults = useCallback(async (jobId: number) => {
+    setLoadingResults(true);
     try {
       const res = await callFn({ action: 'task_traces', job_id: jobId });
-      if (res.ok) {
-        const data = await res.json();
-        setTraces(data.tasks ?? []);
-        setShowTraces(true);
+      if (!res.ok) return;
+      const data = await res.json();
+      const taskList: TaskTrace[] = data.tasks ?? [];
+      setTraces(taskList);
+      setShowResults(true);
+
+      if (taskList.length > 0) {
+        const ids = taskList.map(t => t.listing_id);
+        const { data: listings } = await supabase
+          .from('listings')
+          .select('id, name, city, state, slug, photos, hero_image')
+          .in('id', ids);
+        if (listings) {
+          const map: Record<string, ListingDetail> = {};
+          for (const l of listings) map[l.id] = l as ListingDetail;
+          setListingDetails(map);
+        }
       }
     } finally {
-      setLoadingTraces(false);
+      setLoadingResults(false);
     }
   }, [callFn]);
 
@@ -187,9 +237,9 @@ export default function GalleryBackfillPage() {
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ jobId, status: finalStatus })); } catch {}
       loadStatus();
       showToast('success', `Done! ${data.succeeded} of ${data.total} listings gained new photos.`);
-      loadTraces(jobId);
+      loadResults(jobId);
     }
-  }, [callFn, loadStatus, showToast, loadTraces]);
+  }, [callFn, loadStatus, showToast, loadResults]);
 
   useEffect(() => {
     loadStatus();
@@ -207,7 +257,7 @@ export default function GalleryBackfillPage() {
               setJobProgress(data);
               if (data.status === 'done' || data.status === 'cancelled') {
                 setJobStatus(data.status === 'done' ? 'done' : 'cancelled');
-                loadTraces(jobId);
+                loadResults(jobId);
               } else if (data.status === 'running') {
                 setJobStatus('running');
                 if (pollRef.current) clearInterval(pollRef.current);
@@ -227,7 +277,8 @@ export default function GalleryBackfillPage() {
     setJobStatus('running');
     setJobProgress(null);
     setTraces([]);
-    setShowTraces(false);
+    setListingDetails({});
+    setShowResults(false);
     try {
       const limit = mode === 'test' ? testLimit : 0;
       const since = mode === 'today'
@@ -256,8 +307,8 @@ export default function GalleryBackfillPage() {
     await callFn({ action: 'cancel', job_id: jobId });
     setJobStatus('cancelled');
     showToast('info', 'Job cancelled.');
-    loadTraces(jobId);
-  }, [callFn, showToast, loadTraces]);
+    loadResults(jobId);
+  }, [callFn, showToast, loadResults]);
 
   const handleReset = useCallback(() => {
     if (pollRef.current) clearInterval(pollRef.current);
@@ -266,7 +317,8 @@ export default function GalleryBackfillPage() {
     setJobStatus('idle');
     setJobProgress(null);
     setTraces([]);
-    setShowTraces(false);
+    setListingDetails({});
+    setShowResults(false);
   }, []);
 
   const pct = jobProgress && jobProgress.total > 0
@@ -275,7 +327,9 @@ export default function GalleryBackfillPage() {
 
   const gainedCount = traces.filter(t => t.photos_after > t.photos_before).length;
   const noGainCount = traces.filter(t => t.task_status === 'done' && t.photos_after <= t.photos_before).length;
-  const doneCount = traces.filter(t => t.task_status === 'done').length;
+
+  const gainedTraces = traces.filter(t => t.photos_after > t.photos_before);
+  const noGainTraces = traces.filter(t => t.task_status === 'done' && t.photos_after <= t.photos_before);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -291,7 +345,7 @@ export default function GalleryBackfillPage() {
         </div>
       )}
 
-      <div className="container mx-auto px-4 max-w-3xl py-10">
+      <div className="container mx-auto px-4 max-w-4xl py-10">
         <div className="flex items-center gap-2 mb-1">
           <Link href="/admin" className="text-sm text-gray-500 hover:text-[#0F2744] transition-colors">Admin</Link>
           <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
@@ -504,47 +558,66 @@ export default function GalleryBackfillPage() {
           </CardContent>
         </Card>
 
-        {(showTraces || loadingTraces) && (
-          <Card className="mb-6">
-            <CardHeader className="pb-3 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-[#0F2744]">
-                  Per-Listing Results
-                </CardTitle>
-                {doneCount > 0 && (
-                  <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                    {gainedCount > 0 && (
-                      <Pill label={`${gainedCount} gained photos`} color="bg-teal-50 text-teal-700 border-teal-200" />
-                    )}
-                    {noGainCount > 0 && (
-                      <Pill label={`${noGainCount} no new photos`} color="bg-gray-100 text-gray-500 border-gray-200" />
-                    )}
-                  </div>
-                )}
+        {(showResults || loadingResults) && (
+          <>
+            {loadingResults ? (
+              <div className="flex items-center gap-2 text-sm text-gray-400 py-8 justify-center">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading results…
               </div>
-            </CardHeader>
-            <CardContent className="p-4">
-              {loadingTraces ? (
-                <div className="flex items-center gap-2 text-sm text-gray-400 py-4 justify-center">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Loading results…
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {traces.length === 0 ? (
-                    <p className="text-sm text-gray-400 text-center py-4">No results yet.</p>
-                  ) : (
-                    traces.map(task => <TraceRow key={task.id} task={task} />)
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            ) : (
+              <>
+                {gainedTraces.length > 0 && (
+                  <Card className="mb-6">
+                    <CardHeader className="pb-3 border-b border-gray-100">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-semibold text-[#0F2744]">
+                          Gained New Photos
+                          <span className="ml-2 text-xs font-normal text-gray-400">— click to open listing</span>
+                        </CardTitle>
+                        <Pill label={`${gainedCount} listings`} color="bg-teal-50 text-teal-700 border-teal-200" />
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {gainedTraces.map(task => (
+                          <ResultCard
+                            key={task.id}
+                            trace={task}
+                            listing={listingDetails[task.listing_id] ?? null}
+                          />
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {noGainTraces.length > 0 && (
+                  <Card className="mb-6">
+                    <CardHeader className="pb-3 border-b border-gray-100">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-semibold text-[#0F2744]">No New Photos</CardTitle>
+                        <Pill label={`${noGainCount} listings`} color="bg-gray-100 text-gray-500 border-gray-200" />
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {noGainTraces.map(task => (
+                          <ResultCard
+                            key={task.id}
+                            trace={task}
+                            listing={listingDetails[task.listing_id] ?? null}
+                          />
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            )}
+          </>
         )}
       </div>
     </div>
   );
 }
-
-const MIN_GALLERY_TARGET = 3;
-const MAX_GALLERY_PHOTOS = 5;
