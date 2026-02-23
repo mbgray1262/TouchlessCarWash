@@ -161,13 +161,27 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                     <MapPin className="w-4 h-4" />
                     {listing.address}
                   </span>
-                  {listing.rating > 0 && (
-                    <span className="flex items-center gap-1.5">
-                      <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                      <span className="font-semibold text-white">{Number(listing.rating).toFixed(1)}</span>
-                      <span className="text-white/60">({listing.review_count} reviews)</span>
-                    </span>
-                  )}
+                  {listing.rating > 0 && (() => {
+                    const ratingContent = (
+                      <>
+                        <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                        <span className="font-semibold text-white">{Number(listing.rating).toFixed(1)}</span>
+                        <span className="text-white/60">({listing.review_count} reviews)</span>
+                      </>
+                    );
+                    return listing.google_place_id ? (
+                      <a
+                        href={`https://www.google.com/maps/place/?q=place_id:${listing.google_place_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 hover:underline underline-offset-2 decoration-white/40 transition-all"
+                      >
+                        {ratingContent}
+                      </a>
+                    ) : (
+                      <span className="flex items-center gap-1.5">{ratingContent}</span>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

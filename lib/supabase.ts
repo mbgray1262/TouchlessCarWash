@@ -48,6 +48,7 @@ export type Listing = {
   booking_url: string | null;
   google_maps_url: string | null;
   google_id: string | null;
+  google_place_id: string | null;
 };
 
 export type Review = {
