@@ -46,15 +46,29 @@ async function fetchImageAsBase64(url: string): Promise<{ base64: string; mediaT
 async function classifyPhotoWithClaude(
   imageUrl: string,
   apiKey: string,
+  approvedUrls: string[] = [],
 ): Promise<{ verdict: 'GOOD' | 'BAD_CONTACT' | 'BAD_OTHER'; reason: string }> {
   const img = await fetchImageAsBase64(imageUrl);
   if (!img) return { verdict: 'BAD_OTHER', reason: 'Could not fetch image' };
 
+  const refImages = (await Promise.all(
+    approvedUrls.slice(0, 3).map(u => fetchImageAsBase64(u))
+  )).filter((x): x is { base64: string; mediaType: string } => x !== null);
+
+  const dedupClause = refImages.length > 0
+    ? '\nAlso reject this photo (as BAD_OTHER) if it shows essentially the same view as any of the already-approved photos shown above — we want visual variety, not multiple shots of the same angle.'
+    : '';
+
   const prompt = `You are evaluating a photo for a touchless car wash directory. Classify this image as:
 GOOD (clear exterior shot of an automated/touchless car wash facility, wash tunnel, or building signage),
 BAD_CONTACT (shows brushes, cloth strips, mops, or any contact wash equipment), or
-BAD_OTHER (poor quality, car interior, people only, logo/graphic, blurry, or not clearly a car wash).
+BAD_OTHER (poor quality, car interior, people only, logo/graphic, blurry, or not clearly a car wash).${dedupClause}
 Reply with only the classification and a one-sentence reason, formatted as: VERDICT: reason`;
+
+  const refBlocks = refImages.flatMap((r, i) => [
+    { type: 'text' as const, text: `Already-approved photo ${i + 1}:` },
+    { type: 'image' as const, source: { type: 'base64' as const, media_type: r.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp', data: r.base64 } },
+  ]);
 
   const maxAttempts = 4;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -71,9 +85,11 @@ Reply with only the classification and a one-sentence reason, formatted as: VERD
         messages: [{
           role: 'user',
           content: [
+            ...refBlocks,
+            { type: 'text', text: refImages.length > 0 ? 'Now evaluate this new candidate photo:' : '' },
             { type: 'image', source: { type: 'base64', media_type: img.mediaType, data: img.base64 } },
             { type: 'text', text: prompt },
-          ],
+          ].filter(b => b.type !== 'text' || (b as {type: string; text: string}).text !== ''),
         }],
       }),
     });
@@ -375,7 +391,7 @@ Deno.serve(async (req: Request) => {
                 if (currentPhotos.length + newApproved.length >= MAX_GALLERY_PHOTOS) break;
                 placePhotosScreened++;
                 try {
-                  const result = await classifyPhotoWithClaude(url, anthropicKey);
+                  const result = await classifyPhotoWithClaude(url, anthropicKey, [...currentPhotos, ...newApproved]);
                   if (result.verdict === 'GOOD') {
                     const slot = `gallery_bp_${currentPhotos.length + newApproved.length}_${Date.now()}`;
                     const rehosted = await rehostToStorage(supabase, url, task.listing_id as string, slot);
