@@ -78,22 +78,56 @@ Reply with only the classification and a one-sentence reason, formatted as: VERD
   return { verdict: 'BAD_OTHER', reason: clean.replace(/^BAD_OTHER[:\s-]*/i, '').trim() };
 }
 
-function filterCandidateUrls(images: string[], alreadySeen: string[]): string[] {
+interface UrlTraceEntry {
+  url: string;
+  passed: boolean;
+  reason: string | null;
+}
+
+function filterCandidateUrlsWithTrace(
+  images: string[],
+  alreadySeen: string[],
+): { candidates: string[]; trace: UrlTraceEntry[] } {
   const seen = new Set(alreadySeen);
-  return images.filter(url => {
-    if (seen.has(url)) return false;
+  const trace: UrlTraceEntry[] = [];
+
+  const KEYWORD_RULES: Array<{ test: (s: string) => boolean; label: string }> = [
+    { test: s => seen.has(s), label: 'already seen' },
+    { test: s => s.includes('favicon'), label: "'favicon' keyword" },
+    { test: s => s.includes('logo'), label: "'logo' keyword" },
+    { test: s => s.includes('icon'), label: "'icon' keyword" },
+    { test: s => s.includes('facebook.com') || s.includes('twitter.com') || s.includes('instagram.com'), label: 'social domain' },
+    { test: s => s.includes('google-analytics') || s.includes('pixel') || s.includes('tracking'), label: 'tracking keyword' },
+    { test: s => s.includes('1x1') || s.includes('spacer') || s.includes('blank'), label: 'spacer/blank keyword' },
+    { test: s => s.includes('badge') || s.includes('banner') || s.includes('button'), label: "'banner'/'badge'/'button' keyword" },
+    { test: s => s.includes('simoniz') || s.includes('armorall') || s.includes('turtle') || s.includes('rainx'), label: 'brand product keyword' },
+    { test: s => s.includes('social') || s.includes('share') || s.includes('sprite'), label: "'social'/'share'/'sprite' keyword" },
+  ];
+
+  for (const url of images) {
     const lower = url.toLowerCase();
-    if (lower.includes('favicon')) return false;
-    if (lower.includes('logo')) return false;
-    if (lower.includes('icon')) return false;
-    if (lower.includes('facebook.com') || lower.includes('twitter.com') || lower.includes('instagram.com')) return false;
-    if (lower.includes('google-analytics') || lower.includes('pixel') || lower.includes('tracking')) return false;
-    if (lower.includes('1x1') || lower.includes('spacer') || lower.includes('blank')) return false;
-    if (lower.includes('badge') || lower.includes('banner') || lower.includes('button')) return false;
-    if (lower.includes('simoniz') || lower.includes('armorall') || lower.includes('turtle') || lower.includes('rainx')) return false;
-    if (lower.includes('social') || lower.includes('share') || lower.includes('sprite')) return false;
-    return /\.(jpg|jpeg|png|webp)/i.test(lower);
-  });
+    let rejected = false;
+    for (const rule of KEYWORD_RULES) {
+      if (rule.test(lower)) {
+        trace.push({ url, passed: false, reason: `rejected: ${rule.label}` });
+        rejected = true;
+        break;
+      }
+    }
+    if (rejected) continue;
+    if (!/\.(jpg|jpeg|png|webp)/i.test(lower)) {
+      trace.push({ url, passed: false, reason: 'rejected: no image extension' });
+      continue;
+    }
+    trace.push({ url, passed: true, reason: null });
+  }
+
+  const candidates = trace.filter(e => e.passed).map(e => e.url);
+  return { candidates, trace };
+}
+
+function filterCandidateUrls(images: string[], alreadySeen: string[]): string[] {
+  return filterCandidateUrlsWithTrace(images, alreadySeen).candidates;
 }
 
 async function rehostToStorage(
@@ -385,6 +419,7 @@ Deno.serve(async (req: Request) => {
         firecrawl_images_found: 0,
         firecrawl_candidates: 0,
         firecrawl_approved: 0,
+        firecrawl_url_trace: null as UrlTraceEntry[] | null,
         total_approved: 0,
         fallback_reason: null,
       };
@@ -478,12 +513,14 @@ Deno.serve(async (req: Request) => {
             const html = fcData.data?.html ?? fcData.data?.rawHtml ?? '';
             const rawImages = extractImagesFromHtml(html);
             trace.firecrawl_images_found = rawImages.length;
-            const candidates = filterCandidateUrls(rawImages, badUrls).slice(0, 20);
-            trace.firecrawl_candidates = candidates.length;
+            const { candidates, trace: urlTrace } = filterCandidateUrlsWithTrace(rawImages, badUrls);
+            const slicedCandidates = candidates.slice(0, 20);
+            trace.firecrawl_url_trace = urlTrace;
+            trace.firecrawl_candidates = slicedCandidates.length;
             const approvedBefore = approved.length;
 
             const r = await screenAndRehost(
-              candidates, approved, badUrls, task.listing_id as string,
+              slicedCandidates, approved, badUrls, task.listing_id as string,
               supabase, anthropicKey, MAX_PHOTOS, crawlNotes,
             );
             approved = r.approved;
@@ -593,6 +630,7 @@ Deno.serve(async (req: Request) => {
         firecrawl_images_found: trace.firecrawl_images_found as number,
         firecrawl_candidates: trace.firecrawl_candidates as number,
         firecrawl_approved: trace.firecrawl_approved as number,
+        firecrawl_url_trace: trace.firecrawl_url_trace as UrlTraceEntry[] | null,
         total_approved: trace.total_approved as number,
         fallback_reason: trace.fallback_reason as string | null,
       }).eq('id', task.id);
@@ -648,6 +686,7 @@ Deno.serve(async (req: Request) => {
           'google_photo_exists', 'google_verdict', 'google_reason',
           'website_photos_db_count', 'website_photos_screened', 'website_photos_approved',
           'firecrawl_triggered', 'firecrawl_images_found', 'firecrawl_candidates', 'firecrawl_approved',
+          'firecrawl_url_trace',
           'total_approved', 'fallback_reason',
         ].join(', '))
         .eq('job_id', jobId)

@@ -42,6 +42,12 @@ interface RecentListing {
   logo_photo: string | null;
 }
 
+interface UrlTraceEntry {
+  url: string;
+  passed: boolean;
+  reason: string | null;
+}
+
 interface TaskTrace {
   id: number;
   listing_id: string;
@@ -63,6 +69,7 @@ interface TaskTrace {
   firecrawl_images_found: number;
   firecrawl_candidates: number;
   firecrawl_approved: number;
+  firecrawl_url_trace: UrlTraceEntry[] | null;
   total_approved: number;
   fallback_reason: string | null;
 }
@@ -173,7 +180,7 @@ function TraceRow({ task }: { task: TaskTrace }) {
           </div>
 
           {/* Step 3: Firecrawl */}
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Step 3 — Firecrawl Scrape</p>
             <div className="flex items-center gap-2 flex-wrap">
               <Pill
@@ -191,6 +198,35 @@ function TraceRow({ task }: { task: TaskTrace }) {
                 </>
               )}
             </div>
+            {task.firecrawl_triggered && task.firecrawl_url_trace && task.firecrawl_url_trace.length > 0 && (
+              <div className="mt-1 rounded border border-gray-200 bg-white overflow-hidden">
+                <div className="max-h-48 overflow-y-auto">
+                  {task.firecrawl_url_trace.map((entry, i) => (
+                    <div key={i} className={`flex items-start gap-1.5 px-2 py-1 border-b border-gray-100 last:border-0 ${entry.passed ? 'bg-teal-50/40' : ''}`}>
+                      <span className="shrink-0 mt-0.5 text-[11px] leading-none">
+                        {entry.passed ? '✅' : '❌'}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <a
+                          href={entry.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] text-blue-600 hover:underline break-all leading-tight block"
+                        >
+                          {entry.url}
+                        </a>
+                        {!entry.passed && entry.reason && (
+                          <span className="text-[10px] text-red-500 leading-tight">{entry.reason}</span>
+                        )}
+                        {entry.passed && (
+                          <span className="text-[10px] text-teal-600 leading-tight">passed filter</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Result */}
