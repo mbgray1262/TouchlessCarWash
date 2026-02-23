@@ -32,7 +32,8 @@ export default function PhotoLightbox({ photos, index, listingName, onClose, onN
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
+      className="fixed inset-0 flex items-center justify-center bg-black/90"
+      style={{ zIndex: 9999 }}
       onClick={onClose}
     >
       <button
