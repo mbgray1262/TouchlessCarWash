@@ -319,7 +319,7 @@ Deno.serve(async (req: Request) => {
         .eq('job_id', jobId)
         .eq('task_status', 'pending')
         .order('id')
-        .limit(1);
+        .limit(2);
 
       if (!batchTasks || batchTasks.length === 0) {
         await supabase.from('gallery_backfill_jobs').update({
@@ -329,95 +329,100 @@ Deno.serve(async (req: Request) => {
         return Response.json({ done: true }, { headers: corsHeaders });
       }
 
-      const task = batchTasks[0];
-
+      const taskIds = batchTasks.map((t: { id: number }) => t.id);
       await supabase.from('gallery_backfill_tasks')
         .update({ task_status: 'in_progress', updated_at: new Date().toISOString() })
-        .eq('id', task.id);
+        .in('id', taskIds);
 
-      let placePhotosFetched = 0;
-      let placePhotosScreened = 0;
-      let placePhotosApproved = 0;
-      let fallbackReason: string | null = null;
-      let photosAfter = task.photos_before as number;
+      async function processOneTask(task: typeof batchTasks[0]) {
+        let placePhotosFetched = 0;
+        let placePhotosScreened = 0;
+        let placePhotosApproved = 0;
+        let fallbackReason: string | null = null;
+        let photosAfter = task.photos_before as number;
 
-      try {
-        const { data: listingData } = await supabase
-          .from('listings')
-          .select('photos, hero_image, blocked_photos')
-          .eq('id', task.listing_id)
-          .maybeSingle();
+        try {
+          const { data: listingData } = await supabase
+            .from('listings')
+            .select('photos, hero_image, blocked_photos')
+            .eq('id', task.listing_id)
+            .maybeSingle();
 
-        const currentPhotos: string[] = (listingData?.photos as string[]) ?? [];
-        const heroImage: string | null = (listingData?.hero_image as string | null) ?? null;
-        const blockedPhotos: string[] = (listingData?.blocked_photos as string[]) ?? [];
+          const currentPhotos: string[] = (listingData?.photos as string[]) ?? [];
+          const heroImage: string | null = (listingData?.hero_image as string | null) ?? null;
+          const blockedPhotos: string[] = (listingData?.blocked_photos as string[]) ?? [];
 
-        const existingUrls = [...currentPhotos, ...(heroImage ? [heroImage] : []), ...blockedPhotos];
+          const existingUrls = [...currentPhotos, ...(heroImage ? [heroImage] : []), ...blockedPhotos];
 
-        const needed = MAX_GALLERY_PHOTOS - currentPhotos.length;
-        if (needed <= 0) {
-          fallbackReason = 'Already has enough gallery photos';
-        } else {
-          const fetchCount = Math.min(15, needed + 5);
-          const placePhotoUrls = await fetchGooglePlacePhotoUrls(
-            task.google_place_id as string,
-            googleApiKey,
-            existingUrls,
-            fetchCount,
-          );
-          placePhotosFetched = placePhotoUrls.length;
-
-          if (placePhotoUrls.length === 0) {
-            fallbackReason = 'Google Places API returned no photos';
+          const needed = MAX_GALLERY_PHOTOS - currentPhotos.length;
+          if (needed <= 0) {
+            fallbackReason = 'Already has enough gallery photos';
           } else {
-            const newApproved: string[] = [];
-            for (const url of placePhotoUrls) {
-              if (currentPhotos.length + newApproved.length >= MAX_GALLERY_PHOTOS) break;
-              placePhotosScreened++;
-              try {
-                const result = await classifyPhotoWithClaude(url, anthropicKey);
-                if (result.verdict === 'GOOD') {
-                  const slot = `gallery_bp_${currentPhotos.length + newApproved.length}_${Date.now()}`;
-                  const rehosted = await rehostToStorage(supabase, url, task.listing_id as string, slot);
-                  newApproved.push(rehosted ?? url);
-                  placePhotosApproved++;
+            const fetchCount = Math.min(15, needed + 5);
+            const placePhotoUrls = await fetchGooglePlacePhotoUrls(
+              task.google_place_id as string,
+              googleApiKey,
+              existingUrls,
+              fetchCount,
+            );
+            placePhotosFetched = placePhotoUrls.length;
+
+            if (placePhotoUrls.length === 0) {
+              fallbackReason = 'Google Places API returned no photos';
+            } else {
+              const newApproved: string[] = [];
+              for (const url of placePhotoUrls) {
+                if (currentPhotos.length + newApproved.length >= MAX_GALLERY_PHOTOS) break;
+                placePhotosScreened++;
+                try {
+                  const result = await classifyPhotoWithClaude(url, anthropicKey);
+                  if (result.verdict === 'GOOD') {
+                    const slot = `gallery_bp_${currentPhotos.length + newApproved.length}_${Date.now()}`;
+                    const rehosted = await rehostToStorage(supabase, url, task.listing_id as string, slot);
+                    newApproved.push(rehosted ?? url);
+                    placePhotosApproved++;
+                  }
+                } catch {
+                  // skip on error
                 }
-              } catch {
-                // skip on error
+              }
+
+              if (newApproved.length > 0) {
+                const updatedPhotos = [...currentPhotos, ...newApproved];
+                await supabase.from('listings').update({
+                  photos: updatedPhotos,
+                }).eq('id', task.listing_id);
+                photosAfter = updatedPhotos.length;
+              } else {
+                fallbackReason = `${placePhotosScreened} photos screened by Claude — none passed GOOD verdict`;
               }
             }
-
-            if (newApproved.length > 0) {
-              const updatedPhotos = [...currentPhotos, ...newApproved];
-              await supabase.from('listings').update({
-                photos: updatedPhotos,
-              }).eq('id', task.listing_id);
-              photosAfter = updatedPhotos.length;
-            } else {
-              fallbackReason = `${placePhotosScreened} photos screened by Claude — none passed GOOD verdict`;
-            }
           }
+        } catch (e) {
+          fallbackReason = `Error: ${(e as Error).message}`;
         }
-      } catch (e) {
-        fallbackReason = `Error: ${(e as Error).message}`;
+
+        await supabase.from('gallery_backfill_tasks').update({
+          task_status: 'done',
+          place_photos_fetched: placePhotosFetched,
+          place_photos_screened: placePhotosScreened,
+          place_photos_approved: placePhotosApproved,
+          photos_after: photosAfter,
+          fallback_reason: fallbackReason,
+          finished_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }).eq('id', task.id);
+
+        return { succeeded: placePhotosApproved > 0 };
       }
 
-      const succeeded = placePhotosApproved > 0;
-
-      await supabase.from('gallery_backfill_tasks').update({
-        task_status: 'done',
-        place_photos_fetched: placePhotosFetched,
-        place_photos_screened: placePhotosScreened,
-        place_photos_approved: placePhotosApproved,
-        photos_after: photosAfter,
-        fallback_reason: fallbackReason,
-        finished_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }).eq('id', task.id);
+      const results = await Promise.all(batchTasks.map(processOneTask));
+      const processedCount = results.length;
+      const succeededCount = results.filter(r => r.succeeded).length;
 
       await supabase.from('gallery_backfill_jobs').update({
-        processed: (job.processed ?? 0) + 1,
-        succeeded: (job.succeeded ?? 0) + (succeeded ? 1 : 0),
+        processed: (job.processed ?? 0) + processedCount,
+        succeeded: (job.succeeded ?? 0) + succeededCount,
       }).eq('id', jobId);
 
       const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -429,7 +434,7 @@ Deno.serve(async (req: Request) => {
         }).catch(() => {})
       );
 
-      return Response.json({ processed: 1, succeeded: succeeded ? 1 : 0 }, { headers: corsHeaders });
+      return Response.json({ processed: processedCount, succeeded: succeededCount }, { headers: corsHeaders });
     }
 
     // ---- JOB_STATUS ----
