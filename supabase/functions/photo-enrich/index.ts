@@ -358,6 +358,12 @@ Deno.serve(async (req: Request) => {
         .eq('is_touchless', true)
         .not('hero_image', 'is', null);
 
+      const { count: needHero } = await supabase
+        .from('listings')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_touchless', true)
+        .is('hero_image', null);
+
       const { count: googleSrc } = await supabase
         .from('listings')
         .select('id', { count: 'exact', head: true })
@@ -379,6 +385,7 @@ Deno.serve(async (req: Request) => {
       return Response.json({
         total: total ?? 0,
         with_hero: withHero ?? 0,
+        need_hero: needHero ?? 0,
         by_source: {
           google: googleSrc ?? 0,
           website: websiteSrc ?? 0,

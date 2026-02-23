@@ -20,6 +20,7 @@ type JobStatus = 'idle' | 'running' | 'done' | 'cancelled' | 'error';
 interface PipelineStats {
   total: number;
   with_hero: number;
+  need_hero: number;
   by_source: { google: number; website: number; street_view: number };
 }
 
@@ -501,15 +502,20 @@ export default function EnrichPhotosPage() {
 
         {/* Stats */}
         {stats && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
             <div className="bg-white rounded-xl border border-gray-200 p-4">
               <p className="text-xs text-gray-400 mb-1">Total Touchless</p>
               <p className="text-2xl font-bold text-[#0F2744]">{stats.total.toLocaleString()}</p>
             </div>
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="bg-white rounded-xl border border-teal-200 p-4">
               <p className="text-xs text-gray-400 mb-1">Have Hero Image</p>
               <p className="text-2xl font-bold text-teal-600">{stats.with_hero.toLocaleString()}</p>
               <p className="text-xs text-gray-400 mt-0.5">{coveragePct}% coverage</p>
+            </div>
+            <div className="bg-white rounded-xl border border-amber-200 p-4">
+              <p className="text-xs text-gray-400 mb-1">Need Hero Image</p>
+              <p className="text-2xl font-bold text-amber-600">{stats.need_hero.toLocaleString()}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{100 - coveragePct}% remaining</p>
             </div>
             <div className="bg-white rounded-xl border border-gray-200 p-4">
               <p className="text-xs text-gray-400 mb-1">From Google</p>
