@@ -87,7 +87,7 @@ export function ListingCard({ listing, href, showVerifiedBadge = false }: Listin
 
           <div className="flex items-start gap-1.5 text-sm text-gray-500 mb-1">
             <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-            <span>{listing.address}, {listing.city}, {listing.state} {listing.zip}</span>
+            <span>{listing.address}</span>
           </div>
 
           {listing.phone && (

@@ -144,7 +144,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                 <div className="flex flex-wrap items-center gap-4 text-white/80 text-sm">
                   <span className="flex items-center gap-1.5">
                     <MapPin className="w-4 h-4" />
-                    {listing.address}, {listing.city}, {listing.state} {listing.zip}
+                    {listing.address}
                   </span>
                   {listing.rating > 0 && (
                     <span className="flex items-center gap-1.5">
@@ -241,7 +241,6 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                   <MapPin className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
                   <div className="text-sm text-gray-700">
                     <div>{listing.address}</div>
-                    <div>{listing.city}, {listing.state} {listing.zip}</div>
                   </div>
                 </div>
                 {listing.phone && (
