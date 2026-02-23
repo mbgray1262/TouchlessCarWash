@@ -7,6 +7,8 @@ const corsHeaders = {
 };
 
 const FIRECRAWL_API = 'https://api.firecrawl.dev/v2';
+const MAX_PHOTOS = 5;
+const MIN_GALLERY_TARGET = 3;
 
 const SKIP_DOMAINS = [
   'facebook.com', 'yelp.com', 'google.com', 'yellowpages.com',
@@ -23,6 +25,7 @@ async function fetchImageAsBase64(url: string): Promise<{ base64: string; mediaT
     const mediaType = ct.split(';')[0].trim();
     if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(mediaType)) return null;
     const buffer = await res.arrayBuffer();
+    if (buffer.byteLength < 5000) return null;
     const bytes = new Uint8Array(buffer);
     let binary = '';
     for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
@@ -74,8 +77,10 @@ Reply with only the classification and a one-sentence reason, formatted as: VERD
   return { verdict: 'BAD_OTHER', reason: text.replace(/^BAD_OTHER[:\s]*/i, '').trim() };
 }
 
-function filterWebsiteImages(images: string[]): string[] {
+function filterCandidateUrls(images: string[], alreadySeen: string[]): string[] {
+  const seen = new Set(alreadySeen);
   return images.filter(url => {
+    if (seen.has(url)) return false;
     const lower = url.toLowerCase();
     if (lower.includes('favicon')) return false;
     if (lower.includes('logo')) return false;
@@ -84,9 +89,10 @@ function filterWebsiteImages(images: string[]): string[] {
     if (lower.includes('google-analytics') || lower.includes('pixel') || lower.includes('tracking')) return false;
     if (lower.includes('1x1') || lower.includes('spacer') || lower.includes('blank')) return false;
     if (lower.includes('badge') || lower.includes('banner') || lower.includes('button')) return false;
-    if (lower.includes('simoniz') || lower.includes('armorall') || lower.includes('turtlewax') || lower.includes('rainx')) return false;
+    if (lower.includes('simoniz') || lower.includes('armorall') || lower.includes('turtle') || lower.includes('rainx')) return false;
+    if (lower.includes('social') || lower.includes('share') || lower.includes('sprite')) return false;
     return /\.(jpg|jpeg|png|webp)/i.test(lower);
-  }).slice(0, 10);
+  });
 }
 
 async function rehostToStorage(
@@ -102,6 +108,7 @@ async function rehostToStorage(
     const mediaType = ct.split(';')[0].trim();
     const ext = mediaType === 'image/png' ? 'png' : mediaType === 'image/webp' ? 'webp' : 'jpg';
     const buffer = await res.arrayBuffer();
+    if (buffer.byteLength < 1000) return null;
     const path = `listings/${listingId}/${slot}.${ext}`;
     const { error } = await supabase.storage.from('listing-photos').upload(path, buffer, {
       contentType: mediaType,
@@ -113,6 +120,41 @@ async function rehostToStorage(
   } catch {
     return null;
   }
+}
+
+type ScreenResult = { approved: string[]; rejected: string[]; crawlNotes: string };
+
+async function screenAndRehost(
+  urls: string[],
+  approved: string[],
+  rejected: string[],
+  listingId: string,
+  supabase: ReturnType<typeof createClient>,
+  anthropicKey: string,
+  maxApprove: number,
+  crawlNotes: string,
+): Promise<ScreenResult> {
+  for (const url of urls) {
+    if (approved.length >= maxApprove) break;
+    try {
+      const result = await classifyPhotoWithClaude(url, anthropicKey);
+      if (result.verdict === 'GOOD') {
+        const slot = `photo_${approved.length}_${Date.now()}`;
+        const rehosted = await rehostToStorage(supabase, url, listingId, slot);
+        if (rehosted) approved.push(rehosted);
+        rejected.push(url);
+      } else {
+        rejected.push(url);
+        if (result.verdict === 'BAD_CONTACT') {
+          const note = `[Photo rejected BAD_CONTACT: ${result.reason}]`;
+          crawlNotes = crawlNotes ? `${crawlNotes} ${note}` : note;
+        }
+      }
+    } catch {
+      rejected.push(url);
+    }
+  }
+  return { approved, rejected, crawlNotes };
 }
 
 Deno.serve(async (req: Request) => {
@@ -180,10 +222,9 @@ Deno.serve(async (req: Request) => {
 
       const limit: number = body.limit ?? 0;
 
-      // Fetch touchless listings
       let query = supabase
         .from('listings')
-        .select('id, name, website, google_photo_url, google_logo_url, street_view_url, hero_image, logo_photo, crawl_notes')
+        .select('id, name, website, google_photo_url, google_logo_url, street_view_url, hero_image, hero_image_source, logo_photo, crawl_notes, photos, website_photos, blocked_photos')
         .eq('is_touchless', true)
         .order('id');
 
@@ -195,7 +236,6 @@ Deno.serve(async (req: Request) => {
         return Response.json({ error: 'No touchless listings found' }, { status: 404, headers: corsHeaders });
       }
 
-      // Create a job record
       const { data: job, error: jobErr } = await supabase
         .from('photo_enrich_jobs')
         .insert({
@@ -210,8 +250,7 @@ Deno.serve(async (req: Request) => {
 
       if (jobErr || !job) return Response.json({ error: jobErr?.message ?? 'Failed to create job' }, { status: 500, headers: corsHeaders });
 
-      // Insert all listing tasks
-      const tasks = listings.map(l => ({
+      const tasks = (listings as Record<string, unknown>[]).map(l => ({
         job_id: job.id,
         listing_id: l.id,
         listing_name: l.name,
@@ -220,6 +259,7 @@ Deno.serve(async (req: Request) => {
         google_logo_url: l.google_logo_url,
         street_view_url: l.street_view_url,
         current_hero: l.hero_image,
+        current_hero_source: l.hero_image_source,
         current_logo: l.logo_photo,
         current_crawl_notes: l.crawl_notes,
         task_status: 'pending',
@@ -228,7 +268,6 @@ Deno.serve(async (req: Request) => {
       const { error: taskErr } = await supabase.from('photo_enrich_tasks').insert(tasks);
       if (taskErr) return Response.json({ error: taskErr.message }, { status: 500, headers: corsHeaders });
 
-      // Kick off processing in background
       const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY')!;
       EdgeRuntime.waitUntil(
         fetch(`${supabaseUrl}/functions/v1/photo-enrich`, {
@@ -250,7 +289,6 @@ Deno.serve(async (req: Request) => {
       const jobId = body.job_id;
       if (!jobId) return Response.json({ error: 'job_id required' }, { status: 400, headers: corsHeaders });
 
-      // Check job exists and is running
       const { data: job } = await supabase
         .from('photo_enrich_jobs')
         .select('id, status, total, processed, succeeded')
@@ -262,10 +300,9 @@ Deno.serve(async (req: Request) => {
         return Response.json({ done: true, status: job.status }, { headers: corsHeaders });
       }
 
-      // Grab next pending task
       const { data: tasks } = await supabase
         .from('photo_enrich_tasks')
-        .select('id, listing_id, listing_name, website, google_photo_url, google_logo_url, street_view_url, current_hero, current_logo, current_crawl_notes')
+        .select('id, listing_id, listing_name, website, google_photo_url, google_logo_url, street_view_url, current_hero, current_hero_source, current_logo, current_crawl_notes')
         .eq('job_id', jobId)
         .eq('task_status', 'pending')
         .order('id')
@@ -273,7 +310,6 @@ Deno.serve(async (req: Request) => {
 
       const task = tasks?.[0];
       if (!task) {
-        // All tasks processed — mark job done
         await supabase.from('photo_enrich_jobs').update({
           status: 'done',
           finished_at: new Date().toISOString(),
@@ -281,33 +317,91 @@ Deno.serve(async (req: Request) => {
         return Response.json({ done: true }, { headers: corsHeaders });
       }
 
-      // Mark task in_progress
       await supabase.from('photo_enrich_tasks').update({ task_status: 'in_progress' }).eq('id', task.id);
 
-      let heroImage: string | null = null;
-      let heroSource: string | null = null;
-      let galleryPhotos: string[] = [];
-      let logoPhoto: string | null = null;
-      let crawlNotes = task.current_crawl_notes ?? '';
+      // Fetch full listing data needed for this step
+      const { data: listingData } = await supabase
+        .from('listings')
+        .select('photos, website_photos, blocked_photos')
+        .eq('id', task.listing_id)
+        .maybeSingle();
 
-      // --- STEP 1: Evaluate google_photo_url ---
-      if (task.google_photo_url) {
-        try {
-          const result = await classifyPhotoWithClaude(task.google_photo_url, anthropicKey);
-          if (result.verdict === 'GOOD') {
-            heroImage = task.google_photo_url;
-            heroSource = 'google';
-          } else {
-            const note = `[Google photo rejected: ${result.verdict} — ${result.reason}]`;
-            crawlNotes = crawlNotes ? `${crawlNotes} ${note}` : note;
-          }
-        } catch {
-          // continue to step 2
+      const currentPhotos: string[] = (listingData?.photos as string[]) ?? [];
+      const websitePhotos: string[] = (() => {
+        const wp = listingData?.website_photos;
+        if (!wp) return [];
+        if (Array.isArray(wp)) return wp as string[];
+        if (typeof wp === 'object') return Object.values(wp as Record<string, string>);
+        return [];
+      })();
+      const blockedPhotos: string[] = (listingData?.blocked_photos as string[]) ?? [];
+
+      // Never overwrite a manually-set hero
+      const heroIsManual = task.current_hero_source === 'manual' || task.current_hero_source === 'manual_upload';
+
+      let approved: string[] = [];
+      let rejectedUrls: string[] = [...blockedPhotos];
+      let heroSource: string | null = heroIsManual ? (task.current_hero_source as string) : null;
+      let crawlNotes: string = (task.current_crawl_notes as string) ?? '';
+
+      // Carry forward any already-rehosted gallery photos (skip hero slot)
+      for (const p of currentPhotos) {
+        if (p && !approved.includes(p) && approved.length < MAX_PHOTOS) {
+          approved.push(p);
         }
       }
 
-      // --- STEP 2: Firecrawl website scraping ---
-      if (!heroImage && task.website && !SKIP_DOMAINS.some(d => (task.website ?? '').includes(d))) {
+      // ---- STEP 1: Screen google_photo_url ----
+      const googleUrl = task.google_photo_url as string | null;
+      if (googleUrl && !rejectedUrls.includes(googleUrl)) {
+        try {
+          const result = await classifyPhotoWithClaude(googleUrl, anthropicKey);
+          if (result.verdict === 'GOOD') {
+            const rehosted = await rehostToStorage(supabase, googleUrl, task.listing_id as string, 'google_photo');
+            const finalUrl = rehosted ?? googleUrl;
+            if (!approved.includes(finalUrl) && approved.length < MAX_PHOTOS) {
+              approved.unshift(finalUrl);
+            }
+            if (!heroIsManual && !heroSource) heroSource = 'google';
+          } else {
+            rejectedUrls.push(googleUrl);
+            if (result.verdict === 'BAD_CONTACT') {
+              const note = `[Google photo BAD_CONTACT: ${result.reason}]`;
+              crawlNotes = crawlNotes ? `${crawlNotes} ${note}` : note;
+            }
+          }
+        } catch {
+          // continue
+        }
+      }
+
+      // ---- STEP 2: Screen existing website_photos from DB ----
+      if (approved.length < MAX_PHOTOS && websitePhotos.length > 0) {
+        const candidates = filterCandidateUrls(websitePhotos, rejectedUrls).slice(0, 15);
+        const r = await screenAndRehost(
+          candidates,
+          approved,
+          rejectedUrls,
+          task.listing_id as string,
+          supabase,
+          anthropicKey,
+          MAX_PHOTOS,
+          crawlNotes,
+        );
+        approved = r.approved;
+        rejectedUrls = r.rejected;
+        crawlNotes = r.crawlNotes;
+        if (!heroIsManual && !heroSource && approved.length > 0) heroSource = 'website';
+      }
+
+      // ---- STEP 3: Firecrawl scrape only if < MIN_GALLERY_TARGET approved AND no website_photos in DB ----
+      const websiteUrl = task.website as string | null;
+      const shouldFirecrawl = approved.length < MIN_GALLERY_TARGET
+        && websitePhotos.length === 0
+        && websiteUrl
+        && !SKIP_DOMAINS.some(d => websiteUrl.includes(d));
+
+      if (shouldFirecrawl) {
         try {
           const fcRes = await fetch(`${FIRECRAWL_API}/scrape`, {
             method: 'POST',
@@ -316,7 +410,7 @@ Deno.serve(async (req: Request) => {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              url: task.website,
+              url: websiteUrl,
               formats: ['markdown'],
               onlyMainContent: false,
               includeTags: ['img'],
@@ -326,76 +420,86 @@ Deno.serve(async (req: Request) => {
 
           if (fcRes.ok) {
             const fcData = await fcRes.json() as { success: boolean; data?: { images?: string[] } };
-            const rawImages = fcData.data?.images ?? [];
-            const candidates = filterWebsiteImages(rawImages);
+            const rawImages = (fcData.data?.images ?? []) as string[];
+            const candidates = filterCandidateUrls(rawImages, rejectedUrls).slice(0, 15);
 
-            for (const imgUrl of candidates) {
-              try {
-                const result = await classifyPhotoWithClaude(imgUrl, anthropicKey);
-                if (result.verdict === 'GOOD') {
-                  if (!heroImage) {
-                    heroImage = imgUrl;
-                    heroSource = 'website';
-                  } else if (galleryPhotos.length < 3) {
-                    galleryPhotos.push(imgUrl);
-                  }
-                  if (heroImage && galleryPhotos.length >= 3) break;
-                }
-              } catch {
-                // skip this image
-              }
-            }
+            const r = await screenAndRehost(
+              candidates,
+              approved,
+              rejectedUrls,
+              task.listing_id as string,
+              supabase,
+              anthropicKey,
+              MAX_PHOTOS,
+              crawlNotes,
+            );
+            approved = r.approved;
+            rejectedUrls = r.rejected;
+            crawlNotes = r.crawlNotes;
+            if (!heroIsManual && !heroSource && approved.length > 0) heroSource = 'website';
           }
         } catch {
-          // continue to step 3
+          // continue to step 4
         }
       }
 
-      // --- STEP 3: Street view fallback ---
-      if (!heroImage && task.street_view_url) {
-        heroImage = task.street_view_url;
-        heroSource = 'street_view';
+      // ---- STEP 4: Street view fallback ----
+      const streetViewUrl = task.street_view_url as string | null;
+      const finalHero: string | null = heroIsManual
+        ? (task.current_hero as string)
+        : (approved[0] ?? (streetViewUrl ?? null));
+
+      const finalHeroSource: string | null = heroIsManual
+        ? heroSource
+        : (approved.length > 0 ? heroSource : (streetViewUrl ? 'street_view' : null));
+
+      // ---- STEP 5: Save — hero = approved[0], gallery = approved[1..4] ----
+      const galleryPhotos = approved.slice(heroIsManual ? 0 : 1, MAX_PHOTOS);
+
+      // ---- LOGO: always use google_logo_url, rehost to storage ----
+      let logoPhoto: string | null = null;
+      const logoUrl = task.google_logo_url as string | null;
+      if (logoUrl && !(task.current_logo as string | null)) {
+        const rehosted = await rehostToStorage(supabase, logoUrl, task.listing_id as string, 'logo');
+        logoPhoto = rehosted ?? logoUrl;
       }
 
-      // --- LOGO: always use google_logo_url, rehost to storage ---
-      if (task.google_logo_url && !task.current_logo) {
-        const rehosted = await rehostToStorage(supabase, task.google_logo_url, task.listing_id, 'logo');
-        logoPhoto = rehosted ?? task.google_logo_url;
-      }
+      // Build final blocked list (original blocked + all rejected this run)
+      const newBlocked = [...new Set(rejectedUrls)];
 
-      // --- Save to listings ---
       const update: Record<string, unknown> = {
         last_crawled_at: new Date().toISOString(),
         crawl_notes: crawlNotes || null,
+        blocked_photos: newBlocked,
       };
 
-      if (heroImage) {
-        update.hero_image = heroImage;
-        update.hero_image_source = heroSource;
+      if (!heroIsManual && finalHero) {
+        update.hero_image = finalHero;
+        update.hero_image_source = finalHeroSource;
       }
+
       if (galleryPhotos.length > 0) {
         update.photos = galleryPhotos;
       }
+
       if (logoPhoto) {
         update.logo_photo = logoPhoto;
       }
 
       await supabase.from('listings').update(update).eq('id', task.listing_id);
 
-      // Mark task done
       await supabase.from('photo_enrich_tasks').update({
         task_status: 'done',
-        hero_image_found: !!heroImage,
-        hero_source: heroSource,
+        hero_image_found: !!finalHero,
+        hero_source: finalHeroSource,
         gallery_count: galleryPhotos.length,
         logo_found: !!logoPhoto,
         finished_at: new Date().toISOString(),
       }).eq('id', task.id);
 
-      // Update job counters
       await supabase.from('photo_enrich_jobs').update({
         processed: (job.processed ?? 0) + 1,
-        succeeded: (job.succeeded ?? 0) + (heroImage ? 1 : 0),
+        succeeded: (job.succeeded ?? 0) + (finalHero ? 1 : 0),
       }).eq('id', jobId);
 
       // Chain next task
@@ -410,9 +514,11 @@ Deno.serve(async (req: Request) => {
 
       return Response.json({
         processed: task.listing_id,
-        hero_found: !!heroImage,
-        hero_source: heroSource,
+        hero_found: !!finalHero,
+        hero_source: finalHeroSource,
+        approved_count: approved.length,
         gallery_count: galleryPhotos.length,
+        rejected_count: rejectedUrls.length,
       }, { headers: corsHeaders });
     }
 

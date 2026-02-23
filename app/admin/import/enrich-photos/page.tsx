@@ -199,7 +199,7 @@ export default function EnrichPhotosPage() {
           <h1 className="text-3xl font-bold text-[#0F2744]">Photo Enrichment</h1>
         </div>
         <p className="text-gray-500 mb-8 text-sm">
-          Assigns hero images and logos to all touchless listings. Google photos are screened by AI first — website scraping only runs as a fallback.
+          Collects 3–5 approved photos per listing. Google photos and existing website photos are AI-screened first — Firecrawl scraping only runs as a fallback when fewer than 3 photos are found.
         </p>
 
         {/* Stats */}
@@ -232,19 +232,27 @@ export default function EnrichPhotosPage() {
           <div className="space-y-2 text-sm text-gray-600">
             <div className="flex items-start gap-2.5">
               <span className="mt-0.5 w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0">1</span>
-              <span><strong>Google photo</strong> — AI-screened with Claude Haiku. GOOD = hero image. BAD_CONTACT or BAD_OTHER = rejected, moves to step 2.</span>
+              <span><strong>Google photo</strong> — AI-screened with Claude Haiku. GOOD = added to approved list. BAD_CONTACT = noted in crawl log. BAD_OTHER = silently rejected.</span>
             </div>
             <div className="flex items-start gap-2.5">
               <span className="mt-0.5 w-5 h-5 rounded-full bg-teal-100 text-teal-700 text-xs font-bold flex items-center justify-center shrink-0">2</span>
-              <span><strong>Website scrape</strong> — Firecrawl scrapes the site. Each image is AI-screened. Up to 1 hero + 3 gallery photos saved. Logos/icons/social images strictly rejected.</span>
+              <span><strong>Existing website photos</strong> — If the DB already has <code className="text-xs bg-gray-100 px-1 rounded">website_photos</code>, each is screened. Logos, icons, brand graphics, and social images are strictly rejected.</span>
             </div>
             <div className="flex items-start gap-2.5">
-              <span className="mt-0.5 w-5 h-5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold flex items-center justify-center shrink-0">3</span>
-              <span><strong>Street view fallback</strong> — Used only if steps 1 & 2 found nothing.</span>
+              <span className="mt-0.5 w-5 h-5 rounded-full bg-teal-100 text-teal-700 text-xs font-bold flex items-center justify-center shrink-0">3</span>
+              <span><strong>Firecrawl scrape</strong> — Only runs if fewer than 3 approved photos after steps 1–2 AND no <code className="text-xs bg-gray-100 px-1 rounded">website_photos</code> in DB. Same strict screening applied.</span>
+            </div>
+            <div className="flex items-start gap-2.5">
+              <span className="mt-0.5 w-5 h-5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold flex items-center justify-center shrink-0">4</span>
+              <span><strong>Street view fallback</strong> — Used as hero only if zero approved photos found in steps 1–3.</span>
+            </div>
+            <div className="flex items-start gap-2.5">
+              <span className="mt-0.5 w-5 h-5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold flex items-center justify-center shrink-0">5</span>
+              <span><strong>Save</strong> — First approved photo becomes hero. Next up to 4 become gallery. Hard cap of 5 total. Rejected URLs added to <code className="text-xs bg-gray-100 px-1 rounded">blocked_photos</code>. Manually-set hero images are never overwritten.</span>
             </div>
             <div className="flex items-start gap-2.5">
               <span className="mt-0.5 w-5 h-5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold flex items-center justify-center shrink-0">L</span>
-              <span><strong>Logo</strong> — Always uses <code className="text-xs bg-gray-100 px-1 rounded">google_logo_url</code>, rehosted to Supabase storage. No vision screening needed.</span>
+              <span><strong>Logo</strong> — Always uses <code className="text-xs bg-gray-100 px-1 rounded">google_logo_url</code>, rehosted to Supabase storage. No vision screening. Never extracted from website scraping.</span>
             </div>
           </div>
         </div>
