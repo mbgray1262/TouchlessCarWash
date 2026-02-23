@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import { slugify } from '@/lib/constants';
 import {
   ChevronRight, Camera, Loader2, CheckCircle2, AlertCircle,
   RefreshCw, XCircle, ImageIcon, Globe, MapPin, Bug, ChevronDown, ChevronUp,
@@ -35,6 +36,7 @@ interface RecentListing {
   name: string;
   city: string;
   state: string;
+  slug: string | null;
   hero_image: string | null;
   hero_image_source: string | null;
   logo_photo: string | null;
@@ -254,7 +256,7 @@ export default function EnrichPhotosPage() {
   const loadRecentListings = useCallback(async () => {
     const { data } = await supabase
       .from('listings')
-      .select('id, name, city, state, hero_image, hero_image_source, logo_photo')
+      .select('id, name, city, state, slug, hero_image, hero_image_source, logo_photo')
       .eq('is_touchless', true)
       .not('hero_image', 'is', null)
       .order('last_crawled_at', { ascending: false })
@@ -625,41 +627,56 @@ export default function EnrichPhotosPage() {
             </CardHeader>
             <CardContent className="p-0">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-px bg-gray-100">
-                {recentListings.map(listing => (
-                  <div key={listing.id} className="bg-white p-3 space-y-2">
-                    <div className="relative">
-                      {listing.hero_image ? (
-                        <img
-                          src={listing.hero_image}
-                          alt={listing.name}
-                          className="w-full h-28 object-cover rounded-lg border border-gray-100"
-                          onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                        />
-                      ) : (
-                        <div className="w-full h-28 bg-gray-100 rounded-lg border border-gray-100 flex items-center justify-center">
-                          <ImageIcon className="w-6 h-6 text-gray-300" />
-                        </div>
-                      )}
-                      {listing.hero_image_source && (
-                        <span className={`absolute top-1.5 left-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded border ${SOURCE_COLOR[listing.hero_image_source] ?? 'bg-gray-100 text-gray-500 border-gray-200'}`}>
-                          {SOURCE_LABEL[listing.hero_image_source] ?? listing.hero_image_source}
-                        </span>
-                      )}
-                      {listing.logo_photo && (
-                        <img
-                          src={listing.logo_photo}
-                          alt=""
-                          className="absolute bottom-1.5 right-1.5 w-8 h-8 object-contain rounded bg-white/90 border border-gray-200 p-0.5"
-                          onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                        />
-                      )}
+                {recentListings.map(listing => {
+                  const href = listing.slug
+                    ? `/car-washes/${slugify(listing.state)}/${slugify(listing.city)}/${listing.slug}`
+                    : null;
+                  const inner = (
+                    <>
+                      <div className="relative">
+                        {listing.hero_image ? (
+                          <img
+                            src={listing.hero_image}
+                            alt={listing.name}
+                            className="w-full h-28 object-cover rounded-lg border border-gray-100"
+                            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        ) : (
+                          <div className="w-full h-28 bg-gray-100 rounded-lg border border-gray-100 flex items-center justify-center">
+                            <ImageIcon className="w-6 h-6 text-gray-300" />
+                          </div>
+                        )}
+                        {listing.hero_image_source && (
+                          <span className={`absolute top-1.5 left-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded border ${SOURCE_COLOR[listing.hero_image_source] ?? 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                            {SOURCE_LABEL[listing.hero_image_source] ?? listing.hero_image_source}
+                          </span>
+                        )}
+                        {listing.logo_photo && (
+                          <img
+                            src={listing.logo_photo}
+                            alt=""
+                            className="absolute bottom-1.5 right-1.5 w-8 h-8 object-contain rounded bg-white/90 border border-gray-200 p-0.5"
+                            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-[#0F2744] truncate group-hover:underline">{listing.name}</p>
+                        <p className="text-xs text-gray-400">{listing.city}, {listing.state}</p>
+                      </div>
+                    </>
+                  );
+                  return href ? (
+                    <a key={listing.id} href={href} target="_blank" rel="noopener noreferrer"
+                      className="bg-white p-3 space-y-2 group cursor-pointer hover:bg-gray-50 transition-colors">
+                      {inner}
+                    </a>
+                  ) : (
+                    <div key={listing.id} className="bg-white p-3 space-y-2">
+                      {inner}
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold text-[#0F2744] truncate">{listing.name}</p>
-                      <p className="text-xs text-gray-400">{listing.city}, {listing.state}</p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
