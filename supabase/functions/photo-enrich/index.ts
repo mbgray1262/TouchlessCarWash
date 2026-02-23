@@ -335,6 +335,7 @@ Deno.serve(async (req: Request) => {
         .from('listings')
         .select('id, name, website, google_photo_url, google_logo_url, street_view_url, hero_image, hero_image_source, logo_photo, crawl_notes, photos, website_photos, blocked_photos')
         .eq('is_touchless', true)
+        .is('photo_enrichment_attempted_at', null)
         .order('hero_image', { nullsFirst: true })
         .order('id');
 
@@ -650,6 +651,7 @@ Deno.serve(async (req: Request) => {
 
       const update: Record<string, unknown> = {
         last_crawled_at: new Date().toISOString(),
+        photo_enrichment_attempted_at: new Date().toISOString(),
         crawl_notes: crawlNotes || null,
         blocked_photos: newBlocked,
       };
