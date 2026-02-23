@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Star, MapPin, CheckCircle, TrendingUp, Search, Eye, Sparkles, Droplet } from 'lucide-react';
-import { SearchBar } from '@/components/SearchBar';
+import HeroSection from '@/components/HeroSection';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -55,42 +55,7 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen">
-      <section
-        id="search"
-        className="relative min-h-[70vh] md:min-h-[80vh] flex items-center"
-        style={{
-          backgroundImage: 'url(https://res.cloudinary.com/dret3qhyu/image/upload/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
-        }}
-      >
-        <div
-          className="absolute inset-0 bg-gradient-to-r from-[#0a1628]/95 via-[#0a1628]/75 via-40% to-transparent"
-          aria-hidden="true"
-        />
-
-        <div className="container mx-auto px-4 md:px-8 relative z-10">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium mb-6">
-              <Search className="w-4 h-4" />
-              100% Touchless Only
-            </div>
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
-              Find Touchless Car Washes Near You
-            </h1>
-            <p className="text-lg md:text-xl text-white/90 mb-8 leading-relaxed">
-              The only directory dedicated exclusively to touchless car washes. No brushes, no scratches — just clean.
-            </p>
-            <div className="mb-6">
-              <SearchBar placeholder="Search by city or ZIP" />
-            </div>
-            <p className="text-sm text-white/70">
-              Verified listings • Real reviews • Updated regularly
-            </p>
-          </div>
-        </div>
-      </section>
+      <HeroSection />
 
       <section className="bg-[#0F2744] py-12">
         <div className="container mx-auto px-4">
