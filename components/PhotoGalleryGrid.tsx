@@ -11,14 +11,28 @@ interface PhotoGalleryGridProps {
 export default function PhotoGalleryGrid({ photos, listingName }: PhotoGalleryGridProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
+  const gridClass =
+    photos.length === 1
+      ? 'grid grid-cols-1'
+      : photos.length === 2
+      ? 'grid grid-cols-2'
+      : 'grid grid-cols-2 sm:grid-cols-3';
+
+  const aspectClass =
+    photos.length === 1
+      ? 'aspect-video sm:aspect-[21/9]'
+      : photos.length === 2
+      ? 'aspect-video'
+      : 'aspect-video';
+
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div className={`${gridClass} gap-3`}>
         {photos.map((photo, i) => (
           <button
             key={i}
             onClick={() => setLightboxIndex(i)}
-            className="aspect-video rounded-xl overflow-hidden bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#22C55E] focus:ring-offset-2"
+            className={`${aspectClass} rounded-xl overflow-hidden bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#22C55E] focus:ring-offset-2`}
             aria-label={`View photo ${i + 1}`}
           >
             <img
