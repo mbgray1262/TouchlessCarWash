@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   ArrowLeft, Link2, Loader2, CheckCircle2, XCircle, ExternalLink,
   MapPin, Phone, Globe, Star, Clock, Sparkles, Image as ImageIcon,
-  AlertCircle, ChevronRight, Images, Tag
+  AlertCircle, ChevronRight, Images, Tag,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -177,6 +177,13 @@ export default function ImportPage() {
             >
               <Tag className="w-4 h-4" />
               Amenity Backfill
+            </Link>
+            <Link
+              href="/admin/import/gallery-backfill"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-teal-600 hover:text-teal-800 border border-teal-200 hover:border-teal-400 rounded-lg px-3 py-2 bg-teal-50 hover:bg-teal-100 transition-colors"
+            >
+              <Images className="w-4 h-4" />
+              Gallery Photo Backfill
             </Link>
             <Link
               href="/admin/import/hours"
