@@ -273,7 +273,7 @@ export function ReviewCard({ listing, onUpdate }: Props) {
           {logo && (
             <div>
               <p className="text-xs font-medium text-gray-500 mb-1.5">Detected Logo</p>
-              <img src={logo} alt="logo" className="h-12 object-contain border border-gray-200 rounded-lg p-1 bg-white" />
+              <img src={logo} alt="logo" className="h-12 object-contain border border-gray-200 rounded-lg p-1 bg-white" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
             </div>
           )}
 
