@@ -152,8 +152,8 @@ export default async function Home() {
               <div className="text-sm text-white/80">Verified Listings</div>
             </div>
             <div>
-              <div className="text-4xl md:text-5xl font-bold text-white mb-2">50 States + DC</div>
-              <div className="text-sm text-white/80">States Covered</div>
+              <div className="text-4xl md:text-5xl font-bold text-white mb-2">50<sup className="text-2xl md:text-3xl font-semibold align-super">+DC</sup></div>
+              <div className="text-sm text-white/80">States + DC Covered</div>
             </div>
             <div>
               <div className="text-4xl md:text-5xl font-bold text-white mb-2">100%</div>
