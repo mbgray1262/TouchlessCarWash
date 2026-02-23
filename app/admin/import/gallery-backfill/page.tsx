@@ -210,15 +210,20 @@ export default function GalleryBackfillPage() {
 
       if (taskList.length > 0) {
         const ids = taskList.map(t => t.listing_id);
-        const { data: listings } = await supabase
-          .from('listings')
-          .select('id, name, city, state, slug, photos, hero_image')
-          .in('id', ids);
-        if (listings) {
-          const map: Record<string, ListingDetail> = {};
-          for (const l of listings) map[l.id] = l as ListingDetail;
-          setListingDetails(map);
+        const CHUNK = 200;
+        const allListings: ListingDetail[] = [];
+        for (let i = 0; i < ids.length; i += CHUNK) {
+          const chunk = ids.slice(i, i + CHUNK);
+          const { data: listings } = await supabase
+            .from('listings')
+            .select('id, name, city, state, slug, photos, hero_image')
+            .in('id', chunk)
+            .limit(CHUNK);
+          if (listings) allListings.push(...(listings as ListingDetail[]));
         }
+        const map: Record<string, ListingDetail> = {};
+        for (const l of allListings) map[l.id] = l;
+        setListingDetails(map);
       }
     } finally {
       setLoadingResults(false);
