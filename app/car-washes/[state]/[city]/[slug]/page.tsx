@@ -8,6 +8,7 @@ import {
 import LogoImage from '@/components/LogoImage';
 import PhotoGalleryStrip from '@/components/PhotoGalleryStrip';
 import PhotoGalleryGrid from '@/components/PhotoGalleryGrid';
+import SuggestEditModal from '@/components/SuggestEditModal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase, type Listing } from '@/lib/supabase';
@@ -598,6 +599,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                     Get Directions
                   </a>
                 )}
+                <SuggestEditModal listingId={listing.id} listingName={listing.name} />
               </div>
 
               {hours && Object.keys(hours).length > 0 && (
