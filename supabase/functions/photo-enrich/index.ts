@@ -71,10 +71,11 @@ Reply with only the classification and a one-sentence reason, formatted as: VERD
   if (!res.ok) throw new Error(`Claude vision error ${res.status}`);
   const data = await res.json() as { content: Array<{ text: string }> };
   const text = (data.content?.[0]?.text ?? '').trim();
+  const clean = text.replace(/^VERDICT:\s*/i, '').trim();
 
-  if (text.startsWith('GOOD')) return { verdict: 'GOOD', reason: text.replace(/^GOOD[:\s]*/i, '').trim() };
-  if (text.startsWith('BAD_CONTACT')) return { verdict: 'BAD_CONTACT', reason: text.replace(/^BAD_CONTACT[:\s]*/i, '').trim() };
-  return { verdict: 'BAD_OTHER', reason: text.replace(/^BAD_OTHER[:\s]*/i, '').trim() };
+  if (clean.startsWith('GOOD')) return { verdict: 'GOOD', reason: clean.replace(/^GOOD[:\s-]*/i, '').trim() };
+  if (clean.startsWith('BAD_CONTACT')) return { verdict: 'BAD_CONTACT', reason: clean.replace(/^BAD_CONTACT[:\s-]*/i, '').trim() };
+  return { verdict: 'BAD_OTHER', reason: clean.replace(/^BAD_OTHER[:\s-]*/i, '').trim() };
 }
 
 function filterCandidateUrls(images: string[], alreadySeen: string[]): string[] {
