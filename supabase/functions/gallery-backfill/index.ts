@@ -266,11 +266,13 @@ Deno.serve(async (req: Request) => {
 
       const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY')!;
       const kickUrl = `${supabaseUrl}/functions/v1/gallery-backfill`;
-      await fetch(kickUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseAnon}` },
-        body: JSON.stringify({ action: 'process_batch', job_id: job.id }),
-      }).catch(() => {});
+      EdgeRuntime.waitUntil(
+        fetch(kickUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseAnon}` },
+          body: JSON.stringify({ action: 'process_batch', job_id: job.id }),
+        }).catch(() => {})
+      );
 
       return Response.json({ job_id: job.id, total: toProcess.length }, { headers: corsHeaders });
     }
