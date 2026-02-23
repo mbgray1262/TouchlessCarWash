@@ -76,6 +76,7 @@ interface TaskTrace {
   firecrawl_candidates: number;
   firecrawl_approved: number;
   firecrawl_url_trace: UrlTraceEntry[] | null;
+  google_place_photos_approved: number;
   total_approved: number;
   fallback_reason: string | null;
 }
@@ -163,6 +164,17 @@ function TraceRow({ task }: { task: TaskTrace }) {
                 {task.google_photo_url}
               </a>
             )}
+          </div>
+
+          {/* Step 1.5: Google Place Photos */}
+          <div className="space-y-1">
+            <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Step 1.5 — Google Place Photos</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Pill
+                label={task.google_place_photos_approved > 0 ? `${task.google_place_photos_approved} approved` : 'None approved'}
+                color={task.google_place_photos_approved > 0 ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-gray-100 text-gray-500 border-gray-200'}
+              />
+            </div>
           </div>
 
           {/* Step 2: DB Website Photos */}

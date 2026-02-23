@@ -236,8 +236,6 @@ interface ScreenResult {
   approvedCount: number;
 }
 
-// BUG 1 FIX: Only BAD photos go into badUrls — GOOD photos are never added to the blocked list.
-// Previously, GOOD photos were also pushed into rejected[], corrupting blocked_photos.
 async function screenAndRehost(
   urls: string[],
   approved: string[],
@@ -271,8 +269,6 @@ async function screenAndRehost(
   return { approved, badUrls, crawlNotes, approvedCount: approved.length - approvedBefore };
 }
 
-// BUG 2 FIX: Extract image URLs from HTML content since Firecrawl does not
-// return an images[] array — it returns rendered HTML. Parse src/data-src attributes.
 function extractImagesFromHtml(html: string): string[] {
   const urls: string[] = [];
   const srcRegex = /(?:src|srcset|data-src|data-lazy-src|data-original)=["']([^"']+\.(?:jpg|jpeg|png|webp)[^"']*)/gi;
@@ -282,6 +278,40 @@ function extractImagesFromHtml(html: string): string[] {
     if (url.startsWith('http')) urls.push(url);
   }
   return [...new Set(urls)];
+}
+
+async function fetchGooglePlacePhotoUrls(
+  placeId: string,
+  googleApiKey: string,
+  heroPhotoUrl: string | null,
+  maxPhotos: number,
+): Promise<string[]> {
+  const detailsUrl = `https://places.googleapis.com/v1/places/${placeId}?fields=photos&key=${googleApiKey}`;
+  const res = await fetch(detailsUrl, { signal: AbortSignal.timeout(10000) });
+  if (!res.ok) return [];
+
+  const data = await res.json() as {
+    photos?: Array<{ name: string; widthPx?: number; heightPx?: number }>;
+  };
+
+  const photos = data.photos ?? [];
+  if (photos.length === 0) return [];
+
+  const urls: string[] = [];
+  for (const photo of photos) {
+    if (urls.length >= maxPhotos) break;
+    const mediaUrl = `https://places.googleapis.com/v1/${photo.name}/media?maxHeightPx=1600&maxWidthPx=1600&key=${googleApiKey}`;
+    const mediaRes = await fetch(mediaUrl, {
+      redirect: 'follow',
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!mediaRes.ok) continue;
+    const finalUrl = mediaRes.url;
+    if (!finalUrl || finalUrl === heroPhotoUrl) continue;
+    urls.push(finalUrl);
+  }
+
+  return urls;
 }
 
 Deno.serve(async (req: Request) => {
@@ -294,6 +324,7 @@ Deno.serve(async (req: Request) => {
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY') ?? await getSecret(supabaseUrl, serviceKey, 'FIRECRAWL_API_KEY');
     const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY') ?? await getSecret(supabaseUrl, serviceKey, 'ANTHROPIC_API_KEY');
+    const googleApiKey = Deno.env.get('GOOGLE_PLACES_API_KEY') ?? await getSecret(supabaseUrl, serviceKey, 'GOOGLE_PLACES_API_KEY');
 
     const supabase = createClient(supabaseUrl, serviceKey);
     const body = await req.json().catch(() => ({}));
@@ -349,7 +380,7 @@ Deno.serve(async (req: Request) => {
 
       let query = supabase
         .from('listings')
-        .select('id, name, website, google_photo_url, google_logo_url, street_view_url, hero_image, hero_image_source, logo_photo, crawl_notes, photos, website_photos, blocked_photos')
+        .select('id, name, website, google_photo_url, google_logo_url, street_view_url, google_place_id, hero_image, hero_image_source, logo_photo, crawl_notes, photos, website_photos, blocked_photos')
         .eq('is_touchless', true)
         .is('photo_enrichment_attempted_at', null)
         .order('hero_image', { nullsFirst: true })
@@ -385,6 +416,7 @@ Deno.serve(async (req: Request) => {
         google_photo_url: l.google_photo_url,
         google_logo_url: l.google_logo_url,
         street_view_url: l.street_view_url,
+        google_place_id: l.google_place_id,
         current_hero: l.hero_image,
         current_hero_source: l.hero_image_source,
         current_logo: l.logo_photo,
@@ -435,7 +467,7 @@ Deno.serve(async (req: Request) => {
 
       const { data: batchTasks } = await supabase
         .from('photo_enrich_tasks')
-        .select('id, listing_id, listing_name, website, google_photo_url, google_logo_url, street_view_url, current_hero, current_hero_source, current_logo, current_crawl_notes')
+        .select('id, listing_id, listing_name, website, google_photo_url, google_logo_url, street_view_url, google_place_id, current_hero, current_hero_source, current_logo, current_crawl_notes')
         .eq('job_id', jobId)
         .eq('task_status', 'pending')
         .order('id')
@@ -496,6 +528,7 @@ Deno.serve(async (req: Request) => {
           firecrawl_candidates: 0,
           firecrawl_approved: 0,
           firecrawl_url_trace: null as UrlTraceEntry[] | null,
+          google_place_photos_approved: 0,
           total_approved: 0,
           fallback_reason: null,
         };
@@ -523,6 +556,46 @@ Deno.serve(async (req: Request) => {
         } else if (googleUrl && badUrls.includes(googleUrl)) {
           trace.google_verdict = 'previously_blocked';
           trace.google_reason = 'URL is in blocked_photos list';
+        }
+
+        // ---- STEP 1.5: Google Place Photos — fill gallery from Place Details API ----
+        const placeId = task.google_place_id as string | null;
+        const needMorePhotos = approved.length < MIN_GALLERY_TARGET;
+        if (placeId && googleApiKey && needMorePhotos) {
+          try {
+            const needed = MAX_PHOTOS - approved.length;
+            const placePhotoUrls = await fetchGooglePlacePhotoUrls(
+              placeId,
+              googleApiKey,
+              heroPhoto,
+              Math.min(10, needed + 5),
+            );
+
+            const approvedBefore = approved.length;
+            for (const url of placePhotoUrls) {
+              if (approved.length >= MAX_PHOTOS) break;
+              if (approved.includes(url) || badUrls.includes(url)) continue;
+              try {
+                const result = await classifyPhotoWithClaude(url, anthropicKey);
+                if (result.verdict === 'GOOD') {
+                  const slot = `place_photo_${approved.length}_${Date.now()}`;
+                  const rehosted = await rehostToStorage(supabase, url, task.listing_id as string, slot);
+                  approved.push(rehosted ?? url);
+                } else {
+                  badUrls.push(url);
+                  if (result.verdict === 'BAD_CONTACT') {
+                    const note = `[Place photo rejected BAD_CONTACT: ${result.reason}]`;
+                    crawlNotes = crawlNotes ? `${crawlNotes} ${note}` : note;
+                  }
+                }
+              } catch {
+                badUrls.push(url);
+              }
+            }
+            trace.google_place_photos_approved = approved.length - approvedBefore;
+          } catch {
+            // Place Photos fetch failed silently — continue with other sources
+          }
         }
 
         // ---- STEP 2: Screen existing website_photos from DB ----
@@ -681,6 +754,7 @@ Deno.serve(async (req: Request) => {
           firecrawl_candidates: trace.firecrawl_candidates as number,
           firecrawl_approved: trace.firecrawl_approved as number,
           firecrawl_url_trace: trace.firecrawl_url_trace as UrlTraceEntry[] | null,
+          google_place_photos_approved: trace.google_place_photos_approved as number,
           total_approved: trace.total_approved as number,
           fallback_reason: trace.fallback_reason as string | null,
         }).eq('id', task.id);
@@ -755,6 +829,7 @@ Deno.serve(async (req: Request) => {
           'website_photos_db_count', 'website_photos_screened', 'website_photos_approved',
           'firecrawl_triggered', 'firecrawl_images_found', 'firecrawl_candidates', 'firecrawl_approved',
           'firecrawl_url_trace',
+          'google_place_photos_approved',
           'total_approved', 'fallback_reason',
         ].join(', '))
         .eq('job_id', jobId)
