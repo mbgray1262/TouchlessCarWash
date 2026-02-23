@@ -6,6 +6,7 @@ import {
   Sparkles, ExternalLink, ChevronRight
 } from 'lucide-react';
 import LogoImage from '@/components/LogoImage';
+import PhotoGalleryStrip from '@/components/PhotoGalleryStrip';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase, type Listing } from '@/lib/supabase';
@@ -92,9 +93,11 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
   const heroImage = listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
   const logoImage = listing.logo_photo ?? listing.google_logo_url ?? null;
 
-  const galleryPhotos = (listing.photos || [])
-    .filter((p: string) => isImageUrl(p) && p !== heroImage && p !== logoImage)
-    .slice(0, 8);
+  const allGalleryPhotos = (listing.photos || [])
+    .filter((p: string) => isImageUrl(p) && p !== heroImage && p !== logoImage);
+
+  const galleryPhotos = allGalleryPhotos.slice(0, 8);
+  const stripPhotos = allGalleryPhotos.slice(0, 4);
 
   const hours = listing.hours as Record<string, string> | null;
 
@@ -163,6 +166,14 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
           </div>
         </div>
       </div>
+
+      {stripPhotos.length > 0 && (
+        <div className="bg-[#0F2744]">
+          <div className="container mx-auto px-4 max-w-5xl pb-4">
+            <PhotoGalleryStrip photos={allGalleryPhotos} listingName={listing.name} />
+          </div>
+        </div>
+      )}
 
       <div className="container mx-auto px-4 max-w-5xl py-8 space-y-8">
         {listing.latitude && listing.longitude && (
