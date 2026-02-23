@@ -405,8 +405,7 @@ Deno.serve(async (req: Request) => {
         .from('listings')
         .select('id, name, website, google_photo_url, google_logo_url, street_view_url, google_place_id, hero_image, hero_image_source, logo_photo, crawl_notes, photos, website_photos, blocked_photos')
         .eq('is_touchless', true)
-        .is('photo_enrichment_attempted_at', null)
-        .order('hero_image', { nullsFirst: true })
+        .is('hero_image', null)
         .order('id');
 
       if (limit > 0) query = query.limit(limit);
