@@ -6,6 +6,7 @@ import {
   Sparkles, ExternalLink, ChevronRight
 } from 'lucide-react';
 import LogoImage from '@/components/LogoImage';
+import PhotoGalleryGrid from '@/components/PhotoGalleryGrid';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase, type Listing } from '@/lib/supabase';
@@ -215,18 +216,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
             {galleryPhotos.length > 0 && (
               <div className="bg-white rounded-2xl border border-gray-200 p-6">
                 <h2 className="text-lg font-bold text-[#0F2744] mb-4">Photos</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {galleryPhotos.map((photo: string, i: number) => (
-                    <div key={i} className="aspect-video rounded-xl overflow-hidden bg-gray-100">
-                      <img
-                        src={photo}
-                        alt={`${listing.name} photo ${i + 1}`}
-                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                        loading="lazy"
-                      />
-                    </div>
-                  ))}
-                </div>
+                <PhotoGalleryGrid photos={galleryPhotos} listingName={listing.name} />
               </div>
             )}
 
