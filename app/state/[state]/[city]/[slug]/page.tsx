@@ -181,7 +181,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
       <StarRating rating={listing.rating} />
       {listing.google_place_id ? (
         <a
-          href={`https://www.google.com/maps/place/?q=place_id:${listing.google_place_id}`}
+          href={`https://search.google.com/local/reviews?placeid=${listing.google_place_id}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1 hover:underline underline-offset-2 decoration-white/40 transition-all"
