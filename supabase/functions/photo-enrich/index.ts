@@ -116,7 +116,18 @@ function filterCandidateUrlsWithTrace(
       }
     }
     if (rejected) continue;
-    if (!/\.(jpg|jpeg|png|webp)/i.test(lower)) {
+    const KNOWN_IMAGE_CDNS = [
+      'squarespace-cdn.com',
+      'images.unsplash.com',
+      'cdn.wix.com',
+      'cloudinary.com',
+      'wp-content/uploads',
+      'amazonaws.com',
+      'imgix.net',
+      'cloudfront.net',
+    ];
+    const isKnownCdn = KNOWN_IMAGE_CDNS.some(cdn => lower.includes(cdn));
+    if (!isKnownCdn && !/\.(jpg|jpeg|png|webp)/i.test(lower)) {
       trace.push({ url, passed: false, reason: 'rejected: no image extension' });
       continue;
     }
