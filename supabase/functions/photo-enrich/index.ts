@@ -50,34 +50,48 @@ BAD_CONTACT (shows brushes, cloth strips, mops, or any contact wash equipment), 
 BAD_OTHER (poor quality, car interior, people only, logo/graphic, blurry, or not clearly a car wash).
 Reply with only the classification and a one-sentence reason, formatted as: VERDICT: reason`;
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5',
-      max_tokens: 100,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'image', source: { type: 'base64', media_type: img.mediaType, data: img.base64 } },
-          { type: 'text', text: prompt },
-        ],
-      }],
-    }),
-  });
+  const maxAttempts = 4;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5',
+        max_tokens: 100,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: img.mediaType, data: img.base64 } },
+            { type: 'text', text: prompt },
+          ],
+        }],
+      }),
+    });
 
-  if (!res.ok) throw new Error(`Claude vision error ${res.status}`);
-  const data = await res.json() as { content: Array<{ text: string }> };
-  const text = (data.content?.[0]?.text ?? '').trim();
-  const clean = text.replace(/^VERDICT:\s*/i, '').trim();
+    if (res.status === 529 || res.status === 503 || res.status === 429) {
+      if (attempt < maxAttempts) {
+        const delay = 2000 * attempt;
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+      throw new Error(`Claude vision error ${res.status}`);
+    }
 
-  if (clean.startsWith('GOOD')) return { verdict: 'GOOD', reason: clean.replace(/^GOOD[:\s-]*/i, '').trim() };
-  if (clean.startsWith('BAD_CONTACT')) return { verdict: 'BAD_CONTACT', reason: clean.replace(/^BAD_CONTACT[:\s-]*/i, '').trim() };
-  return { verdict: 'BAD_OTHER', reason: clean.replace(/^BAD_OTHER[:\s-]*/i, '').trim() };
+    if (!res.ok) throw new Error(`Claude vision error ${res.status}`);
+    const data = await res.json() as { content: Array<{ text: string }> };
+    const text = (data.content?.[0]?.text ?? '').trim();
+    const clean = text.replace(/^VERDICT:\s*/i, '').trim();
+
+    if (clean.startsWith('GOOD')) return { verdict: 'GOOD', reason: clean.replace(/^GOOD[:\s-]*/i, '').trim() };
+    if (clean.startsWith('BAD_CONTACT')) return { verdict: 'BAD_CONTACT', reason: clean.replace(/^BAD_CONTACT[:\s-]*/i, '').trim() };
+    return { verdict: 'BAD_OTHER', reason: clean.replace(/^BAD_OTHER[:\s-]*/i, '').trim() };
+  }
+
+  throw new Error('Claude vision max retries exceeded');
 }
 
 interface UrlTraceEntry {
@@ -381,13 +395,11 @@ Deno.serve(async (req: Request) => {
       if (taskErr) return Response.json({ error: taskErr.message }, { status: 500, headers: corsHeaders });
 
       const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY')!;
-      EdgeRuntime.waitUntil(
-        fetch(`${supabaseUrl}/functions/v1/photo-enrich`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseAnon}` },
-          body: JSON.stringify({ action: 'process_batch', job_id: job.id }),
-        }).catch(() => {})
-      );
+      const kickUrl = `${supabaseUrl}/functions/v1/photo-enrich`;
+      const kickBody = JSON.stringify({ action: 'process_batch', job_id: job.id });
+      const kickHeaders = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseAnon}` };
+
+      await fetch(kickUrl, { method: 'POST', headers: kickHeaders, body: kickBody }).catch(() => {});
 
       return Response.json({ job_id: job.id, total: listings.length }, { headers: corsHeaders });
     }
@@ -485,30 +497,21 @@ Deno.serve(async (req: Request) => {
           fallback_reason: null,
         };
 
-        // ---- STEP 1: Screen google_photo_url ----
+        // ---- STEP 1: Use google_photo_url directly (trusted source, no Claude needed) ----
         const googleUrl = task.google_photo_url as string | null;
         trace.google_photo_exists = !!googleUrl;
         if (googleUrl && !badUrls.includes(googleUrl)) {
           try {
-            const result = await classifyPhotoWithClaude(googleUrl, anthropicKey);
-            trace.google_verdict = result.verdict;
-            trace.google_reason = result.reason;
-            if (result.verdict === 'GOOD') {
-              const rehosted = await rehostToStorage(supabase, googleUrl, task.listing_id as string, 'google_photo');
-              const finalUrl = rehosted ?? googleUrl;
-              if (!heroIsManual) {
-                heroPhoto = finalUrl;
-                heroSource = 'google';
-              }
-              if (!approved.includes(finalUrl) && approved.length < MAX_PHOTOS) {
-                approved.unshift(finalUrl);
-              }
-            } else {
-              badUrls.push(googleUrl);
-              if (result.verdict === 'BAD_CONTACT') {
-                const note = `[Google photo BAD_CONTACT: ${result.reason}]`;
-                crawlNotes = crawlNotes ? `${crawlNotes} ${note}` : note;
-              }
+            const rehosted = await rehostToStorage(supabase, googleUrl, task.listing_id as string, 'google_photo');
+            const finalUrl = rehosted ?? googleUrl;
+            trace.google_verdict = 'trusted';
+            trace.google_reason = 'Google Maps photo — used directly without classification';
+            if (!heroIsManual) {
+              heroPhoto = finalUrl;
+              heroSource = 'google';
+            }
+            if (!approved.includes(finalUrl) && approved.length < MAX_PHOTOS) {
+              approved.unshift(finalUrl);
             }
           } catch (e) {
             trace.google_verdict = 'fetch_failed';
@@ -607,27 +610,14 @@ Deno.serve(async (req: Request) => {
 
         trace.total_approved = approved.length;
 
-        // ---- STEP 4: Street view fallback ----
+        // ---- STEP 4: Street view fallback (trusted source, no Claude needed) ----
         const streetViewUrl = task.street_view_url as string | null;
         if (!heroIsManual && !heroPhoto && streetViewUrl) {
-          try {
-            const svResult = await classifyPhotoWithClaude(streetViewUrl, anthropicKey);
-            if (svResult.verdict === 'GOOD') {
-              heroPhoto = streetViewUrl;
-              heroSource = 'street_view';
-              trace.fallback_reason = (trace.fallback_reason as string | null)
-                ? `${trace.fallback_reason}; street view passed screening`
-                : 'No approved photos — street view passed screening';
-            } else {
-              trace.fallback_reason = (trace.fallback_reason as string | null)
-                ? `${trace.fallback_reason}; street view rejected (${svResult.verdict}): ${svResult.reason}`
-                : `Street view rejected (${svResult.verdict}): ${svResult.reason}`;
-            }
-          } catch {
-            trace.fallback_reason = (trace.fallback_reason as string | null)
-              ? `${trace.fallback_reason}; street view fetch failed`
-              : 'Street view fetch failed';
-          }
+          heroPhoto = streetViewUrl;
+          heroSource = 'street_view';
+          trace.fallback_reason = (trace.fallback_reason as string | null)
+            ? `${trace.fallback_reason}; used street view as fallback hero`
+            : 'No approved photos — used street view as fallback hero';
         } else if (!heroIsManual && !heroPhoto && !streetViewUrl) {
           trace.fallback_reason = (trace.fallback_reason as string | null)
             ? `${trace.fallback_reason}; no street view available`
