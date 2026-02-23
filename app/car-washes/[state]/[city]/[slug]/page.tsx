@@ -88,8 +88,11 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
   const cityName = unslugCity(params.city);
   const todayKey = getTodayKey();
 
+  const heroImage = listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
+  const logoImage = listing.logo_photo ?? listing.google_logo_url ?? null;
+
   const galleryPhotos = (listing.photos || [])
-    .filter((p: string) => isImageUrl(p) && p !== listing.hero_image && p !== listing.logo_photo)
+    .filter((p: string) => isImageUrl(p) && p !== heroImage && p !== logoImage)
     .slice(0, 8);
 
   const hours = listing.hours as Record<string, string> | null;
@@ -97,10 +100,10 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="relative bg-[#0F2744]">
-        {listing.hero_image ? (
+        {heroImage ? (
           <div className="relative h-72 md:h-96 overflow-hidden">
             <img
-              src={listing.hero_image}
+              src={heroImage}
               alt={listing.name}
               className="w-full h-full object-cover opacity-60"
             />
@@ -123,9 +126,9 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
             </nav>
 
             <div className="flex items-start gap-4">
-              {listing.logo_photo && (
+              {logoImage && (
                 <div className="shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-white p-1.5 shadow-lg">
-                  <img src={listing.logo_photo} alt={`${listing.name} logo`} className="w-full h-full object-contain" />
+                  <img src={logoImage} alt={`${listing.name} logo`} className="w-full h-full object-contain" />
                 </div>
               )}
               <div className="flex-1 min-w-0">

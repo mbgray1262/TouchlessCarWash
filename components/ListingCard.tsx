@@ -20,19 +20,27 @@ export function ListingCard({ listing, href, showVerifiedBadge = false }: Listin
     /automatic|tunnel|self.serve|express/i.test(a)
   );
 
+  const cardImage = listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
+  const cardLogo = listing.logo_photo ?? listing.google_logo_url ?? null;
+
   return (
     <Link href={linkHref} className="group block h-full">
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-xl hover:border-[#22C55E] transition-all duration-200 h-full flex flex-col">
-        {listing.hero_image ? (
+        {cardImage ? (
           <div className="relative h-48 overflow-hidden shrink-0">
             <img
-              src={listing.hero_image}
+              src={cardImage}
               alt={listing.name}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               loading="lazy"
               decoding="async"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+            {cardLogo && (
+              <div className="absolute top-2.5 left-2.5 w-8 h-8 rounded-lg overflow-hidden bg-white/90 p-0.5 shadow">
+                <img src={cardLogo} alt="" className="w-full h-full object-contain" />
+              </div>
+            )}
             <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between">
               {showVerifiedBadge ? (
                 <Badge className="bg-[#22C55E] text-white border-0 text-xs">
@@ -59,7 +67,7 @@ export function ListingCard({ listing, href, showVerifiedBadge = false }: Listin
         )}
 
         <div className="p-5 flex flex-col flex-1">
-          {showVerifiedBadge && !listing.hero_image && (
+          {showVerifiedBadge && !cardImage && (
             <Badge className="bg-[#22C55E] text-white border-0 text-xs mb-2 self-start">
               <CheckCircle className="w-3 h-3 mr-1" />Touchless Verified
             </Badge>
@@ -68,7 +76,7 @@ export function ListingCard({ listing, href, showVerifiedBadge = false }: Listin
             <h2 className="text-base font-bold text-[#0F2744] group-hover:text-[#22C55E] transition-colors leading-tight">
               {listing.name}
             </h2>
-            {!listing.hero_image && listing.rating > 0 && (
+            {!cardImage && listing.rating > 0 && (
               <div className="flex items-center gap-1 shrink-0">
                 <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
                 <span className="font-semibold text-sm">{Number(listing.rating).toFixed(1)}</span>
