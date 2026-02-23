@@ -11,7 +11,8 @@ const MAX_PHOTOS = 5;
 const MIN_GALLERY_TARGET = 3;
 
 const SKIP_DOMAINS = [
-  'facebook.com', 'yelp.com', 'google.com', 'yellowpages.com',
+  'facebook.com', 'fbcdn.net', 'fbsbx.com',
+  'yelp.com', 'google.com', 'yellowpages.com',
   'bbb.org', 'instagram.com', 'twitter.com', 'x.com', 'tiktok.com',
   'youtube.com', 'linkedin.com', 'pinterest.com', 'nextdoor.com',
   'foursquare.com', 'tripadvisor.com', 'angieslist.com', 'manta.com',
@@ -84,6 +85,32 @@ interface UrlTraceEntry {
   reason: string | null;
 }
 
+function isTinyByDimHint(url: string): boolean {
+  const s = url.toLowerCase();
+  const patterns: RegExp[] = [
+    /[_\-x,](\d+)[_\-x,](\d+)(?:[_\-.]|$)/,
+    /w_(\d+)[,&]h_(\d+)/,
+    /h_(\d+)[,&]w_(\d+)/,
+    /s(\d+)x(\d+)/,
+    /\/(\d+)x(\d+)\//,
+  ];
+  for (const re of patterns) {
+    const m = re.exec(s);
+    if (m) {
+      const a = parseInt(m[1], 10);
+      const b = parseInt(m[2], 10);
+      if (a > 0 && b > 0 && a < 100 && b < 100) return true;
+    }
+  }
+  return false;
+}
+
+function stripThumbnailSuffix(url: string): string {
+  return url
+    .replace(/-\d{2,4}x\d{2,4}(?=\.\w{2,5}$)/i, '')
+    .replace(/_\d{2,4}x\d{2,4}(?=\.\w{2,5}$)/i, '');
+}
+
 function filterCandidateUrlsWithTrace(
   images: string[],
   alreadySeen: string[],
@@ -96,13 +123,14 @@ function filterCandidateUrlsWithTrace(
     { test: s => s.includes('favicon'), label: "'favicon' keyword" },
     { test: s => s.includes('logo'), label: "'logo' keyword" },
     { test: s => s.includes('icon'), label: "'icon' keyword" },
-    { test: s => s.includes('facebook.com') || s.includes('twitter.com') || s.includes('instagram.com'), label: 'social domain' },
+    { test: s => s.includes('facebook.com') || s.includes('fbcdn.net') || s.includes('fbsbx.com') || s.includes('twitter.com') || s.includes('instagram.com'), label: 'social domain' },
     { test: s => s.includes('google-analytics') || s.includes('pixel') || s.includes('tracking'), label: 'tracking keyword' },
     { test: s => s.includes('1x1') || s.includes('spacer') || s.includes('blank'), label: 'spacer/blank keyword' },
     { test: s => s.includes('badge') || s.includes('banner') || s.includes('button'), label: "'banner'/'badge'/'button' keyword" },
     { test: s => s.includes('simoniz') || s.includes('armorall') || s.includes('turtle') || s.includes('rainx'), label: 'brand product keyword' },
     { test: s => s.includes('social') || s.includes('share') || s.includes('sprite'), label: "'social'/'share'/'sprite' keyword" },
     { test: s => /[_\-/]nav[_\-/.]/.test(s) || s.includes('/nav') || s.endsWith('nav.jpg') || s.endsWith('nav.png') || s.endsWith('nav.webp'), label: "'nav' navigation image keyword" },
+    { test: s => isTinyByDimHint(s), label: 'tiny image by dimension hint' },
   ];
 
   for (const url of images) {
@@ -134,8 +162,24 @@ function filterCandidateUrlsWithTrace(
     trace.push({ url, passed: true, reason: null });
   }
 
-  const candidates = trace.filter(e => e.passed).map(e => e.url);
-  return { candidates, trace };
+  const passed = trace.filter(e => e.passed).map(e => e.url);
+
+  const seenBase = new Set<string>();
+  const dedupedPassed: string[] = [];
+  for (const url of passed) {
+    const base = stripThumbnailSuffix(url);
+    if (seenBase.has(base)) {
+      const idx = trace.findIndex(e => e.url === url);
+      if (idx !== -1) {
+        trace[idx] = { url, passed: false, reason: 'rejected: thumbnail duplicate of larger version' };
+      }
+    } else {
+      seenBase.add(base);
+      dedupedPassed.push(url);
+    }
+  }
+
+  return { candidates: dedupedPassed, trace };
 }
 
 function filterCandidateUrls(images: string[], alreadySeen: string[]): string[] {
