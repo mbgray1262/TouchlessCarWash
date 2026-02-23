@@ -211,7 +211,7 @@ export default async function CityPage({ params }: CityPageProps) {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {listings.map((listing) => (
             <ListingCard
               key={listing.id}
