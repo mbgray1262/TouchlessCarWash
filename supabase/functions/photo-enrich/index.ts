@@ -9,7 +9,7 @@ const corsHeaders = {
 const FIRECRAWL_API = 'https://api.firecrawl.dev/v1';
 const MAX_PHOTOS = 5;
 const MIN_GALLERY_TARGET = 3;
-const PARALLEL_BATCH_SIZE = 5;
+const PARALLEL_BATCH_SIZE = 3;
 
 const SKIP_DOMAINS = [
   'facebook.com', 'fbcdn.net', 'fbsbx.com',
@@ -410,6 +410,13 @@ Deno.serve(async (req: Request) => {
       if (job.status === 'cancelled' || job.status === 'done') {
         return Response.json({ done: true, status: job.status }, { headers: corsHeaders });
       }
+
+      await supabase
+        .from('photo_enrich_tasks')
+        .update({ task_status: 'pending' })
+        .eq('job_id', jobId)
+        .eq('task_status', 'in_progress')
+        .is('finished_at', null);
 
       const { data: batchTasks } = await supabase
         .from('photo_enrich_tasks')
