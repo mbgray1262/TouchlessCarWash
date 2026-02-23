@@ -174,6 +174,8 @@ export default function GalleryBackfillPage() {
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; msg: string } | null>(null);
   const jobIdRef = useRef<number | null>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
+  const lastProcessedRef = useRef<number>(-1);
+  const stalledSinceRef = useRef<number | null>(null);
 
   const showToast = useCallback((type: 'success' | 'error' | 'info', msg: string) => {
     setToast({ type, msg });
@@ -234,10 +236,25 @@ export default function GalleryBackfillPage() {
       if (pollRef.current) clearInterval(pollRef.current);
       const finalStatus = data.status === 'done' ? 'done' : 'cancelled';
       setJobStatus(finalStatus);
+      lastProcessedRef.current = -1;
+      stalledSinceRef.current = null;
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ jobId, status: finalStatus })); } catch {}
       loadStatus();
       showToast('success', `Done! ${data.succeeded} of ${data.total} listings gained new photos.`);
       loadResults(jobId);
+    } else if (data.status === 'running') {
+      if (data.processed === lastProcessedRef.current) {
+        const now = Date.now();
+        if (stalledSinceRef.current === null) {
+          stalledSinceRef.current = now;
+        } else if (now - stalledSinceRef.current > 15_000) {
+          stalledSinceRef.current = now;
+          callFn({ action: 'process_batch', job_id: jobId }).catch(() => {});
+        }
+      } else {
+        lastProcessedRef.current = data.processed;
+        stalledSinceRef.current = null;
+      }
     }
   }, [callFn, loadStatus, showToast, loadResults]);
 
@@ -279,6 +296,8 @@ export default function GalleryBackfillPage() {
     setTraces([]);
     setListingDetails({});
     setShowResults(false);
+    lastProcessedRef.current = -1;
+    stalledSinceRef.current = null;
     try {
       const limit = mode === 'test' ? testLimit : 0;
       const since = mode === 'today'
