@@ -6,14 +6,14 @@ import { Button } from '@/components/ui/button';
 export const metadata: Metadata = {
   title: 'About Us — Touchless Car Wash Finder',
   description:
-    'Learn about Touchless Car Wash Finder — the only directory dedicated exclusively to verified touchless (brushless) car washes across all 51 states.',
+    'Learn about Touchless Car Wash Finder — the only directory dedicated exclusively to verified touchless (brushless) car washes across all 50 states + DC.',
   alternates: {
     canonical: 'https://touchlesscarwashfinder.com/about',
   },
   openGraph: {
     title: 'About Us — Touchless Car Wash Finder',
     description:
-      'The only directory dedicated exclusively to verified touchless car washes. 3,465+ locations across all 51 states.',
+      'The only directory dedicated exclusively to verified touchless car washes. 3,465+ locations across all 50 states + DC.',
     url: 'https://touchlesscarwashfinder.com/about',
     type: 'website',
   },
@@ -25,7 +25,7 @@ const organizationSchema = {
   name: 'Touchless Car Wash Finder',
   url: 'https://touchlesscarwashfinder.com',
   description:
-    'The only directory dedicated exclusively to verified touchless (brushless) car washes across all 51 states.',
+    'The only directory dedicated exclusively to verified touchless (brushless) car washes across all 50 states + DC.',
   foundingDate: '2024',
   areaServed: {
     '@type': 'Country',
@@ -36,7 +36,7 @@ const organizationSchema = {
 
 const STATS = [
   { label: 'Verified Locations', value: '3,465+', icon: MapPin },
-  { label: 'States Covered', value: '51', icon: CheckCircle },
+  { label: 'States + DC', value: '50', icon: CheckCircle },
   { label: 'Google Reviews Indexed', value: '100K+', icon: Star },
   { label: 'Hours Listings Updated', value: 'Weekly', icon: Clock },
 ];
@@ -50,7 +50,7 @@ const DIFFERENTIATORS = [
   },
   {
     icon: MapPin,
-    title: 'All 51 States, 3,465+ Locations',
+    title: 'All 50 States + DC, 3,465+ Locations',
     description:
       'From rural towns to major metros, we have built the most comprehensive touchless-only directory in the country — and we add new locations every week.',
   },

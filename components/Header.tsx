@@ -26,9 +26,6 @@ export function Header() {
             <Link href="#browse-states" className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors">
               Browse States
             </Link>
-            <Link href="/add-listing" className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors">
-              Add Your Business
-            </Link>
             <Link href="/blog" className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors">
               Blog
             </Link>
@@ -72,13 +69,6 @@ export function Header() {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Browse States
-              </Link>
-              <Link
-                href="/add-listing"
-                className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Add Your Business
               </Link>
               <Link
                 href="/blog"

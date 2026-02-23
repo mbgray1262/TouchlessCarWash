@@ -9,13 +9,13 @@ import type { Metadata } from 'next';
 const SITE_URL = 'https://touchlesscarwashfinder.com';
 
 export const metadata: Metadata = {
-  title: 'Browse Touchless Car Washes by State — All 51 States | Touchless Car Wash Finder',
+  title: 'Browse Touchless Car Washes by State — All 50 States + DC | Touchless Car Wash Finder',
   description: 'Browse touchless car wash locations in every US state. Find verified brushless car washes near you with ratings, photos, hours, and directions.',
   alternates: {
     canonical: SITE_URL + '/states',
   },
   openGraph: {
-    title: 'Browse Touchless Car Washes by State — All 51 States',
+    title: 'Browse Touchless Car Washes by State — All 50 States + DC',
     description: 'Browse touchless car wash locations in every US state. Find verified brushless car washes near you with ratings, photos, hours, and directions.',
     url: SITE_URL + '/states',
     siteName: 'Touchless Car Wash Finder',
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 const faqItems = [
   {
     question: 'How many touchless car washes are in the United States?',
-    answer: 'Our directory lists over 3,465 verified touchless car wash locations across all 51 states (including Washington D.C.). Every listing has been manually verified to confirm it is a true touchless (brushless) car wash.',
+    answer: 'Our directory lists over 3,465 verified touchless car wash locations across all 50 states + DC. Every listing has been manually verified to confirm it is a true touchless (brushless) car wash.',
   },
   {
     question: 'Which state has the most touchless car washes?',
