@@ -208,13 +208,20 @@ Deno.serve(async (req: Request) => {
       }
 
       const limit: number = body.limit ?? 0;
+      const since: string | null = body.since ?? null;
 
-      const { data: allListings, error: listErr } = await supabase
+      let listQuery = supabase
         .from('listings')
         .select('id, name, google_place_id, photos, hero_image')
         .eq('is_touchless', true)
         .not('google_place_id', 'is', null)
         .order('id');
+
+      if (since) {
+        listQuery = listQuery.gte('photo_enrichment_attempted_at', since);
+      }
+
+      const { data: allListings, error: listErr } = await listQuery;
 
       if (listErr) return Response.json({ error: listErr.message }, { status: 500, headers: corsHeaders });
       if (!allListings || allListings.length === 0) {

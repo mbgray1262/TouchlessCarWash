@@ -127,7 +127,7 @@ function TraceRow({ task }: { task: TaskTrace }) {
 
 export default function GalleryBackfillPage() {
   const [statusData, setStatusData] = useState<StatusData | null>(null);
-  const [mode, setMode] = useState<'test' | 'full'>('test');
+  const [mode, setMode] = useState<'test' | 'today' | 'full'>('test');
   const [testLimit, setTestLimit] = useState(10);
   const [jobStatus, setJobStatus] = useState<JobStatus>('idle');
   const [jobProgress, setJobProgress] = useState<JobProgress | null>(null);
@@ -230,7 +230,10 @@ export default function GalleryBackfillPage() {
     setShowTraces(false);
     try {
       const limit = mode === 'test' ? testLimit : 0;
-      const res = await callFn({ action: 'start', limit });
+      const since = mode === 'today'
+        ? new Date(new Date().setHours(0, 0, 0, 0)).toISOString()
+        : null;
+      const res = await callFn({ action: 'start', limit, ...(since ? { since } : {}) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Failed to start');
       jobIdRef.current = data.job_id;
@@ -374,23 +377,22 @@ export default function GalleryBackfillPage() {
             {jobStatus === 'idle' && (
               <div className="space-y-5">
                 <div className="flex gap-3">
-                  {(['test', 'full'] as const).map(m => (
+                  {([
+                    { key: 'test', label: 'Test Mode', desc: 'Small batch to verify results' },
+                    { key: 'today', label: "Today's Run", desc: 'Listings processed today that need more photos' },
+                    { key: 'full', label: 'Full Run', desc: `All eligible listings with < ${MIN_GALLERY_TARGET} gallery photos` },
+                  ] as const).map(({ key, label, desc }) => (
                     <button
-                      key={m}
-                      onClick={() => setMode(m)}
+                      key={key}
+                      onClick={() => setMode(key)}
                       className={`flex-1 py-3 px-4 rounded-lg border text-sm font-medium transition-all text-left ${
-                        mode === m
+                        mode === key
                           ? 'bg-teal-50 border-teal-400 text-teal-800'
                           : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
                       }`}
                     >
-                      {m === 'test' ? 'Test Mode' : 'Full Run'}
-                      <span className="block text-xs font-normal mt-0.5 opacity-70">
-                        {m === 'test'
-                          ? 'Small batch to verify results'
-                          : `All eligible listings with < ${MIN_GALLERY_TARGET} gallery photos`
-                        }
-                      </span>
+                      {label}
+                      <span className="block text-xs font-normal mt-0.5 opacity-70">{desc}</span>
                     </button>
                   ))}
                 </div>
@@ -416,6 +418,15 @@ export default function GalleryBackfillPage() {
                   </div>
                 )}
 
+                {mode === 'today' && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-xs text-blue-800 font-medium">Scoped to listings where photo enrichment ran today</p>
+                    <p className="text-xs text-blue-700 mt-0.5">
+                      Only listings with a <code className="bg-blue-100 px-1 rounded">photo_enrichment_attempted_at</code> timestamp from today that still have fewer than {MIN_GALLERY_TARGET} gallery photos will be included.
+                    </p>
+                  </div>
+                )}
+
                 {mode === 'full' && (
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
                     <p className="text-xs text-amber-800 font-medium">Full run uses Google Places API + Anthropic credits</p>
@@ -430,7 +441,12 @@ export default function GalleryBackfillPage() {
                   onClick={handleStart}
                 >
                   <Images className="w-4 h-4 mr-2" />
-                  {mode === 'test' ? `Run Test (${testLimit} listings)` : 'Start Gallery Photo Backfill'}
+                  {mode === 'test'
+                    ? `Run Test (${testLimit} listings)`
+                    : mode === 'today'
+                    ? "Start Today's Run"
+                    : 'Start Gallery Photo Backfill'
+                  }
                 </Button>
               </div>
             )}
