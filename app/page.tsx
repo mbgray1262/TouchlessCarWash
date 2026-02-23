@@ -9,10 +9,61 @@ import { supabase, type Listing } from '@/lib/supabase';
 import { US_STATES, getStateSlug } from '@/lib/constants';
 import type { Metadata } from 'next';
 
+const SITE_URL = 'https://touchlesscarwashfinder.com';
+
+const TOP_STATES = ['CA', 'TX', 'FL', 'NY', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI', 'AZ', 'WA'];
+
 export const metadata: Metadata = {
-  title: 'Touchless Car Wash Near Me | Find Touchless Car Washes Nationwide',
-  description: 'Find the best touchless car washes near you. Search by city or zip code to discover quality touchless car wash services across the United States. Compare prices, read reviews, and get directions.',
+  title: 'Touchless Car Wash Near Me — Find 3,465+ Verified Locations | Touchless Car Wash Finder',
+  description: 'Find the nearest touchless car wash in your area. Browse 3,465+ verified brushless car wash locations across all 51 states. No scratches, no brushes — just clean.',
+  alternates: {
+    canonical: SITE_URL + '/',
+  },
+  openGraph: {
+    title: 'Touchless Car Wash Near Me — Find 3,465+ Verified Locations',
+    description: 'Find the nearest touchless car wash in your area. Browse 3,465+ verified brushless car wash locations across all 51 states. No scratches, no brushes — just clean.',
+    url: SITE_URL + '/',
+    siteName: 'Touchless Car Wash Finder',
+    images: [
+      {
+        url: 'https://res.cloudinary.com/dret3qhyu/image/upload/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png',
+        width: 1200,
+        height: 630,
+        alt: 'Touchless Car Wash Finder',
+      },
+    ],
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Touchless Car Wash Near Me — Find 3,465+ Verified Locations',
+    description: 'Find the nearest touchless car wash in your area. Browse 3,465+ verified brushless car wash locations across all 51 states.',
+    images: ['https://res.cloudinary.com/dret3qhyu/image/upload/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png'],
+  },
 };
+
+const faqItems = [
+  {
+    question: 'What is a touchless car wash?',
+    answer: 'A touchless car wash uses high-pressure water jets and specialized detergents to clean your vehicle without any physical contact from brushes, cloth, or foam pads. Because nothing touches your car\'s surface, there is zero risk of scratches, swirl marks, or paint damage.',
+  },
+  {
+    question: 'Are touchless car washes better for your car?',
+    answer: 'Yes — touchless car washes are widely considered the safest option for your paint. They eliminate brush-induced scratches and swirl marks, preserve ceramic coatings and paint protection film (PPF), and are safe for all paint types including matte finishes. The high-pressure water removes dirt effectively without mechanical abrasion.',
+  },
+  {
+    question: 'How do I find a touchless car wash near me?',
+    answer: 'Use the search bar at the top of this page — enter your city, ZIP code, or the name of a car wash and we\'ll show you verified touchless locations nearby. Our directory lists 3,465+ verified touchless car wash locations across all 51 states.',
+  },
+  {
+    question: 'How much does a touchless car wash cost?',
+    answer: 'Touchless car wash prices typically range from $8–$20 for a basic wash and $15–$35 for premium packages that include pre-soak, tire shine, and spot-free rinse. Prices vary by location, market, and included services. Monthly unlimited membership plans are also available at many locations, usually priced between $20–$50/month.',
+  },
+  {
+    question: 'Are touchless car washes safe for new cars?',
+    answer: 'Touchless car washes are the safest type of car wash for new vehicles. New paint is especially vulnerable to micro-scratches caused by brushes and cloth friction. Touchless washes rely entirely on water pressure and chemistry, making them ideal for new cars, vehicles with ceramic coatings, paint protection film (PPF), or any paint-sensitive finish.',
+  },
+];
 
 async function getFeaturedListings(): Promise<Listing[]> {
   const { data, error } = await supabase
@@ -53,8 +104,44 @@ export default async function Home() {
     getTotalCount(),
   ]);
 
+  const organizationSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Touchless Car Wash Finder',
+    url: SITE_URL,
+    logo: SITE_URL + '/logo.png',
+    description: 'The only directory dedicated exclusively to verified touchless car washes across the United States.',
+  };
+
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqItems.map((item) => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.answer,
+      },
+    })),
+  };
+
+  const popularStates = TOP_STATES
+    .map((code) => US_STATES.find((s) => s.code === code))
+    .filter(Boolean)
+    .filter((s) => (stateListingCounts[s!.code] ?? 0) > 0);
+
   return (
     <div className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
+
       <HeroSection />
 
       <section className="bg-[#0F2744] py-12">
@@ -196,6 +283,66 @@ export default async function Home() {
               ))}
             </div>
           )}
+        </div>
+      </section>
+
+      {popularStates.length > 0 && (
+        <section className="py-16 bg-[#F0F4F8]">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+                Popular States
+              </h2>
+              <p className="text-lg text-muted-foreground">
+                Explore touchless car wash directories in the most searched states
+              </p>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 max-w-6xl mx-auto">
+              {popularStates.map((state) => (
+                <Link
+                  key={state!.code}
+                  href={`/state/${getStateSlug(state!.code)}`}
+                  className="group"
+                >
+                  <div className="flex flex-col items-center justify-center bg-white rounded-xl p-5 border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all text-center">
+                    <span className="text-2xl font-bold text-[#0F2744] mb-1 group-hover:text-blue-600 transition-colors">
+                      {state!.code}
+                    </span>
+                    <span className="text-sm font-medium text-gray-700 mb-1">{state!.name}</span>
+                    <span className="text-xs text-gray-500">
+                      {stateListingCounts[state!.code].toLocaleString()} locations
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section className="py-16 bg-white">
+        <div className="container mx-auto px-4 max-w-3xl">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+              Frequently Asked Questions
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Everything you need to know about touchless car washes
+            </p>
+          </div>
+          <div className="divide-y divide-gray-200 border border-gray-200 rounded-2xl overflow-hidden">
+            {faqItems.map((item, i) => (
+              <details key={i} className="group bg-white">
+                <summary className="flex items-center justify-between gap-4 px-6 py-5 cursor-pointer list-none select-none hover:bg-gray-50 transition-colors">
+                  <span className="text-base font-semibold text-gray-900">{item.question}</span>
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 group-open:rotate-45 transition-transform text-lg leading-none">+</span>
+                </summary>
+                <div className="px-6 pb-6 pt-1 text-gray-600 leading-relaxed text-sm">
+                  {item.answer}
+                </div>
+              </details>
+            ))}
+          </div>
         </div>
       </section>
 
