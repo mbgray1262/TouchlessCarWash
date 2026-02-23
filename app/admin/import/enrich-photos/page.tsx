@@ -222,6 +222,8 @@ function TraceRow({ task }: { task: TaskTrace }) {
   );
 }
 
+const STORAGE_KEY = 'photo_enrich_last_job';
+
 export default function EnrichPhotosPage() {
   const [stats, setStats] = useState<PipelineStats | null>(null);
   const [mode, setMode] = useState<'test' | 'full'>('test');
@@ -282,11 +284,43 @@ export default function EnrichPhotosPage() {
     }
   }, []);
 
+  // Restore last job from localStorage on mount so traces survive navigation
   useEffect(() => {
     loadStats();
     loadRecentListings();
+
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const { jobId, status } = JSON.parse(saved) as { jobId: number; status: string };
+        if (jobId && (status === 'done' || status === 'cancelled' || status === 'running')) {
+          jobIdRef.current = jobId;
+          // Re-fetch current job state from server
+          fetch(`${SUPABASE_URL}/functions/v1/photo-enrich`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+            body: JSON.stringify({ action: 'job_status', job_id: jobId }),
+          }).then(r => r.ok ? r.json() : null).then((data: JobProgress | null) => {
+            if (!data) return;
+            setJobProgress(data);
+            if (data.status === 'done' || data.status === 'cancelled') {
+              setJobStatus(data.status === 'done' ? 'done' : 'cancelled');
+              loadTraces(jobId);
+            } else if (data.status === 'running') {
+              setJobStatus('running');
+              if (pollRef.current) clearInterval(pollRef.current);
+              pollRef.current = setInterval(pollJob, 3000);
+            }
+          }).catch(() => {});
+        }
+      }
+    } catch {
+      // localStorage unavailable
+    }
+
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [loadStats, loadRecentListings]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const pollJob = useCallback(async () => {
     const jobId = jobIdRef.current;
@@ -301,7 +335,9 @@ export default function EnrichPhotosPage() {
     setJobProgress(data);
     if (data.status === 'done' || data.status === 'cancelled') {
       if (pollRef.current) clearInterval(pollRef.current);
-      setJobStatus(data.status === 'done' ? 'done' : 'cancelled');
+      const finalStatus = data.status === 'done' ? 'done' : 'cancelled';
+      setJobStatus(finalStatus);
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ jobId, status: finalStatus })); } catch {}
       loadStats();
       loadRecentListings();
       showToast('success', `Done! ${data.succeeded} of ${data.total} listings got a hero image.`);
@@ -324,6 +360,7 @@ export default function EnrichPhotosPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Failed to start');
       jobIdRef.current = data.job_id;
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ jobId: data.job_id, status: 'running' })); } catch {}
       setJobProgress({ id: data.job_id, status: 'running', total: data.total, processed: 0, succeeded: 0 });
       showToast('info', `Started — processing ${data.total} listings one by one.`);
       if (pollRef.current) clearInterval(pollRef.current);
@@ -352,6 +389,7 @@ export default function EnrichPhotosPage() {
   const handleReset = useCallback(() => {
     if (pollRef.current) clearInterval(pollRef.current);
     jobIdRef.current = null;
+    try { localStorage.removeItem(STORAGE_KEY); } catch {}
     setJobStatus('idle');
     setJobProgress(null);
     setTraces([]);
