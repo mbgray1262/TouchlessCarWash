@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import LogoImage from '@/components/LogoImage';
 import PhotoGalleryGrid from '@/components/PhotoGalleryGrid';
+import SuggestEditModal from '@/components/SuggestEditModal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase, type Listing } from '@/lib/supabase';
@@ -642,6 +643,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                     Get Directions
                   </a>
                 )}
+                <SuggestEditModal listingId={listing.id} listingName={listing.name} />
               </div>
 
               {listing.latitude && listing.longitude && (
