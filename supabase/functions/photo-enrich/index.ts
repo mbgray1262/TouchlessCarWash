@@ -501,6 +501,15 @@ Deno.serve(async (req: Request) => {
         .update({ task_status: 'in_progress' })
         .in('id', batchTasks.map(t => t.id));
 
+      const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY')!;
+      EdgeRuntime.waitUntil(
+        fetch(`${supabaseUrl}/functions/v1/photo-enrich`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseAnon}` },
+          body: JSON.stringify({ action: 'process_batch', job_id: jobId }),
+        }).catch(() => {})
+      );
+
       const processOneTask = async (task: typeof batchTasks[number]) => {
         const { data: listingData } = await supabase
           .from('listings')
@@ -801,15 +810,6 @@ Deno.serve(async (req: Request) => {
         processed: (job.processed ?? 0) + batchTasks.length,
         succeeded: (job.succeeded ?? 0) + batchSucceeded,
       }).eq('id', jobId);
-
-      const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY')!;
-      EdgeRuntime.waitUntil(
-        fetch(`${supabaseUrl}/functions/v1/photo-enrich`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseAnon}` },
-          body: JSON.stringify({ action: 'process_batch', job_id: jobId }),
-        }).catch(() => {})
-      );
 
       return Response.json({
         processed: batchTasks.length,
