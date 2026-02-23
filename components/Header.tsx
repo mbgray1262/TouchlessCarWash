@@ -4,23 +4,14 @@ import Link from 'next/link';
 import { Droplet, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsAdmin(!!session?.user);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAdmin(!!session?.user);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  const isAdmin = pathname.startsWith('/admin') || searchParams.get('admin') === 'true';
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
