@@ -122,7 +122,12 @@ async function rehostToStorage(
   }
 }
 
-type ScreenResult = { approved: string[]; rejected: string[]; crawlNotes: string };
+interface ScreenResult {
+  approved: string[];
+  rejected: string[];
+  crawlNotes: string;
+  approvedCount: number;
+}
 
 async function screenAndRehost(
   urls: string[],
@@ -134,6 +139,7 @@ async function screenAndRehost(
   maxApprove: number,
   crawlNotes: string,
 ): Promise<ScreenResult> {
+  const approvedBefore = approved.length;
   for (const url of urls) {
     if (approved.length >= maxApprove) break;
     try {
@@ -154,7 +160,7 @@ async function screenAndRehost(
       rejected.push(url);
     }
   }
-  return { approved, rejected, crawlNotes };
+  return { approved, rejected, crawlNotes, approvedCount: approved.length - approvedBefore };
 }
 
 Deno.serve(async (req: Request) => {
@@ -319,7 +325,6 @@ Deno.serve(async (req: Request) => {
 
       await supabase.from('photo_enrich_tasks').update({ task_status: 'in_progress' }).eq('id', task.id);
 
-      // Fetch full listing data needed for this step
       const { data: listingData } = await supabase
         .from('listings')
         .select('photos, website_photos, blocked_photos')
@@ -336,7 +341,6 @@ Deno.serve(async (req: Request) => {
       })();
       const blockedPhotos: string[] = (listingData?.blocked_photos as string[]) ?? [];
 
-      // Never overwrite a manually-set hero
       const heroIsManual = task.current_hero_source === 'manual' || task.current_hero_source === 'manual_upload';
 
       let approved: string[] = [];
@@ -344,18 +348,36 @@ Deno.serve(async (req: Request) => {
       let heroSource: string | null = heroIsManual ? (task.current_hero_source as string) : null;
       let crawlNotes: string = (task.current_crawl_notes as string) ?? '';
 
-      // Carry forward any already-rehosted gallery photos (skip hero slot)
       for (const p of currentPhotos) {
         if (p && !approved.includes(p) && approved.length < MAX_PHOTOS) {
           approved.push(p);
         }
       }
 
+      // Trace state
+      const trace: Record<string, unknown> = {
+        google_photo_exists: false,
+        google_verdict: 'skipped',
+        google_reason: null,
+        website_photos_db_count: websitePhotos.length,
+        website_photos_screened: 0,
+        website_photos_approved: 0,
+        firecrawl_triggered: false,
+        firecrawl_images_found: 0,
+        firecrawl_candidates: 0,
+        firecrawl_approved: 0,
+        total_approved: 0,
+        fallback_reason: null,
+      };
+
       // ---- STEP 1: Screen google_photo_url ----
       const googleUrl = task.google_photo_url as string | null;
+      trace.google_photo_exists = !!googleUrl;
       if (googleUrl && !rejectedUrls.includes(googleUrl)) {
         try {
           const result = await classifyPhotoWithClaude(googleUrl, anthropicKey);
+          trace.google_verdict = result.verdict;
+          trace.google_reason = result.reason;
           if (result.verdict === 'GOOD') {
             const rehosted = await rehostToStorage(supabase, googleUrl, task.listing_id as string, 'google_photo');
             const finalUrl = rehosted ?? googleUrl;
@@ -370,14 +392,20 @@ Deno.serve(async (req: Request) => {
               crawlNotes = crawlNotes ? `${crawlNotes} ${note}` : note;
             }
           }
-        } catch {
-          // continue
+        } catch (e) {
+          trace.google_verdict = 'fetch_failed';
+          trace.google_reason = (e as Error).message;
         }
+      } else if (googleUrl && rejectedUrls.includes(googleUrl)) {
+        trace.google_verdict = 'previously_blocked';
+        trace.google_reason = 'URL is in blocked_photos list';
       }
 
       // ---- STEP 2: Screen existing website_photos from DB ----
       if (approved.length < MAX_PHOTOS && websitePhotos.length > 0) {
         const candidates = filterCandidateUrls(websitePhotos, rejectedUrls).slice(0, 15);
+        trace.website_photos_screened = candidates.length;
+        const approvedBefore = approved.length;
         const r = await screenAndRehost(
           candidates,
           approved,
@@ -391,15 +419,18 @@ Deno.serve(async (req: Request) => {
         approved = r.approved;
         rejectedUrls = r.rejected;
         crawlNotes = r.crawlNotes;
+        trace.website_photos_approved = approved.length - approvedBefore;
         if (!heroIsManual && !heroSource && approved.length > 0) heroSource = 'website';
       }
 
-      // ---- STEP 3: Firecrawl scrape only if < MIN_GALLERY_TARGET approved AND no website_photos in DB ----
+      // ---- STEP 3: Firecrawl scrape ----
       const websiteUrl = task.website as string | null;
       const shouldFirecrawl = approved.length < MIN_GALLERY_TARGET
         && websitePhotos.length === 0
         && websiteUrl
         && !SKIP_DOMAINS.some(d => websiteUrl.includes(d));
+
+      trace.firecrawl_triggered = !!shouldFirecrawl;
 
       if (shouldFirecrawl) {
         try {
@@ -421,7 +452,10 @@ Deno.serve(async (req: Request) => {
           if (fcRes.ok) {
             const fcData = await fcRes.json() as { success: boolean; data?: { images?: string[] } };
             const rawImages = (fcData.data?.images ?? []) as string[];
+            trace.firecrawl_images_found = rawImages.length;
             const candidates = filterCandidateUrls(rawImages, rejectedUrls).slice(0, 15);
+            trace.firecrawl_candidates = candidates.length;
+            const approvedBefore = approved.length;
 
             const r = await screenAndRehost(
               candidates,
@@ -436,12 +470,25 @@ Deno.serve(async (req: Request) => {
             approved = r.approved;
             rejectedUrls = r.rejected;
             crawlNotes = r.crawlNotes;
+            trace.firecrawl_approved = approved.length - approvedBefore;
             if (!heroIsManual && !heroSource && approved.length > 0) heroSource = 'website';
+          } else {
+            trace.fallback_reason = `Firecrawl HTTP ${fcRes.status}`;
           }
-        } catch {
-          // continue to step 4
+        } catch (e) {
+          trace.fallback_reason = `Firecrawl error: ${(e as Error).message}`;
+        }
+      } else if (!shouldFirecrawl && approved.length < MIN_GALLERY_TARGET) {
+        if (!websiteUrl) {
+          trace.fallback_reason = 'No website URL';
+        } else if (websitePhotos.length > 0) {
+          trace.fallback_reason = 'Skipped Firecrawl — website_photos already in DB';
+        } else if (SKIP_DOMAINS.some(d => websiteUrl.includes(d))) {
+          trace.fallback_reason = `Skipped Firecrawl — website is a directory/social domain`;
         }
       }
+
+      trace.total_approved = approved.length;
 
       // ---- STEP 4: Street view fallback ----
       const streetViewUrl = task.street_view_url as string | null;
@@ -453,10 +500,21 @@ Deno.serve(async (req: Request) => {
         ? heroSource
         : (approved.length > 0 ? heroSource : (streetViewUrl ? 'street_view' : null));
 
-      // ---- STEP 5: Save — hero = approved[0], gallery = approved[1..4] ----
+      if (!heroIsManual && approved.length === 0) {
+        if (streetViewUrl) {
+          trace.fallback_reason = (trace.fallback_reason as string | null)
+            ? `${trace.fallback_reason}; fell back to street view`
+            : 'No approved photos found — fell back to street view';
+        } else {
+          trace.fallback_reason = (trace.fallback_reason as string | null)
+            ? `${trace.fallback_reason}; no street view available`
+            : 'No approved photos and no street view URL';
+        }
+      }
+
+      // ---- STEP 5: Save ----
       const galleryPhotos = approved.slice(heroIsManual ? 0 : 1, MAX_PHOTOS);
 
-      // ---- LOGO: always use google_logo_url, rehost to storage ----
       let logoPhoto: string | null = null;
       const logoUrl = task.google_logo_url as string | null;
       if (logoUrl && !(task.current_logo as string | null)) {
@@ -464,7 +522,6 @@ Deno.serve(async (req: Request) => {
         logoPhoto = rehosted ?? logoUrl;
       }
 
-      // Build final blocked list (original blocked + all rejected this run)
       const newBlocked = [...new Set(rejectedUrls)];
 
       const update: Record<string, unknown> = {
@@ -495,6 +552,19 @@ Deno.serve(async (req: Request) => {
         gallery_count: galleryPhotos.length,
         logo_found: !!logoPhoto,
         finished_at: new Date().toISOString(),
+        // Trace columns
+        google_photo_exists: trace.google_photo_exists as boolean,
+        google_verdict: trace.google_verdict as string,
+        google_reason: trace.google_reason as string | null,
+        website_photos_db_count: trace.website_photos_db_count as number,
+        website_photos_screened: trace.website_photos_screened as number,
+        website_photos_approved: trace.website_photos_approved as number,
+        firecrawl_triggered: trace.firecrawl_triggered as boolean,
+        firecrawl_images_found: trace.firecrawl_images_found as number,
+        firecrawl_candidates: trace.firecrawl_candidates as number,
+        firecrawl_approved: trace.firecrawl_approved as number,
+        total_approved: trace.total_approved as number,
+        fallback_reason: trace.fallback_reason as string | null,
       }).eq('id', task.id);
 
       await supabase.from('photo_enrich_jobs').update({
@@ -502,7 +572,6 @@ Deno.serve(async (req: Request) => {
         succeeded: (job.succeeded ?? 0) + (finalHero ? 1 : 0),
       }).eq('id', jobId);
 
-      // Chain next task
       const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY')!;
       EdgeRuntime.waitUntil(
         fetch(`${supabaseUrl}/functions/v1/photo-enrich`, {
@@ -535,6 +604,28 @@ Deno.serve(async (req: Request) => {
 
       if (!job) return Response.json({ error: 'Job not found' }, { status: 404, headers: corsHeaders });
       return Response.json(job, { headers: corsHeaders });
+    }
+
+    // --- TASK TRACES (for debug panel) ---
+    if (action === 'task_traces') {
+      const jobId = body.job_id;
+      if (!jobId) return Response.json({ error: 'job_id required' }, { status: 400, headers: corsHeaders });
+
+      const { data: tasks } = await supabase
+        .from('photo_enrich_tasks')
+        .select([
+          'id', 'listing_id', 'listing_name', 'website',
+          'google_photo_url', 'street_view_url',
+          'task_status', 'hero_source', 'hero_image_found', 'gallery_count',
+          'google_photo_exists', 'google_verdict', 'google_reason',
+          'website_photos_db_count', 'website_photos_screened', 'website_photos_approved',
+          'firecrawl_triggered', 'firecrawl_images_found', 'firecrawl_candidates', 'firecrawl_approved',
+          'total_approved', 'fallback_reason',
+        ].join(', '))
+        .eq('job_id', jobId)
+        .order('id');
+
+      return Response.json({ tasks: tasks ?? [] }, { headers: corsHeaders });
     }
 
     // --- CANCEL ---
