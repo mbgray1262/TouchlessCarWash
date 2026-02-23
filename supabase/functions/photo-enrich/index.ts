@@ -102,6 +102,7 @@ function filterCandidateUrlsWithTrace(
     { test: s => s.includes('badge') || s.includes('banner') || s.includes('button'), label: "'banner'/'badge'/'button' keyword" },
     { test: s => s.includes('simoniz') || s.includes('armorall') || s.includes('turtle') || s.includes('rainx'), label: 'brand product keyword' },
     { test: s => s.includes('social') || s.includes('share') || s.includes('sprite'), label: "'social'/'share'/'sprite' keyword" },
+    { test: s => /[_\-/]nav[_\-/.]/.test(s) || s.includes('/nav') || s.endsWith('nav.jpg') || s.endsWith('nav.png') || s.endsWith('nav.webp'), label: "'nav' navigation image keyword" },
   ];
 
   for (const url of images) {

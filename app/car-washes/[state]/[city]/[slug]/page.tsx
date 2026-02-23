@@ -93,8 +93,18 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
   const heroImage = listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
   const logoImage = listing.logo_photo ?? listing.google_logo_url ?? null;
 
-  const allGalleryPhotos = (listing.photos || [])
-    .filter((p: string) => isImageUrl(p) && p !== heroImage && p !== logoImage);
+  const seenUrls = new Set<string>();
+  const allGalleryPhotos: string[] = [];
+  const candidatePhotos = [
+    ...(heroImage ? [heroImage] : []),
+    ...(listing.photos || []),
+  ];
+  for (const p of candidatePhotos) {
+    if (p && isImageUrl(p) && p !== logoImage && !seenUrls.has(p)) {
+      seenUrls.add(p);
+      allGalleryPhotos.push(p);
+    }
+  }
 
   const galleryPhotos = allGalleryPhotos.slice(0, 8);
   const stripPhotos = allGalleryPhotos.slice(0, 4);
