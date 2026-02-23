@@ -381,6 +381,8 @@ export default function EnrichPhotosPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const pollCountRef = useRef(0);
+
   const pollJob = useCallback(async () => {
     const jobId = jobIdRef.current;
     if (!jobId) return;
@@ -392,6 +394,13 @@ export default function EnrichPhotosPage() {
     if (!res.ok) return;
     const data: JobProgress = await res.json();
     setJobProgress(data);
+
+    pollCountRef.current += 1;
+    if (pollCountRef.current % 5 === 0) {
+      loadStats();
+      loadRecentListings();
+    }
+
     if (data.status === 'done' || data.status === 'cancelled') {
       if (pollRef.current) clearInterval(pollRef.current);
       const finalStatus = data.status === 'done' ? 'done' : 'cancelled';
@@ -409,6 +418,7 @@ export default function EnrichPhotosPage() {
     setJobProgress(null);
     setTraces([]);
     setShowTraces(false);
+    pollCountRef.current = 0;
     try {
       const limit = mode === 'test' ? testLimit : 0;
       const res = await fetch(`${SUPABASE_URL}/functions/v1/photo-enrich`, {
