@@ -5,6 +5,7 @@ import {
   Star, MapPin, Phone, Globe, Clock, CheckCircle, ArrowLeft,
   Sparkles, ExternalLink, ChevronRight
 } from 'lucide-react';
+import LogoImage from '@/components/LogoImage';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase, type Listing } from '@/lib/supabase';
@@ -127,9 +128,12 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
 
             <div className="flex items-start gap-4">
               {logoImage && (
-                <div className="shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-white p-1.5 shadow-lg">
-                  <img src={logoImage} alt={`${listing.name} logo`} className="w-full h-full object-contain" onError={(e) => { (e.currentTarget.parentElement as HTMLElement).style.display = 'none'; }} />
-                </div>
+                <LogoImage
+                  src={logoImage}
+                  alt={`${listing.name} logo`}
+                  wrapperClassName="shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-white p-1.5 shadow-lg"
+                  className="w-full h-full object-contain"
+                />
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2 mb-2">

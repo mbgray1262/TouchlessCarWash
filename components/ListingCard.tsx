@@ -3,6 +3,7 @@ import { Star, MapPin, Phone, CheckCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { type Listing } from '@/lib/supabase';
 import { getStateSlug } from '@/lib/constants';
+import LogoImage from '@/components/LogoImage';
 
 interface ListingCardProps {
   listing: Listing;
@@ -37,9 +38,12 @@ export function ListingCard({ listing, href, showVerifiedBadge = false }: Listin
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
             {cardLogo && (
-              <div className="absolute top-2.5 left-2.5 w-8 h-8 rounded-lg overflow-hidden bg-white/90 p-0.5 shadow">
-                <img src={cardLogo} alt="" className="w-full h-full object-contain" onError={(e) => { (e.currentTarget.parentElement as HTMLElement).style.display = 'none'; }} />
-              </div>
+              <LogoImage
+                src={cardLogo}
+                alt=""
+                wrapperClassName="absolute top-2.5 left-2.5 w-8 h-8 rounded-lg overflow-hidden bg-white/90 p-0.5 shadow"
+                className="w-full h-full object-contain"
+              />
             )}
             <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between">
               {showVerifiedBadge ? (
