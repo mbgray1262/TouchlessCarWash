@@ -23,6 +23,12 @@ interface PipelineStats {
   by_source: { google: number; website: number; street_view: number };
 }
 
+interface GalleryStats {
+  total_gallery_photos: number;
+  listings_with_photos: number;
+  avg_photos_per_listing: number;
+}
+
 interface JobProgress {
   id: number;
   status: string;
@@ -262,6 +268,7 @@ const STORAGE_KEY = 'photo_enrich_last_job';
 
 export default function EnrichPhotosPage() {
   const [stats, setStats] = useState<PipelineStats | null>(null);
+  const [galleryStats, setGalleryStats] = useState<GalleryStats | null>(null);
   const [mode, setMode] = useState<'test' | 'full'>('test');
   const [testLimit, setTestLimit] = useState(10);
   const [jobStatus, setJobStatus] = useState<JobStatus>('idle');
@@ -289,6 +296,9 @@ export default function EnrichPhotosPage() {
       const data = await res.json();
       setStats(data);
     }
+
+    const { data: gData } = await supabase.rpc('gallery_photo_stats');
+    if (gData) setGalleryStats(gData as GalleryStats);
   }, []);
 
   const loadRecentListings = useCallback(async () => {
@@ -479,7 +489,7 @@ export default function EnrichPhotosPage() {
 
         {/* Stats */}
         {stats && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
             <div className="bg-white rounded-xl border border-gray-200 p-4">
               <p className="text-xs text-gray-400 mb-1">Total Touchless</p>
               <p className="text-2xl font-bold text-[#0F2744]">{stats.total.toLocaleString()}</p>
@@ -497,6 +507,15 @@ export default function EnrichPhotosPage() {
               <p className="text-xs text-gray-400 mb-1">From Website</p>
               <p className="text-2xl font-bold text-teal-600">{stats.by_source.website.toLocaleString()}</p>
               <p className="text-xs text-gray-400 mt-0.5">{stats.by_source.street_view} street view</p>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <p className="text-xs text-gray-400 mb-1">Gallery Photos</p>
+              <p className="text-2xl font-bold text-[#0F2744]">
+                {galleryStats ? galleryStats.total_gallery_photos.toLocaleString() : '—'}
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {galleryStats ? `avg ${galleryStats.avg_photos_per_listing} per listing` : ''}
+              </p>
             </div>
           </div>
         )}
