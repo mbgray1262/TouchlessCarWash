@@ -3,10 +3,24 @@
 import Link from 'next/link';
 import { Droplet, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsAdmin(!!session?.user);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAdmin(!!session?.user);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
@@ -32,9 +46,11 @@ export function Header() {
             <Link href="/about" className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors">
               About
             </Link>
-            <Link href="/admin" className="text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors">
-              Admin
-            </Link>
+            {isAdmin && (
+              <Link href="/admin" className="text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors">
+                Admin
+              </Link>
+            )}
             <Button asChild size="sm" className="bg-[#22C55E] hover:bg-[#16A34A] text-white">
               <Link href="/add-listing">Add Your Business</Link>
             </Button>
@@ -84,13 +100,15 @@ export function Header() {
               >
                 About
               </Link>
-              <Link
-                href="/admin"
-                className="text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Admin
-              </Link>
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className="text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Admin
+                </Link>
+              )}
               <Button asChild size="sm" className="bg-[#22C55E] hover:bg-[#16A34A] text-white w-full">
                 <Link href="/add-listing" onClick={() => setMobileMenuOpen(false)}>Add Your Business</Link>
               </Button>
