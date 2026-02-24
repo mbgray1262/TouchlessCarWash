@@ -200,7 +200,7 @@ export function HeroCard({
 
           {galleryPhotos.length > 0 && (
             <div className="mt-2 pt-2 border-t border-orange-200">
-              <p className="text-[10px] font-semibold text-orange-700 mb-1.5">Gallery photos — click to delete</p>
+              <p className="text-[10px] font-semibold text-orange-700 mb-1.5">Gallery photos</p>
               <div className="flex gap-1.5 flex-wrap">
                 {galleryPhotos.map((url) => (
                   <div key={url} className="relative group">
@@ -215,11 +215,11 @@ export function HeroCard({
                       }}
                     />
                     <button
-                      onClick={() => onRemoveGalleryPhoto(url)}
-                      className="absolute inset-0 bg-red-500/0 group-hover:bg-red-500/70 rounded flex items-center justify-center transition-all"
+                      onClick={(e) => { e.stopPropagation(); onRemoveGalleryPhoto(url); }}
+                      className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center shadow transition-colors"
                       title="Delete from gallery"
                     >
-                      <Trash2 className="w-3.5 h-3.5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <Trash2 className="w-2.5 h-2.5" />
                     </button>
                   </div>
                 ))}
