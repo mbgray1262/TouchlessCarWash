@@ -619,7 +619,7 @@ export default function EnrichPhotosPage() {
                     >
                       {m === 'test' ? 'Test Mode' : 'Full Run'}
                       <span className="block text-xs font-normal mt-0.5 opacity-70">
-                        {m === 'test' ? 'Small batch to verify results' : `All ${stats?.total.toLocaleString() ?? '…'} touchless listings`}
+                        {m === 'test' ? 'Small batch to verify results' : `${stats?.need_hero.toLocaleString() ?? '…'} listings still need photos`}
                       </span>
                     </button>
                   ))}
@@ -650,7 +650,7 @@ export default function EnrichPhotosPage() {
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
                     <p className="text-xs text-amber-800 font-medium">Full run uses Firecrawl + Anthropic credits</p>
                     <p className="text-xs text-amber-700 mt-0.5">
-                      Processes all {stats?.total.toLocaleString() ?? '…'} listings sequentially. Run a test first.
+                      Processes all {stats?.need_hero.toLocaleString() ?? '…'} listings that still need a hero photo. Run a test first.
                     </p>
                   </div>
                 )}
