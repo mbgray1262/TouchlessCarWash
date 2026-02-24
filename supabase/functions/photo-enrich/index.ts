@@ -547,6 +547,12 @@ Deno.serve(async (req: Request) => {
           }
         }
 
+        // If we already have gallery photos and no manual hero, promote the first one
+        if (!heroIsManual && approved.length > 0 && !heroPhoto) {
+          heroPhoto = approved[0];
+          heroSource = 'gallery';
+        }
+
         const trace: Record<string, unknown> = {
           google_photo_exists: false,
           google_verdict: 'skipped',
