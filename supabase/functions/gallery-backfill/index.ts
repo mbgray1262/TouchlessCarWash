@@ -374,7 +374,7 @@ Deno.serve(async (req: Request) => {
           if (needed <= 0) {
             fallbackReason = 'Already has enough gallery photos';
           } else {
-            const fetchCount = Math.min(15, needed + 5);
+            const fetchCount = Math.min(15, needed + 2);
             const placePhotoUrls = await fetchGooglePlacePhotoUrls(
               task.google_place_id as string,
               googleApiKey,

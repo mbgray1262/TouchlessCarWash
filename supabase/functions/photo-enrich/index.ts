@@ -599,7 +599,7 @@ Deno.serve(async (req: Request) => {
               placeId,
               googleApiKey,
               heroPhoto,
-              Math.min(10, needed + 5),
+              Math.min(10, needed + 2),
             );
 
             const approvedBefore = approved.length;
