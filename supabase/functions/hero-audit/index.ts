@@ -174,6 +174,13 @@ Deno.serve(async (req: Request) => {
 
       const limit: number = body.limit ?? 0;
 
+      const { data: auditedRows } = await supabase
+        .from('hero_audit_tasks')
+        .select('listing_id')
+        .in('task_status', ['done', 'in_progress', 'pending']);
+
+      const auditedIds = new Set((auditedRows ?? []).map((r: { listing_id: string }) => r.listing_id));
+
       let query = supabase
         .from('listings')
         .select('id, name, hero_image')
@@ -182,12 +189,15 @@ Deno.serve(async (req: Request) => {
         .not('hero_image', 'is', null)
         .order('id');
 
-      if (limit > 0) query = query.limit(limit);
+      if (limit > 0) query = query.limit(limit + auditedIds.size);
 
-      const { data: listings, error: listErr } = await query;
+      const { data: allListings, error: listErr } = await query;
       if (listErr) return Response.json({ error: listErr.message }, { status: 500, headers: corsHeaders });
+
+      const listings = (allListings ?? []).filter((l: { id: string }) => !auditedIds.has(l.id)).slice(0, limit > 0 ? limit : undefined);
+
       if (!listings || listings.length === 0) {
-        return Response.json({ error: 'No listings with trusted Google hero images found' }, { status: 404, headers: corsHeaders });
+        return Response.json({ error: 'No unaudited listings with Google hero images found' }, { status: 404, headers: corsHeaders });
       }
 
       const { data: job, error: jobErr } = await supabase
