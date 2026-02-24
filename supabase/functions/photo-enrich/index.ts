@@ -619,6 +619,16 @@ Deno.serve(async (req: Request) => {
         .limit(PARALLEL_BATCH_SIZE);
 
       if (!batchTasks || batchTasks.length === 0) {
+        const { count: inProgressCount } = await supabase
+          .from('photo_enrich_tasks')
+          .select('id', { count: 'exact', head: true })
+          .eq('job_id', jobId)
+          .eq('task_status', 'in_progress');
+
+        if ((inProgressCount ?? 0) > 0) {
+          return Response.json({ done: false, waiting: true, in_progress: inProgressCount }, { headers: corsHeaders });
+        }
+
         await supabase.from('photo_enrich_jobs').update({
           status: 'done',
           finished_at: new Date().toISOString(),
