@@ -1,0 +1,178 @@
+'use client';
+
+import { useRef, useEffect } from 'react';
+import { X, Flag, CheckCircle, ChevronDown } from 'lucide-react';
+import { HeroListing, ReplacementOption } from './types';
+
+const SOURCE_COLORS: Record<string, string> = {
+  gallery: 'bg-emerald-100 text-emerald-700',
+  google: 'bg-blue-100 text-blue-700',
+  street_view: 'bg-amber-100 text-amber-700',
+  website: 'bg-sky-100 text-sky-700',
+};
+
+function SourceBadge({ source }: { source: string | null }) {
+  if (!source) return <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">none</span>;
+  const cls = SOURCE_COLORS[source] ?? 'bg-gray-100 text-gray-600';
+  return <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${cls}`}>{source.replace('_', ' ')}</span>;
+}
+
+interface Props {
+  listing: HeroListing;
+  replacements: ReplacementOption[];
+  isFocused: boolean;
+  isExpanded: boolean;
+  onExpand: () => void;
+  onCollapse: () => void;
+  onReplace: (url: string, source: string) => void;
+  onFlag: () => void;
+  onFocus: () => void;
+  confirmIndex: number | null;
+}
+
+export function HeroCard({
+  listing,
+  replacements,
+  isFocused,
+  isExpanded,
+  onExpand,
+  onCollapse,
+  onReplace,
+  onFlag,
+  onFocus,
+  confirmIndex,
+}: Props) {
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isFocused && cardRef.current) {
+      cardRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [isFocused]);
+
+  const hasHero = !!listing.hero_image;
+
+  return (
+    <div
+      ref={cardRef}
+      onClick={onFocus}
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'x' || e.key === 'X') {
+          e.preventDefault();
+          isExpanded ? onCollapse() : onExpand();
+        }
+        if (e.key === 'Escape') onCollapse();
+        if (isExpanded && e.key >= '1' && e.key <= '5') {
+          const idx = parseInt(e.key, 10) - 1;
+          if (replacements[idx]) onReplace(replacements[idx].url, replacements[idx].source);
+        }
+      }}
+      className={`
+        relative rounded-xl overflow-hidden border-2 transition-all duration-200 outline-none cursor-pointer
+        ${isFocused ? 'border-orange-400 shadow-lg shadow-orange-100' : 'border-gray-200 hover:border-gray-300'}
+        ${!hasHero ? 'opacity-60' : ''}
+        ${listing.flagged ? 'ring-2 ring-amber-400 ring-offset-1' : ''}
+      `}
+    >
+      <div className="relative bg-gray-100 h-48 overflow-hidden">
+        {listing.hero_image ? (
+          <img
+            src={listing.hero_image}
+            alt={listing.name}
+            loading="lazy"
+            className="w-full h-full object-cover"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gray-200">
+            <span className="text-gray-400 text-sm">No hero image</span>
+          </div>
+        )}
+
+        <button
+          onClick={(e) => { e.stopPropagation(); isExpanded ? onCollapse() : onExpand(); }}
+          className="absolute top-2 right-2 w-7 h-7 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center shadow-md transition-colors z-10"
+          title="Reject & replace"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+
+        {listing.flagged && (
+          <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-amber-400 flex items-center justify-center shadow">
+            <Flag className="w-3 h-3 text-white" />
+          </div>
+        )}
+      </div>
+
+      <div className="p-2.5 bg-white">
+        <p className="text-sm font-semibold text-gray-800 truncate leading-tight">{listing.name}</p>
+        <p className="text-xs text-gray-500 mt-0.5">{listing.city}, {listing.state}</p>
+        <div className="mt-1.5">
+          <SourceBadge source={listing.hero_image_source} />
+        </div>
+      </div>
+
+      {isExpanded && (
+        <div
+          className="border-t-2 border-orange-300 bg-orange-50 p-3"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-orange-800">Choose replacement</p>
+            <button onClick={onCollapse} className="text-gray-400 hover:text-gray-600">
+              <ChevronDown className="w-4 h-4" />
+            </button>
+          </div>
+
+          {replacements.length === 0 ? (
+            <p className="text-xs text-gray-500 mb-2">No alternatives available</p>
+          ) : (
+            <div className="flex gap-1.5 flex-wrap mb-2">
+              {replacements.map((opt, idx) => (
+                <div key={opt.url} className="relative">
+                  <button
+                    onClick={() => onReplace(opt.url, opt.source)}
+                    className="relative group block rounded-md overflow-hidden border-2 border-transparent hover:border-orange-400 transition-all"
+                    title={`${idx + 1}: ${opt.label}`}
+                  >
+                    <img
+                      src={opt.url}
+                      alt={opt.label}
+                      loading="lazy"
+                      className="w-16 h-12 object-cover"
+                      onError={(e) => {
+                        const p = (e.target as HTMLImageElement).parentElement?.parentElement;
+                        if (p) p.style.display = 'none';
+                      }}
+                    />
+                    {confirmIndex === idx && (
+                      <div className="absolute inset-0 bg-emerald-500/80 flex items-center justify-center">
+                        <CheckCircle className="w-5 h-5 text-white" />
+                      </div>
+                    )}
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[9px] text-center py-0.5 leading-none">
+                      {idx + 1} {opt.label}
+                    </div>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <button
+            onClick={onFlag}
+            className={`flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors ${
+              listing.flagged
+                ? 'bg-amber-200 text-amber-800'
+                : 'bg-white border border-gray-300 text-gray-600 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700'
+            }`}
+          >
+            <Flag className="w-3 h-3" />
+            {listing.flagged ? 'Flagged' : 'Flag for later'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
