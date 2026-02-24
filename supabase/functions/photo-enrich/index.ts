@@ -54,17 +54,32 @@ async function classifyPhotoWithClaude(
     ? '\nAlso reject this photo (as BAD_OTHER) if it shows essentially the same view as any of the already-approved photos shown above — we want visual variety, not multiple shots of the same angle.'
     : '';
 
-  const prompt = `You are evaluating a photo for a touchless car wash directory. Classify this image as:
-GOOD — any of the following qualify:
-  - Exterior of a car wash building, facility, or entrance
-  - Interior of a wash bay, tunnel, or automated wash equipment
-  - Cars being washed by touchless equipment (water jets, foam, air dryers)
-  - Drive-through tunnel view from inside or outside
-  - Car wash signage, entrance canopy, or facility overview
-  The key test: does this image represent a car wash business? If yes, it is GOOD.
-BAD_CONTACT — ONLY use this if the image clearly shows brush rollers, cloth strips, mop curtains, or physical contact wash equipment that touches the car. Do NOT use BAD_CONTACT for wash bays, water jets, or foam equipment.
-BAD_OTHER — truly unrelated or unusable: gas station pumps with no car wash visible, convenience store interior, EV chargers only, people only without wash context, contact info card, plain logo/graphic, severely blurry or dark image, non-car-wash business.
-When in doubt, prefer GOOD. Only reject images that are clearly wrong.${dedupClause}
+  const prompt = `You are evaluating a photo for a touchless car wash directory listing. Classify this image as one of:
+
+GOOD — the image is a real photograph that clearly represents an automated car wash:
+  - Exterior of a car wash building, facility entrance, or facade
+  - Interior of an automated wash tunnel showing arches, nozzles, blowers, or a car moving through
+  - A car being washed by automated touchless equipment (high-pressure water jets, foam applicators, air dryers)
+  - Drive-through tunnel view from the driver's perspective entering or exiting
+  - Clear signage or canopy of a car wash facility with the building or wash bays visible
+
+BAD_CONTACT — the image clearly shows physical contact wash equipment that touches the car: spinning brush rollers, cloth strips, mop curtains, or hanging fabric/foam pads making contact with a vehicle. Do NOT use BAD_CONTACT for touchless equipment like water jets, spray arches, or foam nozzles.
+
+BAD_OTHER — reject for ANY of these reasons:
+  - NOT A REAL PHOTOGRAPH: Any illustration, logo, mascot, cartoon character, brand graphic, marketing artwork, or digitally created image. This includes stylized characters, colorful brand illustrations, and any image that is clearly not a photograph of a real place. If it looks drawn, rendered, or designed rather than photographed, it is BAD_OTHER.
+  - SELF-SERVE WAND BAY: A coin-operated or self-serve bay where customers wash their own car using a handheld wand, spray gun, or pressure washer hose. These are not automated touchless washes.
+  - EQUIPMENT CLOSE-UP: A close-up of a single piece of equipment (soap dispenser, vacuum station, payment kiosk, vending machine, air compressor) with no broader facility context.
+  - WRONG BUSINESS: Gas station forecourt/pumps with no car wash visible, EV charging station, convenience store, restaurant, or any non-car-wash business.
+  - CAR INTERIOR: Dashboard, steering wheel, or seats photographed from inside a vehicle.
+  - PEOPLE ONLY: Photo of people with no car wash facility visible.
+  - BROKEN/UNUSABLE: Solid color, blank gradient, placeholder graphic, severely blurry, nearly black, or otherwise unusable image.
+  - SIGNAGE ONLY: A photo showing only a sign, menu board, or price list with no car wash facility visible behind it.
+
+IMPORTANT RULES:
+- The image MUST be a real photograph. Illustrations and graphics are ALWAYS BAD_OTHER.
+- When genuinely uncertain between GOOD and BAD_OTHER for a real photograph where some car wash facility is visible, prefer GOOD.
+- When genuinely uncertain whether an image is a real photograph or a graphic/illustration, prefer BAD_OTHER.${dedupClause}
+
 Reply with only the classification and a one-sentence reason, formatted as: VERDICT: reason`;
 
   const refBlocks = refImages.flatMap((r, i) => [
