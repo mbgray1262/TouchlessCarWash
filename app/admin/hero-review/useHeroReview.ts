@@ -198,6 +198,20 @@ export function useHeroReview() {
     );
   };
 
+  const handleCropSave = async (listingId: string, croppedUrl: string) => {
+    await supabase
+      .from('listings')
+      .update({ hero_image: croppedUrl, hero_image_source: 'gallery' })
+      .eq('id', listingId);
+
+    setListings(prev =>
+      prev.map(l => l.id === listingId
+        ? { ...l, hero_image: croppedUrl, hero_image_source: 'gallery' }
+        : l
+      )
+    );
+  };
+
   const handleFlag = async (listingId: string) => {
     const listing = listings.find(l => l.id === listingId);
     const alreadyFlagged = listing?.flagged;
@@ -256,6 +270,7 @@ export function useHeroReview() {
     handleReplace,
     handleRemoveHero,
     handleRemoveGalleryPhoto,
+    handleCropSave,
     handleFlag,
     navigateFocus,
     reload: loadListings,

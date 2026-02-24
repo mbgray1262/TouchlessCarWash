@@ -1,9 +1,10 @@
 'use client';
 
 import { useRef, useEffect, useState } from 'react';
-import { X, Flag, CheckCircle, ChevronDown, Trash2, ImageOff, ZoomIn } from 'lucide-react';
+import { X, Flag, CheckCircle, ChevronDown, Trash2, ImageOff, ZoomIn, Crop } from 'lucide-react';
 import { HeroListing, ReplacementOption } from './types';
 import HeroImageFallback from '@/components/HeroImageFallback';
+import { CropModal } from './CropModal';
 
 const SOURCE_COLORS: Record<string, string> = {
   gallery: 'bg-emerald-100 text-emerald-700',
@@ -68,6 +69,7 @@ interface Props {
   onReplace: (url: string | null, source: string) => void;
   onRemoveHero: () => void;
   onRemoveGalleryPhoto: (url: string) => void;
+  onCropSave: (url: string) => void;
   onFlag: () => void;
   onFocus: () => void;
   confirmIndex: number | null;
@@ -83,12 +85,14 @@ export function HeroCard({
   onReplace,
   onRemoveHero,
   onRemoveGalleryPhoto,
+  onCropSave,
   onFlag,
   onFocus,
   confirmIndex,
 }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [cropOpen, setCropOpen] = useState(false);
 
   useEffect(() => {
     if (isFocused && cardRef.current) {
@@ -102,6 +106,14 @@ export function HeroCard({
   return (
     <>
     {lightboxUrl && <PhotoLightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />}
+    {cropOpen && listing.hero_image && (
+      <CropModal
+        imageUrl={listing.hero_image}
+        listingId={listing.id}
+        onSave={(url) => { onCropSave(url); setCropOpen(false); }}
+        onClose={() => setCropOpen(false)}
+      />
+    )}
     <div
       ref={cardRef}
       onClick={onFocus}
@@ -148,13 +160,22 @@ export function HeroCard({
 
         <div className="absolute top-2 right-2 flex gap-1 z-10">
           {hasHero && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onRemoveHero(); }}
-              className="w-7 h-7 rounded-full bg-gray-700/80 hover:bg-gray-900 text-white flex items-center justify-center shadow-md transition-colors"
-              title="Remove hero (set to placeholder)"
-            >
-              <ImageOff className="w-3.5 h-3.5" />
-            </button>
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); setCropOpen(true); }}
+                className="w-7 h-7 rounded-full bg-gray-700/80 hover:bg-blue-600 text-white flex items-center justify-center shadow-md transition-colors"
+                title="Crop hero image"
+              >
+                <Crop className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onRemoveHero(); }}
+                className="w-7 h-7 rounded-full bg-gray-700/80 hover:bg-gray-900 text-white flex items-center justify-center shadow-md transition-colors"
+                title="Remove hero (set to placeholder)"
+              >
+                <ImageOff className="w-3.5 h-3.5" />
+              </button>
+            </>
           )}
           <button
             onClick={(e) => { e.stopPropagation(); isExpanded ? onCollapse() : onExpand(); }}

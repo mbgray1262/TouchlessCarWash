@@ -39,6 +39,7 @@ export default function HeroReviewPage() {
     handleReplace,
     handleRemoveHero,
     handleRemoveGalleryPhoto,
+    handleCropSave,
     handleFlag,
     navigateFocus,
     reload,
@@ -202,6 +203,7 @@ export default function HeroReviewPage() {
                   }}
                   onRemoveHero={() => handleRemoveHero(listing.id)}
                   onRemoveGalleryPhoto={(url) => handleRemoveGalleryPhoto(listing.id, url)}
+                  onCropSave={(url) => handleCropSave(listing.id, url)}
                   onFlag={() => handleFlag(listing.id)}
                   onFocus={() => setFocusedId(listing.id)}
                   confirmIndex={confirmIndex}

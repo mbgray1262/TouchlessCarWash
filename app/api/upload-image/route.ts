@@ -20,6 +20,8 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
+    const type = (formData.get('type') as string | null) ?? 'blog';
+    const listingId = formData.get('listingId') as string | null;
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -33,13 +35,23 @@ export async function POST(request: NextRequest) {
     const ext = file.type.split('/')[1].replace('jpeg', 'jpg');
     const base = slugifyFilename(file.name) || 'image';
     const timestamp = Date.now();
-    const filename = `${base}-${timestamp}.${ext}`;
+
+    let bucket: string;
+    let filename: string;
+
+    if (type === 'hero' && listingId) {
+      bucket = 'listing-photos';
+      filename = `${listingId}/hero-cropped-${timestamp}.${ext}`;
+    } else {
+      bucket = 'blog-images';
+      filename = `${base}-${timestamp}.${ext}`;
+    }
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = new Uint8Array(arrayBuffer);
 
     const { error: uploadError } = await supabase.storage
-      .from('blog-images')
+      .from(bucket)
       .upload(filename, buffer, {
         contentType: file.type,
         upsert: false,
@@ -50,7 +62,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { data: urlData } = supabase.storage
-      .from('blog-images')
+      .from(bucket)
       .getPublicUrl(filename);
 
     return NextResponse.json({ url: urlData.publicUrl });
