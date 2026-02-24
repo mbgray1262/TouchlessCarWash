@@ -842,6 +842,20 @@ Deno.serve(async (req: Request) => {
         return { heroPhoto, heroSource, approved, galleryPhotos };
       };
 
+      const { data: jobCheck } = await supabase
+        .from('photo_enrich_jobs')
+        .select('status')
+        .eq('id', jobId)
+        .maybeSingle();
+
+      if (jobCheck?.status === 'cancelled') {
+        await supabase.from('photo_enrich_tasks')
+          .update({ task_status: 'cancelled' })
+          .eq('job_id', jobId)
+          .in('task_status', ['pending', 'in_progress']);
+        return Response.json({ done: true, status: 'cancelled' }, { headers: corsHeaders });
+      }
+
       const results = await Promise.allSettled(batchTasks.map(task => processOneTask(task)));
 
       let batchSucceeded = 0;
@@ -861,10 +875,11 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      await supabase.from('photo_enrich_jobs').update({
-        processed: (job.processed ?? 0) + batchTasks.length,
-        succeeded: (job.succeeded ?? 0) + batchSucceeded,
-      }).eq('id', jobId);
+      await supabase.rpc('increment_photo_enrich_job_counts', {
+        p_job_id: jobId,
+        p_processed: batchTasks.length,
+        p_succeeded: batchSucceeded,
+      });
 
       return Response.json({
         processed: batchTasks.length,
@@ -917,7 +932,7 @@ Deno.serve(async (req: Request) => {
       await supabase.from('photo_enrich_tasks')
         .update({ task_status: 'cancelled' })
         .eq('job_id', jobId)
-        .eq('task_status', 'pending');
+        .in('task_status', ['pending', 'in_progress']);
 
       return Response.json({ cancelled: true }, { headers: corsHeaders });
     }
