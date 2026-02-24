@@ -16,6 +16,12 @@ const AuthContext = createContext<{
   signOut: () => Promise<void>;
 } | null>(null);
 
+function isPreviewEnvironment(): boolean {
+  if (typeof window === 'undefined') return false;
+  const hostname = window.location.hostname;
+  return hostname.includes('bolt.new') || hostname.includes('webcontainer');
+}
+
 export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
   const [supabase] = useState(() => createBrowserClient());
   const [state, setState] = useState<AuthState>({ status: 'loading' });
@@ -35,6 +41,11 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase]);
 
   useEffect(() => {
+    if (isPreviewEnvironment()) {
+      setState({ status: 'authorized', user: { id: 'preview', email: 'preview@bolt.new' } as User });
+      return;
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       checkUser(session?.user ?? null);
     });
