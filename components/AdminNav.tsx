@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, List, Building2, FileText, ArrowLeft, Upload, ShieldCheck, Link2, Database, Zap, Filter, Sparkles, PenLine, Eye } from 'lucide-react';
+import { LayoutDashboard, List, Building2, FileText, ArrowLeft, Upload, ShieldCheck, Link2, Database, Zap, Filter, Sparkles, PenLine, Eye, LogOut } from 'lucide-react';
+import { useAdminAuth } from './AdminAuthProvider';
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
@@ -22,11 +23,14 @@ const navItems = [
 
 export function AdminNav() {
   const pathname = usePathname();
+  const { signOut, state } = useAdminAuth();
 
   function isActive(href: string, exact: boolean): boolean {
     if (exact) return pathname === href;
     return pathname.startsWith(href);
   }
+
+  const userEmail = state.status === 'authorized' ? state.user.email : null;
 
   return (
     <div className="bg-white border-b border-gray-200">
@@ -56,6 +60,19 @@ export function AdminNav() {
               </Link>
             );
           })}
+          <div className="ml-auto flex items-center gap-3 pl-4 border-l border-gray-200 shrink-0">
+            {userEmail && (
+              <span className="text-xs text-gray-400 hidden md:block">{userEmail}</span>
+            )}
+            <button
+              onClick={signOut}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+              title="Sign out"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Sign out</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
