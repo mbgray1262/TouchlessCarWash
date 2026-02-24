@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const FIRECRAWL_API = 'https://api.firecrawl.dev/v1';
 const MAX_PHOTOS = 5;
-const PARALLEL_BATCH_SIZE = 2;
+const PARALLEL_BATCH_SIZE = 1;
 // Mark a task stuck after 8 minutes — tasks can take longer with dedup DB queries + AI classification
 const STUCK_TASK_TIMEOUT_MS = 8 * 60 * 1000;
 
