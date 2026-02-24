@@ -9,8 +9,8 @@ const corsHeaders = {
 const FIRECRAWL_API = 'https://api.firecrawl.dev/v1';
 const MAX_PHOTOS = 5;
 const PARALLEL_BATCH_SIZE = 2;
-// Mark a task stuck after 3 minutes (well within edge function limits)
-const STUCK_TASK_TIMEOUT_MS = 3 * 60 * 1000;
+// Mark a task stuck after 8 minutes — tasks can take longer with dedup DB queries + AI classification
+const STUCK_TASK_TIMEOUT_MS = 8 * 60 * 1000;
 
 const SKIP_DOMAINS = [
   'facebook.com', 'fbcdn.net', 'fbsbx.com',
@@ -636,16 +636,18 @@ Deno.serve(async (req: Request) => {
       const selfUrl = `${supabaseUrl}/functions/v1/photo-enrich`;
       const kickHeaders = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseAnon}` };
 
-      // Kick the NEXT batch immediately using waitUntil BEFORE doing any heavy work.
-      // This ensures the chain continues even if this invocation crashes mid-task.
+      // Kick the NEXT batch before doing heavy work so the chain survives a crash.
+      // Send two staggered kicks so if the first one is dropped the second still continues the chain.
+      const nextKickBody = JSON.stringify({ action: 'process_batch', job_id: jobId });
       EdgeRuntime.waitUntil(
-        new Promise(r => setTimeout(r, 500)).then(() =>
-          fetch(selfUrl, {
-            method: 'POST',
-            headers: kickHeaders,
-            body: JSON.stringify({ action: 'process_batch', job_id: jobId }),
-          }).catch(() => {})
-        )
+        Promise.all([
+          new Promise(r => setTimeout(r, 500)).then(() =>
+            fetch(selfUrl, { method: 'POST', headers: kickHeaders, body: nextKickBody }).catch(() => {})
+          ),
+          new Promise(r => setTimeout(r, 4000)).then(() =>
+            fetch(selfUrl, { method: 'POST', headers: kickHeaders, body: nextKickBody }).catch(() => {})
+          ),
+        ])
       );
 
       const processOneTask = async (task: typeof batchTasks[number]) => {
