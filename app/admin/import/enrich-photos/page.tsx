@@ -382,6 +382,16 @@ export default function EnrichPhotosPage() {
   }, []);
 
   const pollCountRef = useRef(0);
+  const lastProcessedRef = useRef<number>(-1);
+  const staleSinceRef = useRef<number | null>(null);
+
+  const kickBatch = useCallback(async (jobId: number) => {
+    await fetch(`${SUPABASE_URL}/functions/v1/photo-enrich`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+      body: JSON.stringify({ action: 'process_batch', job_id: jobId }),
+    }).catch(() => {});
+  }, []);
 
   const pollJob = useCallback(async () => {
     const jobId = jobIdRef.current;
@@ -401,6 +411,20 @@ export default function EnrichPhotosPage() {
       loadRecentListings();
     }
 
+    if (data.status === 'running') {
+      if (data.processed !== lastProcessedRef.current) {
+        lastProcessedRef.current = data.processed;
+        staleSinceRef.current = null;
+      } else {
+        if (staleSinceRef.current === null) {
+          staleSinceRef.current = Date.now();
+        } else if (Date.now() - staleSinceRef.current > 30_000) {
+          staleSinceRef.current = Date.now();
+          kickBatch(jobId);
+        }
+      }
+    }
+
     if (data.status === 'done' || data.status === 'cancelled') {
       if (pollRef.current) clearInterval(pollRef.current);
       const finalStatus = data.status === 'done' ? 'done' : 'cancelled';
@@ -411,7 +435,7 @@ export default function EnrichPhotosPage() {
       showToast('success', `Done! ${data.succeeded} of ${data.total} listings got a hero image.`);
       loadTraces(jobId);
     }
-  }, [loadStats, loadRecentListings, showToast, loadTraces]);
+  }, [loadStats, loadRecentListings, showToast, loadTraces, kickBatch]);
 
   const handleStart = useCallback(async () => {
     setJobStatus('running');
@@ -419,6 +443,8 @@ export default function EnrichPhotosPage() {
     setTraces([]);
     setShowTraces(false);
     pollCountRef.current = 0;
+    lastProcessedRef.current = -1;
+    staleSinceRef.current = null;
     try {
       const limit = mode === 'test' ? testLimit : 0;
       const res = await fetch(`${SUPABASE_URL}/functions/v1/photo-enrich`, {
