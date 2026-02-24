@@ -113,14 +113,13 @@ function Pill({ label, color }: { label: string; color: string }) {
   );
 }
 
-function TraceRow({ task }: { task: TaskTrace }) {
-  const [open, setOpen] = useState(false);
+function TraceRow({ task, open, onToggle }: { task: TaskTrace; open: boolean; onToggle: () => void }) {
   const finalSource = task.hero_source ?? (task.hero_image_found ? 'unknown' : 'none');
 
   return (
     <div className="border border-gray-100 rounded-lg overflow-hidden">
       <button
-        onClick={() => setOpen(v => !v)}
+        onClick={onToggle}
         className="w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 transition-colors"
       >
         <div className="flex-1 min-w-0">
@@ -291,6 +290,7 @@ export default function EnrichPhotosPage() {
   const [traces, setTraces] = useState<TaskTrace[]>([]);
   const [showTraces, setShowTraces] = useState(false);
   const [loadingTraces, setLoadingTraces] = useState(false);
+  const [expandedTraces, setExpandedTraces] = useState<Set<number>>(new Set());
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; msg: string } | null>(null);
   const jobIdRef = useRef<number | null>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
@@ -443,6 +443,7 @@ export default function EnrichPhotosPage() {
     setJobProgress(null);
     setTraces([]);
     setShowTraces(false);
+    setExpandedTraces(new Set());
     pollCountRef.current = 0;
     lastProcessedRef.current = -1;
     staleSinceRef.current = null;
@@ -490,6 +491,7 @@ export default function EnrichPhotosPage() {
     setJobProgress(null);
     setTraces([]);
     setShowTraces(false);
+    setExpandedTraces(new Set());
   }, []);
 
   const pct = jobProgress && jobProgress.total > 0
@@ -774,21 +776,39 @@ export default function EnrichPhotosPage() {
         {(showTraces || loadingTraces) && (
           <Card className="mb-6">
             <CardHeader className="pb-3 border-b border-gray-100">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2">
                   <Bug className="w-4 h-4 text-gray-500" />
                   <CardTitle className="text-sm font-semibold text-[#0F2744]">
                     Per-Listing Debug Trace
                   </CardTitle>
                 </div>
-                {doneCount > 0 && (
-                  <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                    {googleCount > 0 && <Pill label={`${googleCount} Google`} color={SOURCE_COLOR.google} />}
-                    {websiteCount > 0 && <Pill label={`${websiteCount} Website`} color={SOURCE_COLOR.website} />}
-                    {streetViewCount > 0 && <Pill label={`${streetViewCount} Street View`} color={SOURCE_COLOR.street_view} />}
-                    {noHeroCount > 0 && <Pill label={`${noHeroCount} No Hero`} color="bg-red-50 text-red-600 border-red-200" />}
-                  </div>
-                )}
+                <div className="flex items-center gap-2 flex-wrap justify-end">
+                  {doneCount > 0 && (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {googleCount > 0 && <Pill label={`${googleCount} Google`} color={SOURCE_COLOR.google} />}
+                      {websiteCount > 0 && <Pill label={`${websiteCount} Website`} color={SOURCE_COLOR.website} />}
+                      {streetViewCount > 0 && <Pill label={`${streetViewCount} Street View`} color={SOURCE_COLOR.street_view} />}
+                      {noHeroCount > 0 && <Pill label={`${noHeroCount} No Hero`} color="bg-red-50 text-red-600 border-red-200" />}
+                    </div>
+                  )}
+                  {traces.length > 0 && (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setExpandedTraces(new Set(traces.map(t => t.id)))}
+                        className="text-[11px] font-medium text-gray-500 hover:text-[#0F2744] px-2 py-1 rounded border border-gray-200 hover:border-gray-300 bg-white transition-colors flex items-center gap-1"
+                      >
+                        <ChevronDown className="w-3 h-3" /> Expand all
+                      </button>
+                      <button
+                        onClick={() => setExpandedTraces(new Set())}
+                        className="text-[11px] font-medium text-gray-500 hover:text-[#0F2744] px-2 py-1 rounded border border-gray-200 hover:border-gray-300 bg-white transition-colors flex items-center gap-1"
+                      >
+                        <ChevronUp className="w-3 h-3" /> Collapse all
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-4">
@@ -802,7 +822,18 @@ export default function EnrichPhotosPage() {
                   {traces.length === 0 ? (
                     <p className="text-sm text-gray-400 text-center py-4">No trace data available yet.</p>
                   ) : (
-                    traces.map(task => <TraceRow key={task.id} task={task} />)
+                    traces.map(task => (
+                      <TraceRow
+                        key={task.id}
+                        task={task}
+                        open={expandedTraces.has(task.id)}
+                        onToggle={() => setExpandedTraces(prev => {
+                          const next = new Set(prev);
+                          next.has(task.id) ? next.delete(task.id) : next.add(task.id);
+                          return next;
+                        })}
+                      />
+                    ))
                   )}
                 </div>
               )}
