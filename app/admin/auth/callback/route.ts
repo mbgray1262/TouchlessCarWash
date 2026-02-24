@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
 
   if (code) {
@@ -12,6 +12,10 @@ export async function GET(request: NextRequest) {
     );
     await supabase.auth.exchangeCodeForSession(code);
   }
+
+  const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host') ?? '';
+  const proto = request.headers.get('x-forwarded-proto') ?? 'https';
+  const origin = host ? `${proto}://${host}` : new URL(request.url).origin;
 
   return NextResponse.redirect(`${origin}/admin`);
 }
