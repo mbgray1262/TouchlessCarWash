@@ -6,9 +6,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
 };
 
-const PARALLEL_BATCH_SIZE = 5;
-const NUM_PARALLEL_WORKERS = 3;
+const PARALLEL_BATCH_SIZE = 3;
+const NUM_PARALLEL_WORKERS = 1;
 const STUCK_TASK_TIMEOUT_MS = 120_000;
+const HAIKU_INTER_CALL_DELAY_MS = 250;
 
 async function getSecret(supabaseUrl: string, serviceKey: string, name: string): Promise<string> {
   const res = await fetch(`${supabaseUrl}/rest/v1/rpc/get_secret`, {
@@ -126,6 +127,8 @@ VERDICT: reason`;
     const data = await res.json() as { content: Array<{ text: string }> };
     const text = (data.content?.[0]?.text ?? '').trim();
     const clean = text.replace(/^VERDICT:\s*/i, '').trim();
+
+    await new Promise(r => setTimeout(r, HAIKU_INTER_CALL_DELAY_MS));
 
     if (clean.toUpperCase().startsWith('GOOD')) {
       return { verdict: 'GOOD', reason: clean.replace(/^GOOD[:\s-]*/i, '').trim() };
@@ -407,25 +410,23 @@ Deno.serve(async (req: Request) => {
         return Response.json({ done: true, status: 'cancelled' }, { headers: corsHeaders });
       }
 
-      const results = await Promise.allSettled(batchTasks.map((task: { id: number; listing_id: string; listing_name: string; hero_image_url: string }) => processOneTask(task)));
-
       let batchSucceeded = 0;
       let batchCleared = 0;
 
-      for (const result of results) {
-        if (result.status === 'fulfilled') {
-          if (result.value.verdict === 'GOOD') batchSucceeded++;
-          if (result.value.actionTaken === 'cleared' || result.value.actionTaken.startsWith('replaced_')) batchCleared++;
-        } else {
-          const failedTask = batchTasks[results.indexOf(result)];
+      for (const task of batchTasks as Array<{ id: number; listing_id: string; listing_name: string; hero_image_url: string }>) {
+        try {
+          const result = await processOneTask(task);
+          if (result.verdict === 'GOOD') batchSucceeded++;
+          if (result.actionTaken === 'cleared' || result.actionTaken.startsWith('replaced_')) batchCleared++;
+        } catch (err) {
           await supabase.from('hero_audit_tasks').update({
             task_status: 'done',
             verdict: 'fetch_failed',
-            reason: `Unhandled error: ${(result.reason as Error)?.message ?? 'unknown'}`,
+            reason: `Unhandled error: ${(err as Error)?.message ?? 'unknown'}`,
             action_taken: 'kept',
             finished_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-          }).eq('id', failedTask.id);
+          }).eq('id', task.id);
         }
       }
 
