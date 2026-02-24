@@ -167,7 +167,15 @@ async function findReplacementHero(
   }
 
   if (listing.street_view_url) {
-    return { heroUrl: listing.street_view_url as string, heroSource: 'street_view' };
+    const svUrl = listing.street_view_url as string;
+    try {
+      const { verdict } = await classifyHeroImage(svUrl, anthropicKey);
+      if (verdict === 'GOOD') {
+        return { heroUrl: svUrl, heroSource: 'street_view' };
+      }
+    } catch {
+      // fall through to null
+    }
   }
 
   return null;
@@ -466,6 +474,49 @@ Deno.serve(async (req: Request) => {
         .order('id');
 
       return Response.json({ tasks: tasks ?? [] }, { headers: corsHeaders });
+    }
+
+    // ── FORCE REAUDIT ─────────────────────────────────────────────────────────
+    // Deletes audit tasks for listings whose current hero came from a replacement
+    // (replaced_with_street_view, replaced_with_gallery) so the audit re-checks them.
+    // Also re-audits listings where street_view images were kept (fetch_failed on trusted source).
+    if (action === 'force_reaudit') {
+      // 1. Listings where the replacement was accepted without being classified
+      const { data: replacedTasks } = await supabase
+        .from('hero_audit_tasks')
+        .select('listing_id')
+        .like('action_taken', 'replaced_with_%');
+
+      const replacedIds = (replacedTasks ?? []).map((t: { listing_id: string }) => t.listing_id);
+
+      // 2. Listings where audit was fetch_failed but image is still set (trusted source kept)
+      const { data: fetchFailedTasks } = await supabase
+        .from('hero_audit_tasks')
+        .select('listing_id')
+        .eq('verdict', 'fetch_failed')
+        .eq('action_taken', 'kept');
+
+      const fetchFailedIds = (fetchFailedTasks ?? []).map((t: { listing_id: string }) => t.listing_id);
+
+      const allIds = [...new Set([...replacedIds, ...fetchFailedIds])];
+
+      if (allIds.length === 0) {
+        return Response.json({ deleted: 0, message: 'No listings to reaudit' }, { headers: corsHeaders });
+      }
+
+      // Delete in chunks to avoid query size limits
+      const CHUNK = 200;
+      let deleted = 0;
+      for (let i = 0; i < allIds.length; i += CHUNK) {
+        const chunk = allIds.slice(i, i + CHUNK);
+        const { count } = await supabase
+          .from('hero_audit_tasks')
+          .delete({ count: 'exact' })
+          .in('listing_id', chunk);
+        deleted += count ?? 0;
+      }
+
+      return Response.json({ deleted, reaudit_listing_count: allIds.length }, { headers: corsHeaders });
     }
 
     // ── CANCEL ────────────────────────────────────────────────────────────────
