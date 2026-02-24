@@ -184,6 +184,10 @@ function filterCandidateUrlsWithTrace(
     { test: s => s.includes('simoniz') || s.includes('armorall') || s.includes('turtle') || s.includes('rainx'), label: 'brand product keyword' },
     { test: s => s.includes('social') || s.includes('share') || s.includes('sprite'), label: "'social'/'share'/'sprite' keyword" },
     { test: s => /[_\-/]nav[_\-/.]/.test(s) || s.includes('/nav') || s.endsWith('nav.jpg') || s.endsWith('nav.png') || s.endsWith('nav.webp'), label: "'nav' navigation image keyword" },
+    { test: s => s.includes('basemaps.cartocdn') || s.includes('maps.googleapis.com/tiles') || s.includes('tile.openstreetmap') || s.includes('tiles.mapbox') || s.includes('khms.google') || s.includes('mt0.google') || s.includes('mt1.google'), label: 'map tile URL' },
+    { test: s => s.includes('app-store') || s.includes('appstore') || s.includes('google-play') || s.includes('play.google') || /badge.*(apple|google)/i.test(s) || /(apple|google).*badge/i.test(s) || /\/(ios|android|google|apple)\.png/.test(s) || s.includes('download-app'), label: 'app store badge' },
+    { test: s => s.includes('placeholder') || s.includes('pixel.png') || s.includes('loading.') || s.includes('spinner') || s.includes('avatar-default') || s.includes('gravatar.com') || s.includes('wp-includes/images') || s.includes('emoji') || s.includes('smilies'), label: 'generic web graphic' },
+    { test: s => s.includes('ssl-seal') || s.includes('trust-badge') || s.includes('secure-checkout') || s.includes('bbb-logo') || s.includes('yelp-logo') || s.includes('google-review') || /\/(visa|mastercard|paypal)[^/]*\.(png|jpg|webp|svg)/i.test(s), label: 'payment/trust badge' },
     { test: s => isTinyByDimHint(s), label: 'tiny image by dimension hint' },
   ];
 
