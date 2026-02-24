@@ -639,14 +639,14 @@ export default function EnrichPhotosPage() {
                     >
                       Upgrade quality
                       <span className="block text-xs font-normal mt-0.5 opacity-70">
-                        Replace Google / street view heroes with real website photos
+                        Replace street view heroes + bare Google heroes with website photos
                       </span>
                     </button>
                   </div>
                   {jobType === 'upgrade' && (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800 space-y-1">
-                      <p className="font-medium">Targets listings with Google or street view hero images that have a website URL.</p>
-                      <p>Scrapes each website with Firecrawl. If good photos are found, the hero is upgraded. If nothing is found, the existing image is kept — listings are never left worse off.</p>
+                      <p className="font-medium">Targets street view heroes, and Google heroes that have no gallery photos yet.</p>
+                      <p>Scrapes each website with Firecrawl. If good photos are found, the hero is upgraded. If nothing is found, the existing image is kept — listings are never left worse off. Listings that already have a Google hero <em>and</em> a gallery are skipped.</p>
                     </div>
                   )}
                 </div>
@@ -697,7 +697,7 @@ export default function EnrichPhotosPage() {
                     <p className="text-xs text-amber-800 font-medium">Full run uses Firecrawl + Anthropic credits</p>
                     <p className="text-xs text-amber-700 mt-0.5">
                       {jobType === 'upgrade'
-                        ? 'Will attempt to upgrade all listings currently using Google or street view as their hero image.'
+                        ? 'Will scrape websites for all street view heroes and bare Google heroes (no existing gallery).'
                         : `Processes all ${stats?.need_hero.toLocaleString() ?? '…'} listings that still need a hero photo.`
                       } Run a test first.
                     </p>

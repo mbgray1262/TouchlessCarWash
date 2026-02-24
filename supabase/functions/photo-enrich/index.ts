@@ -473,7 +473,13 @@ Deno.serve(async (req: Request) => {
         .order('id');
 
       if (upgradeMode) {
-        query = query.in('hero_image_source', ['google', 'street_view']).not('website', 'is', null);
+        // Only target listings where website scraping is likely to improve things:
+        // - street_view heroes (always worth replacing with a real photo)
+        // - google heroes where the gallery is empty (no approved photos yet)
+        // Listings that already have gallery photos alongside a google hero are left alone.
+        query = query
+          .not('website', 'is', null)
+          .or('hero_image_source.eq.street_view,and(hero_image_source.eq.google,photos.is.null)');
       } else {
         query = query.is('hero_image', null);
       }
