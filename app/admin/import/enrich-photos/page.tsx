@@ -294,6 +294,7 @@ export default function EnrichPhotosPage() {
   const [expandedTraces, setExpandedTraces] = useState<Set<number>>(new Set());
   const [copied, setCopied] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; msg: string } | null>(null);
+  const [restoring, setRestoring] = useState(true);
   const jobIdRef = useRef<number | null>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -346,39 +347,66 @@ export default function EnrichPhotosPage() {
     }
   }, []);
 
-  // Restore last job from localStorage on mount so traces survive navigation
+  // Restore last job on mount — always check DB for a running job first
   useEffect(() => {
     loadStats();
     loadRecentListings();
 
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const { jobId, status } = JSON.parse(saved) as { jobId: number; status: string };
-        if (jobId && (status === 'done' || status === 'cancelled' || status === 'running')) {
-          jobIdRef.current = jobId;
-          // Re-fetch current job state from server
-          fetch(`${SUPABASE_URL}/functions/v1/photo-enrich`, {
+    (async () => {
+      try {
+        // First: check DB for any currently running job (survives navigation and duplicate clicks)
+        const { data: runningJob } = await supabase
+          .from('photo_enrich_jobs')
+          .select('id, status, total, processed, succeeded')
+          .eq('status', 'running')
+          .order('id', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (runningJob) {
+          jobIdRef.current = runningJob.id;
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ jobId: runningJob.id, status: 'running' })); } catch {}
+          const res = await fetch(`${SUPABASE_URL}/functions/v1/photo-enrich`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
-            body: JSON.stringify({ action: 'job_status', job_id: jobId }),
-          }).then(r => r.ok ? r.json() : null).then((data: JobProgress | null) => {
-            if (!data) return;
+            body: JSON.stringify({ action: 'job_status', job_id: runningJob.id }),
+          });
+          const data: JobProgress | null = res.ok ? await res.json() : null;
+          if (data) {
             setJobProgress(data);
-            if (data.status === 'done' || data.status === 'cancelled') {
+            setJobStatus('running');
+            if (pollRef.current) clearInterval(pollRef.current);
+            pollRef.current = setInterval(pollJob, 3000);
+            pollJob();
+          }
+          return;
+        }
+
+        // No running job — restore last completed/cancelled from localStorage
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const { jobId, status } = JSON.parse(saved) as { jobId: number; status: string };
+          if (jobId && (status === 'done' || status === 'cancelled')) {
+            jobIdRef.current = jobId;
+            const res = await fetch(`${SUPABASE_URL}/functions/v1/photo-enrich`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+              body: JSON.stringify({ action: 'job_status', job_id: jobId }),
+            });
+            const data: JobProgress | null = res.ok ? await res.json() : null;
+            if (data) {
+              setJobProgress(data);
               setJobStatus(data.status === 'done' ? 'done' : 'cancelled');
               loadTraces(jobId);
-            } else if (data.status === 'running') {
-              setJobStatus('running');
-              if (pollRef.current) clearInterval(pollRef.current);
-              pollRef.current = setInterval(pollJob, 3000);
             }
-          }).catch(() => {});
+          }
         }
+      } catch {
+        // ignore restore errors
+      } finally {
+        setRestoring(false);
       }
-    } catch {
-      // localStorage unavailable
-    }
+    })();
 
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -719,11 +747,12 @@ export default function EnrichPhotosPage() {
                 )}
 
                 <Button
-                  className={`w-full text-white ${jobType === 'upgrade' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-teal-600 hover:bg-teal-700'}`}
+                  disabled={restoring}
+                  className={`w-full text-white ${jobType === 'upgrade' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-teal-600 hover:bg-teal-700'} disabled:opacity-50 disabled:cursor-not-allowed`}
                   onClick={handleStart}
                 >
-                  <Camera className="w-4 h-4 mr-2" />
-                  {mode === 'test'
+                  {restoring ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Camera className="w-4 h-4 mr-2" />}
+                  {restoring ? 'Checking status…' : mode === 'test'
                     ? `Test ${jobType === 'upgrade' ? 'Upgrade' : 'Fill'} (${testLimit} listings)`
                     : jobType === 'upgrade' ? 'Start Quality Upgrade' : 'Start Full Photo Enrichment'
                   }
