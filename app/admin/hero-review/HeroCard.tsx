@@ -1,7 +1,7 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
-import { X, Flag, CheckCircle, ChevronDown, Trash2, ImageOff } from 'lucide-react';
+import { useRef, useEffect, useState } from 'react';
+import { X, Flag, CheckCircle, ChevronDown, Trash2, ImageOff, ZoomIn } from 'lucide-react';
 import { HeroListing, ReplacementOption } from './types';
 import HeroImageFallback from '@/components/HeroImageFallback';
 
@@ -16,6 +16,34 @@ function SourceBadge({ source }: { source: string | null }) {
   if (!source) return <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">none</span>;
   const cls = SOURCE_COLORS[source] ?? 'bg-gray-100 text-gray-600';
   return <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${cls}`}>{source.replace('_', ' ')}</span>;
+}
+
+function PhotoLightbox({ url, onClose }: { url: string; onClose: () => void }) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+      >
+        <X className="w-5 h-5" />
+      </button>
+      <img
+        src={url}
+        alt="Full size preview"
+        className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      />
+    </div>
+  );
 }
 
 function PlaceholderSVG({ className }: { className?: string }) {
@@ -60,6 +88,7 @@ export function HeroCard({
   confirmIndex,
 }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (isFocused && cardRef.current) {
@@ -71,6 +100,8 @@ export function HeroCard({
   const galleryPhotos = listing.photos ?? [];
 
   return (
+    <>
+    {lightboxUrl && <PhotoLightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />}
     <div
       ref={cardRef}
       onClick={onFocus}
@@ -93,15 +124,24 @@ export function HeroCard({
         ${listing.flagged ? 'ring-2 ring-amber-400 ring-offset-1' : ''}
       `}
     >
-      <div className="relative bg-gray-100 h-48 overflow-hidden">
+      <div className="relative bg-gray-100 h-48 overflow-hidden group/hero">
         {listing.hero_image ? (
-          <img
-            src={listing.hero_image}
-            alt={listing.name}
-            loading="lazy"
-            className="w-full h-full object-cover"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-          />
+          <>
+            <img
+              src={listing.hero_image}
+              alt={listing.name}
+              loading="lazy"
+              className="w-full h-full object-cover"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+            <button
+              onClick={(e) => { e.stopPropagation(); setLightboxUrl(listing.hero_image!); }}
+              className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover/hero:bg-black/30 transition-colors"
+              title="View full size"
+            >
+              <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover/hero:opacity-100 transition-opacity drop-shadow-lg" />
+            </button>
+          </>
         ) : (
           <HeroImageFallback variant="card" className="w-full h-full" />
         )}
@@ -203,12 +243,13 @@ export function HeroCard({
               <p className="text-[10px] font-semibold text-orange-700 mb-1.5">Gallery photos</p>
               <div className="flex gap-1.5 flex-wrap">
                 {galleryPhotos.map((url) => (
-                  <div key={url} className="relative group">
+                  <div key={url} className="relative group/gal">
                     <img
                       src={url}
                       alt="gallery"
                       loading="lazy"
-                      className="w-14 h-10 object-cover rounded border border-gray-200"
+                      className="w-14 h-10 object-cover rounded border border-gray-200 cursor-zoom-in"
+                      onClick={(e) => { e.stopPropagation(); setLightboxUrl(url); }}
                       onError={(e) => {
                         const p = (e.target as HTMLImageElement).parentElement;
                         if (p) p.style.display = 'none';
@@ -241,5 +282,6 @@ export function HeroCard({
         </div>
       )}
     </div>
+    </>
   );
 }
