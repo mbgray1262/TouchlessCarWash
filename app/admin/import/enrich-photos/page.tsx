@@ -533,7 +533,7 @@ export default function EnrichPhotosPage() {
           <h1 className="text-3xl font-bold text-[#0F2744]">Photo Enrichment</h1>
         </div>
         <p className="text-gray-500 mb-8 text-sm">
-          Collects 3–5 approved photos per listing. Google photos and existing website photos are AI-screened first — Firecrawl scraping only runs as a fallback when fewer than 3 photos are found.
+          Collects 3–5 approved photos per listing. Firecrawl scrapes the listing&apos;s own website first — Google and street view fill in any gaps.
         </p>
 
         {/* Stats */}
@@ -579,20 +579,24 @@ export default function EnrichPhotosPage() {
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">How it works</p>
           <div className="space-y-2 text-sm text-gray-600">
             <div className="flex items-start gap-2.5">
-              <span className="mt-0.5 w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0">1</span>
-              <span><strong>Google photo</strong> — AI-screened with Claude Haiku. GOOD = added to approved list. BAD_CONTACT = noted in crawl log. BAD_OTHER = silently rejected.</span>
+              <span className="mt-0.5 w-5 h-5 rounded-full bg-teal-100 text-teal-700 text-xs font-bold flex items-center justify-center shrink-0">1</span>
+              <span><strong>Firecrawl scrape</strong> — The listing&apos;s own website is scraped first. Images are filtered and AI-screened with Claude Haiku. Up to 5 approved photos are collected.</span>
             </div>
             <div className="flex items-start gap-2.5">
               <span className="mt-0.5 w-5 h-5 rounded-full bg-teal-100 text-teal-700 text-xs font-bold flex items-center justify-center shrink-0">2</span>
-              <span><strong>Existing website photos</strong> — If the DB already has <code className="text-xs bg-gray-100 px-1 rounded">website_photos</code>, each is screened. Logos, icons, brand graphics, and social images are strictly rejected.</span>
+              <span><strong>DB website photos</strong> — If the gallery is still under 5, any <code className="text-xs bg-gray-100 px-1 rounded">website_photos</code> already stored in the database are screened to fill remaining slots.</span>
             </div>
             <div className="flex items-start gap-2.5">
-              <span className="mt-0.5 w-5 h-5 rounded-full bg-teal-100 text-teal-700 text-xs font-bold flex items-center justify-center shrink-0">3</span>
-              <span><strong>Firecrawl scrape</strong> — Only runs if fewer than 3 approved photos after steps 1–2 AND no <code className="text-xs bg-gray-100 px-1 rounded">website_photos</code> in DB. Same strict screening applied.</span>
+              <span className="mt-0.5 w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0">3</span>
+              <span><strong>Google Place Photos</strong> — If the gallery still has room, photos from the Google Places API are AI-screened and added.</span>
             </div>
             <div className="flex items-start gap-2.5">
-              <span className="mt-0.5 w-5 h-5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold flex items-center justify-center shrink-0">4</span>
-              <span><strong>Street view fallback</strong> — Used as hero only if zero approved photos found in steps 1–3.</span>
+              <span className="mt-0.5 w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0">4</span>
+              <span><strong>Google photo URL</strong> — The single <code className="text-xs bg-gray-100 px-1 rounded">google_photo_url</code> is checked as a last Google fallback. BAD_CONTACT = noted in crawl log. BAD_OTHER = silently rejected.</span>
+            </div>
+            <div className="flex items-start gap-2.5">
+              <span className="mt-0.5 w-5 h-5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold flex items-center justify-center shrink-0">5</span>
+              <span><strong>Street view fallback</strong> — Used as hero only if zero approved photos were found in steps 1–4. No AI screening needed.</span>
             </div>
           </div>
         </div>
