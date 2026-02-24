@@ -6,8 +6,6 @@ import { HeroListing, FilterSource, ReplacementOption, SessionStats } from './ty
 
 const PAGE_SIZE = 20;
 
-const FALLBACK_IMAGE = 'https://images.pexels.com/photos/1118448/pexels-photo-1118448.jpeg?auto=compress&cs=tinysrgb&w=400';
-
 export function useHeroReview() {
   const [listings, setListings] = useState<HeroListing[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,12 +104,11 @@ export function useHeroReview() {
     photos.forEach((p, i) => add(p, `Gallery ${i + 1}`, 'gallery'));
     add(listing.google_photo_url, 'Google', 'google');
     add(listing.street_view_url, 'Street View', 'street_view');
-    add(FALLBACK_IMAGE, 'Fallback', 'fallback');
 
     return opts.slice(0, 8);
   };
 
-  const handleReplace = async (listingId: string, url: string, source: string, optIdx: number) => {
+  const handleReplace = async (listingId: string, url: string | null, source: string, optIdx: number) => {
     const listing = listings.find(l => l.id === listingId);
     const oldHero = listing?.hero_image ?? null;
 
@@ -119,20 +116,20 @@ export function useHeroReview() {
 
     await supabase
       .from('listings')
-      .update({ hero_image: url, hero_image_source: source })
+      .update({ hero_image: url, hero_image_source: url ? source : null })
       .eq('id', listingId);
 
     await supabase.from('hero_reviews').insert({
       listing_id: listingId,
-      action: 'replaced',
+      action: url ? 'replaced' : 'removed',
       old_hero_url: oldHero,
       new_hero_url: url,
-      new_source: source,
+      new_source: url ? source : null,
     });
 
     setListings(prev =>
       prev.map(l => l.id === listingId
-        ? { ...l, hero_image: url, hero_image_source: source as HeroListing['hero_image_source'] }
+        ? { ...l, hero_image: url, hero_image_source: (url ? source : null) as HeroListing['hero_image_source'] }
         : l
       )
     );
@@ -143,6 +140,62 @@ export function useHeroReview() {
       setConfirmMap(prev => { const n = { ...prev }; delete n[listingId]; return n; });
       setExpandedId(null);
     }, 800);
+  };
+
+  const handleRemoveHero = async (listingId: string) => {
+    const listing = listings.find(l => l.id === listingId);
+    const oldHero = listing?.hero_image ?? null;
+
+    await supabase
+      .from('listings')
+      .update({ hero_image: null, hero_image_source: null })
+      .eq('id', listingId);
+
+    await supabase.from('hero_reviews').insert({
+      listing_id: listingId,
+      action: 'removed',
+      old_hero_url: oldHero,
+      new_hero_url: null,
+      new_source: null,
+    });
+
+    setListings(prev =>
+      prev.map(l => l.id === listingId
+        ? { ...l, hero_image: null, hero_image_source: null }
+        : l
+      )
+    );
+  };
+
+  const handleRemoveGalleryPhoto = async (listingId: string, photoUrl: string) => {
+    const listing = listings.find(l => l.id === listingId);
+    const currentPhotos = listing?.photos ?? [];
+    const newPhotos = currentPhotos.filter(p => p !== photoUrl);
+
+    const { data: current } = await supabase
+      .from('listings')
+      .select('blocked_photos')
+      .eq('id', listingId)
+      .maybeSingle();
+
+    const blocked = (current?.blocked_photos as string[] | null) ?? [];
+    const combined = blocked.concat(photoUrl);
+    const newBlocked = combined.filter((v, i) => combined.indexOf(v) === i);
+
+    await supabase
+      .from('listings')
+      .update({
+        photos: newPhotos.length > 0 ? newPhotos : null,
+        blocked_photos: newBlocked,
+      })
+      .eq('id', listingId);
+
+    setListings(prev =>
+      prev.map(l => l.id === listingId
+        ? { ...l, photos: newPhotos.length > 0 ? newPhotos : null }
+        : l
+      )
+    );
   };
 
   const handleFlag = async (listingId: string) => {
@@ -201,6 +254,8 @@ export function useHeroReview() {
     flaggedIds,
     getReplacements,
     handleReplace,
+    handleRemoveHero,
+    handleRemoveGalleryPhoto,
     handleFlag,
     navigateFocus,
     reload: loadListings,

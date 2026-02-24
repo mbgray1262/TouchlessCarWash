@@ -37,6 +37,8 @@ export default function HeroReviewPage() {
     stats,
     getReplacements,
     handleReplace,
+    handleRemoveHero,
+    handleRemoveGalleryPhoto,
     handleFlag,
     navigateFocus,
     reload,
@@ -195,9 +197,11 @@ export default function HeroReviewPage() {
                   }}
                   onCollapse={() => setExpandedId(null)}
                   onReplace={(url, source) => {
-                    const idx = replacements.findIndex(r => r.url === url);
+                    const idx = url ? replacements.findIndex(r => r.url === url) : -1;
                     handleReplace(listing.id, url, source, idx);
                   }}
+                  onRemoveHero={() => handleRemoveHero(listing.id)}
+                  onRemoveGalleryPhoto={(url) => handleRemoveGalleryPhoto(listing.id, url)}
                   onFlag={() => handleFlag(listing.id)}
                   onFocus={() => setFocusedId(listing.id)}
                   confirmIndex={confirmIndex}

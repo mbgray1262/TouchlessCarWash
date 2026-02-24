@@ -16,6 +16,8 @@ export interface HeroListing {
   flagged?: boolean;
 }
 
+export type ReplacementSpecial = 'use_placeholder' | 'remove_hero';
+
 export interface ReplacementOption {
   url: string;
   label: string;

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect } from 'react';
-import { X, Flag, CheckCircle, ChevronDown } from 'lucide-react';
+import { X, Flag, CheckCircle, ChevronDown, Trash2, ImageOff } from 'lucide-react';
 import { HeroListing, ReplacementOption } from './types';
 import HeroImageFallback from '@/components/HeroImageFallback';
 
@@ -18,6 +18,18 @@ function SourceBadge({ source }: { source: string | null }) {
   return <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${cls}`}>{source.replace('_', ' ')}</span>;
 }
 
+function PlaceholderSVG({ className }: { className?: string }) {
+  return (
+    <div className={`flex items-center justify-center bg-gray-100 ${className ?? ''}`}>
+      <svg viewBox="0 0 80 60" className="w-16 h-12 text-gray-300" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="80" height="60" rx="6" fill="currentColor" opacity="0.4" />
+        <circle cx="28" cy="22" r="7" fill="white" opacity="0.7" />
+        <path d="M8 50 L24 32 L36 44 L52 28 L72 50 Z" fill="white" opacity="0.6" />
+      </svg>
+    </div>
+  );
+}
+
 interface Props {
   listing: HeroListing;
   replacements: ReplacementOption[];
@@ -25,7 +37,9 @@ interface Props {
   isExpanded: boolean;
   onExpand: () => void;
   onCollapse: () => void;
-  onReplace: (url: string, source: string) => void;
+  onReplace: (url: string | null, source: string) => void;
+  onRemoveHero: () => void;
+  onRemoveGalleryPhoto: (url: string) => void;
   onFlag: () => void;
   onFocus: () => void;
   confirmIndex: number | null;
@@ -39,6 +53,8 @@ export function HeroCard({
   onExpand,
   onCollapse,
   onReplace,
+  onRemoveHero,
+  onRemoveGalleryPhoto,
   onFlag,
   onFocus,
   confirmIndex,
@@ -52,6 +68,7 @@ export function HeroCard({
   }, [isFocused]);
 
   const hasHero = !!listing.hero_image;
+  const galleryPhotos = listing.photos ?? [];
 
   return (
     <div
@@ -89,13 +106,24 @@ export function HeroCard({
           <HeroImageFallback variant="card" className="w-full h-full" />
         )}
 
-        <button
-          onClick={(e) => { e.stopPropagation(); isExpanded ? onCollapse() : onExpand(); }}
-          className="absolute top-2 right-2 w-7 h-7 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center shadow-md transition-colors z-10"
-          title="Reject & replace"
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
+        <div className="absolute top-2 right-2 flex gap-1 z-10">
+          {hasHero && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onRemoveHero(); }}
+              className="w-7 h-7 rounded-full bg-gray-700/80 hover:bg-gray-900 text-white flex items-center justify-center shadow-md transition-colors"
+              title="Remove hero (set to placeholder)"
+            >
+              <ImageOff className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); isExpanded ? onCollapse() : onExpand(); }}
+            className="w-7 h-7 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center shadow-md transition-colors"
+            title="Reject & replace"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
 
         {listing.flagged && (
           <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-amber-400 flex items-center justify-center shadow">
@@ -124,7 +152,7 @@ export function HeroCard({
             </button>
           </div>
 
-          {replacements.length === 0 ? (
+          {replacements.length === 0 && galleryPhotos.length === 0 ? (
             <p className="text-xs text-gray-500 mb-2">No alternatives available</p>
           ) : (
             <div className="flex gap-1.5 flex-wrap mb-2">
@@ -156,12 +184,52 @@ export function HeroCard({
                   </button>
                 </div>
               ))}
+
+              <button
+                onClick={() => onReplace(null, 'placeholder')}
+                className="relative group block rounded-md overflow-hidden border-2 border-transparent hover:border-orange-400 transition-all"
+                title="Use Placeholder"
+              >
+                <PlaceholderSVG className="w-16 h-12" />
+                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[9px] text-center py-0.5 leading-none">
+                  Placeholder
+                </div>
+              </button>
+            </div>
+          )}
+
+          {galleryPhotos.length > 0 && (
+            <div className="mt-2 pt-2 border-t border-orange-200">
+              <p className="text-[10px] font-semibold text-orange-700 mb-1.5">Gallery photos — click to delete</p>
+              <div className="flex gap-1.5 flex-wrap">
+                {galleryPhotos.map((url) => (
+                  <div key={url} className="relative group">
+                    <img
+                      src={url}
+                      alt="gallery"
+                      loading="lazy"
+                      className="w-14 h-10 object-cover rounded border border-gray-200"
+                      onError={(e) => {
+                        const p = (e.target as HTMLImageElement).parentElement;
+                        if (p) p.style.display = 'none';
+                      }}
+                    />
+                    <button
+                      onClick={() => onRemoveGalleryPhoto(url)}
+                      className="absolute inset-0 bg-red-500/0 group-hover:bg-red-500/70 rounded flex items-center justify-center transition-all"
+                      title="Delete from gallery"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
           <button
             onClick={onFlag}
-            className={`flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors ${
+            className={`mt-2 flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors ${
               listing.flagged
                 ? 'bg-amber-200 text-amber-800'
                 : 'bg-white border border-gray-300 text-gray-600 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700'
