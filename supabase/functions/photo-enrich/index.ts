@@ -1029,7 +1029,13 @@ Deno.serve(async (req: Request) => {
 
       if (!job) return Response.json({ error: 'Job not found' }, { status: 404, headers: corsHeaders });
 
-      // Also return stuck task count so UI can show a warning
+      // Count actual task states from the tasks table — avoids double-counting from racing invocations
+      const { data: taskCounts } = await supabase
+        .from('photo_enrich_tasks')
+        .select('task_status')
+        .eq('job_id', jobId);
+
+      const doneTasks = taskCounts?.filter(t => t.task_status === 'done').length ?? 0;
       const stuckCutoff = new Date(Date.now() - STUCK_TASK_TIMEOUT_MS).toISOString();
       const { count: stuckCount } = await supabase
         .from('photo_enrich_tasks')
@@ -1039,7 +1045,7 @@ Deno.serve(async (req: Request) => {
         .is('finished_at', null)
         .lt('updated_at', stuckCutoff);
 
-      return Response.json({ ...job, stuck_count: stuckCount ?? 0 }, { headers: corsHeaders });
+      return Response.json({ ...job, processed: doneTasks, stuck_count: stuckCount ?? 0 }, { headers: corsHeaders });
     }
 
     if (action === 'task_traces') {
