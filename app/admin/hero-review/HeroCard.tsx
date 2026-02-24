@@ -3,6 +3,7 @@
 import { useRef, useEffect } from 'react';
 import { X, Flag, CheckCircle, ChevronDown } from 'lucide-react';
 import { HeroListing, ReplacementOption } from './types';
+import HeroImageFallback from '@/components/HeroImageFallback';
 
 const SOURCE_COLORS: Record<string, string> = {
   gallery: 'bg-emerald-100 text-emerald-700',
@@ -85,9 +86,7 @@ export function HeroCard({
             onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gray-200">
-            <span className="text-gray-400 text-sm">No hero image</span>
-          </div>
+          <HeroImageFallback variant="card" className="w-full h-full" />
         )}
 
         <button
