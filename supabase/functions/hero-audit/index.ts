@@ -50,20 +50,31 @@ async function classifyHeroImage(
   const img = await fetchImageAsBase64(imageUrl);
   if (!img) return { verdict: 'fetch_failed', reason: 'Could not fetch image (timeout or invalid format)' };
 
-  const prompt = `You are quality-checking a hero image for a touchless car wash directory listing.
+  const prompt = `You are quality-checking a hero image for a touchless car wash directory listing. This is the primary image users see, so it should clearly represent the car wash business.
 
 Classify this image as one of:
-GOOD — any of the following are GOOD:
-  - Exterior shot of a car wash building, facility, or entrance
-  - Interior of a wash bay, wash tunnel, or automated wash equipment
-  - Cars being washed by touchless equipment (water jets, foam applicators, air dryers)
-  - Drive-through tunnel view from inside or outside
-  - Car wash signage, entrance canopy, or facility overview
-  The key test: does this image represent a car wash business? If yes, it is GOOD.
-BAD_CONTACT — ONLY use this if the image clearly shows brush rollers, cloth strips, mop curtains, or other physical contact wash equipment that touches the car. Do NOT use BAD_CONTACT for touchless wash bays, water jets, or foam equipment.
-BAD_OTHER — truly unrelated or unusable: gas station pumps with no car wash visible, convenience store interior, EV chargers only, people only without wash context, contact info card, plain logo/graphic, severely blurry or dark image, non-car-wash business (restaurant, auto repair shop, etc.).
 
-When in doubt, prefer GOOD. Only reject images that are clearly wrong.
+GOOD — the image clearly represents a car wash business as seen from a customer perspective:
+  - Exterior of a car wash building, facility entrance, or facade
+  - Interior of a wash tunnel or bay showing the wash environment (arches, equipment along the sides, car moving through)
+  - Cars actively being washed by automated equipment (water jets, foam, blowers)
+  - Drive-through tunnel view from the driver's perspective entering or exiting
+  - Clear signage or canopy of a car wash facility with context
+
+BAD_CONTACT — ONLY use this if the image clearly shows brush rollers, cloth strips, mop curtains, or other physical contact wash equipment that touches the car. Do NOT use BAD_CONTACT for touchless wash bays, water jets, or foam equipment.
+
+BAD_OTHER — reject for any of these:
+  - Coin-operated self-serve wash bay with wand/hose only and no automated equipment visible
+  - Close-up of a single piece of equipment (a soap dispenser, vacuum, payment kiosk, token machine, etc.) with no facility context
+  - Car interior shot (dashboard, steering wheel, seats viewed from inside the car)
+  - Gas station forecourt with pumps and no visible car wash building
+  - EV charging station with no car wash visible
+  - Convenience store, restaurant, or unrelated business interior or exterior
+  - People-only photo with no car wash context
+  - Plain logo, graphic, or text card
+  - Severely blurry, very dark, or nearly unusable image
+
+When in doubt between GOOD and BAD_OTHER for a borderline image, prefer GOOD if there is clearly a car wash facility present. Only reject images that are clearly the wrong type.
 
 Reply with only the verdict and a one-sentence reason in this exact format:
 VERDICT: reason`;
@@ -125,6 +136,40 @@ VERDICT: reason`;
   return { verdict: 'fetch_failed', reason: 'Max retries exceeded' };
 }
 
+async function findReplacementHero(
+  supabase: ReturnType<typeof createClient>,
+  listingId: string,
+  anthropicKey: string,
+): Promise<{ heroUrl: string; heroSource: string } | null> {
+  const { data: listing } = await supabase
+    .from('listings')
+    .select('photos, street_view_url')
+    .eq('id', listingId)
+    .maybeSingle();
+
+  if (!listing) return null;
+
+  const galleryPhotos: string[] = (listing.photos as string[]) ?? [];
+
+  for (const photoUrl of galleryPhotos) {
+    if (!photoUrl) continue;
+    try {
+      const { verdict } = await classifyHeroImage(photoUrl, anthropicKey);
+      if (verdict === 'GOOD') {
+        return { heroUrl: photoUrl, heroSource: 'gallery' };
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  if (listing.street_view_url) {
+    return { heroUrl: listing.street_view_url as string, heroSource: 'street_view' };
+  }
+
+  return null;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -141,18 +186,18 @@ Deno.serve(async (req: Request) => {
 
     // ── STATUS ───────────────────────────────────────────────────────────────
     if (action === 'status') {
-      const { count: listingsWithTrustedHero } = await supabase
+      const { count: listingsWithAuditableHero } = await supabase
         .from('listings')
         .select('id', { count: 'exact', head: true })
-        .eq('hero_image_source', 'google')
         .eq('is_touchless', true)
-        .not('hero_image', 'is', null);
+        .not('hero_image', 'is', null)
+        .or('hero_image_source.eq.google,hero_image_source.is.null');
 
       const { data: auditedCountRow } = await supabase
         .rpc('count_distinct_audited_hero_listings');
 
       const auditedCount = auditedCountRow ?? 0;
-      const unauditedCount = Math.max(0, (listingsWithTrustedHero ?? 0) - auditedCount);
+      const unauditedCount = Math.max(0, (listingsWithAuditableHero ?? 0) - auditedCount);
 
       const { data: recentJob } = await supabase
         .from('hero_audit_jobs')
@@ -162,7 +207,7 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
 
       return Response.json({
-        listings_with_google_hero: listingsWithTrustedHero ?? 0,
+        listings_with_auditable_hero: listingsWithAuditableHero ?? 0,
         unaudited_count: unauditedCount,
         audited_count: auditedCount,
         recent_job: recentJob ?? null,
@@ -177,7 +222,6 @@ Deno.serve(async (req: Request) => {
 
       const limit: number = body.limit ?? 0;
 
-      // Use SQL anti-join to find listings that have NOT been audited yet (never appeared in any task)
       const { data: listings, error: listErr } = await supabase.rpc('get_unaudited_hero_listings', {
         p_limit: limit > 0 ? limit : null,
       });
@@ -185,7 +229,7 @@ Deno.serve(async (req: Request) => {
       if (listErr) return Response.json({ error: listErr.message }, { status: 500, headers: corsHeaders });
 
       if (!listings || listings.length === 0) {
-        return Response.json({ error: 'No unaudited listings with Google hero images found' }, { status: 404, headers: corsHeaders });
+        return Response.json({ error: 'No unaudited listings with hero images found' }, { status: 404, headers: corsHeaders });
       }
 
       const { data: job, error: jobErr } = await supabase
@@ -249,7 +293,6 @@ Deno.serve(async (req: Request) => {
         return Response.json({ done: true, status: job.status }, { headers: corsHeaders });
       }
 
-      // Reset stuck tasks
       const stuckCutoff = new Date(Date.now() - STUCK_TASK_TIMEOUT_MS).toISOString();
       await supabase
         .from('hero_audit_tasks')
@@ -258,7 +301,6 @@ Deno.serve(async (req: Request) => {
         .eq('task_status', 'in_progress')
         .lt('updated_at', stuckCutoff);
 
-      // Atomically claim tasks using FOR UPDATE SKIP LOCKED to prevent race conditions
       const { data: batchTasks, error: claimErr } = await supabase.rpc('claim_hero_audit_tasks', {
         p_job_id: jobId,
         p_batch_size: PARALLEL_BATCH_SIZE,
@@ -269,7 +311,6 @@ Deno.serve(async (req: Request) => {
       }
 
       if (!batchTasks || batchTasks.length === 0) {
-        // Check if all tasks are done
         const { count: pendingCount } = await supabase
           .from('hero_audit_tasks')
           .select('id', { count: 'exact', head: true })
@@ -303,14 +344,27 @@ Deno.serve(async (req: Request) => {
         let actionTaken = 'kept';
 
         if (isBad) {
-          await supabase
-            .from('listings')
-            .update({
-              hero_image: null,
-              hero_image_source: null,
-            })
-            .eq('id', task.listing_id);
-          actionTaken = 'cleared';
+          const replacement = await findReplacementHero(supabase, task.listing_id, anthropicKey);
+
+          if (replacement) {
+            await supabase
+              .from('listings')
+              .update({
+                hero_image: replacement.heroUrl,
+                hero_image_source: replacement.heroSource,
+              })
+              .eq('id', task.listing_id);
+            actionTaken = `replaced_with_${replacement.heroSource}`;
+          } else {
+            await supabase
+              .from('listings')
+              .update({
+                hero_image: null,
+                hero_image_source: null,
+              })
+              .eq('id', task.listing_id);
+            actionTaken = 'cleared';
+          }
         }
 
         await supabase.from('hero_audit_tasks').update({
@@ -333,7 +387,7 @@ Deno.serve(async (req: Request) => {
 
       if (jobCheck?.status === 'cancelled') {
         await supabase.from('hero_audit_tasks')
-          .update({ task_status: 'cancelled' })
+          .update({ task_status: 'cancelled', updated_at: new Date().toISOString() })
           .eq('job_id', jobId)
           .in('task_status', ['pending', 'in_progress']);
         return Response.json({ done: true, status: 'cancelled' }, { headers: corsHeaders });
@@ -347,7 +401,7 @@ Deno.serve(async (req: Request) => {
       for (const result of results) {
         if (result.status === 'fulfilled') {
           if (result.value.verdict === 'GOOD') batchSucceeded++;
-          if (result.value.actionTaken === 'cleared') batchCleared++;
+          if (result.value.actionTaken === 'cleared' || result.value.actionTaken.startsWith('replaced_')) batchCleared++;
         } else {
           const failedTask = batchTasks[results.indexOf(result)];
           await supabase.from('hero_audit_tasks').update({
