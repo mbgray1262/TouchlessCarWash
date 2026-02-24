@@ -346,7 +346,11 @@ Deno.serve(async (req: Request) => {
       const processOneTask = async (task: { id: number; listing_id: string; listing_name: string; hero_image_url: string }) => {
         const { verdict, reason } = await classifyHeroImage(task.hero_image_url, anthropicKey);
 
-        const isBad = verdict === 'BAD_CONTACT' || verdict === 'BAD_OTHER';
+        const isTrustedSource = task.hero_image_url.includes('supabase.co') ||
+          task.hero_image_url.includes('maps.googleapis.com') ||
+          task.hero_image_url.includes('googleusercontent.com');
+        const isBad = verdict === 'BAD_CONTACT' || verdict === 'BAD_OTHER' ||
+          (verdict === 'fetch_failed' && !isTrustedSource);
         let actionTaken = 'kept';
 
         if (isBad) {
