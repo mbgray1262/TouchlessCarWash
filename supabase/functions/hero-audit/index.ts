@@ -141,11 +141,6 @@ Deno.serve(async (req: Request) => {
 
     // ── STATUS ───────────────────────────────────────────────────────────────
     if (action === 'status') {
-      const { count: trustedCount } = await supabase
-        .from('photo_enrich_tasks')
-        .select('id', { count: 'exact', head: true })
-        .eq('google_verdict', 'trusted');
-
       const { count: listingsWithTrustedHero } = await supabase
         .from('listings')
         .select('id', { count: 'exact', head: true })
@@ -153,12 +148,10 @@ Deno.serve(async (req: Request) => {
         .eq('is_touchless', true)
         .not('hero_image', 'is', null);
 
-      const { data: auditedRows } = await supabase
-        .from('hero_audit_tasks')
-        .select('listing_id')
-        .in('task_status', ['done', 'in_progress', 'pending']);
+      const { data: auditedCountRow } = await supabase
+        .rpc('count_distinct_audited_hero_listings');
 
-      const auditedCount = new Set((auditedRows ?? []).map((r: { listing_id: string }) => r.listing_id)).size;
+      const auditedCount = auditedCountRow ?? 0;
       const unauditedCount = Math.max(0, (listingsWithTrustedHero ?? 0) - auditedCount);
 
       const { data: recentJob } = await supabase
@@ -169,7 +162,6 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
 
       return Response.json({
-        trusted_tasks: trustedCount ?? 0,
         listings_with_google_hero: listingsWithTrustedHero ?? 0,
         unaudited_count: unauditedCount,
         audited_count: auditedCount,
@@ -185,27 +177,12 @@ Deno.serve(async (req: Request) => {
 
       const limit: number = body.limit ?? 0;
 
-      const { data: auditedRows } = await supabase
-        .from('hero_audit_tasks')
-        .select('listing_id')
-        .in('task_status', ['done', 'in_progress', 'pending']);
+      // Use SQL anti-join to find listings that have NOT been audited yet (never appeared in any task)
+      const { data: listings, error: listErr } = await supabase.rpc('get_unaudited_hero_listings', {
+        p_limit: limit > 0 ? limit : null,
+      });
 
-      const auditedIds = new Set((auditedRows ?? []).map((r: { listing_id: string }) => r.listing_id));
-
-      let query = supabase
-        .from('listings')
-        .select('id, name, hero_image')
-        .eq('is_touchless', true)
-        .eq('hero_image_source', 'google')
-        .not('hero_image', 'is', null)
-        .order('id');
-
-      if (limit > 0) query = query.limit(limit + auditedIds.size);
-
-      const { data: allListings, error: listErr } = await query;
       if (listErr) return Response.json({ error: listErr.message }, { status: 500, headers: corsHeaders });
-
-      const listings = (allListings ?? []).filter((l: { id: string }) => !auditedIds.has(l.id)).slice(0, limit > 0 ? limit : undefined);
 
       if (!listings || listings.length === 0) {
         return Response.json({ error: 'No unaudited listings with Google hero images found' }, { status: 404, headers: corsHeaders });
@@ -272,6 +249,7 @@ Deno.serve(async (req: Request) => {
         return Response.json({ done: true, status: job.status }, { headers: corsHeaders });
       }
 
+      // Reset stuck tasks
       const stuckCutoff = new Date(Date.now() - STUCK_TASK_TIMEOUT_MS).toISOString();
       await supabase
         .from('hero_audit_tasks')
@@ -280,25 +258,34 @@ Deno.serve(async (req: Request) => {
         .eq('task_status', 'in_progress')
         .lt('updated_at', stuckCutoff);
 
-      const { data: batchTasks } = await supabase
-        .from('hero_audit_tasks')
-        .select('id, listing_id, listing_name, hero_image_url')
-        .eq('job_id', jobId)
-        .eq('task_status', 'pending')
-        .order('id')
-        .limit(PARALLEL_BATCH_SIZE);
+      // Atomically claim tasks using FOR UPDATE SKIP LOCKED to prevent race conditions
+      const { data: batchTasks, error: claimErr } = await supabase.rpc('claim_hero_audit_tasks', {
+        p_job_id: jobId,
+        p_batch_size: PARALLEL_BATCH_SIZE,
+      });
 
-      if (!batchTasks || batchTasks.length === 0) {
-        await supabase.from('hero_audit_jobs').update({
-          status: 'done',
-          finished_at: new Date().toISOString(),
-        }).eq('id', jobId);
-        return Response.json({ done: true }, { headers: corsHeaders });
+      if (claimErr) {
+        return Response.json({ error: claimErr.message }, { status: 500, headers: corsHeaders });
       }
 
-      await supabase.from('hero_audit_tasks')
-        .update({ task_status: 'in_progress', updated_at: new Date().toISOString() })
-        .in('id', batchTasks.map(t => t.id));
+      if (!batchTasks || batchTasks.length === 0) {
+        // Check if all tasks are done
+        const { count: pendingCount } = await supabase
+          .from('hero_audit_tasks')
+          .select('id', { count: 'exact', head: true })
+          .eq('job_id', jobId)
+          .in('task_status', ['pending', 'in_progress']);
+
+        if (!pendingCount || pendingCount === 0) {
+          await supabase.from('hero_audit_jobs').update({
+            status: 'done',
+            finished_at: new Date().toISOString(),
+          }).eq('id', jobId);
+          return Response.json({ done: true }, { headers: corsHeaders });
+        }
+
+        return Response.json({ done: false, waiting: true }, { headers: corsHeaders });
+      }
 
       const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY')!;
       EdgeRuntime.waitUntil(
@@ -309,8 +296,8 @@ Deno.serve(async (req: Request) => {
         }).catch(() => {})
       );
 
-      const processOneTask = async (task: typeof batchTasks[number]) => {
-        const { verdict, reason } = await classifyHeroImage(task.hero_image_url as string, anthropicKey);
+      const processOneTask = async (task: { id: number; listing_id: string; listing_name: string; hero_image_url: string }) => {
+        const { verdict, reason } = await classifyHeroImage(task.hero_image_url, anthropicKey);
 
         const isBad = verdict === 'BAD_CONTACT' || verdict === 'BAD_OTHER';
         let actionTaken = 'kept';
@@ -352,7 +339,7 @@ Deno.serve(async (req: Request) => {
         return Response.json({ done: true, status: 'cancelled' }, { headers: corsHeaders });
       }
 
-      const results = await Promise.allSettled(batchTasks.map(task => processOneTask(task)));
+      const results = await Promise.allSettled(batchTasks.map((task: { id: number; listing_id: string; listing_name: string; hero_image_url: string }) => processOneTask(task)));
 
       let batchSucceeded = 0;
       let batchCleared = 0;
