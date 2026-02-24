@@ -50,33 +50,34 @@ async function classifyHeroImage(
   const img = await fetchImageAsBase64(imageUrl);
   if (!img) return { verdict: 'fetch_failed', reason: 'Could not fetch image (timeout or invalid format)' };
 
-  const prompt = `You are quality-checking a hero image for a touchless car wash directory listing. This is the primary image users see, so it should clearly represent the car wash business.
+  const prompt = `You are quality-checking a hero image for a touchless car wash directory listing. This is the primary image users see when browsing the directory, so it must clearly represent an AUTOMATED touchless car wash business.
 
 Classify this image as one of:
 
-GOOD — the image clearly represents a car wash business as seen from a customer perspective:
+GOOD — the image is a real photograph that clearly represents an automated car wash:
   - Exterior of a car wash building, facility entrance, or facade
-  - Interior of a wash tunnel or bay showing the wash environment (arches, equipment along the sides, car moving through)
-  - Cars actively being washed by automated equipment (water jets, foam, blowers)
+  - Interior of an automated wash tunnel showing arches, nozzles, blowers, or a car moving through
+  - A car being washed by automated touchless equipment (high-pressure water jets, foam applicators, air dryers)
   - Drive-through tunnel view from the driver's perspective entering or exiting
-  - Clear signage or canopy of a car wash facility with context
+  - Clear signage or canopy of a car wash facility with the building or wash bays visible
 
-BAD_CONTACT — ONLY use this if the image clearly shows brush rollers, cloth strips, mop curtains, or other physical contact wash equipment that touches the car. Do NOT use BAD_CONTACT for touchless wash bays, water jets, or foam equipment.
+BAD_CONTACT — the image clearly shows physical contact wash equipment that touches the car: spinning brush rollers, cloth strips, mop curtains, or hanging fabric/foam pads making contact with a vehicle. Do NOT use BAD_CONTACT for touchless equipment like water jets, spray arches, or foam nozzles.
 
-BAD_OTHER — reject for any of these:
-  - Any logo, brand illustration, mascot, character, graphic, or artwork — even if it features a car wash brand name. This includes stylized characters (astronauts, animals, people), colorful brand graphics, illustrated logos, or any image that is clearly marketing art rather than a real photograph of the facility.
-  - Coin-operated self-serve wash bay with wand/hose only and no automated equipment visible
-  - Close-up of a single piece of equipment (a soap dispenser, vacuum, payment kiosk, token machine, etc.) with no facility context
-  - Car interior shot (dashboard, steering wheel, seats viewed from inside the car)
-  - Gas station forecourt with pumps and no visible car wash building
-  - EV charging station with no car wash visible
-  - Convenience store, restaurant, or unrelated business interior or exterior
-  - People-only photo with no car wash context
-  - Severely blurry, very dark, or nearly unusable image
+BAD_OTHER — reject for ANY of these reasons:
+  - NOT A REAL PHOTOGRAPH: Any illustration, logo, mascot, cartoon character, brand graphic, marketing artwork, or digitally created image. This includes stylized characters (astronauts, animals, mascots), colorful brand illustrations, and any image that is clearly not a photograph of a real place. If it looks drawn, rendered, or designed rather than photographed, it is BAD_OTHER.
+  - SELF-SERVE WAND BAY: A coin-operated or token-operated self-serve bay where customers wash their own car using a handheld wand, spray gun, or pressure washer hose. These are not automated touchless washes.
+  - EQUIPMENT CLOSE-UP: A close-up of a single piece of equipment (soap dispenser, vacuum station, payment kiosk, token machine, vending machine, air compressor) with no broader facility context.
+  - WRONG BUSINESS: Gas station forecourt/pumps with no car wash visible, EV charging station, convenience store, restaurant, laundromat, or any non-car-wash business.
+  - CAR INTERIOR: Dashboard, steering wheel, or seats photographed from inside a vehicle.
+  - PEOPLE ONLY: Photo of people with no car wash facility visible.
+  - BROKEN/UNUSABLE: Solid color, blank gradient, placeholder graphic, severely blurry, nearly black, or otherwise unusable image.
+  - SIGNAGE ONLY: A photo showing only a sign, menu board, or price list with no car wash facility visible behind it.
 
-The image MUST be a real photograph of a physical car wash facility or a car being washed. Illustrations, logos, mascots, and brand graphics are always BAD_OTHER regardless of what brand they represent.
-
-When in doubt between GOOD and BAD_OTHER for a borderline real photograph, prefer GOOD if a car wash facility is clearly present. But never pass illustrations or graphics as GOOD.
+IMPORTANT RULES:
+- The image MUST be a real photograph. Illustrations and graphics are ALWAYS BAD_OTHER.
+- A business may have both self-serve bays and automated touchless bays. If the photo shows the self-serve wand bay side, reject it — we want the automated touchless side.
+- When genuinely uncertain between GOOD and BAD_OTHER for a real photograph where some car wash facility is visible, prefer GOOD.
+- When genuinely uncertain whether an image is a real photograph or a graphic/illustration, prefer BAD_OTHER.
 
 Reply with only the verdict and a one-sentence reason in this exact format:
 VERDICT: reason`;
