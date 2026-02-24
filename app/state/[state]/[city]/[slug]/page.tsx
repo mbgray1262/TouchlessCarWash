@@ -7,6 +7,7 @@ import {
   CalendarCheck, ChevronDown
 } from 'lucide-react';
 import LogoImage from '@/components/LogoImage';
+import HeroImageFallback from '@/components/HeroImageFallback';
 import PhotoGalleryGrid from '@/components/PhotoGalleryGrid';
 import SuggestEditModal from '@/components/SuggestEditModal';
 import { Badge } from '@/components/ui/badge';
@@ -481,7 +482,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
               <div className="absolute inset-0 bg-gradient-to-t from-[#0F2744] via-[#0F2744]/50 to-[#0F2744]/10" />
             </div>
           ) : (
-            <div className="h-36 md:h-48" />
+            <HeroImageFallback variant="full" className="h-48 md:h-64" />
           )}
 
           <div className="absolute inset-0 flex flex-col justify-end">

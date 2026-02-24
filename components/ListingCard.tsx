@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { type Listing } from '@/lib/supabase';
 import { getStateSlug } from '@/lib/constants';
 import LogoImage from '@/components/LogoImage';
+import HeroImageFallback from '@/components/HeroImageFallback';
 
 interface ListingCardProps {
   listing: Listing;
@@ -65,9 +66,7 @@ export function ListingCard({ listing, href, showVerifiedBadge = false }: Listin
             </div>
           </div>
         ) : (
-          <div className="h-20 bg-gradient-to-br from-[#0F2744] to-[#1E3A8A] flex items-center justify-center shrink-0">
-            <span className="text-white/20 text-5xl font-bold">{listing.name.charAt(0)}</span>
-          </div>
+          <HeroImageFallback variant="card" className="h-48 shrink-0" />
         )}
 
         <div className="p-5 flex flex-col flex-1">

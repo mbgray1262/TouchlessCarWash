@@ -6,6 +6,7 @@ import {
   Sparkles, ExternalLink, ChevronRight, HelpCircle, CalendarCheck, ChevronDown
 } from 'lucide-react';
 import LogoImage from '@/components/LogoImage';
+import HeroImageFallback from '@/components/HeroImageFallback';
 import PhotoGalleryStrip from '@/components/PhotoGalleryStrip';
 import PhotoGalleryGrid from '@/components/PhotoGalleryGrid';
 import SuggestEditModal from '@/components/SuggestEditModal';
@@ -394,7 +395,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
               <div className="absolute inset-0 bg-gradient-to-t from-[#0F2744] via-[#0F2744]/60 to-transparent" />
             </div>
           ) : (
-            <div className="h-32 md:h-40" />
+            <HeroImageFallback variant="full" className="h-48 md:h-64" />
           )}
 
           <div className="absolute inset-0 flex flex-col justify-end">
