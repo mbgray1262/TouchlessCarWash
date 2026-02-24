@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import {
   ChevronRight, ShieldCheck, Loader2, CheckCircle2, AlertCircle,
-  RefreshCw, XCircle, ImageIcon, ChevronDown, ChevronUp,
+  RefreshCw, XCircle, ImageIcon, ChevronDown, ChevronUp, Eye,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +13,7 @@ import { AdminNav } from '@/components/AdminNav';
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const STORAGE_KEY = 'hero_audit_last_job';
+const SV_STORAGE_KEY = 'sv_audit_last_job';
 const PARALLEL_BATCH_SIZE = 3;
 
 type JobStatus = 'idle' | 'running' | 'done' | 'cancelled' | 'error';
@@ -173,8 +174,31 @@ function TaskRow({ task }: { task: AuditTask }) {
   );
 }
 
+interface SvAuditStatus {
+  total_street_view: number;
+  already_audited: number;
+  recent_job: {
+    id: number;
+    status: string;
+    total: number;
+    processed: number;
+    succeeded: number;
+    cleared: number;
+    started_at: string;
+    finished_at: string | null;
+  } | null;
+}
+
 function callFn(body: Record<string, unknown>) {
   return fetch(`${SUPABASE_URL}/functions/v1/hero-audit`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+    body: JSON.stringify(body),
+  });
+}
+
+function callSvFn(body: Record<string, unknown>) {
+  return fetch(`${SUPABASE_URL}/functions/v1/street-view-audit`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
     body: JSON.stringify(body),
@@ -195,6 +219,20 @@ export default function HeroAuditPage() {
   const pollRef = useRef<NodeJS.Timeout | null>(null);
   const lastProcessedRef = useRef<number>(-1);
   const stalledSinceRef = useRef<number | null>(null);
+
+  // ── Street View Audit state ────────────────────────────────────────────────
+  const [svStatus, setSvStatus] = useState<SvAuditStatus | null>(null);
+  const [svMode, setSvMode] = useState<'test' | 'full'>('test');
+  const [svTestLimit, setSvTestLimit] = useState(25);
+  const [svJobStatus, setSvJobStatus] = useState<JobStatus>('idle');
+  const [svJobProgress, setSvJobProgress] = useState<JobProgress | null>(null);
+  const [svTasks, setSvTasks] = useState<AuditTask[]>([]);
+  const [svShowTasks, setSvShowTasks] = useState(false);
+  const [svLoadingTasks, setSvLoadingTasks] = useState(false);
+  const svJobIdRef = useRef<number | null>(null);
+  const svPollRef = useRef<NodeJS.Timeout | null>(null);
+  const svLastProcessedRef = useRef<number>(-1);
+  const svStalledSinceRef = useRef<number | null>(null);
 
   const showToast = useCallback((type: 'success' | 'error' | 'info', msg: string) => {
     setToast({ type, msg });
@@ -262,11 +300,12 @@ export default function HeroAuditPage() {
 
   useEffect(() => {
     loadStatus();
+    loadSvStatus();
 
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        const { jobId, status } = JSON.parse(saved) as { jobId: number; status: string };
+        const { jobId } = JSON.parse(saved) as { jobId: number; status: string };
         if (jobId) {
           jobIdRef.current = jobId;
           callFn({ action: 'job_status', job_id: jobId })
@@ -288,7 +327,35 @@ export default function HeroAuditPage() {
       }
     } catch {}
 
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    try {
+      const svSaved = localStorage.getItem(SV_STORAGE_KEY);
+      if (svSaved) {
+        const { jobId } = JSON.parse(svSaved) as { jobId: number; status: string };
+        if (jobId) {
+          svJobIdRef.current = jobId;
+          callSvFn({ action: 'job_status', job_id: jobId })
+            .then(r => r.ok ? r.json() : null)
+            .then((data: JobProgress | null) => {
+              if (!data) return;
+              setSvJobProgress(data);
+              if (data.status === 'done' || data.status === 'cancelled') {
+                setSvJobStatus(data.status === 'done' ? 'done' : 'cancelled');
+                loadSvTaskTraces(jobId);
+              } else if (data.status === 'running') {
+                setSvJobStatus('running');
+                if (svPollRef.current) clearInterval(svPollRef.current);
+                svPollRef.current = setInterval(pollSvJob, 3000);
+              }
+            })
+            .catch(() => {});
+        }
+      }
+    } catch {}
+
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+      if (svPollRef.current) clearInterval(svPollRef.current);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -339,6 +406,113 @@ export default function HeroAuditPage() {
     loadStatus();
   }, [loadStatus]);
 
+  // ── Street View Audit callbacks ────────────────────────────────────────────
+  const loadSvStatus = useCallback(async () => {
+    const res = await callSvFn({ action: 'status' });
+    if (res.ok) {
+      const data = await res.json();
+      setSvStatus(data);
+    }
+  }, []);
+
+  const loadSvTaskTraces = useCallback(async (jobId: number) => {
+    setSvLoadingTasks(true);
+    try {
+      const res = await callSvFn({ action: 'task_traces', job_id: jobId });
+      if (res.ok) {
+        const data = await res.json();
+        setSvTasks(data.tasks ?? []);
+        setSvShowTasks(true);
+      }
+    } finally {
+      setSvLoadingTasks(false);
+    }
+  }, []);
+
+  const pollSvJob = useCallback(async () => {
+    const jobId = svJobIdRef.current;
+    if (!jobId) return;
+    const res = await callSvFn({ action: 'job_status', job_id: jobId });
+    if (!res.ok) return;
+    const data: JobProgress = await res.json();
+    setSvJobProgress(data);
+
+    if (data.status === 'running') {
+      if (data.processed === svLastProcessedRef.current) {
+        const now = Date.now();
+        if (svStalledSinceRef.current === null) {
+          svStalledSinceRef.current = now;
+        } else if (now - svStalledSinceRef.current > 20_000) {
+          svStalledSinceRef.current = now;
+          callSvFn({ action: 'process_batch', job_id: jobId }).catch(() => {});
+        }
+      } else {
+        svLastProcessedRef.current = data.processed;
+        svStalledSinceRef.current = null;
+      }
+    }
+
+    if (data.status === 'done' || data.status === 'cancelled') {
+      if (svPollRef.current) clearInterval(svPollRef.current);
+      const finalStatus = data.status === 'done' ? 'done' : 'cancelled';
+      setSvJobStatus(finalStatus);
+      try { localStorage.setItem(SV_STORAGE_KEY, JSON.stringify({ jobId, status: finalStatus })); } catch {}
+      loadSvStatus();
+      showToast(
+        'success',
+        `Done! ${data.succeeded} street view heroes kept, ${data.cleared} cleared from ${data.processed} listings.`
+      );
+      loadSvTaskTraces(jobId);
+    }
+  }, [loadSvStatus, showToast, loadSvTaskTraces]);
+
+  const handleSvStart = useCallback(async () => {
+    setSvJobStatus('running');
+    setSvJobProgress(null);
+    setSvTasks([]);
+    setSvShowTasks(false);
+    svLastProcessedRef.current = -1;
+    svStalledSinceRef.current = null;
+
+    try {
+      const limit = svMode === 'test' ? svTestLimit : 0;
+      const res = await callSvFn({ action: 'start', limit });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Failed to start');
+      svJobIdRef.current = data.job_id;
+      try { localStorage.setItem(SV_STORAGE_KEY, JSON.stringify({ jobId: data.job_id, status: 'running' })); } catch {}
+      setSvJobProgress({ id: data.job_id, status: 'running', total: data.total, processed: 0, succeeded: 0, cleared: 0 });
+      showToast('info', `Started — screening ${data.total} street view hero images.`);
+      if (svPollRef.current) clearInterval(svPollRef.current);
+      svPollRef.current = setInterval(pollSvJob, 3000);
+      pollSvJob();
+    } catch (e) {
+      showToast('error', (e as Error).message);
+      setSvJobStatus('idle');
+    }
+  }, [svMode, svTestLimit, showToast, pollSvJob]);
+
+  const handleSvCancel = useCallback(async () => {
+    const jobId = svJobIdRef.current;
+    if (!jobId) return;
+    if (svPollRef.current) clearInterval(svPollRef.current);
+    await callSvFn({ action: 'cancel', job_id: jobId });
+    setSvJobStatus('cancelled');
+    showToast('info', 'Street view audit cancelled.');
+    loadSvTaskTraces(jobId);
+  }, [showToast, loadSvTaskTraces]);
+
+  const handleSvReset = useCallback(() => {
+    if (svPollRef.current) clearInterval(svPollRef.current);
+    svJobIdRef.current = null;
+    try { localStorage.removeItem(SV_STORAGE_KEY); } catch {}
+    setSvJobStatus('idle');
+    setSvJobProgress(null);
+    setSvTasks([]);
+    setSvShowTasks(false);
+    loadSvStatus();
+  }, [loadSvStatus]);
+
   const pct = jobProgress && jobProgress.total > 0
     ? Math.min(100, Math.round((jobProgress.processed / jobProgress.total) * 100))
     : 0;
@@ -347,6 +521,15 @@ export default function HeroAuditPage() {
   const badTasks = tasks.filter(t => t.verdict === 'BAD_CONTACT' || t.verdict === 'BAD_OTHER');
   const failedTasks = tasks.filter(t => t.verdict === 'fetch_failed');
   const doneTasks = tasks.filter(t => t.task_status === 'done');
+
+  const svPct = svJobProgress && svJobProgress.total > 0
+    ? Math.min(100, Math.round((svJobProgress.processed / svJobProgress.total) * 100))
+    : 0;
+
+  const svGoodTasks = svTasks.filter(t => t.verdict === 'GOOD');
+  const svBadTasks = svTasks.filter(t => t.verdict === 'BAD_OTHER');
+  const svFailedTasks = svTasks.filter(t => t.verdict === 'fetch_failed');
+  const svDoneTasks = svTasks.filter(t => t.task_status === 'done');
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -646,6 +829,249 @@ export default function HeroAuditPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* ── Street View Audit ──────────────────────────────────────────────── */}
+        <div className="border-t border-gray-200 pt-8 mt-2">
+          <div className="flex items-center gap-2.5 mb-1">
+            <Eye className="w-5 h-5 text-blue-600" />
+            <h2 className="text-xl font-bold text-[#0F2744]">Street View Image Audit</h2>
+          </div>
+          <p className="text-gray-500 mb-6 text-sm">
+            912 listings currently use a street view image as their hero — these were assigned as a blind fallback and were never
+            screened by Claude. Some may show a generic road, wrong angle, or an unrelated business. This audit checks each one
+            and clears any that aren&apos;t clearly showing a car wash facility.
+          </p>
+
+          {svStatus && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+              <div className="bg-white rounded-xl border border-blue-200 p-4">
+                <p className="text-xs text-gray-400 mb-1">Street View Heroes</p>
+                <p className="text-2xl font-bold text-blue-600">{svStatus.total_street_view.toLocaleString()}</p>
+                <p className="text-xs text-gray-400 mt-0.5">currently using street view</p>
+              </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-4">
+                <p className="text-xs text-gray-400 mb-1">Already Screened</p>
+                <p className="text-2xl font-bold text-[#0F2744]">{svStatus.already_audited.toLocaleString()}</p>
+                <p className="text-xs text-gray-400 mt-0.5">tasks completed</p>
+              </div>
+              {svStatus.recent_job && (
+                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                  <p className="text-xs text-gray-400 mb-1">Last Run</p>
+                  <p className="text-2xl font-bold text-[#0F2744]">{svStatus.recent_job.cleared}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">cleared of {svStatus.recent_job.total}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <Card className="mb-6">
+            <CardHeader className="pb-3 border-b border-gray-100">
+              <CardTitle className="text-sm font-semibold text-[#0F2744]">Run Street View Audit</CardTitle>
+            </CardHeader>
+            <CardContent className="p-5">
+
+              {svJobStatus === 'idle' && (
+                <div className="space-y-5">
+                  <div className="flex gap-3">
+                    {(['test', 'full'] as const).map(m => (
+                      <button
+                        key={m}
+                        onClick={() => setSvMode(m)}
+                        className={`flex-1 py-3 px-4 rounded-lg border text-sm font-medium transition-all text-left ${
+                          svMode === m
+                            ? 'bg-blue-50 border-blue-400 text-blue-800'
+                            : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
+                        }`}
+                      >
+                        {m === 'test' ? 'Test Mode' : 'Full Audit'}
+                        <span className="block text-xs font-normal mt-0.5 opacity-70">
+                          {m === 'test'
+                            ? 'Small sample to preview results'
+                            : `Screen all ${svStatus?.total_street_view.toLocaleString() ?? '…'} street view hero images`}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {svMode === 'test' && (
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-gray-600">Listings to screen</label>
+                      <div className="flex gap-2">
+                        {[10, 25, 50, 100].map(n => (
+                          <button
+                            key={n}
+                            onClick={() => setSvTestLimit(n)}
+                            className={`px-4 py-1.5 rounded-lg border text-sm font-medium transition-all ${
+                              svTestLimit === n
+                                ? 'bg-blue-600 border-blue-600 text-white'
+                                : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                            }`}
+                          >
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {svMode === 'full' && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-xs text-blue-800 font-medium">Full audit uses Anthropic credits (~1 Haiku call per listing)</p>
+                      <p className="text-xs text-blue-700 mt-0.5">
+                        Will screen {svStatus?.total_street_view.toLocaleString() ?? '…'} street view hero images. Bad ones are cleared — those listings
+                        will then show up in Photo Enrichment to get better heroes.
+                      </p>
+                    </div>
+                  )}
+
+                  <Button
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                    onClick={handleSvStart}
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    {svMode === 'test' ? `Run Test (${svTestLimit} images)` : 'Start Full Street View Audit'}
+                  </Button>
+                </div>
+              )}
+
+              {svJobStatus === 'running' && svJobProgress && (
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-[#0F2744]">Screening street view images…</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {svJobProgress.processed} / {svJobProgress.total} screened
+                        &nbsp;·&nbsp; {svJobProgress.succeeded} kept
+                        &nbsp;·&nbsp; <span className="text-red-500 font-medium">{svJobProgress.cleared} cleared</span>
+                      </p>
+                    </div>
+                    <span className="relative flex h-2.5 w-2.5 mt-1 shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500" />
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-blue-500 h-2 rounded-full transition-all duration-700"
+                      style={{ width: `${svPct}%` }}
+                    />
+                  </div>
+                  {svJobProgress.cleared > 0 && (
+                    <div className="flex items-center gap-1.5 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg p-2.5">
+                      <XCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{svJobProgress.cleared} bad street view heroes cleared — those listings now have no hero image.</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1.5 text-xs text-gray-400 bg-gray-50 border border-gray-100 rounded-lg p-3">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>Processing {PARALLEL_BATCH_SIZE} images at a time on the server.</span>
+                  </div>
+                  <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50" onClick={handleSvCancel}>
+                    <XCircle className="w-3.5 h-3.5 mr-1.5" /> Cancel
+                  </Button>
+                </div>
+              )}
+
+              {(svJobStatus === 'done' || svJobStatus === 'cancelled') && svJobProgress && (
+                <div className="space-y-4">
+                  <div className={`flex items-center gap-3 p-4 rounded-lg border ${
+                    svJobStatus === 'done' ? 'bg-teal-50 border-teal-200' : 'bg-gray-50 border-gray-200'
+                  }`}>
+                    {svJobStatus === 'done'
+                      ? <CheckCircle2 className="w-5 h-5 text-teal-600 shrink-0" />
+                      : <XCircle className="w-5 h-5 text-gray-400 shrink-0" />
+                    }
+                    <div className="flex-1">
+                      <p className={`text-sm font-semibold ${svJobStatus === 'done' ? 'text-teal-800' : 'text-gray-600'}`}>
+                        {svJobStatus === 'done' ? 'Street view audit complete' : 'Audit cancelled'}
+                      </p>
+                      <p className={`text-xs mt-0.5 ${svJobStatus === 'done' ? 'text-teal-600' : 'text-gray-400'}`}>
+                        {svJobProgress.succeeded} kept &nbsp;·&nbsp; {svJobProgress.cleared} cleared
+                        {' '}of {svJobProgress.processed} screened
+                      </p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={handleSvReset}>
+                      <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Run Again
+                    </Button>
+                  </div>
+
+                  {svJobProgress.cleared > 0 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-xs text-blue-800 font-medium">Next step: re-enrich cleared listings</p>
+                      <p className="text-xs text-blue-700 mt-1">
+                        {svJobProgress.cleared} listings now have no hero image. Run{' '}
+                        <Link href="/admin/import/enrich-photos" className="underline font-semibold">Photo Enrichment</Link>
+                        {' '}to find better heroes for them via Google photos or website scraping.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {(svShowTasks || svLoadingTasks) && (
+            <Card className="mb-6">
+              <CardHeader className="pb-3 border-b border-gray-100">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-semibold text-[#0F2744]">
+                    Street View Screening Results
+                  </CardTitle>
+                  {svDoneTasks.length > 0 && (
+                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                      {svGoodTasks.length > 0 && <Pill label={`${svGoodTasks.length} GOOD`} color="bg-teal-50 text-teal-700 border-teal-200" />}
+                      {svBadTasks.length > 0 && <Pill label={`${svBadTasks.length} BAD`} color="bg-red-50 text-red-600 border-red-200" />}
+                      {svFailedTasks.length > 0 && <Pill label={`${svFailedTasks.length} failed`} color="bg-gray-100 text-gray-500 border-gray-200" />}
+                    </div>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="p-4">
+                {svLoadingTasks ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-400 py-4 justify-center">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading results…
+                  </div>
+                ) : svTasks.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-4">No results yet.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {svBadTasks.length > 0 && (
+                      <div className="mb-3">
+                        <p className="text-[10px] font-semibold text-red-600 uppercase tracking-wider mb-2 px-1">
+                          Cleared ({svBadTasks.length})
+                        </p>
+                        <div className="space-y-1.5">
+                          {svBadTasks.map(t => <TaskRow key={t.id} task={t} />)}
+                        </div>
+                      </div>
+                    )}
+                    {svGoodTasks.length > 0 && (
+                      <div className="mb-3">
+                        <p className="text-[10px] font-semibold text-teal-600 uppercase tracking-wider mb-2 px-1">
+                          Kept ({svGoodTasks.length})
+                        </p>
+                        <div className="space-y-1.5">
+                          {svGoodTasks.map(t => <TaskRow key={t.id} task={t} />)}
+                        </div>
+                      </div>
+                    )}
+                    {svFailedTasks.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 px-1">
+                          Fetch Failed ({svFailedTasks.length})
+                        </p>
+                        <div className="space-y-1.5">
+                          {svFailedTasks.map(t => <TaskRow key={t.id} task={t} />)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
 
       </div>
     </div>
