@@ -55,9 +55,16 @@ async function classifyPhotoWithClaude(
     : '';
 
   const prompt = `You are evaluating a photo for a touchless car wash directory. Classify this image as:
-GOOD (clear exterior shot of an automated/touchless car wash facility, wash tunnel, or building signage),
-BAD_CONTACT (shows brushes, cloth strips, mops, or any contact wash equipment), or
-BAD_OTHER (poor quality, car interior, people only, logo/graphic, blurry, or not clearly a car wash).${dedupClause}
+GOOD — any of the following qualify:
+  - Exterior of a car wash building, facility, or entrance
+  - Interior of a wash bay, tunnel, or automated wash equipment
+  - Cars being washed by touchless equipment (water jets, foam, air dryers)
+  - Drive-through tunnel view from inside or outside
+  - Car wash signage, entrance canopy, or facility overview
+  The key test: does this image represent a car wash business? If yes, it is GOOD.
+BAD_CONTACT — ONLY use this if the image clearly shows brush rollers, cloth strips, mop curtains, or physical contact wash equipment that touches the car. Do NOT use BAD_CONTACT for wash bays, water jets, or foam equipment.
+BAD_OTHER — truly unrelated or unusable: gas station pumps with no car wash visible, convenience store interior, EV chargers only, people only without wash context, contact info card, plain logo/graphic, severely blurry or dark image, non-car-wash business.
+When in doubt, prefer GOOD. Only reject images that are clearly wrong.${dedupClause}
 Reply with only the classification and a one-sentence reason, formatted as: VERDICT: reason`;
 
   const refBlocks = refImages.flatMap((r, i) => [

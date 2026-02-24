@@ -52,9 +52,17 @@ async function classifyHeroImage(
   const prompt = `You are quality-checking a hero image for a touchless car wash directory listing.
 
 Classify this image as one of:
-GOOD — a clear exterior shot of an automated/touchless car wash facility, wash tunnel entrance, or building with visible signage. Must look like a real car wash business.
-BAD_CONTACT — shows brushes, cloth strips, mops, or any contact wash equipment (not touchless).
-BAD_OTHER — poor quality, blurry, car interior view, close-up of equipment only, people only, logo/graphic, food truck, gas station with no wash, abandoned building, unclear subject, or anything that would not represent a touchless car wash listing well.
+GOOD — any of the following are GOOD:
+  - Exterior shot of a car wash building, facility, or entrance
+  - Interior of a wash bay, wash tunnel, or automated wash equipment
+  - Cars being washed by touchless equipment (water jets, foam applicators, air dryers)
+  - Drive-through tunnel view from inside or outside
+  - Car wash signage, entrance canopy, or facility overview
+  The key test: does this image represent a car wash business? If yes, it is GOOD.
+BAD_CONTACT — ONLY use this if the image clearly shows brush rollers, cloth strips, mop curtains, or other physical contact wash equipment that touches the car. Do NOT use BAD_CONTACT for touchless wash bays, water jets, or foam equipment.
+BAD_OTHER — truly unrelated or unusable: gas station pumps with no car wash visible, convenience store interior, EV chargers only, people only without wash context, contact info card, plain logo/graphic, severely blurry or dark image, non-car-wash business (restaurant, auto repair shop, etc.).
+
+When in doubt, prefer GOOD. Only reject images that are clearly wrong.
 
 Reply with only the verdict and a one-sentence reason in this exact format:
 VERDICT: reason`;
