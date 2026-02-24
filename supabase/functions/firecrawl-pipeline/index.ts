@@ -707,6 +707,7 @@ Deno.serve(async (req: Request) => {
               crawl_status,
               is_touchless,
               touchless_evidence,
+              raw_markdown: markdown.slice(0, 50000),
               images_found: images.length,
             }),
             syncFilters(supabase, listing.id, is_touchless, amenities, filterMap),
