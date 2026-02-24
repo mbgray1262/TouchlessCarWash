@@ -330,6 +330,48 @@ async function fetchGooglePlacePhotoUrls(
   return urls;
 }
 
+async function pickBestHeroFromGallery(urls: string[], apiKey: string): Promise<number> {
+  if (urls.length === 1) return 0;
+
+  const images = await Promise.all(urls.map(u => fetchImageAsBase64(u)));
+  const valid = images.map((img, i) => ({ img, i })).filter(({ img }) => img !== null);
+  if (valid.length === 0) return 0;
+  if (valid.length === 1) return valid[0].i;
+
+  const imageBlocks = valid.flatMap(({ img, i }) => [
+    { type: 'text' as const, text: `Photo ${i + 1}:` },
+    { type: 'image' as const, source: { type: 'base64' as const, media_type: img!.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp', data: img!.base64 } },
+  ]);
+
+  const prompt = `You are selecting the single best hero image for a touchless car wash directory listing. Review the ${valid.length} photos above and pick the one that would make the best first impression: ideally a clear, well-lit exterior shot of the facility or wash tunnel entrance. Avoid interior-only shots, close-ups of equipment, or blurry images if better options exist.
+
+Reply with only the photo number (e.g. "2") and nothing else.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5',
+        max_tokens: 10,
+        messages: [{ role: 'user', content: [...imageBlocks, { type: 'text', text: prompt }] }],
+      }),
+    });
+    if (!res.ok) return 0;
+    const data = await res.json() as { content: Array<{ text: string }> };
+    const text = (data.content?.[0]?.text ?? '').trim();
+    const num = parseInt(text, 10);
+    if (!isNaN(num) && num >= 1 && num <= urls.length) return num - 1;
+  } catch {
+    // fall through
+  }
+  return 0;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -547,9 +589,10 @@ Deno.serve(async (req: Request) => {
           }
         }
 
-        // If we already have gallery photos and no manual hero, promote the first one
+        // If we already have gallery photos and no manual hero, pick the best one via Claude
         if (!heroIsManual && approved.length > 0 && !heroPhoto) {
-          heroPhoto = approved[0];
+          const bestIdx = await pickBestHeroFromGallery(approved, anthropicKey);
+          heroPhoto = approved[bestIdx];
           heroSource = 'gallery';
         }
 
