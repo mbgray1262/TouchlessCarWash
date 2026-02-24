@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { slugify } from '@/lib/constants';
 import {
   ChevronRight, Camera, Loader2, CheckCircle2, AlertCircle,
-  RefreshCw, XCircle, ImageIcon, Globe, MapPin, Bug, ChevronDown, ChevronUp,
+  RefreshCw, XCircle, ImageIcon, Globe, MapPin, Bug, ChevronDown, ChevronUp, Copy, Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -291,6 +291,7 @@ export default function EnrichPhotosPage() {
   const [showTraces, setShowTraces] = useState(false);
   const [loadingTraces, setLoadingTraces] = useState(false);
   const [expandedTraces, setExpandedTraces] = useState<Set<number>>(new Set());
+  const [copied, setCopied] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; msg: string } | null>(null);
   const jobIdRef = useRef<number | null>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
@@ -805,6 +806,21 @@ export default function EnrichPhotosPage() {
                         className="text-[11px] font-medium text-gray-500 hover:text-[#0F2744] px-2 py-1 rounded border border-gray-200 hover:border-gray-300 bg-white transition-colors flex items-center gap-1"
                       >
                         <ChevronUp className="w-3 h-3" /> Collapse all
+                      </button>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(JSON.stringify(traces, null, 2));
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 2000);
+                        }}
+                        className={`text-[11px] font-medium px-2 py-1 rounded border bg-white transition-colors flex items-center gap-1 ${
+                          copied
+                            ? 'text-teal-700 border-teal-300 hover:border-teal-400'
+                            : 'text-gray-500 border-gray-200 hover:text-[#0F2744] hover:border-gray-300'
+                        }`}
+                      >
+                        {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                        {copied ? 'Copied!' : 'Copy JSON'}
                       </button>
                     </div>
                   )}
