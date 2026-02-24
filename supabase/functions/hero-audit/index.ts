@@ -152,6 +152,14 @@ Deno.serve(async (req: Request) => {
         .eq('is_touchless', true)
         .not('hero_image', 'is', null);
 
+      const { data: auditedRows } = await supabase
+        .from('hero_audit_tasks')
+        .select('listing_id')
+        .in('task_status', ['done', 'in_progress', 'pending']);
+
+      const auditedCount = new Set((auditedRows ?? []).map((r: { listing_id: string }) => r.listing_id)).size;
+      const unauditedCount = Math.max(0, (listingsWithTrustedHero ?? 0) - auditedCount);
+
       const { data: recentJob } = await supabase
         .from('hero_audit_jobs')
         .select('id, status, total, processed, succeeded, cleared, started_at, finished_at')
@@ -162,6 +170,8 @@ Deno.serve(async (req: Request) => {
       return Response.json({
         trusted_tasks: trustedCount ?? 0,
         listings_with_google_hero: listingsWithTrustedHero ?? 0,
+        unaudited_count: unauditedCount,
+        audited_count: auditedCount,
         recent_job: recentJob ?? null,
       }, { headers: corsHeaders });
     }

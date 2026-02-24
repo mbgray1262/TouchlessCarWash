@@ -20,6 +20,8 @@ type JobStatus = 'idle' | 'running' | 'done' | 'cancelled' | 'error';
 interface AuditStatus {
   trusted_tasks: number;
   listings_with_google_hero: number;
+  unaudited_count: number;
+  audited_count: number;
   recent_job: {
     id: number;
     status: string;
@@ -383,14 +385,14 @@ export default function HeroAuditPage() {
         {auditStatus && (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
             <div className="bg-white rounded-xl border border-amber-200 p-4">
-              <p className="text-xs text-gray-400 mb-1">Trusted (unscreened)</p>
-              <p className="text-2xl font-bold text-amber-600">{auditStatus.listings_with_google_hero.toLocaleString()}</p>
-              <p className="text-xs text-gray-400 mt-0.5">Google heroes to audit</p>
+              <p className="text-xs text-gray-400 mb-1">Remaining to audit</p>
+              <p className="text-2xl font-bold text-amber-600">{auditStatus.unaudited_count.toLocaleString()}</p>
+              <p className="text-xs text-gray-400 mt-0.5">of {auditStatus.listings_with_google_hero.toLocaleString()} total Google heroes</p>
             </div>
             <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <p className="text-xs text-gray-400 mb-1">Previous Trusted Tasks</p>
-              <p className="text-2xl font-bold text-[#0F2744]">{auditStatus.trusted_tasks.toLocaleString()}</p>
-              <p className="text-xs text-gray-400 mt-0.5">in photo_enrich_tasks</p>
+              <p className="text-xs text-gray-400 mb-1">Already audited</p>
+              <p className="text-2xl font-bold text-[#0F2744]">{auditStatus.audited_count.toLocaleString()}</p>
+              <p className="text-xs text-gray-400 mt-0.5">across all past runs</p>
             </div>
             {auditStatus.recent_job && (
               <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -460,7 +462,7 @@ export default function HeroAuditPage() {
                       <span className="block text-xs font-normal mt-0.5 opacity-70">
                         {m === 'test'
                           ? 'Small sample to preview results'
-                          : `Screen all ${auditStatus?.listings_with_google_hero.toLocaleString() ?? '…'} Google hero images`}
+                          : `Screen ${auditStatus?.unaudited_count.toLocaleString() ?? '…'} remaining unaudited images`}
                       </span>
                     </button>
                   ))}
@@ -491,7 +493,7 @@ export default function HeroAuditPage() {
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
                     <p className="text-xs text-amber-800 font-medium">Full audit uses Anthropic credits (~1 Haiku call per listing)</p>
                     <p className="text-xs text-amber-700 mt-0.5">
-                      Will screen all {auditStatus?.listings_with_google_hero.toLocaleString() ?? '…'} Google hero images and clear any that fail.
+                      Will screen {auditStatus?.unaudited_count.toLocaleString() ?? '…'} remaining unaudited Google hero images and clear any that fail.
                       Run a test first to calibrate expectations.
                     </p>
                   </div>
