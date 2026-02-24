@@ -6,8 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
 };
 
-const PARALLEL_BATCH_SIZE = 10;
-const NUM_PARALLEL_WORKERS = 5;
+const PARALLEL_BATCH_SIZE = 20;
+const NUM_PARALLEL_WORKERS = 8;
 const STUCK_TASK_TIMEOUT_MS = 90_000;
 
 async function getSecret(supabaseUrl: string, serviceKey: string, name: string): Promise<string> {
@@ -25,31 +25,10 @@ async function getSecret(supabaseUrl: string, serviceKey: string, name: string):
   return text.replace(/^"|"$/g, '');
 }
 
-async function fetchImageAsBase64(url: string): Promise<{ base64: string; mediaType: string } | null> {
-  try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
-    if (!res.ok) return null;
-    const ct = res.headers.get('content-type') || 'image/jpeg';
-    const mediaType = ct.split(';')[0].trim();
-    if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(mediaType)) return null;
-    const buffer = await res.arrayBuffer();
-    if (buffer.byteLength < 5000) return null;
-    const bytes = new Uint8Array(buffer);
-    let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-    return { base64: btoa(binary), mediaType };
-  } catch {
-    return null;
-  }
-}
-
 async function classifyStreetViewImage(
   imageUrl: string,
   apiKey: string,
 ): Promise<{ verdict: 'GOOD' | 'BAD_OTHER' | 'fetch_failed'; reason: string }> {
-  const img = await fetchImageAsBase64(imageUrl);
-  if (!img) return { verdict: 'fetch_failed', reason: 'Could not fetch image (timeout or invalid format)' };
-
   const prompt = `You are quality-checking a street view / exterior photo used as the hero image for a touchless car wash directory listing. This image was automatically assigned as a fallback — it may or may not actually show a usable car wash exterior.
 
 Classify this image as one of:
@@ -95,9 +74,8 @@ VERDICT: reason`;
             {
               type: 'image',
               source: {
-                type: 'base64',
-                media_type: img.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
-                data: img.base64,
+                type: 'url',
+                url: imageUrl,
               },
             },
             { type: 'text', text: prompt },
@@ -115,6 +93,10 @@ VERDICT: reason`;
     }
 
     if (!res.ok) {
+      const errBody = await res.text().catch(() => '');
+      if (errBody.includes('Could not download image') || errBody.includes('invalid_request_error')) {
+        return { verdict: 'fetch_failed', reason: 'Image URL not accessible to Claude' };
+      }
       return { verdict: 'fetch_failed', reason: `Claude API error ${res.status}` };
     }
 
