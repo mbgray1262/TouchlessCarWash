@@ -613,7 +613,26 @@ Deno.serve(async (req: Request) => {
           fallback_reason: null,
         };
 
-        // ---- STEP 1: Use google_photo_url directly (trusted source, no Claude needed) ----
+        // ---- STEP 1: Screen existing website_photos from DB (highest priority for hero) ----
+        if (websitePhotos.length > 0) {
+          const candidates = filterCandidateUrls(websitePhotos, badUrls).slice(0, 15);
+          trace.website_photos_screened = candidates.length;
+          const approvedBefore = approved.length;
+          const r = await screenAndRehost(
+            candidates, approved, badUrls, task.listing_id as string,
+            supabase, anthropicKey, MAX_PHOTOS, crawlNotes,
+          );
+          approved = r.approved;
+          badUrls = r.badUrls;
+          crawlNotes = r.crawlNotes;
+          trace.website_photos_approved = approved.length - approvedBefore;
+          if (!heroIsManual && !heroSource && approved.length > 0) {
+            heroSource = 'website';
+            heroPhoto = approved[0];
+          }
+        }
+
+        // ---- STEP 2: Use google_photo_url as hero if no website hero found yet ----
         const googleUrl = task.google_photo_url as string | null;
         trace.google_photo_exists = !!googleUrl;
         if (googleUrl && !badUrls.includes(googleUrl)) {
@@ -622,12 +641,12 @@ Deno.serve(async (req: Request) => {
             const finalUrl = rehosted ?? googleUrl;
             trace.google_verdict = 'trusted';
             trace.google_reason = 'Google Maps photo — used directly without classification';
-            if (!heroIsManual) {
+            if (!heroIsManual && !heroPhoto) {
               heroPhoto = finalUrl;
               heroSource = 'google';
             }
             if (!approved.includes(finalUrl) && approved.length < MAX_PHOTOS) {
-              approved.unshift(finalUrl);
+              approved.push(finalUrl);
             }
           } catch (e) {
             trace.google_verdict = 'fetch_failed';
@@ -638,7 +657,7 @@ Deno.serve(async (req: Request) => {
           trace.google_reason = 'URL is in blocked_photos list';
         }
 
-        // ---- STEP 1.5: Google Place Photos — fill gallery from Place Details API ----
+        // ---- STEP 2.5: Google Place Photos — fill gallery from Place Details API ----
         const placeId = task.google_place_id as string | null;
         const needMorePhotos = approved.length < MIN_GALLERY_TARGET;
         if (placeId && googleApiKey && needMorePhotos) {
@@ -675,25 +694,6 @@ Deno.serve(async (req: Request) => {
             trace.google_place_photos_approved = approved.length - approvedBefore;
           } catch {
             // Place Photos fetch failed silently — continue with other sources
-          }
-        }
-
-        // ---- STEP 2: Screen existing website_photos from DB ----
-        if (approved.length < MAX_PHOTOS && websitePhotos.length > 0) {
-          const candidates = filterCandidateUrls(websitePhotos, badUrls).slice(0, 15);
-          trace.website_photos_screened = candidates.length;
-          const approvedBefore = approved.length;
-          const r = await screenAndRehost(
-            candidates, approved, badUrls, task.listing_id as string,
-            supabase, anthropicKey, MAX_PHOTOS, crawlNotes,
-          );
-          approved = r.approved;
-          badUrls = r.badUrls;
-          crawlNotes = r.crawlNotes;
-          trace.website_photos_approved = approved.length - approvedBefore;
-          if (!heroIsManual && !heroSource && approved.length > 0) {
-            heroSource = 'website';
-            heroPhoto = approved[0];
           }
         }
 
