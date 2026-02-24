@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   ArrowLeft, Link2, Loader2, CheckCircle2, XCircle, ExternalLink,
   MapPin, Phone, Globe, Star, Clock, Sparkles, Image as ImageIcon,
-  AlertCircle, ChevronRight, Images, Tag,
+  AlertCircle, ChevronRight, Images, Tag, ShieldCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -170,6 +170,13 @@ export default function ImportPage() {
             >
               <ImageIcon className="w-4 h-4" />
               Photo Enrichment
+            </Link>
+            <Link
+              href="/admin/import/hero-audit"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-amber-600 hover:text-amber-800 border border-amber-200 hover:border-amber-400 rounded-lg px-3 py-2 bg-amber-50 hover:bg-amber-100 transition-colors"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              Hero Image Audit
             </Link>
             <Link
               href="/admin/import/amenity-backfill"

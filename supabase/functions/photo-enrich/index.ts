@@ -637,16 +637,25 @@ Deno.serve(async (req: Request) => {
         trace.google_photo_exists = !!googleUrl;
         if (googleUrl && !badUrls.includes(googleUrl)) {
           try {
-            const rehosted = await rehostToStorage(supabase, googleUrl, task.listing_id as string, 'google_photo');
-            const finalUrl = rehosted ?? googleUrl;
-            trace.google_verdict = 'trusted';
-            trace.google_reason = 'Google Maps photo — used directly without classification';
-            if (!heroIsManual && !heroPhoto) {
-              heroPhoto = finalUrl;
-              heroSource = 'google';
-            }
-            if (!approved.includes(finalUrl) && approved.length < MAX_PHOTOS) {
-              approved.push(finalUrl);
+            const result = await classifyPhotoWithClaude(googleUrl, anthropicKey, [...approved]);
+            trace.google_verdict = result.verdict;
+            trace.google_reason = result.reason;
+            if (result.verdict === 'GOOD') {
+              const rehosted = await rehostToStorage(supabase, googleUrl, task.listing_id as string, 'google_photo');
+              const finalUrl = rehosted ?? googleUrl;
+              if (!heroIsManual && !heroPhoto) {
+                heroPhoto = finalUrl;
+                heroSource = 'google';
+              }
+              if (!approved.includes(finalUrl) && approved.length < MAX_PHOTOS) {
+                approved.push(finalUrl);
+              }
+            } else {
+              badUrls.push(googleUrl);
+              if (result.verdict === 'BAD_CONTACT') {
+                const note = `[Google photo rejected BAD_CONTACT: ${result.reason}]`;
+                crawlNotes = crawlNotes ? `${crawlNotes} ${note}` : note;
+              }
             }
           } catch (e) {
             trace.google_verdict = 'fetch_failed';
