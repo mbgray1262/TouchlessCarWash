@@ -8,9 +8,9 @@ const corsHeaders = {
 
 const FIRECRAWL_API = 'https://api.firecrawl.dev/v1';
 const MAX_PHOTOS = 5;
-const MIN_GALLERY_TARGET = 3;
 const PARALLEL_BATCH_SIZE = 2;
-const STUCK_TASK_TIMEOUT_MS = 60_000;
+// Mark a task stuck after 3 minutes (well within edge function limits)
+const STUCK_TASK_TIMEOUT_MS = 3 * 60 * 1000;
 
 const SKIP_DOMAINS = [
   'facebook.com', 'fbcdn.net', 'fbsbx.com',
@@ -477,10 +477,6 @@ Deno.serve(async (req: Request) => {
         .order('id');
 
       if (upgradeMode) {
-        // Only target listings where website scraping is likely to improve things:
-        // - street_view heroes (always worth replacing with a real photo)
-        // - google heroes where the gallery is empty (no approved photos yet)
-        // Listings that already have gallery photos alongside a google hero are left alone.
         query = query
           .not('website', 'is', null)
           .or('hero_image_source.eq.street_view,and(hero_image_source.eq.google,photos.is.null)');
@@ -535,7 +531,15 @@ Deno.serve(async (req: Request) => {
       const kickBody = JSON.stringify({ action: 'process_batch', job_id: job.id });
       const kickHeaders = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseAnon}` };
 
-      await fetch(kickUrl, { method: 'POST', headers: kickHeaders, body: kickBody }).catch(() => {});
+      // Kick two concurrent invocations from the start to prevent a dead chain on first invocation failure
+      EdgeRuntime.waitUntil(
+        Promise.all([
+          fetch(kickUrl, { method: 'POST', headers: kickHeaders, body: kickBody }).catch(() => {}),
+          new Promise(r => setTimeout(r, 2000)).then(() =>
+            fetch(kickUrl, { method: 'POST', headers: kickHeaders, body: kickBody }).catch(() => {})
+          ),
+        ])
+      );
 
       return Response.json({ job_id: job.id, total: listings.length }, { headers: corsHeaders });
     }
@@ -561,6 +565,7 @@ Deno.serve(async (req: Request) => {
 
       const isUpgradeMode = (job as Record<string, unknown>).upgrade_mode === true;
 
+      // Reset any tasks that got stuck in_progress
       const stuckCutoff = new Date(Date.now() - STUCK_TASK_TIMEOUT_MS).toISOString();
       await supabase
         .from('photo_enrich_tasks')
@@ -586,11 +591,27 @@ Deno.serve(async (req: Request) => {
         return Response.json({ done: true }, { headers: corsHeaders });
       }
 
+      // Claim tasks atomically — mark in_progress so concurrent invocations don't double-process
+      const claimedIds = batchTasks.map(t => t.id);
       await supabase.from('photo_enrich_tasks')
         .update({ task_status: 'in_progress' })
-        .in('id', batchTasks.map(t => t.id));
+        .in('id', claimedIds);
 
       const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY')!;
+      const selfUrl = `${supabaseUrl}/functions/v1/photo-enrich`;
+      const kickHeaders = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseAnon}` };
+
+      // Kick the NEXT batch immediately using waitUntil BEFORE doing any heavy work.
+      // This ensures the chain continues even if this invocation crashes mid-task.
+      EdgeRuntime.waitUntil(
+        new Promise(r => setTimeout(r, 500)).then(() =>
+          fetch(selfUrl, {
+            method: 'POST',
+            headers: kickHeaders,
+            body: JSON.stringify({ action: 'process_batch', job_id: jobId }),
+          }).catch(() => {})
+        )
+      );
 
       const processOneTask = async (task: typeof batchTasks[number]) => {
         const { data: listingData } = await supabase
@@ -613,7 +634,6 @@ Deno.serve(async (req: Request) => {
 
         let approved: string[] = [];
         let badUrls: string[] = [...blockedPhotos];
-        // In upgrade mode: ignore current hero/gallery so pipeline runs fresh from website
         let heroPhoto: string | null = heroIsManual ? (task.current_hero as string) : null;
         let heroSource: string | null = heroIsManual ? (task.current_hero_source as string) : null;
         let crawlNotes: string = (task.current_crawl_notes as string) ?? '';
@@ -625,7 +645,6 @@ Deno.serve(async (req: Request) => {
             }
           }
 
-          // If we already have gallery photos and no manual hero, pick the best one via Claude
           if (!heroIsManual && approved.length > 0 && !heroPhoto) {
             const bestIdx = await pickBestHeroFromGallery(approved, anthropicKey);
             heroPhoto = approved[bestIdx];
@@ -653,7 +672,6 @@ Deno.serve(async (req: Request) => {
         const websiteUrl = task.website as string | null;
         const canFirecrawl = !!websiteUrl && !SKIP_DOMAINS.some(d => websiteUrl.includes(d));
 
-        // ---- STEP 1: Firecrawl website scrape (first priority when listing has a website) ----
         trace.firecrawl_triggered = canFirecrawl;
 
         if (canFirecrawl) {
@@ -710,7 +728,6 @@ Deno.serve(async (req: Request) => {
           trace.fallback_reason = 'Skipped Firecrawl — website is a directory/social domain';
         }
 
-        // ---- STEP 2: Screen existing website_photos from DB (supplement if Firecrawl didn't fill gallery) ----
         if (websitePhotos.length > 0 && approved.length < MAX_PHOTOS) {
           const candidates = filterCandidateUrls(websitePhotos, badUrls).slice(0, 15);
           trace.website_photos_screened = candidates.length;
@@ -729,7 +746,6 @@ Deno.serve(async (req: Request) => {
           }
         }
 
-        // ---- STEP 3: Google Place Photos — fill gallery from Place Details API ----
         const placeId = task.google_place_id as string | null;
         if (placeId && googleApiKey && approved.length < MAX_PHOTOS) {
           try {
@@ -769,11 +785,10 @@ Deno.serve(async (req: Request) => {
             }
             trace.google_place_photos_approved = approved.length - approvedBefore;
           } catch {
-            // Place Photos fetch failed silently — continue with other sources
+            // Place Photos fetch failed silently
           }
         }
 
-        // ---- STEP 4: google_photo_url single photo (last Google fallback before street view) ----
         const googleUrl = task.google_photo_url as string | null;
         trace.google_photo_exists = !!googleUrl;
         if (googleUrl && !badUrls.includes(googleUrl) && approved.length < MAX_PHOTOS) {
@@ -809,7 +824,6 @@ Deno.serve(async (req: Request) => {
 
         trace.total_approved = approved.length;
 
-        // ---- STEP 5: Street view fallback (only in normal mode, not upgrade mode) ----
         const streetViewUrl = task.street_view_url as string | null;
         if (!isUpgradeMode) {
           if (!heroIsManual && !heroPhoto && streetViewUrl) {
@@ -824,13 +838,11 @@ Deno.serve(async (req: Request) => {
               : 'No approved photos and no street view URL';
           }
         } else if (!heroPhoto) {
-          // Upgrade mode: website scrape found nothing — keep original hero, don't downgrade
           trace.fallback_reason = (trace.fallback_reason as string | null)
             ? `${trace.fallback_reason}; no website photos found — original hero kept`
             : 'No website photos found — original hero kept unchanged';
         }
 
-        // ---- Save ----
         const galleryPhotos = heroPhoto && approved.includes(heroPhoto)
           ? approved.filter(p => p !== heroPhoto).slice(0, MAX_PHOTOS - 1)
           : approved.slice(0, MAX_PHOTOS);
@@ -851,7 +863,6 @@ Deno.serve(async (req: Request) => {
           blocked_photos: newBlocked,
         };
 
-        // In upgrade mode: only update hero if we found a website photo (don't overwrite with null)
         if (!heroIsManual && heroPhoto && (!isUpgradeMode || heroSource === 'website')) {
           update.hero_image = heroPhoto;
           update.hero_image_source = heroSource;
@@ -932,22 +943,6 @@ Deno.serve(async (req: Request) => {
         p_succeeded: batchSucceeded,
       });
 
-      const { data: jobAfter } = await supabase
-        .from('photo_enrich_jobs')
-        .select('status')
-        .eq('id', jobId)
-        .maybeSingle();
-
-      if (jobAfter?.status === 'running') {
-        EdgeRuntime.waitUntil(
-          fetch(`${supabaseUrl}/functions/v1/photo-enrich`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseAnon}` },
-            body: JSON.stringify({ action: 'process_batch', job_id: jobId }),
-          }).catch(() => {})
-        );
-      }
-
       return Response.json({
         processed: batchTasks.length,
         succeeded: batchSucceeded,
@@ -965,7 +960,18 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
 
       if (!job) return Response.json({ error: 'Job not found' }, { status: 404, headers: corsHeaders });
-      return Response.json(job, { headers: corsHeaders });
+
+      // Also return stuck task count so UI can show a warning
+      const stuckCutoff = new Date(Date.now() - STUCK_TASK_TIMEOUT_MS).toISOString();
+      const { count: stuckCount } = await supabase
+        .from('photo_enrich_tasks')
+        .select('id', { count: 'exact', head: true })
+        .eq('job_id', jobId)
+        .eq('task_status', 'in_progress')
+        .is('finished_at', null)
+        .lt('updated_at', stuckCutoff);
+
+      return Response.json({ ...job, stuck_count: stuckCount ?? 0 }, { headers: corsHeaders });
     }
 
     if (action === 'task_traces') {

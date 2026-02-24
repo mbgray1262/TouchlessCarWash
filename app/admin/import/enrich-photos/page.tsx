@@ -36,6 +36,7 @@ interface JobProgress {
   total: number;
   processed: number;
   succeeded: number;
+  stuck_count?: number;
 }
 
 interface RecentListing {
@@ -386,13 +387,22 @@ export default function EnrichPhotosPage() {
   const pollCountRef = useRef(0);
   const lastProcessedRef = useRef<number>(-1);
   const staleSinceRef = useRef<number | null>(null);
+  const kickInFlightRef = useRef(false);
 
-  const kickBatch = useCallback(async (jobId: number) => {
-    await fetch(`${SUPABASE_URL}/functions/v1/photo-enrich`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
-      body: JSON.stringify({ action: 'process_batch', job_id: jobId }),
-    }).catch(() => {});
+  const kickBatch = useCallback(async (jobId: number, count = 3) => {
+    if (kickInFlightRef.current) return;
+    kickInFlightRef.current = true;
+    const kicks = Array.from({ length: count }, (_, i) =>
+      new Promise<void>(resolve => setTimeout(resolve, i * 800)).then(() =>
+        fetch(`${SUPABASE_URL}/functions/v1/photo-enrich`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+          body: JSON.stringify({ action: 'process_batch', job_id: jobId }),
+        }).catch(() => {})
+      )
+    );
+    await Promise.allSettled(kicks);
+    kickInFlightRef.current = false;
   }, []);
 
   const pollJob = useCallback(async () => {
@@ -420,9 +430,10 @@ export default function EnrichPhotosPage() {
       } else {
         if (staleSinceRef.current === null) {
           staleSinceRef.current = Date.now();
-        } else if (Date.now() - staleSinceRef.current > 15_000) {
+        } else if (Date.now() - staleSinceRef.current > 8_000) {
+          // Stalled — fire 3 concurrent kicks to break the deadlock
           staleSinceRef.current = Date.now();
-          kickBatch(jobId);
+          kickBatch(jobId, 3);
         }
       }
     }
@@ -737,9 +748,15 @@ export default function EnrichPhotosPage() {
                 <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
                   <div className="bg-teal-500 h-2 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
                 </div>
+                {(jobProgress.stuck_count ?? 0) > 0 && (
+                  <div className="flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{jobProgress.stuck_count} task(s) appear stuck — auto-recovery kicks are firing to unblock them.</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-1.5 text-xs text-gray-400 bg-gray-50 border border-gray-100 rounded-lg p-3">
                   <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                  <span>Running on server — processes one listing at a time to stay within compute limits.</span>
+                  <span>Running on server — processes listings in parallel batches. Auto-recovers from stalls automatically.</span>
                 </div>
                 <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50" onClick={handleCancel}>
                   <XCircle className="w-3.5 h-3.5 mr-1.5" /> Cancel
