@@ -87,7 +87,10 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   const heroImage = listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
 
   const title = `${listing.name} - Touchless Car Wash in ${listing.city}, ${stateName} | Touchless Car Wash Finder`;
-  const description = `${listing.name} at ${listing.address}, ${listing.city}, ${stateName}. ${ratingPart}${reviewPart}${amenityPart}. Hours, directions, photos & more.`;
+  const metaDescription = listing.description
+    ? listing.description.slice(0, 160).replace(/\n/g, ' ').trim()
+    : `${listing.name} at ${listing.address}, ${listing.city}, ${stateName}. ${ratingPart}${reviewPart}${amenityPart}. Hours, directions, photos & more.`;
+  const description = metaDescription;
 
   return {
     title,
@@ -491,6 +494,13 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
+              {listing.description && (
+                <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                  <h2 className="text-lg font-bold text-[#0F2744] mb-3">About {listing.name}</h2>
+                  <div className="text-gray-700 text-sm leading-relaxed whitespace-pre-line">{listing.description}</div>
+                </div>
+              )}
+
               {listing.amenities && listing.amenities.length > 0 && (
                 <div className="bg-white rounded-2xl border border-gray-200 p-6">
                   <h2 className="text-lg font-bold text-[#0F2744] mb-4 flex items-center gap-2">
