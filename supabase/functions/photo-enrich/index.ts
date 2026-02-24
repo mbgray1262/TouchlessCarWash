@@ -449,20 +449,26 @@ Deno.serve(async (req: Request) => {
       }
 
       const limit: number = body.limit ?? 0;
+      const upgradeMode: boolean = body.upgrade_mode === true;
 
       let query = supabase
         .from('listings')
         .select('id, name, website, google_photo_url, google_logo_url, street_view_url, google_place_id, hero_image, hero_image_source, logo_photo, crawl_notes, photos, website_photos, blocked_photos')
         .eq('is_touchless', true)
-        .is('hero_image', null)
         .order('id');
+
+      if (upgradeMode) {
+        query = query.in('hero_image_source', ['google', 'street_view']).not('website', 'is', null);
+      } else {
+        query = query.is('hero_image', null);
+      }
 
       if (limit > 0) query = query.limit(limit);
 
       const { data: listings, error: listErr } = await query;
       if (listErr) return Response.json({ error: listErr.message }, { status: 500, headers: corsHeaders });
       if (!listings || listings.length === 0) {
-        return Response.json({ error: 'No touchless listings found' }, { status: 404, headers: corsHeaders });
+        return Response.json({ error: upgradeMode ? 'No listings eligible for upgrade (need google/street_view hero + website URL)' : 'No touchless listings found' }, { status: 404, headers: corsHeaders });
       }
 
       const { data: job, error: jobErr } = await supabase
@@ -473,6 +479,7 @@ Deno.serve(async (req: Request) => {
           succeeded: 0,
           status: 'running',
           started_at: new Date().toISOString(),
+          upgrade_mode: upgradeMode,
         })
         .select('id')
         .single();
@@ -518,7 +525,7 @@ Deno.serve(async (req: Request) => {
 
       const { data: job } = await supabase
         .from('photo_enrich_jobs')
-        .select('id, status, total, processed, succeeded')
+        .select('id, status, total, processed, succeeded, upgrade_mode')
         .eq('id', jobId)
         .maybeSingle();
 
@@ -526,6 +533,8 @@ Deno.serve(async (req: Request) => {
       if (job.status === 'cancelled' || job.status === 'done') {
         return Response.json({ done: true, status: job.status }, { headers: corsHeaders });
       }
+
+      const isUpgradeMode = (job as Record<string, unknown>).upgrade_mode === true;
 
       const stuckCutoff = new Date(Date.now() - STUCK_TASK_TIMEOUT_MS).toISOString();
       await supabase
@@ -586,21 +595,24 @@ Deno.serve(async (req: Request) => {
 
         let approved: string[] = [];
         let badUrls: string[] = [...blockedPhotos];
+        // In upgrade mode: ignore current hero/gallery so pipeline runs fresh from website
         let heroPhoto: string | null = heroIsManual ? (task.current_hero as string) : null;
         let heroSource: string | null = heroIsManual ? (task.current_hero_source as string) : null;
         let crawlNotes: string = (task.current_crawl_notes as string) ?? '';
 
-        for (const p of currentPhotos) {
-          if (p && !approved.includes(p) && approved.length < MAX_PHOTOS) {
-            approved.push(p);
+        if (!isUpgradeMode) {
+          for (const p of currentPhotos) {
+            if (p && !approved.includes(p) && approved.length < MAX_PHOTOS) {
+              approved.push(p);
+            }
           }
-        }
 
-        // If we already have gallery photos and no manual hero, pick the best one via Claude
-        if (!heroIsManual && approved.length > 0 && !heroPhoto) {
-          const bestIdx = await pickBestHeroFromGallery(approved, anthropicKey);
-          heroPhoto = approved[bestIdx];
-          heroSource = 'gallery';
+          // If we already have gallery photos and no manual hero, pick the best one via Claude
+          if (!heroIsManual && approved.length > 0 && !heroPhoto) {
+            const bestIdx = await pickBestHeroFromGallery(approved, anthropicKey);
+            heroPhoto = approved[bestIdx];
+            heroSource = 'gallery';
+          }
         }
 
         const trace: Record<string, unknown> = {
@@ -779,21 +791,28 @@ Deno.serve(async (req: Request) => {
 
         trace.total_approved = approved.length;
 
-        // ---- STEP 5: Street view fallback (trusted source, no Claude needed) ----
+        // ---- STEP 5: Street view fallback (only in normal mode, not upgrade mode) ----
         const streetViewUrl = task.street_view_url as string | null;
-        if (!heroIsManual && !heroPhoto && streetViewUrl) {
-          heroPhoto = streetViewUrl;
-          heroSource = 'street_view';
+        if (!isUpgradeMode) {
+          if (!heroIsManual && !heroPhoto && streetViewUrl) {
+            heroPhoto = streetViewUrl;
+            heroSource = 'street_view';
+            trace.fallback_reason = (trace.fallback_reason as string | null)
+              ? `${trace.fallback_reason}; used street view as fallback hero`
+              : 'No approved photos — used street view as fallback hero';
+          } else if (!heroIsManual && !heroPhoto && !streetViewUrl) {
+            trace.fallback_reason = (trace.fallback_reason as string | null)
+              ? `${trace.fallback_reason}; no street view available`
+              : 'No approved photos and no street view URL';
+          }
+        } else if (!heroPhoto) {
+          // Upgrade mode: website scrape found nothing — keep original hero, don't downgrade
           trace.fallback_reason = (trace.fallback_reason as string | null)
-            ? `${trace.fallback_reason}; used street view as fallback hero`
-            : 'No approved photos — used street view as fallback hero';
-        } else if (!heroIsManual && !heroPhoto && !streetViewUrl) {
-          trace.fallback_reason = (trace.fallback_reason as string | null)
-            ? `${trace.fallback_reason}; no street view available`
-            : 'No approved photos and no street view URL';
+            ? `${trace.fallback_reason}; no website photos found — original hero kept`
+            : 'No website photos found — original hero kept unchanged';
         }
 
-        // ---- STEP 5: Save ----
+        // ---- Save ----
         const galleryPhotos = heroPhoto && approved.includes(heroPhoto)
           ? approved.filter(p => p !== heroPhoto).slice(0, MAX_PHOTOS - 1)
           : approved.slice(0, MAX_PHOTOS);
@@ -814,7 +833,8 @@ Deno.serve(async (req: Request) => {
           blocked_photos: newBlocked,
         };
 
-        if (!heroIsManual && heroPhoto) {
+        // In upgrade mode: only update hero if we found a website photo (don't overwrite with null)
+        if (!heroIsManual && heroPhoto && (!isUpgradeMode || heroSource === 'website')) {
           update.hero_image = heroPhoto;
           update.hero_image_source = heroSource;
         }

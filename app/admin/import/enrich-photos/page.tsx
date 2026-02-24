@@ -283,6 +283,7 @@ export default function EnrichPhotosPage() {
   const [stats, setStats] = useState<PipelineStats | null>(null);
   const [galleryStats, setGalleryStats] = useState<GalleryStats | null>(null);
   const [mode, setMode] = useState<'test' | 'full'>('test');
+  const [jobType, setJobType] = useState<'fill' | 'upgrade'>('fill');
   const [testLimit, setTestLimit] = useState(10);
   const [jobStatus, setJobStatus] = useState<JobStatus>('idle');
   const [jobProgress, setJobProgress] = useState<JobProgress | null>(null);
@@ -450,7 +451,7 @@ export default function EnrichPhotosPage() {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/photo-enrich`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
-        body: JSON.stringify({ action: 'start', limit }),
+        body: JSON.stringify({ action: 'start', limit, upgrade_mode: jobType === 'upgrade' }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Failed to start');
@@ -610,6 +611,47 @@ export default function EnrichPhotosPage() {
 
             {jobStatus === 'idle' && (
               <div className="space-y-5">
+
+                {/* Job type selector */}
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-gray-600 uppercase tracking-wider">What to run</label>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setJobType('fill')}
+                      className={`flex-1 py-3 px-4 rounded-lg border text-sm font-medium transition-all text-left ${
+                        jobType === 'fill'
+                          ? 'bg-teal-50 border-teal-400 text-teal-800'
+                          : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
+                      }`}
+                    >
+                      Fill gaps
+                      <span className="block text-xs font-normal mt-0.5 opacity-70">
+                        {stats?.need_hero.toLocaleString() ?? '…'} listings have no hero image yet
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => setJobType('upgrade')}
+                      className={`flex-1 py-3 px-4 rounded-lg border text-sm font-medium transition-all text-left ${
+                        jobType === 'upgrade'
+                          ? 'bg-blue-50 border-blue-400 text-blue-800'
+                          : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
+                      }`}
+                    >
+                      Upgrade quality
+                      <span className="block text-xs font-normal mt-0.5 opacity-70">
+                        Replace Google / street view heroes with real website photos
+                      </span>
+                    </button>
+                  </div>
+                  {jobType === 'upgrade' && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800 space-y-1">
+                      <p className="font-medium">Targets listings with Google or street view hero images that have a website URL.</p>
+                      <p>Scrapes each website with Firecrawl. If good photos are found, the hero is upgraded. If nothing is found, the existing image is kept — listings are never left worse off.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Scale selector */}
                 <div className="flex gap-3">
                   {(['test', 'full'] as const).map(m => (
                     <button
@@ -623,7 +665,7 @@ export default function EnrichPhotosPage() {
                     >
                       {m === 'test' ? 'Test Mode' : 'Full Run'}
                       <span className="block text-xs font-normal mt-0.5 opacity-70">
-                        {m === 'test' ? 'Small batch to verify results' : `${stats?.need_hero.toLocaleString() ?? '…'} listings still need photos`}
+                        {m === 'test' ? 'Small batch to verify results first' : 'Process all eligible listings'}
                       </span>
                     </button>
                   ))}
@@ -654,17 +696,23 @@ export default function EnrichPhotosPage() {
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
                     <p className="text-xs text-amber-800 font-medium">Full run uses Firecrawl + Anthropic credits</p>
                     <p className="text-xs text-amber-700 mt-0.5">
-                      Processes all {stats?.need_hero.toLocaleString() ?? '…'} listings that still need a hero photo. Run a test first.
+                      {jobType === 'upgrade'
+                        ? 'Will attempt to upgrade all listings currently using Google or street view as their hero image.'
+                        : `Processes all ${stats?.need_hero.toLocaleString() ?? '…'} listings that still need a hero photo.`
+                      } Run a test first.
                     </p>
                   </div>
                 )}
 
                 <Button
-                  className="w-full bg-teal-600 hover:bg-teal-700 text-white"
+                  className={`w-full text-white ${jobType === 'upgrade' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-teal-600 hover:bg-teal-700'}`}
                   onClick={handleStart}
                 >
                   <Camera className="w-4 h-4 mr-2" />
-                  {mode === 'test' ? `Run Test (${testLimit} listings)` : 'Start Full Photo Enrichment'}
+                  {mode === 'test'
+                    ? `Test ${jobType === 'upgrade' ? 'Upgrade' : 'Fill'} (${testLimit} listings)`
+                    : jobType === 'upgrade' ? 'Start Quality Upgrade' : 'Start Full Photo Enrichment'
+                  }
                 </Button>
               </div>
             )}
