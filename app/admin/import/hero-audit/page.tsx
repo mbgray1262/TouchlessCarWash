@@ -207,6 +207,7 @@ function callSvFn(body: Record<string, unknown>) {
 
 export default function HeroAuditPage() {
   const [auditStatus, setAuditStatus] = useState<AuditStatus | null>(null);
+  const [resettingFailed, setResettingFailed] = useState(false);
   const [mode, setMode] = useState<'test' | 'full'>('test');
   const [testLimit, setTestLimit] = useState(25);
   const [jobStatus, setJobStatus] = useState<JobStatus>('idle');
@@ -394,6 +395,21 @@ export default function HeroAuditPage() {
     showToast('info', 'Job cancelled.');
     loadTaskTraces(jobId);
   }, [showToast, loadTaskTraces]);
+
+  const handleResetFailed = useCallback(async () => {
+    setResettingFailed(true);
+    try {
+      const res = await callFn({ action: 'force_reaudit' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Failed to reset');
+      showToast('success', `Reset ${data.reaudit_listing_count.toLocaleString()} previously-failed audit tasks — run a Full Audit to screen them now.`);
+      loadStatus();
+    } catch (e) {
+      showToast('error', (e as Error).message);
+    } finally {
+      setResettingFailed(false);
+    }
+  }, [showToast, loadStatus]);
 
   const handleReset = useCallback(() => {
     if (pollRef.current) clearInterval(pollRef.current);
@@ -586,6 +602,26 @@ export default function HeroAuditPage() {
             )}
           </div>
         )}
+
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <p className="text-xs font-semibold text-red-700 uppercase tracking-wider mb-1">Unaudited Images Detected</p>
+            <p className="text-sm text-red-800 leading-relaxed">
+              Previous audit runs hit Claude rate limits and kept {(1306).toLocaleString()} images without actually screening them.
+              Click <strong>Reset Failed</strong> to re-queue them, then run a Full Audit below to screen every single one.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="shrink-0 border-red-300 text-red-700 hover:bg-red-100"
+            onClick={handleResetFailed}
+            disabled={resettingFailed}
+          >
+            {resettingFailed ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5 mr-1.5" />}
+            Reset Failed
+          </Button>
+        </div>
 
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
           <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-2">Root Cause</p>

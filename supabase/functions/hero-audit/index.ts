@@ -6,9 +6,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
 };
 
-const PARALLEL_BATCH_SIZE = 10;
-const NUM_PARALLEL_WORKERS = 5;
-const STUCK_TASK_TIMEOUT_MS = 90_000;
+const PARALLEL_BATCH_SIZE = 5;
+const NUM_PARALLEL_WORKERS = 3;
+const STUCK_TASK_TIMEOUT_MS = 120_000;
 
 async function getSecret(supabaseUrl: string, serviceKey: string, name: string): Promise<string> {
   const res = await fetch(`${supabaseUrl}/rest/v1/rpc/get_secret`, {
@@ -82,7 +82,7 @@ IMPORTANT RULES:
 Reply with only the verdict and a one-sentence reason in this exact format:
 VERDICT: reason`;
 
-  const maxAttempts = 4;
+  const maxAttempts = 5;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -113,7 +113,7 @@ VERDICT: reason`;
 
     if (res.status === 529 || res.status === 503 || res.status === 429) {
       if (attempt < maxAttempts) {
-        await new Promise(r => setTimeout(r, 2000 * attempt));
+        await new Promise(r => setTimeout(r, 30000 * attempt));
         continue;
       }
       return { verdict: 'fetch_failed', reason: `Claude overloaded (${res.status}) after ${maxAttempts} retries` };
@@ -354,11 +354,7 @@ Deno.serve(async (req: Request) => {
       const processOneTask = async (task: { id: number; listing_id: string; listing_name: string; hero_image_url: string }) => {
         const { verdict, reason } = await classifyHeroImage(task.hero_image_url, anthropicKey);
 
-        const isTrustedSource = task.hero_image_url.includes('supabase.co') ||
-          task.hero_image_url.includes('maps.googleapis.com') ||
-          task.hero_image_url.includes('googleusercontent.com');
-        const isBad = verdict === 'BAD_CONTACT' || verdict === 'BAD_OTHER' ||
-          (verdict === 'fetch_failed' && !isTrustedSource);
+        const isBad = verdict === 'BAD_CONTACT' || verdict === 'BAD_OTHER' || verdict === 'fetch_failed';
         let actionTaken = 'kept';
 
         if (isBad) {
