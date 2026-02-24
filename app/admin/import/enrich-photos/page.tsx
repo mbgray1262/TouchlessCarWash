@@ -420,7 +420,7 @@ export default function EnrichPhotosPage() {
       } else {
         if (staleSinceRef.current === null) {
           staleSinceRef.current = Date.now();
-        } else if (Date.now() - staleSinceRef.current > 30_000) {
+        } else if (Date.now() - staleSinceRef.current > 15_000) {
           staleSinceRef.current = Date.now();
           kickBatch(jobId);
         }
