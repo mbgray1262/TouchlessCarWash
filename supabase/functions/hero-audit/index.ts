@@ -6,7 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
 };
 
-const PARALLEL_BATCH_SIZE = 3;
+const PARALLEL_BATCH_SIZE = 10;
+const NUM_PARALLEL_WORKERS = 5;
 const STUCK_TASK_TIMEOUT_MS = 90_000;
 
 async function getSecret(supabaseUrl: string, serviceKey: string, name: string): Promise<string> {
@@ -239,11 +240,14 @@ Deno.serve(async (req: Request) => {
       if (taskErr) return Response.json({ error: taskErr.message }, { status: 500, headers: corsHeaders });
 
       const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY')!;
-      await fetch(`${supabaseUrl}/functions/v1/hero-audit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseAnon}` },
-        body: JSON.stringify({ action: 'process_batch', job_id: job.id }),
-      }).catch(() => {});
+      const workerPromises = Array.from({ length: NUM_PARALLEL_WORKERS }, () =>
+        fetch(`${supabaseUrl}/functions/v1/hero-audit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseAnon}` },
+          body: JSON.stringify({ action: 'process_batch', job_id: job.id }),
+        }).catch(() => {})
+      );
+      await Promise.all(workerPromises);
 
       return Response.json({ job_id: job.id, total: listings.length }, { headers: corsHeaders });
     }
