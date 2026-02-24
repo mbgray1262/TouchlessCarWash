@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useState } from 'react';
-import { X, Flag, CheckCircle, ChevronDown, Trash2, ImageOff, ZoomIn, Crop } from 'lucide-react';
+import { X, Flag, CheckCircle, ChevronDown, Trash2, ImageOff, ZoomIn, Crop, ExternalLink } from 'lucide-react';
 import { HeroListing, ReplacementOption } from './types';
 import HeroImageFallback from '@/components/HeroImageFallback';
 import { CropModal } from './CropModal';
@@ -194,7 +194,21 @@ export function HeroCard({
       </div>
 
       <div className="p-2.5 bg-white">
-        <p className="text-sm font-semibold text-gray-800 truncate leading-tight">{listing.name}</p>
+        <div className="flex items-center gap-1 min-w-0">
+          <p className="text-sm font-semibold text-gray-800 truncate leading-tight flex-1">{listing.name}</p>
+          {listing.website && (
+            <a
+              href={listing.website}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex-shrink-0 text-gray-400 hover:text-blue-500 transition-colors"
+              title="Open website"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          )}
+        </div>
         <p className="text-xs text-gray-500 mt-0.5">{listing.city}, {listing.state}</p>
         <div className="mt-1.5">
           <SourceBadge source={listing.hero_image_source} />

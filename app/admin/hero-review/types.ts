@@ -12,6 +12,7 @@ export interface HeroListing {
   photos: string[] | null;
   google_photo_url: string | null;
   street_view_url: string | null;
+  website: string | null;
   photo_enrichment_attempted_at: string | null;
   flagged?: boolean;
 }
