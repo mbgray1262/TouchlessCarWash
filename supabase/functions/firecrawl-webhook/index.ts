@@ -166,7 +166,11 @@ Deno.serve(async (req: Request) => {
     const images = item.images ?? [];
 
     const { data: batch } = await supabase.from('pipeline_batches')
-      .select('id, url_to_id').eq('firecrawl_job_id', payload.jobId ?? '').maybeSingle();
+      .select('id, url_to_id, batch_type, status').eq('firecrawl_job_id', payload.jobId ?? '').maybeSingle();
+
+    if (batch?.status === 'failed' || batch?.status === 'completed') {
+      return Response.json({ ok: true, skipped: 'batch already finished' }, { headers: corsHeaders });
+    }
 
     function normalizeUrl(url: string): string {
       return url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '').toLowerCase();
@@ -232,14 +236,18 @@ Deno.serve(async (req: Request) => {
 
     const filteredImages = filterImages(images);
 
+    const isEnrichBatch = batch?.batch_type === 'enrich_touchless';
+
     await Promise.all(listingRows.map(async (listing: { id: string; is_touchless: boolean | null; hero_image: string | null }) => {
       const updatePayload: Record<string, unknown> = {
         last_crawled_at: new Date().toISOString(),
-        crawl_status,
-        touchless_evidence,
         website_photos: filteredImages.length > 0 ? filteredImages : null,
       };
-      if (listing.is_touchless === null && is_touchless !== null) updatePayload.is_touchless = is_touchless;
+      if (!isEnrichBatch) {
+        updatePayload.crawl_status = crawl_status;
+        updatePayload.touchless_evidence = touchless_evidence;
+        if (listing.is_touchless === null && is_touchless !== null) updatePayload.is_touchless = is_touchless;
+      }
       if (!listing.hero_image && filteredImages.length > 0) updatePayload.hero_image = filteredImages[0];
       if (amenities.length > 0) updatePayload.amenities = amenities;
 
