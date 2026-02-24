@@ -260,8 +260,11 @@ Deno.serve(async (req: Request) => {
         task_status: 'pending',
       }));
 
-      const { error: taskErr } = await supabase.from('hero_audit_tasks').insert(tasks);
-      if (taskErr) return Response.json({ error: taskErr.message }, { status: 500, headers: corsHeaders });
+      const CHUNK_SIZE = 500;
+      for (let i = 0; i < tasks.length; i += CHUNK_SIZE) {
+        const { error: taskErr } = await supabase.from('hero_audit_tasks').insert(tasks.slice(i, i + CHUNK_SIZE));
+        if (taskErr) return Response.json({ error: taskErr.message }, { status: 500, headers: corsHeaders });
+      }
 
       const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY')!;
       const workerPromises = Array.from({ length: NUM_PARALLEL_WORKERS }, () =>
