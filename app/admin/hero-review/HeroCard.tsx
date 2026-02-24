@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useState } from 'react';
-import { X, Flag, CheckCircle, ChevronDown, Trash2, ImageOff, ZoomIn, Crop, ExternalLink } from 'lucide-react';
+import { X, Flag, CheckCircle, ChevronDown, Trash2, ImageOff, ZoomIn, Crop, ExternalLink, CarFront } from 'lucide-react';
 import { HeroListing, ReplacementOption } from './types';
 import HeroImageFallback from '@/components/HeroImageFallback';
 import { CropModal } from './CropModal';
@@ -70,6 +70,7 @@ interface Props {
   onRemoveHero: () => void;
   onRemoveGalleryPhoto: (url: string) => void;
   onCropSave: (url: string) => void;
+  onMarkNotTouchless: () => void;
   onFlag: () => void;
   onFocus: () => void;
   confirmIndex: number | null;
@@ -86,6 +87,7 @@ export function HeroCard({
   onRemoveHero,
   onRemoveGalleryPhoto,
   onCropSave,
+  onMarkNotTouchless,
   onFlag,
   onFocus,
   confirmIndex,
@@ -303,17 +305,27 @@ export function HeroCard({
             </div>
           )}
 
-          <button
-            onClick={onFlag}
-            className={`mt-2 flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors ${
-              listing.flagged
-                ? 'bg-amber-200 text-amber-800'
-                : 'bg-white border border-gray-300 text-gray-600 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700'
-            }`}
-          >
-            <Flag className="w-3 h-3" />
-            {listing.flagged ? 'Flagged' : 'Flag for later'}
-          </button>
+          <div className="mt-2 flex items-center gap-2">
+            <button
+              onClick={onFlag}
+              className={`flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors ${
+                listing.flagged
+                  ? 'bg-amber-200 text-amber-800'
+                  : 'bg-white border border-gray-300 text-gray-600 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700'
+              }`}
+            >
+              <Flag className="w-3 h-3" />
+              {listing.flagged ? 'Flagged' : 'Flag for later'}
+            </button>
+            <button
+              onClick={onMarkNotTouchless}
+              className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-white border border-gray-300 text-gray-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700 transition-colors"
+              title="Mark as NOT touchless — removes from this queue"
+            >
+              <CarFront className="w-3 h-3" />
+              Not touchless
+            </button>
+          </div>
         </div>
       )}
     </div>

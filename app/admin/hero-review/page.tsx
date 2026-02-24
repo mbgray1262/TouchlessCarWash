@@ -40,6 +40,7 @@ export default function HeroReviewPage() {
     handleRemoveHero,
     handleRemoveGalleryPhoto,
     handleCropSave,
+    handleMarkNotTouchless,
     handleFlag,
     navigateFocus,
     reload,
@@ -204,6 +205,7 @@ export default function HeroReviewPage() {
                   onRemoveHero={() => handleRemoveHero(listing.id)}
                   onRemoveGalleryPhoto={(url) => handleRemoveGalleryPhoto(listing.id, url)}
                   onCropSave={(url) => handleCropSave(listing.id, url)}
+                  onMarkNotTouchless={() => handleMarkNotTouchless(listing.id)}
                   onFlag={() => handleFlag(listing.id)}
                   onFocus={() => setFocusedId(listing.id)}
                   confirmIndex={confirmIndex}

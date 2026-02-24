@@ -212,6 +212,15 @@ export function useHeroReview() {
     );
   };
 
+  const handleMarkNotTouchless = async (listingId: string) => {
+    await supabase
+      .from('listings')
+      .update({ is_touchless: false })
+      .eq('id', listingId);
+
+    setListings(prev => prev.filter(l => l.id !== listingId));
+  };
+
   const handleFlag = async (listingId: string) => {
     const listing = listings.find(l => l.id === listingId);
     const alreadyFlagged = listing?.flagged;
@@ -271,6 +280,7 @@ export function useHeroReview() {
     handleRemoveHero,
     handleRemoveGalleryPhoto,
     handleCropSave,
+    handleMarkNotTouchless,
     handleFlag,
     navigateFocus,
     reload: loadListings,
