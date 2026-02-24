@@ -64,6 +64,7 @@ GOOD — the image clearly represents a car wash business as seen from a custome
 BAD_CONTACT — ONLY use this if the image clearly shows brush rollers, cloth strips, mop curtains, or other physical contact wash equipment that touches the car. Do NOT use BAD_CONTACT for touchless wash bays, water jets, or foam equipment.
 
 BAD_OTHER — reject for any of these:
+  - Any logo, brand illustration, mascot, character, graphic, or artwork — even if it features a car wash brand name. This includes stylized characters (astronauts, animals, people), colorful brand graphics, illustrated logos, or any image that is clearly marketing art rather than a real photograph of the facility.
   - Coin-operated self-serve wash bay with wand/hose only and no automated equipment visible
   - Close-up of a single piece of equipment (a soap dispenser, vacuum, payment kiosk, token machine, etc.) with no facility context
   - Car interior shot (dashboard, steering wheel, seats viewed from inside the car)
@@ -71,10 +72,11 @@ BAD_OTHER — reject for any of these:
   - EV charging station with no car wash visible
   - Convenience store, restaurant, or unrelated business interior or exterior
   - People-only photo with no car wash context
-  - Plain logo, graphic, or text card
   - Severely blurry, very dark, or nearly unusable image
 
-When in doubt between GOOD and BAD_OTHER for a borderline image, prefer GOOD if there is clearly a car wash facility present. Only reject images that are clearly the wrong type.
+The image MUST be a real photograph of a physical car wash facility or a car being washed. Illustrations, logos, mascots, and brand graphics are always BAD_OTHER regardless of what brand they represent.
+
+When in doubt between GOOD and BAD_OTHER for a borderline real photograph, prefer GOOD if a car wash facility is clearly present. But never pass illustrations or graphics as GOOD.
 
 Reply with only the verdict and a one-sentence reason in this exact format:
 VERDICT: reason`;
