@@ -287,10 +287,15 @@ async function screenAndRehost(
   anthropicKey: string,
   maxApprove: number,
   crawlNotes: string,
+  genericUrls: Set<string> = new Set(),
 ): Promise<ScreenResult> {
   const approvedBefore = approved.length;
   for (const url of urls) {
     if (approved.length >= maxApprove) break;
+    if (genericUrls.has(url)) {
+      badUrls.push(url);
+      continue;
+    }
     try {
       const result = await classifyPhotoWithClaude(url, anthropicKey, [...approved]);
       if (result.verdict === 'GOOD') {
@@ -354,6 +359,36 @@ async function fetchGooglePlacePhotoUrls(
   }
 
   return urls;
+}
+
+// Returns a Set of URLs that are already used as hero_image on >= threshold other listings.
+// Used to skip generic chain images that have been reused across many locations.
+async function fetchGenericUrls(
+  supabase: ReturnType<typeof createClient>,
+  candidateUrls: string[],
+  threshold = 3,
+): Promise<Set<string>> {
+  if (candidateUrls.length === 0) return new Set();
+  const { data } = await supabase
+    .from('listings')
+    .select('hero_image')
+    .in('hero_image', candidateUrls)
+    .not('hero_image', 'is', null);
+
+  if (!data) return new Set();
+
+  const counts = new Map<string, number>();
+  for (const row of data) {
+    if (row.hero_image) {
+      counts.set(row.hero_image, (counts.get(row.hero_image) ?? 0) + 1);
+    }
+  }
+
+  const generic = new Set<string>();
+  for (const [url, count] of counts) {
+    if (count >= threshold) generic.add(url);
+  }
+  return generic;
 }
 
 async function pickBestHeroFromGallery(urls: string[], apiKey: string): Promise<number> {
@@ -674,6 +709,9 @@ Deno.serve(async (req: Request) => {
 
         trace.firecrawl_triggered = canFirecrawl;
 
+        // Scrape first so we have the full candidate pool before doing the batch dedup check
+        let firecrawlCandidates: string[] = [];
+
         if (canFirecrawl) {
           try {
             const fcRes = await fetch(`${FIRECRAWL_API}/scrape`, {
@@ -699,23 +737,9 @@ Deno.serve(async (req: Request) => {
               const rawImages = extractImagesFromHtml(html);
               trace.firecrawl_images_found = rawImages.length;
               const { candidates, trace: urlTrace } = filterCandidateUrlsWithTrace(rawImages, badUrls);
-              const slicedCandidates = candidates.slice(0, 20);
+              firecrawlCandidates = candidates.slice(0, 20);
               trace.firecrawl_url_trace = urlTrace;
-              trace.firecrawl_candidates = slicedCandidates.length;
-              const approvedBefore = approved.length;
-
-              const r = await screenAndRehost(
-                slicedCandidates, approved, badUrls, task.listing_id as string,
-                supabase, anthropicKey, MAX_PHOTOS, crawlNotes,
-              );
-              approved = r.approved;
-              badUrls = r.badUrls;
-              crawlNotes = r.crawlNotes;
-              trace.firecrawl_approved = approved.length - approvedBefore;
-              if (!heroIsManual && !heroSource && approved.length > 0) {
-                heroSource = 'website';
-                heroPhoto = approved[0];
-              }
+              trace.firecrawl_candidates = firecrawlCandidates.length;
             } else {
               trace.fallback_reason = `Firecrawl HTTP ${fcRes.status}`;
             }
@@ -728,13 +752,43 @@ Deno.serve(async (req: Request) => {
           trace.fallback_reason = 'Skipped Firecrawl — website is a directory/social domain';
         }
 
-        if (websitePhotos.length > 0 && approved.length < MAX_PHOTOS) {
-          const candidates = filterCandidateUrls(websitePhotos, badUrls).slice(0, 15);
-          trace.website_photos_screened = candidates.length;
+        // Batch dedup check: gather all candidate URLs from every source and check
+        // which ones are already used as hero_image on 3+ other listings (generic chain images).
+        const dbWebsiteCandidates = websitePhotos.length > 0
+          ? filterCandidateUrls(websitePhotos, badUrls).slice(0, 15)
+          : [];
+        const googleUrl = task.google_photo_url as string | null;
+        const allCandidateUrls = [
+          ...firecrawlCandidates,
+          ...dbWebsiteCandidates,
+          ...(googleUrl ? [googleUrl] : []),
+        ];
+        const genericUrls = await fetchGenericUrls(supabase, allCandidateUrls, 3);
+
+        // ---- STEP 1: Firecrawl candidates ----
+        if (firecrawlCandidates.length > 0) {
           const approvedBefore = approved.length;
           const r = await screenAndRehost(
-            candidates, approved, badUrls, task.listing_id as string,
-            supabase, anthropicKey, MAX_PHOTOS, crawlNotes,
+            firecrawlCandidates, approved, badUrls, task.listing_id as string,
+            supabase, anthropicKey, MAX_PHOTOS, crawlNotes, genericUrls,
+          );
+          approved = r.approved;
+          badUrls = r.badUrls;
+          crawlNotes = r.crawlNotes;
+          trace.firecrawl_approved = approved.length - approvedBefore;
+          if (!heroIsManual && !heroSource && approved.length > 0) {
+            heroSource = 'website';
+            heroPhoto = approved[0];
+          }
+        }
+
+        // ---- STEP 2: DB website_photos ----
+        if (dbWebsiteCandidates.length > 0 && approved.length < MAX_PHOTOS) {
+          trace.website_photos_screened = dbWebsiteCandidates.length;
+          const approvedBefore = approved.length;
+          const r = await screenAndRehost(
+            dbWebsiteCandidates, approved, badUrls, task.listing_id as string,
+            supabase, anthropicKey, MAX_PHOTOS, crawlNotes, genericUrls,
           );
           approved = r.approved;
           badUrls = r.badUrls;
@@ -746,6 +800,7 @@ Deno.serve(async (req: Request) => {
           }
         }
 
+        // ---- STEP 3: Google Place Photos ----
         const placeId = task.google_place_id as string | null;
         if (placeId && googleApiKey && approved.length < MAX_PHOTOS) {
           try {
@@ -757,10 +812,17 @@ Deno.serve(async (req: Request) => {
               Math.min(10, needed + 2),
             );
 
+            // Dedup check for place photo URLs (fetched dynamically, not in initial batch)
+            const placeGenericUrls = await fetchGenericUrls(supabase, placePhotoUrls, 3);
+
             const approvedBefore = approved.length;
             for (const url of placePhotoUrls) {
               if (approved.length >= MAX_PHOTOS) break;
               if (approved.includes(url) || badUrls.includes(url)) continue;
+              if (placeGenericUrls.has(url)) {
+                badUrls.push(url);
+                continue;
+              }
               try {
                 const result = await classifyPhotoWithClaude(url, anthropicKey, [...approved]);
                 if (result.verdict === 'GOOD') {
@@ -789,9 +851,9 @@ Deno.serve(async (req: Request) => {
           }
         }
 
-        const googleUrl = task.google_photo_url as string | null;
+        // ---- STEP 4: google_photo_url single fallback ----
         trace.google_photo_exists = !!googleUrl;
-        if (googleUrl && !badUrls.includes(googleUrl) && approved.length < MAX_PHOTOS) {
+        if (googleUrl && !badUrls.includes(googleUrl) && !genericUrls.has(googleUrl) && approved.length < MAX_PHOTOS) {
           try {
             const result = await classifyPhotoWithClaude(googleUrl, anthropicKey, [...approved]);
             trace.google_verdict = result.verdict;
@@ -817,6 +879,10 @@ Deno.serve(async (req: Request) => {
             trace.google_verdict = 'fetch_failed';
             trace.google_reason = (e as Error).message;
           }
+        } else if (googleUrl && genericUrls.has(googleUrl)) {
+          trace.google_verdict = 'generic_chain_image';
+          trace.google_reason = 'URL already used as hero on 3+ other listings';
+          badUrls.push(googleUrl);
         } else if (googleUrl && badUrls.includes(googleUrl)) {
           trace.google_verdict = 'previously_blocked';
           trace.google_reason = 'URL is in blocked_photos list';
