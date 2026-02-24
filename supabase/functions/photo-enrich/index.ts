@@ -620,109 +620,13 @@ Deno.serve(async (req: Request) => {
           fallback_reason: null,
         };
 
-        // ---- STEP 1: Screen existing website_photos from DB (highest priority for hero) ----
-        if (websitePhotos.length > 0) {
-          const candidates = filterCandidateUrls(websitePhotos, badUrls).slice(0, 15);
-          trace.website_photos_screened = candidates.length;
-          const approvedBefore = approved.length;
-          const r = await screenAndRehost(
-            candidates, approved, badUrls, task.listing_id as string,
-            supabase, anthropicKey, MAX_PHOTOS, crawlNotes,
-          );
-          approved = r.approved;
-          badUrls = r.badUrls;
-          crawlNotes = r.crawlNotes;
-          trace.website_photos_approved = approved.length - approvedBefore;
-          if (!heroIsManual && !heroSource && approved.length > 0) {
-            heroSource = 'website';
-            heroPhoto = approved[0];
-          }
-        }
-
-        // ---- STEP 2: Use google_photo_url as hero if no website hero found yet ----
-        const googleUrl = task.google_photo_url as string | null;
-        trace.google_photo_exists = !!googleUrl;
-        if (googleUrl && !badUrls.includes(googleUrl)) {
-          try {
-            const result = await classifyPhotoWithClaude(googleUrl, anthropicKey, [...approved]);
-            trace.google_verdict = result.verdict;
-            trace.google_reason = result.reason;
-            if (result.verdict === 'GOOD') {
-              const rehosted = await rehostToStorage(supabase, googleUrl, task.listing_id as string, 'google_photo');
-              const finalUrl = rehosted ?? googleUrl;
-              if (!heroIsManual && !heroPhoto) {
-                heroPhoto = finalUrl;
-                heroSource = 'google';
-              }
-              if (!approved.includes(finalUrl) && approved.length < MAX_PHOTOS) {
-                approved.push(finalUrl);
-              }
-            } else {
-              badUrls.push(googleUrl);
-              if (result.verdict === 'BAD_CONTACT') {
-                const note = `[Google photo rejected BAD_CONTACT: ${result.reason}]`;
-                crawlNotes = crawlNotes ? `${crawlNotes} ${note}` : note;
-              }
-            }
-          } catch (e) {
-            trace.google_verdict = 'fetch_failed';
-            trace.google_reason = (e as Error).message;
-          }
-        } else if (googleUrl && badUrls.includes(googleUrl)) {
-          trace.google_verdict = 'previously_blocked';
-          trace.google_reason = 'URL is in blocked_photos list';
-        }
-
-        // ---- STEP 2.5: Google Place Photos — fill gallery from Place Details API ----
-        const placeId = task.google_place_id as string | null;
-        const needMorePhotos = approved.length < MIN_GALLERY_TARGET;
-        if (placeId && googleApiKey && needMorePhotos) {
-          try {
-            const needed = MAX_PHOTOS - approved.length;
-            const placePhotoUrls = await fetchGooglePlacePhotoUrls(
-              placeId,
-              googleApiKey,
-              heroPhoto,
-              Math.min(10, needed + 2),
-            );
-
-            const approvedBefore = approved.length;
-            for (const url of placePhotoUrls) {
-              if (approved.length >= MAX_PHOTOS) break;
-              if (approved.includes(url) || badUrls.includes(url)) continue;
-              try {
-                const result = await classifyPhotoWithClaude(url, anthropicKey, [...approved]);
-                if (result.verdict === 'GOOD') {
-                  const slot = `place_photo_${approved.length}_${Date.now()}`;
-                  const rehosted = await rehostToStorage(supabase, url, task.listing_id as string, slot);
-                  approved.push(rehosted ?? url);
-                } else {
-                  badUrls.push(url);
-                  if (result.verdict === 'BAD_CONTACT') {
-                    const note = `[Place photo rejected BAD_CONTACT: ${result.reason}]`;
-                    crawlNotes = crawlNotes ? `${crawlNotes} ${note}` : note;
-                  }
-                }
-              } catch {
-                badUrls.push(url);
-              }
-            }
-            trace.google_place_photos_approved = approved.length - approvedBefore;
-          } catch {
-            // Place Photos fetch failed silently — continue with other sources
-          }
-        }
-
-        // ---- STEP 3: Firecrawl scrape ----
         const websiteUrl = task.website as string | null;
-        const shouldFirecrawl = approved.length < MIN_GALLERY_TARGET
-          && websitePhotos.length === 0
-          && websiteUrl
-          && !SKIP_DOMAINS.some(d => websiteUrl.includes(d));
+        const canFirecrawl = !!websiteUrl && !SKIP_DOMAINS.some(d => websiteUrl.includes(d));
 
-        trace.firecrawl_triggered = !!shouldFirecrawl;
+        // ---- STEP 1: Firecrawl website scrape (first priority when listing has a website) ----
+        trace.firecrawl_triggered = canFirecrawl;
 
-        if (shouldFirecrawl) {
+        if (canFirecrawl) {
           try {
             const fcRes = await fetch(`${FIRECRAWL_API}/scrape`, {
               method: 'POST',
@@ -770,19 +674,112 @@ Deno.serve(async (req: Request) => {
           } catch (e) {
             trace.fallback_reason = `Firecrawl error: ${(e as Error).message}`;
           }
-        } else if (!shouldFirecrawl && approved.length < MIN_GALLERY_TARGET) {
-          if (!websiteUrl) {
-            trace.fallback_reason = 'No website URL';
-          } else if (websitePhotos.length > 0) {
-            trace.fallback_reason = 'Skipped Firecrawl — website_photos already in DB';
-          } else if (SKIP_DOMAINS.some(d => websiteUrl.includes(d))) {
-            trace.fallback_reason = 'Skipped Firecrawl — website is a directory/social domain';
+        } else if (!websiteUrl) {
+          trace.fallback_reason = 'No website URL — skipped Firecrawl';
+        } else if (SKIP_DOMAINS.some(d => websiteUrl.includes(d))) {
+          trace.fallback_reason = 'Skipped Firecrawl — website is a directory/social domain';
+        }
+
+        // ---- STEP 2: Screen existing website_photos from DB (supplement if Firecrawl didn't fill gallery) ----
+        if (websitePhotos.length > 0 && approved.length < MAX_PHOTOS) {
+          const candidates = filterCandidateUrls(websitePhotos, badUrls).slice(0, 15);
+          trace.website_photos_screened = candidates.length;
+          const approvedBefore = approved.length;
+          const r = await screenAndRehost(
+            candidates, approved, badUrls, task.listing_id as string,
+            supabase, anthropicKey, MAX_PHOTOS, crawlNotes,
+          );
+          approved = r.approved;
+          badUrls = r.badUrls;
+          crawlNotes = r.crawlNotes;
+          trace.website_photos_approved = approved.length - approvedBefore;
+          if (!heroIsManual && !heroSource && approved.length > 0) {
+            heroSource = 'website';
+            heroPhoto = approved[0];
           }
+        }
+
+        // ---- STEP 3: Google Place Photos — fill gallery from Place Details API ----
+        const placeId = task.google_place_id as string | null;
+        if (placeId && googleApiKey && approved.length < MAX_PHOTOS) {
+          try {
+            const needed = MAX_PHOTOS - approved.length;
+            const placePhotoUrls = await fetchGooglePlacePhotoUrls(
+              placeId,
+              googleApiKey,
+              heroPhoto,
+              Math.min(10, needed + 2),
+            );
+
+            const approvedBefore = approved.length;
+            for (const url of placePhotoUrls) {
+              if (approved.length >= MAX_PHOTOS) break;
+              if (approved.includes(url) || badUrls.includes(url)) continue;
+              try {
+                const result = await classifyPhotoWithClaude(url, anthropicKey, [...approved]);
+                if (result.verdict === 'GOOD') {
+                  const slot = `place_photo_${approved.length}_${Date.now()}`;
+                  const rehosted = await rehostToStorage(supabase, url, task.listing_id as string, slot);
+                  const finalUrl = rehosted ?? url;
+                  approved.push(finalUrl);
+                  if (!heroIsManual && !heroPhoto) {
+                    heroPhoto = finalUrl;
+                    heroSource = 'google';
+                  }
+                } else {
+                  badUrls.push(url);
+                  if (result.verdict === 'BAD_CONTACT') {
+                    const note = `[Place photo rejected BAD_CONTACT: ${result.reason}]`;
+                    crawlNotes = crawlNotes ? `${crawlNotes} ${note}` : note;
+                  }
+                }
+              } catch {
+                badUrls.push(url);
+              }
+            }
+            trace.google_place_photos_approved = approved.length - approvedBefore;
+          } catch {
+            // Place Photos fetch failed silently — continue with other sources
+          }
+        }
+
+        // ---- STEP 4: google_photo_url single photo (last Google fallback before street view) ----
+        const googleUrl = task.google_photo_url as string | null;
+        trace.google_photo_exists = !!googleUrl;
+        if (googleUrl && !badUrls.includes(googleUrl) && approved.length < MAX_PHOTOS) {
+          try {
+            const result = await classifyPhotoWithClaude(googleUrl, anthropicKey, [...approved]);
+            trace.google_verdict = result.verdict;
+            trace.google_reason = result.reason;
+            if (result.verdict === 'GOOD') {
+              const rehosted = await rehostToStorage(supabase, googleUrl, task.listing_id as string, 'google_photo');
+              const finalUrl = rehosted ?? googleUrl;
+              if (!heroIsManual && !heroPhoto) {
+                heroPhoto = finalUrl;
+                heroSource = 'google';
+              }
+              if (!approved.includes(finalUrl) && approved.length < MAX_PHOTOS) {
+                approved.push(finalUrl);
+              }
+            } else {
+              badUrls.push(googleUrl);
+              if (result.verdict === 'BAD_CONTACT') {
+                const note = `[Google photo rejected BAD_CONTACT: ${result.reason}]`;
+                crawlNotes = crawlNotes ? `${crawlNotes} ${note}` : note;
+              }
+            }
+          } catch (e) {
+            trace.google_verdict = 'fetch_failed';
+            trace.google_reason = (e as Error).message;
+          }
+        } else if (googleUrl && badUrls.includes(googleUrl)) {
+          trace.google_verdict = 'previously_blocked';
+          trace.google_reason = 'URL is in blocked_photos list';
         }
 
         trace.total_approved = approved.length;
 
-        // ---- STEP 4: Street view fallback (trusted source, no Claude needed) ----
+        // ---- STEP 5: Street view fallback (trusted source, no Claude needed) ----
         const streetViewUrl = task.street_view_url as string | null;
         if (!heroIsManual && !heroPhoto && streetViewUrl) {
           heroPhoto = streetViewUrl;
