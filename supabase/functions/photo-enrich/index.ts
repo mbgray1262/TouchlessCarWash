@@ -621,6 +621,7 @@ Deno.serve(async (req: Request) => {
       const { data: batchTasks } = await supabase.rpc('claim_photo_enrich_tasks', {
         p_job_id: jobId,
         p_limit: PARALLEL_BATCH_SIZE,
+        p_max_concurrency: NUM_PARALLEL_CHAINS * PARALLEL_BATCH_SIZE * 2,
       });
 
       if (!batchTasks || batchTasks.length === 0) {
