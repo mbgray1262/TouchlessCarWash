@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useState } from 'react';
-import { X, Flag, CheckCircle, ChevronDown, Trash2, ImageOff, ZoomIn, Crop, ExternalLink, CarFront } from 'lucide-react';
+import { X, Flag, CheckCircle, ChevronDown, Trash2, ImageOff, ZoomIn, Crop, ExternalLink, CarFront, Star } from 'lucide-react';
 import { HeroListing, ReplacementOption } from './types';
 import HeroImageFallback from '@/components/HeroImageFallback';
 import { CropModal } from './CropModal';
@@ -103,7 +103,7 @@ export function HeroCard({
   }, [isFocused]);
 
   const hasHero = !!listing.hero_image;
-  const galleryPhotos = listing.photos ?? [];
+  const galleryPhotos = (listing.photos ?? []).filter(p => p !== listing.hero_image);
 
   return (
     <>
@@ -277,7 +277,7 @@ export function HeroCard({
 
           {galleryPhotos.length > 0 && (
             <div className="mt-2 pt-2 border-t border-orange-200">
-              <p className="text-[10px] font-semibold text-orange-700 mb-1.5">Gallery photos</p>
+              <p className="text-[10px] font-semibold text-orange-700 mb-1.5">Gallery photos — click star to use as hero</p>
               <div className="flex gap-1.5 flex-wrap">
                 {galleryPhotos.map((url) => (
                   <div key={url} className="relative group/gal">
@@ -292,6 +292,13 @@ export function HeroCard({
                         if (p) p.style.display = 'none';
                       }}
                     />
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onReplace(url, 'gallery'); }}
+                      className="absolute bottom-0.5 left-0.5 w-5 h-5 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow transition-colors"
+                      title="Use as hero"
+                    >
+                      <Star className="w-2.5 h-2.5" />
+                    </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); onRemoveGalleryPhoto(url); }}
                       className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center shadow transition-colors"

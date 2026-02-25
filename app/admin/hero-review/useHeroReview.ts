@@ -100,12 +100,10 @@ export function useHeroReview() {
       }
     };
 
-    const photos = listing.photos ?? [];
-    photos.forEach((p, i) => add(p, `Gallery ${i + 1}`, 'gallery'));
     add(listing.google_photo_url, 'Google', 'google');
     add(listing.street_view_url, 'Street View', 'street_view');
 
-    return opts.slice(0, 8);
+    return opts;
   };
 
   const handleReplace = async (listingId: string, url: string | null, source: string, optIdx: number) => {
@@ -114,9 +112,18 @@ export function useHeroReview() {
 
     setConfirmMap(prev => ({ ...prev, [listingId]: optIdx }));
 
+    const currentPhotos = listing?.photos ?? [];
+    const updatedPhotos = oldHero && !currentPhotos.includes(oldHero)
+      ? [oldHero, ...currentPhotos]
+      : currentPhotos;
+
     await supabase
       .from('listings')
-      .update({ hero_image: url, hero_image_source: url ? source : null })
+      .update({
+        hero_image: url,
+        hero_image_source: url ? source : null,
+        photos: updatedPhotos.length > 0 ? updatedPhotos : null,
+      })
       .eq('id', listingId);
 
     await supabase.from('hero_reviews').insert({
@@ -129,7 +136,12 @@ export function useHeroReview() {
 
     setListings(prev =>
       prev.map(l => l.id === listingId
-        ? { ...l, hero_image: url, hero_image_source: (url ? source : null) as HeroListing['hero_image_source'] }
+        ? {
+            ...l,
+            hero_image: url,
+            hero_image_source: (url ? source : null) as HeroListing['hero_image_source'],
+            photos: updatedPhotos.length > 0 ? updatedPhotos : null,
+          }
         : l
       )
     );
