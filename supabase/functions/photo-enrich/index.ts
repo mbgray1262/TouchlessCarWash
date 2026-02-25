@@ -298,7 +298,7 @@ async function screenAndRehost(
       continue;
     }
     try {
-      const result = await classifyPhotoWithClaude(url, anthropicKey, [...approved]);
+      const result = await classifyPhotoWithClaude(url, anthropicKey, []);
       if (result.verdict === 'GOOD') {
         const slot = `photo_${approved.length}_${Date.now()}`;
         const rehosted = await rehostToStorage(supabase, url, listingId, slot);
@@ -517,11 +517,7 @@ Deno.serve(async (req: Request) => {
           .not('website', 'is', null)
           .or('hero_image_source.eq.street_view,and(hero_image_source.eq.google,photos.is.null)');
       } else {
-        // Only pick up listings with no hero AND not yet attempted — prevents re-processing
-        // listings that already failed (timed out, no photos found, etc.)
-        query = query
-          .is('hero_image', null)
-          .is('photo_enrichment_attempted_at', null);
+        query = query.is('hero_image', null);
       }
 
       if (limit > 0) query = query.limit(limit);
@@ -692,7 +688,7 @@ Deno.serve(async (req: Request) => {
           return await Promise.race([
             processOneTaskInner(task),
             new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error('Task processing timeout')), 90_000)
+              setTimeout(() => reject(new Error('Task processing timeout')), 60_000)
             ),
           ]);
         } catch (e) {
@@ -899,7 +895,7 @@ Deno.serve(async (req: Request) => {
                 continue;
               }
               try {
-                const result = await classifyPhotoWithClaude(url, anthropicKey, [...approved]);
+                const result = await classifyPhotoWithClaude(url, anthropicKey, []);
                 if (result.verdict === 'GOOD') {
                   const slot = `place_photo_${approved.length}_${Date.now()}`;
                   const rehosted = await rehostToStorage(supabase, url, task.listing_id as string, slot);
@@ -930,7 +926,7 @@ Deno.serve(async (req: Request) => {
         trace.google_photo_exists = !!googleUrl;
         if (googleUrl && !badUrls.includes(googleUrl) && !genericUrls.has(googleUrl) && approved.length < MAX_PHOTOS) {
           try {
-            const result = await classifyPhotoWithClaude(googleUrl, anthropicKey, [...approved]);
+            const result = await classifyPhotoWithClaude(googleUrl, anthropicKey, []);
             trace.google_verdict = result.verdict;
             trace.google_reason = result.reason;
             if (result.verdict === 'GOOD') {
@@ -1041,12 +1037,6 @@ Deno.serve(async (req: Request) => {
           total_approved: trace.total_approved as number,
           fallback_reason: trace.fallback_reason as string | null,
         }).eq('id', task.id);
-
-        await supabase.rpc('increment_photo_enrich_job_counts', {
-          p_job_id: jobId,
-          p_processed: 1,
-          p_succeeded: heroPhoto ? 1 : 0,
-        });
 
         return { heroPhoto, heroSource, approved, galleryPhotos };
       };
