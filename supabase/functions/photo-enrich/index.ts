@@ -607,15 +607,33 @@ Deno.serve(async (req: Request) => {
 
       const isUpgradeMode = (job as Record<string, unknown>).upgrade_mode === true;
 
-      // Reset any tasks that got stuck in_progress
+      // Handle stuck in_progress tasks:
+      // - If attempt_count >= 3 → mark done (give up, they keep timing out)
+      // - Otherwise → reset to pending so another chain can retry
       const stuckCutoff = new Date(Date.now() - STUCK_TASK_TIMEOUT_MS).toISOString();
-      await supabase
-        .from('photo_enrich_tasks')
-        .update({ task_status: 'pending', updated_at: new Date().toISOString() })
-        .eq('job_id', jobId)
-        .eq('task_status', 'in_progress')
-        .is('finished_at', null)
-        .lt('updated_at', stuckCutoff);
+      await Promise.all([
+        supabase
+          .from('photo_enrich_tasks')
+          .update({
+            task_status: 'done',
+            hero_image_found: false,
+            finished_at: new Date().toISOString(),
+            fallback_reason: 'Skipped — repeated timeouts',
+          })
+          .eq('job_id', jobId)
+          .eq('task_status', 'in_progress')
+          .is('finished_at', null)
+          .lt('updated_at', stuckCutoff)
+          .gte('attempt_count', 3),
+        supabase
+          .from('photo_enrich_tasks')
+          .update({ task_status: 'pending', updated_at: new Date().toISOString() })
+          .eq('job_id', jobId)
+          .eq('task_status', 'in_progress')
+          .is('finished_at', null)
+          .lt('updated_at', stuckCutoff)
+          .lt('attempt_count', 3),
+      ]);
 
       // Re-check cancel status AFTER resetting stuck tasks but BEFORE claiming
       const { data: freshJob } = await supabase
