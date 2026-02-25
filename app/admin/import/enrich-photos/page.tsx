@@ -37,6 +37,7 @@ interface JobProgress {
   processed: number;
   succeeded: number;
   stuck_count?: number;
+  in_progress_count?: number;
 }
 
 interface RecentListing {
@@ -446,8 +447,8 @@ export default function EnrichPhotosPage() {
     setJobProgress(data);
 
     pollCountRef.current += 1;
-    if (pollCountRef.current % 5 === 0) {
-      loadStats();
+    loadStats();
+    if (pollCountRef.current % 3 === 0) {
       loadRecentListings();
     }
 
@@ -458,8 +459,7 @@ export default function EnrichPhotosPage() {
       } else {
         if (staleSinceRef.current === null) {
           staleSinceRef.current = Date.now();
-        } else if (Date.now() - staleSinceRef.current > 8_000) {
-          // Stalled — fire 3 concurrent kicks to break the deadlock
+        } else if (Date.now() - staleSinceRef.current > 15_000) {
           staleSinceRef.current = Date.now();
           kickBatch(jobId, 3);
         }
@@ -767,6 +767,9 @@ export default function EnrichPhotosPage() {
                     <p className="text-sm font-semibold text-[#0F2744]">Processing listings…</p>
                     <p className="text-xs text-gray-400 mt-0.5">
                       {jobProgress.processed} / {jobProgress.total} done &nbsp;·&nbsp; {jobProgress.succeeded} got hero images
+                      {(jobProgress.in_progress_count ?? 0) > 0 && (
+                        <span className="ml-2 text-blue-500">&nbsp;·&nbsp; {jobProgress.in_progress_count} processing</span>
+                      )}
                     </p>
                   </div>
                   <span className="relative flex h-2.5 w-2.5 mt-1 shrink-0">

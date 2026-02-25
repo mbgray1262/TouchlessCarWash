@@ -9,8 +9,8 @@ const corsHeaders = {
 const FIRECRAWL_API = 'https://api.firecrawl.dev/v1';
 const MAX_PHOTOS = 5;
 const PARALLEL_BATCH_SIZE = 1;
-// Mark a task stuck after 8 minutes — tasks can take longer with dedup DB queries + AI classification
-const STUCK_TASK_TIMEOUT_MS = 8 * 60 * 1000;
+// Mark a task stuck after 2 minutes — tasks should complete well within this window
+const STUCK_TASK_TIMEOUT_MS = 2 * 60 * 1000;
 
 const SKIP_DOMAINS = [
   'facebook.com', 'fbcdn.net', 'fbsbx.com',
@@ -1039,23 +1039,28 @@ Deno.serve(async (req: Request) => {
 
       if (!job) return Response.json({ error: 'Job not found' }, { status: 404, headers: corsHeaders });
 
-      // Count actual task states from the tasks table — avoids double-counting from racing invocations
-      const { data: taskCounts } = await supabase
-        .from('photo_enrich_tasks')
-        .select('task_status')
-        .eq('job_id', jobId);
-
-      const doneTasks = taskCounts?.filter(t => t.task_status === 'done').length ?? 0;
       const stuckCutoff = new Date(Date.now() - STUCK_TASK_TIMEOUT_MS).toISOString();
-      const { count: stuckCount } = await supabase
-        .from('photo_enrich_tasks')
-        .select('id', { count: 'exact', head: true })
-        .eq('job_id', jobId)
-        .eq('task_status', 'in_progress')
-        .is('finished_at', null)
-        .lt('updated_at', stuckCutoff);
 
-      return Response.json({ ...job, processed: doneTasks, stuck_count: stuckCount ?? 0 }, { headers: corsHeaders });
+      const [stuckResult, inProgressResult] = await Promise.all([
+        supabase
+          .from('photo_enrich_tasks')
+          .select('id', { count: 'exact', head: true })
+          .eq('job_id', jobId)
+          .eq('task_status', 'in_progress')
+          .is('finished_at', null)
+          .lt('updated_at', stuckCutoff),
+        supabase
+          .from('photo_enrich_tasks')
+          .select('id', { count: 'exact', head: true })
+          .eq('job_id', jobId)
+          .eq('task_status', 'in_progress'),
+      ]);
+
+      return Response.json({
+        ...job,
+        stuck_count: stuckResult.count ?? 0,
+        in_progress_count: inProgressResult.count ?? 0,
+      }, { headers: corsHeaders });
     }
 
     if (action === 'task_traces') {
