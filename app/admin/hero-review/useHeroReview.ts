@@ -179,6 +179,44 @@ export function useHeroReview() {
     );
   };
 
+  const handleDeleteExternalPhoto = async (listingId: string, field: 'google_photo_url' | 'street_view_url') => {
+    await supabase.from('listings').update({ [field]: null }).eq('id', listingId);
+    setListings(prev => prev.map(l => l.id === listingId ? { ...l, [field]: null } : l));
+  };
+
+  const handleDeleteHeroPhoto = async (listingId: string) => {
+    const listing = listings.find(l => l.id === listingId);
+    const heroUrl = listing?.hero_image ?? null;
+    if (!heroUrl) return;
+
+    const { data: current } = await supabase
+      .from('listings').select('blocked_photos').eq('id', listingId).maybeSingle();
+
+    const blocked = (current?.blocked_photos as string[] | null) ?? [];
+    const newBlocked = blocked.includes(heroUrl) ? blocked : [heroUrl, ...blocked];
+
+    const updates: Record<string, unknown> = {
+      hero_image: null,
+      hero_image_source: null,
+      blocked_photos: newBlocked,
+    };
+    if (listing?.google_photo_url === heroUrl) updates.google_photo_url = null;
+    if (listing?.street_view_url === heroUrl) updates.street_view_url = null;
+
+    await supabase.from('listings').update(updates).eq('id', listingId);
+
+    setListings(prev => prev.map(l => {
+      if (l.id !== listingId) return l;
+      return {
+        ...l,
+        hero_image: null,
+        hero_image_source: null,
+        google_photo_url: l.google_photo_url === heroUrl ? null : l.google_photo_url,
+        street_view_url: l.street_view_url === heroUrl ? null : l.street_view_url,
+      };
+    }));
+  };
+
   const handleRemoveGalleryPhoto = async (listingId: string, photoUrl: string) => {
     const listing = listings.find(l => l.id === listingId);
     const currentPhotos = listing?.photos ?? [];
@@ -290,6 +328,8 @@ export function useHeroReview() {
     getReplacements,
     handleReplace,
     handleRemoveHero,
+    handleDeleteHeroPhoto,
+    handleDeleteExternalPhoto,
     handleRemoveGalleryPhoto,
     handleCropSave,
     handleMarkNotTouchless,

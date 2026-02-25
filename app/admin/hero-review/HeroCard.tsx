@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useState } from 'react';
-import { X, Flag, CheckCircle, ChevronDown, Trash2, ImageOff, ZoomIn, Crop, ExternalLink, CarFront, Star } from 'lucide-react';
+import { X, Flag, ImageOff, ZoomIn, Crop, ExternalLink, CarFront, Star, Trash2, ChevronDown, ImageIcon } from 'lucide-react';
 import { HeroListing, ReplacementOption } from './types';
 import HeroImageFallback from '@/components/HeroImageFallback';
 import { CropModal } from './CropModal';
@@ -19,42 +19,88 @@ function SourceBadge({ source }: { source: string | null }) {
   return <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${cls}`}>{source.replace('_', ' ')}</span>;
 }
 
-function PhotoLightbox({ url, onClose }: { url: string; onClose: () => void }) {
+interface GalleryItem {
+  kind: 'photo' | 'placeholder';
+  url?: string;
+  label: string;
+  source?: string;
+  onUseAsHero: () => void;
+  onDelete?: () => void;
+}
+
+interface LightboxProps {
+  url: string;
+  label: string;
+  onClose: () => void;
+  onUseAsHero: () => void;
+  onDelete?: () => void;
+}
+
+function PhotoLightbox({ url, label, onClose, onUseAsHero, onDelete }: LightboxProps) {
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'Enter') { onUseAsHero(); onClose(); }
+      if (e.key === 'Delete' && onDelete) { onDelete(); onClose(); }
+    };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [onClose]);
+  }, [onClose, onUseAsHero, onDelete]);
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm"
       onClick={onClose}
     >
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
-      >
-        <X className="w-5 h-5" />
-      </button>
-      <img
-        src={url}
-        alt="Full size preview"
-        className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+      <div
+        className="flex flex-col items-center gap-4"
         onClick={(e) => e.stopPropagation()}
-      />
+      >
+        <img
+          src={url}
+          alt={label}
+          className="max-w-[88vw] max-h-[75vh] object-contain rounded-lg shadow-2xl"
+        />
+        <div className="flex items-center gap-2">
+          <span className="text-white/50 text-xs">{label}</span>
+          <div className="w-px h-4 bg-white/20" />
+          <button
+            onClick={() => { onUseAsHero(); onClose(); }}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold transition-colors shadow-lg"
+            title="Use as hero (Enter)"
+          >
+            <Star className="w-3.5 h-3.5" />
+            Use as hero
+          </button>
+          {onDelete && (
+            <button
+              onClick={() => { onDelete(); onClose(); }}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-colors shadow-lg"
+              title="Delete photo (Del)"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Delete
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm transition-colors"
+            title="Close (Esc)"
+          >
+            <X className="w-3.5 h-3.5" />
+            Close
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
 
-function PlaceholderSVG({ className }: { className?: string }) {
+function PlaceholderThumb({ className }: { className?: string }) {
   return (
-    <div className={`flex items-center justify-center bg-gray-100 ${className ?? ''}`}>
-      <svg viewBox="0 0 80 60" className="w-16 h-12 text-gray-300" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect width="80" height="60" rx="6" fill="currentColor" opacity="0.4" />
-        <circle cx="28" cy="22" r="7" fill="white" opacity="0.7" />
-        <path d="M8 50 L24 32 L36 44 L52 28 L72 50 Z" fill="white" opacity="0.6" />
-      </svg>
+    <div className={`flex flex-col items-center justify-center bg-gray-100 gap-1 ${className ?? ''}`}>
+      <ImageIcon className="w-5 h-5 text-gray-300" />
+      <span className="text-[9px] text-gray-400 font-medium">Placeholder</span>
     </div>
   );
 }
@@ -68,6 +114,8 @@ interface Props {
   onCollapse: () => void;
   onReplace: (url: string | null, source: string) => void;
   onRemoveHero: () => void;
+  onDeleteHero: () => void;
+  onDeleteExternalPhoto: (field: 'google_photo_url' | 'street_view_url') => void;
   onRemoveGalleryPhoto: (url: string) => void;
   onCropSave: (url: string) => void;
   onMarkNotTouchless: () => void;
@@ -85,6 +133,8 @@ export function HeroCard({
   onCollapse,
   onReplace,
   onRemoveHero,
+  onDeleteHero,
+  onDeleteExternalPhoto,
   onRemoveGalleryPhoto,
   onCropSave,
   onMarkNotTouchless,
@@ -93,7 +143,7 @@ export function HeroCard({
   confirmIndex,
 }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<{ url: string; label: string; onUseAsHero: () => void; onDelete?: () => void } | null>(null);
   const [cropOpen, setCropOpen] = useState(false);
 
   useEffect(() => {
@@ -105,9 +155,54 @@ export function HeroCard({
   const hasHero = !!listing.hero_image;
   const galleryPhotos = (listing.photos ?? []).filter(p => p !== listing.hero_image);
 
+  const externalFieldFor = (url: string): 'google_photo_url' | 'street_view_url' | null => {
+    if (url === listing.google_photo_url) return 'google_photo_url';
+    if (url === listing.street_view_url) return 'street_view_url';
+    return null;
+  };
+
+  const galleryItems: GalleryItem[] = [
+    ...replacements.map((opt) => {
+      const field = externalFieldFor(opt.url);
+      return {
+        kind: 'photo' as const,
+        url: opt.url,
+        label: opt.label,
+        source: opt.source,
+        onUseAsHero: () => {
+          const idx = replacements.findIndex(r => r.url === opt.url);
+          onReplace(opt.url, opt.source);
+          void idx;
+        },
+        onDelete: field ? () => onDeleteExternalPhoto(field) : undefined,
+      };
+    }),
+    ...galleryPhotos.map((url) => ({
+      kind: 'photo' as const,
+      url,
+      label: 'Gallery',
+      source: 'gallery',
+      onUseAsHero: () => onReplace(url, 'gallery'),
+      onDelete: () => onRemoveGalleryPhoto(url),
+    })),
+    {
+      kind: 'placeholder' as const,
+      label: 'Placeholder',
+      onUseAsHero: () => onReplace(null, 'placeholder'),
+    },
+  ];
+
   return (
     <>
-    {lightboxUrl && <PhotoLightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />}
+    {lightbox && (
+      <PhotoLightbox
+        url={lightbox.url}
+        label={lightbox.label}
+        onClose={() => setLightbox(null)}
+        onUseAsHero={() => { lightbox.onUseAsHero(); setLightbox(null); }}
+        onDelete={lightbox.onDelete}
+      />
+    )}
     {cropOpen && listing.hero_image && (
       <CropModal
         imageUrl={listing.hero_image}
@@ -126,10 +221,6 @@ export function HeroCard({
           isExpanded ? onCollapse() : onExpand();
         }
         if (e.key === 'Escape') onCollapse();
-        if (isExpanded && e.key >= '1' && e.key <= '5') {
-          const idx = parseInt(e.key, 10) - 1;
-          if (replacements[idx]) onReplace(replacements[idx].url, replacements[idx].source);
-        }
       }}
       className={`
         relative rounded-xl overflow-hidden border-2 transition-all duration-200 outline-none cursor-pointer
@@ -149,7 +240,15 @@ export function HeroCard({
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
             <button
-              onClick={(e) => { e.stopPropagation(); setLightboxUrl(listing.hero_image!); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightbox({
+                  url: listing.hero_image!,
+                  label: `Hero — ${listing.hero_image_source ?? 'unknown'}`,
+                  onUseAsHero: () => {},
+                  onDelete: onDeleteHero,
+                });
+              }}
               className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover/hero:bg-black/30 transition-colors"
               title="View full size"
             >
@@ -173,7 +272,7 @@ export function HeroCard({
               <button
                 onClick={(e) => { e.stopPropagation(); onRemoveHero(); }}
                 className="w-7 h-7 rounded-full bg-gray-700/80 hover:bg-gray-900 text-white flex items-center justify-center shadow-md transition-colors"
-                title="Remove hero (set to placeholder)"
+                title="Clear hero (keeps photo in gallery)"
               >
                 <ImageOff className="w-3.5 h-3.5" />
               </button>
@@ -182,7 +281,7 @@ export function HeroCard({
           <button
             onClick={(e) => { e.stopPropagation(); isExpanded ? onCollapse() : onExpand(); }}
             className="w-7 h-7 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center shadow-md transition-colors"
-            title="Reject & replace"
+            title="Open photo gallery (X)"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -222,97 +321,93 @@ export function HeroCard({
           className="border-t-2 border-orange-300 bg-orange-50 p-3"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-semibold text-orange-800">Choose replacement</p>
+          <div className="flex items-center justify-between mb-2.5">
+            <p className="text-xs font-semibold text-orange-800">
+              Available photos
+              <span className="font-normal text-orange-500 ml-1">— zoom, set as hero, or delete</span>
+            </p>
             <button onClick={onCollapse} className="text-gray-400 hover:text-gray-600">
               <ChevronDown className="w-4 h-4" />
             </button>
           </div>
 
-          {replacements.length === 0 && galleryPhotos.length === 0 ? (
-            <p className="text-xs text-gray-500 mb-2">No alternatives available</p>
-          ) : (
-            <div className="flex gap-1.5 flex-wrap mb-2">
-              {replacements.map((opt, idx) => (
-                <div key={opt.url} className="relative">
-                  <button
-                    onClick={() => onReplace(opt.url, opt.source)}
-                    className="relative group block rounded-md overflow-hidden border-2 border-transparent hover:border-orange-400 transition-all"
-                    title={`${idx + 1}: ${opt.label}`}
-                  >
-                    <img
-                      src={opt.url}
-                      alt={opt.label}
-                      loading="lazy"
-                      className="w-16 h-12 object-cover"
-                      onError={(e) => {
-                        const p = (e.target as HTMLImageElement).parentElement?.parentElement;
-                        if (p) p.style.display = 'none';
-                      }}
-                    />
-                    {confirmIndex === idx && (
-                      <div className="absolute inset-0 bg-emerald-500/80 flex items-center justify-center">
-                        <CheckCircle className="w-5 h-5 text-white" />
+          {galleryItems.length === 1 ? (
+            <p className="text-xs text-gray-400 mb-2">No photos available — only placeholder</p>
+          ) : null}
+
+          <div className="flex flex-wrap gap-2">
+            {galleryItems.map((item, idx) => {
+              const isConfirmed = confirmIndex !== null && item.kind === 'photo' &&
+                replacements[confirmIndex]?.url === item.url;
+
+              return (
+                <div key={item.url ?? 'placeholder'} className="flex flex-col gap-1">
+                  <div className="relative group/item w-20 h-14">
+                    {item.kind === 'placeholder' ? (
+                      <PlaceholderThumb className="w-20 h-14 rounded-md" />
+                    ) : (
+                      <img
+                        src={item.url}
+                        alt={item.label}
+                        loading="lazy"
+                        className="w-20 h-14 object-cover rounded-md border border-gray-200"
+                        onError={(e) => {
+                          const p = (e.target as HTMLImageElement).closest('.flex.flex-col') as HTMLElement | null;
+                          if (p) p.style.display = 'none';
+                        }}
+                      />
+                    )}
+
+                    {isConfirmed && (
+                      <div className="absolute inset-0 rounded-md bg-emerald-500/80 flex items-center justify-center">
+                        <Star className="w-5 h-5 text-white fill-white" />
                       </div>
                     )}
-                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[9px] text-center py-0.5 leading-none">
-                      {idx + 1} {opt.label}
-                    </div>
-                  </button>
-                </div>
-              ))}
 
-              <button
-                onClick={() => onReplace(null, 'placeholder')}
-                className="relative group block rounded-md overflow-hidden border-2 border-transparent hover:border-orange-400 transition-all"
-                title="Use Placeholder"
-              >
-                <PlaceholderSVG className="w-16 h-12" />
-                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[9px] text-center py-0.5 leading-none">
-                  Placeholder
-                </div>
-              </button>
-            </div>
-          )}
+                    {item.kind === 'photo' && !isConfirmed && (
+                      <button
+                        onClick={() => setLightbox({
+                          url: item.url!,
+                          label: item.label,
+                          onUseAsHero: item.onUseAsHero,
+                          onDelete: item.onDelete,
+                        })}
+                        className="absolute inset-0 flex items-center justify-center rounded-md bg-black/0 group-hover/item:bg-black/25 transition-colors opacity-0 group-hover/item:opacity-100"
+                        title="View full size"
+                      >
+                        <ZoomIn className="w-5 h-5 text-white drop-shadow-lg" />
+                      </button>
+                    )}
+                  </div>
 
-          {galleryPhotos.length > 0 && (
-            <div className="mt-2 pt-2 border-t border-orange-200">
-              <p className="text-[10px] font-semibold text-orange-700 mb-1.5">Gallery photos — click star to use as hero</p>
-              <div className="flex gap-1.5 flex-wrap">
-                {galleryPhotos.map((url) => (
-                  <div key={url} className="relative group/gal">
-                    <img
-                      src={url}
-                      alt="gallery"
-                      loading="lazy"
-                      className="w-14 h-10 object-cover rounded border border-gray-200 cursor-zoom-in"
-                      onClick={(e) => { e.stopPropagation(); setLightboxUrl(url); }}
-                      onError={(e) => {
-                        const p = (e.target as HTMLImageElement).parentElement;
-                        if (p) p.style.display = 'none';
-                      }}
-                    />
+                  <div className="flex gap-1 w-20">
                     <button
-                      onClick={(e) => { e.stopPropagation(); onReplace(url, 'gallery'); }}
-                      className="absolute bottom-0.5 left-0.5 w-5 h-5 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow transition-colors"
-                      title="Use as hero"
+                      onClick={item.onUseAsHero}
+                      className="flex-1 h-5 rounded flex items-center justify-center bg-emerald-100 hover:bg-emerald-500 text-emerald-600 hover:text-white transition-colors text-[9px] font-semibold gap-0.5"
+                      title={`Use as hero${item.kind === 'placeholder' ? ' (placeholder)' : ''}`}
                     >
                       <Star className="w-2.5 h-2.5" />
                     </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onRemoveGalleryPhoto(url); }}
-                      className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center shadow transition-colors"
-                      title="Delete from gallery"
-                    >
-                      <Trash2 className="w-2.5 h-2.5" />
-                    </button>
+                    {item.onDelete && (
+                      <button
+                        onClick={item.onDelete}
+                        className="flex-1 h-5 rounded flex items-center justify-center bg-red-100 hover:bg-red-500 text-red-500 hover:text-white transition-colors"
+                        title="Delete this photo"
+                      >
+                        <Trash2 className="w-2.5 h-2.5" />
+                      </button>
+                    )}
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
 
-          <div className="mt-2 flex items-center gap-2">
+                  <div className="text-[9px] text-center text-gray-400 leading-none truncate w-20">
+                    {item.label}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-3 pt-2.5 border-t border-orange-200 flex items-center gap-2">
             <button
               onClick={onFlag}
               className={`flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors ${
@@ -322,12 +417,12 @@ export function HeroCard({
               }`}
             >
               <Flag className="w-3 h-3" />
-              {listing.flagged ? 'Flagged' : 'Flag for later'}
+              {listing.flagged ? 'Flagged' : 'Flag'}
             </button>
             <button
               onClick={onMarkNotTouchless}
               className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-white border border-gray-300 text-gray-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700 transition-colors"
-              title="Mark as NOT touchless — removes from this queue"
+              title="Mark as NOT touchless"
             >
               <CarFront className="w-3 h-3" />
               Not touchless
