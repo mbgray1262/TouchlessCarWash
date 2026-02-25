@@ -378,6 +378,8 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
   const candidatePhotos = [
     ...(heroImage ? [heroImage] : []),
     ...(listing.photos || []),
+    ...(listing.google_photo_url ? [listing.google_photo_url] : []),
+    ...(listing.street_view_url ? [listing.street_view_url] : []),
   ];
   for (const p of candidatePhotos) {
     if (p && isImageUrl(p) && p !== logoImage && !seenUrls.has(p)) {
