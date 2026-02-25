@@ -611,11 +611,22 @@ Deno.serve(async (req: Request) => {
       const stuckCutoff = new Date(Date.now() - STUCK_TASK_TIMEOUT_MS).toISOString();
       await supabase
         .from('photo_enrich_tasks')
-        .update({ task_status: 'pending' })
+        .update({ task_status: 'pending', updated_at: new Date().toISOString() })
         .eq('job_id', jobId)
         .eq('task_status', 'in_progress')
         .is('finished_at', null)
         .lt('updated_at', stuckCutoff);
+
+      // Re-check cancel status AFTER resetting stuck tasks but BEFORE claiming
+      const { data: freshJob } = await supabase
+        .from('photo_enrich_jobs')
+        .select('status')
+        .eq('id', jobId)
+        .maybeSingle();
+
+      if (freshJob?.status === 'cancelled' || freshJob?.status === 'done') {
+        return Response.json({ done: true, status: freshJob.status }, { headers: corsHeaders });
+      }
 
       // Atomically claim tasks using FOR UPDATE SKIP LOCKED — prevents double-processing
       const { data: batchTasks } = await supabase.rpc('claim_photo_enrich_tasks', {
@@ -993,20 +1004,6 @@ Deno.serve(async (req: Request) => {
 
         return { heroPhoto, heroSource, approved, galleryPhotos };
       };
-
-      const { data: jobCheck } = await supabase
-        .from('photo_enrich_jobs')
-        .select('status')
-        .eq('id', jobId)
-        .maybeSingle();
-
-      if (jobCheck?.status === 'cancelled') {
-        await supabase.from('photo_enrich_tasks')
-          .update({ task_status: 'cancelled' })
-          .eq('job_id', jobId)
-          .in('task_status', ['pending', 'in_progress']);
-        return Response.json({ done: true, status: 'cancelled' }, { headers: corsHeaders });
-      }
 
       const results = await Promise.allSettled(batchTasks.map(task => processOneTask(task)));
 
