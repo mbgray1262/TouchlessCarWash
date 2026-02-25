@@ -610,13 +610,11 @@ Deno.serve(async (req: Request) => {
         .is('finished_at', null)
         .lt('updated_at', stuckCutoff);
 
-      const { data: batchTasks } = await supabase
-        .from('photo_enrich_tasks')
-        .select('id, listing_id, listing_name, website, google_photo_url, google_logo_url, street_view_url, google_place_id, current_hero, current_hero_source, current_logo, current_crawl_notes')
-        .eq('job_id', jobId)
-        .eq('task_status', 'pending')
-        .order('id')
-        .limit(PARALLEL_BATCH_SIZE);
+      // Atomically claim tasks using FOR UPDATE SKIP LOCKED — prevents double-processing
+      const { data: batchTasks } = await supabase.rpc('claim_photo_enrich_tasks', {
+        p_job_id: jobId,
+        p_limit: PARALLEL_BATCH_SIZE,
+      });
 
       if (!batchTasks || batchTasks.length === 0) {
         const { count: inProgressCount } = await supabase
@@ -635,12 +633,6 @@ Deno.serve(async (req: Request) => {
         }).eq('id', jobId);
         return Response.json({ done: true }, { headers: corsHeaders });
       }
-
-      // Claim tasks atomically — mark in_progress so concurrent invocations don't double-process
-      const claimedIds = batchTasks.map(t => t.id);
-      await supabase.from('photo_enrich_tasks')
-        .update({ task_status: 'in_progress' })
-        .in('id', claimedIds);
 
       const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY')!;
       const selfUrl = `${supabaseUrl}/functions/v1/photo-enrich`;
