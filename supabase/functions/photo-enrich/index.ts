@@ -517,7 +517,11 @@ Deno.serve(async (req: Request) => {
           .not('website', 'is', null)
           .or('hero_image_source.eq.street_view,and(hero_image_source.eq.google,photos.is.null)');
       } else {
-        query = query.is('hero_image', null);
+        // Only pick up listings with no hero AND not yet attempted — prevents re-processing
+        // listings that already failed (timed out, no photos found, etc.)
+        query = query
+          .is('hero_image', null)
+          .is('photo_enrichment_attempted_at', null);
       }
 
       if (limit > 0) query = query.limit(limit);
@@ -657,6 +661,20 @@ Deno.serve(async (req: Request) => {
       );
 
       const processOneTask = async (task: typeof batchTasks[number]) => {
+        // Skip listings that have timed out too many times — mark attempted and move on
+        if ((task.attempt_count as number ?? 0) > 3) {
+          await supabase.from('photo_enrich_tasks').update({
+            task_status: 'done',
+            hero_image_found: false,
+            finished_at: new Date().toISOString(),
+            fallback_reason: 'Skipped — repeated timeouts on this listing',
+          }).eq('id', task.id);
+          await supabase.from('listings').update({
+            photo_enrichment_attempted_at: new Date().toISOString(),
+          }).eq('id', task.listing_id);
+          return { heroPhoto: null, heroSource: null, approved: [], galleryPhotos: [] };
+        }
+
         const { data: listingData } = await supabase
           .from('listings')
           .select('photos, website_photos, blocked_photos')
