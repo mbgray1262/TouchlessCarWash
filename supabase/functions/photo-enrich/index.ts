@@ -8,10 +8,10 @@ const corsHeaders = {
 
 const FIRECRAWL_API = 'https://api.firecrawl.dev/v1';
 const MAX_PHOTOS = 5;
-const PARALLEL_BATCH_SIZE = 3;
-const NUM_PARALLEL_CHAINS = 4;
-// Mark a task stuck after 3 minutes
-const STUCK_TASK_TIMEOUT_MS = 3 * 60 * 1000;
+const PARALLEL_BATCH_SIZE = 1;
+const NUM_PARALLEL_CHAINS = 6;
+// Mark a task stuck after 4 minutes
+const STUCK_TASK_TIMEOUT_MS = 4 * 60 * 1000;
 
 const SKIP_DOMAINS = [
   'facebook.com', 'fbcdn.net', 'fbsbx.com',
@@ -670,6 +670,28 @@ Deno.serve(async (req: Request) => {
       );
 
       const processOneTask = async (task: typeof batchTasks[number]) => {
+        try {
+          return await Promise.race([
+            processOneTaskInner(task),
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error('Task processing timeout')), 90_000)
+            ),
+          ]);
+        } catch (e) {
+          await supabase.from('photo_enrich_tasks').update({
+            task_status: 'done',
+            hero_image_found: false,
+            finished_at: new Date().toISOString(),
+            fallback_reason: `Timeout/error: ${(e as Error).message}`,
+          }).eq('id', task.id);
+          await supabase.from('listings').update({
+            photo_enrichment_attempted_at: new Date().toISOString(),
+          }).eq('id', task.listing_id);
+          return { heroPhoto: null, heroSource: null, approved: [], galleryPhotos: [] };
+        }
+      };
+
+      const processOneTaskInner = async (task: typeof batchTasks[number]) => {
         // Skip listings that have timed out too many times — mark attempted and move on
         if ((task.attempt_count as number ?? 0) > 3) {
           await supabase.from('photo_enrich_tasks').update({
