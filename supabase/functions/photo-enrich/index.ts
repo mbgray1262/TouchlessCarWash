@@ -1042,6 +1042,12 @@ Deno.serve(async (req: Request) => {
           fallback_reason: trace.fallback_reason as string | null,
         }).eq('id', task.id);
 
+        await supabase.rpc('increment_photo_enrich_job_counts', {
+          p_job_id: jobId,
+          p_processed: 1,
+          p_succeeded: heroPhoto ? 1 : 0,
+        });
+
         return { heroPhoto, heroSource, approved, galleryPhotos };
       };
 
