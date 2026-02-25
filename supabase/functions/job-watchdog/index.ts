@@ -60,6 +60,14 @@ Deno.serve(async (req: Request) => {
       const markedDone = stuckDoneResult?.length ?? 0;
       const reset = stuckResetResult?.length ?? 0;
 
+      if (markedDone > 0) {
+        await supabase.rpc('increment_photo_enrich_job_counts', {
+          p_job_id: job.id,
+          p_processed: markedDone,
+          p_succeeded: 0,
+        });
+      }
+
       const { count: pendingCount } = await supabase
         .from('photo_enrich_tasks')
         .select('id', { count: 'exact', head: true })
