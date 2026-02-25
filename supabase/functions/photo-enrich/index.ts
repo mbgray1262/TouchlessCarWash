@@ -624,14 +624,15 @@ Deno.serve(async (req: Request) => {
       });
 
       if (!batchTasks || batchTasks.length === 0) {
-        const { count: inProgressCount } = await supabase
-          .from('photo_enrich_tasks')
-          .select('id', { count: 'exact', head: true })
-          .eq('job_id', jobId)
-          .eq('task_status', 'in_progress');
+        const [{ count: inProgressCount }, { count: pendingCount }] = await Promise.all([
+          supabase.from('photo_enrich_tasks').select('id', { count: 'exact', head: true })
+            .eq('job_id', jobId).eq('task_status', 'in_progress'),
+          supabase.from('photo_enrich_tasks').select('id', { count: 'exact', head: true })
+            .eq('job_id', jobId).eq('task_status', 'pending'),
+        ]);
 
-        if ((inProgressCount ?? 0) > 0) {
-          return Response.json({ done: false, waiting: true, in_progress: inProgressCount }, { headers: corsHeaders });
+        if ((inProgressCount ?? 0) > 0 || (pendingCount ?? 0) > 0) {
+          return Response.json({ done: false, waiting: true, in_progress: inProgressCount, pending: pendingCount }, { headers: corsHeaders });
         }
 
         await supabase.from('photo_enrich_jobs').update({
@@ -645,19 +646,15 @@ Deno.serve(async (req: Request) => {
       const selfUrl = `${supabaseUrl}/functions/v1/photo-enrich`;
       const kickHeaders = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseAnon}` };
 
-      // Kick NUM_PARALLEL_CHAINS next batches before doing heavy work.
-      // Each chain independently claims tasks via FOR UPDATE SKIP LOCKED — no double-processing.
-      // Stagger kicks so not all hit simultaneously; redundant kicks ensure chain survives a dropped request.
+      // 3 staggered kicks — redundancy ensures chain survives a dropped request.
+      // Concurrency cap in claim RPC prevents fan-out; extra kicks return empty immediately.
       const nextKickBody = JSON.stringify({ action: 'process_batch', job_id: jobId });
-      const kickDelays = [200, 600, 1200, 2000, 5000, 9000];
       EdgeRuntime.waitUntil(
-        Promise.all(
-          kickDelays.slice(0, NUM_PARALLEL_CHAINS + 2).map(delay =>
-            new Promise(r => setTimeout(r, delay)).then(() =>
-              fetch(selfUrl, { method: 'POST', headers: kickHeaders, body: nextKickBody }).catch(() => {})
-            )
+        Promise.all([200, 2000, 6000].map(delay =>
+          new Promise(r => setTimeout(r, delay)).then(() =>
+            fetch(selfUrl, { method: 'POST', headers: kickHeaders, body: nextKickBody }).catch(() => {})
           )
-        )
+        ))
       );
 
       const processOneTask = async (task: typeof batchTasks[number]) => {
