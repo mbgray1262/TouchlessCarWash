@@ -8,9 +8,10 @@ const corsHeaders = {
 
 const FIRECRAWL_API = 'https://api.firecrawl.dev/v1';
 const MAX_PHOTOS = 5;
-const PARALLEL_BATCH_SIZE = 1;
-// Mark a task stuck after 2 minutes — tasks should complete well within this window
-const STUCK_TASK_TIMEOUT_MS = 2 * 60 * 1000;
+const PARALLEL_BATCH_SIZE = 3;
+const NUM_PARALLEL_CHAINS = 4;
+// Mark a task stuck after 3 minutes
+const STUCK_TASK_TIMEOUT_MS = 3 * 60 * 1000;
 
 const SKIP_DOMAINS = [
   'facebook.com', 'fbcdn.net', 'fbsbx.com',
@@ -566,14 +567,16 @@ Deno.serve(async (req: Request) => {
       const kickBody = JSON.stringify({ action: 'process_batch', job_id: job.id });
       const kickHeaders = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseAnon}` };
 
-      // Kick two concurrent invocations from the start to prevent a dead chain on first invocation failure
+      // Kick NUM_PARALLEL_CHAINS chains from the start, staggered to avoid thundering herd
+      const startDelays = [0, 400, 800, 1400, 3000, 6000];
       EdgeRuntime.waitUntil(
-        Promise.all([
-          fetch(kickUrl, { method: 'POST', headers: kickHeaders, body: kickBody }).catch(() => {}),
-          new Promise(r => setTimeout(r, 2000)).then(() =>
-            fetch(kickUrl, { method: 'POST', headers: kickHeaders, body: kickBody }).catch(() => {})
-          ),
-        ])
+        Promise.all(
+          startDelays.slice(0, NUM_PARALLEL_CHAINS + 2).map(delay =>
+            new Promise(r => setTimeout(r, delay)).then(() =>
+              fetch(kickUrl, { method: 'POST', headers: kickHeaders, body: kickBody }).catch(() => {})
+            )
+          )
+        )
       );
 
       return Response.json({ job_id: job.id, total: listings.length }, { headers: corsHeaders });
@@ -638,18 +641,19 @@ Deno.serve(async (req: Request) => {
       const selfUrl = `${supabaseUrl}/functions/v1/photo-enrich`;
       const kickHeaders = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseAnon}` };
 
-      // Kick the NEXT batch before doing heavy work so the chain survives a crash.
-      // Send two staggered kicks so if the first one is dropped the second still continues the chain.
+      // Kick NUM_PARALLEL_CHAINS next batches before doing heavy work.
+      // Each chain independently claims tasks via FOR UPDATE SKIP LOCKED — no double-processing.
+      // Stagger kicks so not all hit simultaneously; redundant kicks ensure chain survives a dropped request.
       const nextKickBody = JSON.stringify({ action: 'process_batch', job_id: jobId });
+      const kickDelays = [200, 600, 1200, 2000, 5000, 9000];
       EdgeRuntime.waitUntil(
-        Promise.all([
-          new Promise(r => setTimeout(r, 500)).then(() =>
-            fetch(selfUrl, { method: 'POST', headers: kickHeaders, body: nextKickBody }).catch(() => {})
-          ),
-          new Promise(r => setTimeout(r, 4000)).then(() =>
-            fetch(selfUrl, { method: 'POST', headers: kickHeaders, body: nextKickBody }).catch(() => {})
-          ),
-        ])
+        Promise.all(
+          kickDelays.slice(0, NUM_PARALLEL_CHAINS + 2).map(delay =>
+            new Promise(r => setTimeout(r, delay)).then(() =>
+              fetch(selfUrl, { method: 'POST', headers: kickHeaders, body: nextKickBody }).catch(() => {})
+            )
+          )
+        )
       );
 
       const processOneTask = async (task: typeof batchTasks[number]) => {
