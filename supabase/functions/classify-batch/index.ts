@@ -57,14 +57,14 @@ DEFINITIONS:
 - SELF-SERVICE: Coin-operated or pay-per-use open bays where the CUSTOMER operates a handheld wand or pressure washer themselves to wash their own car. This is NOT automated and should NOT be classified as touchless even though no brushes contact the car.
 
 CLASSIFY is_touchless = true ONLY when:
-- Website explicitly mentions "touchless", "touch-free", "contactless", "no-touch", "brushless", or "laser wash" as a wash TYPE they offer
+- The business itself claims to offer "touchless", "touch-free", "contactless", "no-touch", "brushless", or "laser wash" as a service THEY provide
 - This refers to an AUTOMATED service, not a self-service wand bay
 - Hybrid facilities that offer BOTH automated touchless AND other wash types
 
 CLASSIFY is_touchless = false (THIS IS THE DEFAULT) when:
 - Website describes wash packages or tunnel washes WITHOUT touchless/touch-free/contactless language
 - Website mentions soft-touch, friction, brush, foam brush, cloth, or conveyor wash
-- Website describes ONLY self-service wand bays (customer uses wand themselves) — self-service is NOT touchless for our directory
+- Website describes ONLY self-service wand bays (customer uses wand themselves) — self-service is NEVER touchless for our directory
 - Website mentions "self-serve bays", "self service", "wand", "spray bay", "coin-op", "coin operated" as their PRIMARY or ONLY offering
 - The business is not a car wash (detail shop, auto repair, etc.)
 
@@ -75,7 +75,13 @@ CLASSIFY is_touchless = null ONLY when:
 CLASSIFY is_self_service = true when:
 - Website mentions self-service bays, wand bays, spray bays, coin-operated bays, or customers washing their own car
 
-IMPORTANT: Self-service wand washes are NOT touchless automated washes. If a business offers ONLY self-service bays with no automated touchless tunnel, set is_touchless = false and is_self_service = true.
+CRITICAL RULES — these are the most common classification errors:
+
+1. IGNORE BOILERPLATE INDUSTRY COPY: Many websites (especially on platforms like edan.io, keeq.io, jany.io, lany.io, webbo.me) contain auto-generated "industry analysis", "industry overview", "expert analysis", or "comprehensive industry overview" sections that describe the car wash industry in general terms. These sections often mention touchless technology as an industry trend. This does NOT mean the specific business offers touchless washing. ONLY classify as touchless if the business is describing its own services.
+
+2. SELF-SERVICE IS NEVER TOUCHLESS: Self-service wand bays are NOT automated touchless washes. Never reason that "self-service is touchless by definition." The customer operating a pressure wand does not make it an automated touchless facility. is_self_service = true means is_touchless should be false (unless there is also a separate automated touchless bay).
+
+3. GENERIC MENTIONS DO NOT COUNT: Phrases like "we use state-of-the-art equipment such as touchless wash systems" appearing in generic/template copy do not count. Look for specific first-person service claims: "our touchless wash", "we offer touch-free", "2 touchless automatic bays", specific brand names (LaserWash, Razor®, Petit, etc.).
 
 Respond in this exact JSON format:
 {"is_touchless": true/false/null, "is_self_service": true/false, "evidence": "Brief 1-2 sentence explanation", "amenities": ["list", "of", "amenities"]}
