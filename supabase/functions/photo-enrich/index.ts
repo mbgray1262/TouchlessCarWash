@@ -744,19 +744,12 @@ Deno.serve(async (req: Request) => {
         let heroSource: string | null = heroIsManual ? (task.current_hero_source as string) : null;
         let crawlNotes: string = (task.current_crawl_notes as string) ?? '';
 
-        if (!isUpgradeMode) {
-          for (const p of currentPhotos) {
-            if (p && !approved.includes(p) && approved.length < MAX_PHOTOS) {
-              approved.push(p);
-            }
-          }
-
-          if (!heroIsManual && approved.length > 0 && !heroPhoto) {
-            const bestIdx = await pickBestHeroFromGallery(approved, anthropicKey);
-            heroPhoto = approved[bestIdx];
-            heroSource = 'gallery';
-          }
-        }
+        // NOTE: We intentionally do NOT seed approved from currentPhotos here.
+        // Seeding causes duplicate files when gallery-backfill already ran (gallery_bp_*)
+        // and photo-enrich re-downloads the same Google Place images as place_photo_*.
+        // Instead we start fresh and let the steps below build a clean approved set.
+        // If nothing new is found, galleryPhotos stays empty and the existing photos
+        // array is left untouched (the update only fires when galleryPhotos.length > 0).
 
         const trace: Record<string, unknown> = {
           google_photo_exists: false,
