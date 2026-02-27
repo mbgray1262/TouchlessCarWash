@@ -193,6 +193,13 @@ export default function ImportPage() {
               Gallery Photo Backfill
             </Link>
             <Link
+              href="/admin/import/self-service-audit"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-amber-600 hover:text-amber-800 border border-amber-200 hover:border-amber-400 rounded-lg px-3 py-2 bg-amber-50 hover:bg-amber-100 transition-colors"
+            >
+              <AlertCircle className="w-4 h-4" />
+              Self-Service Audit
+            </Link>
+            <Link
               href="/admin/import/hours"
               className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-800 border border-gray-200 hover:border-gray-400 rounded-lg px-3 py-2 bg-white hover:bg-gray-50 transition-colors"
             >

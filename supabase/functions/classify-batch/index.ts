@@ -50,33 +50,39 @@ async function fetchWebsite(url: string): Promise<{ text: string; ok: boolean; e
   }
 }
 
-const SYSTEM_PROMPT = `You are classifying car wash businesses. Based on the website text provided, determine if this car wash offers TOUCHLESS (also called "touch-free" or "contactless") washing.
+const SYSTEM_PROMPT = `You are classifying car wash businesses for an AUTOMATED TOUCHLESS car wash directory. Your job is to determine whether this business offers an AUTOMATED drive-through touchless wash — and separately, whether it offers self-service wand bays.
 
-A touchless car wash uses only high-pressure water and chemicals — no brushes, cloth, or friction materials contact the vehicle.
+DEFINITIONS:
+- AUTOMATED TOUCHLESS: A drive-through tunnel or bay where the car moves through (or equipment moves around the car) using only high-pressure water jets, foam, and chemicals with NO brushes, cloth, or friction. Keywords: "touchless", "touch-free", "touch free", "contactless", "no-touch", "brushless", "laser wash", "automatic touchless".
+- SELF-SERVICE: Coin-operated or pay-per-use open bays where the CUSTOMER operates a handheld wand or pressure washer themselves to wash their own car. This is NOT automated and should NOT be classified as touchless even though no brushes contact the car.
 
-CLASSIFY AS TOUCHLESS (is_touchless: true):
-- Website explicitly mentions "touchless", "touch-free", "touch free", "contactless", "no-touch", "brushless", or "laser wash"
-- Self-service car washes (wand/spray washes are touchless by definition)
-- Washes that offer BOTH touchless and friction/soft-touch options (hybrid facilities)
+CLASSIFY is_touchless = true ONLY when:
+- Website explicitly mentions "touchless", "touch-free", "contactless", "no-touch", "brushless", or "laser wash" as a wash TYPE they offer
+- This refers to an AUTOMATED service, not a self-service wand bay
+- Hybrid facilities that offer BOTH automated touchless AND other wash types
 
-CLASSIFY AS NOT TOUCHLESS (is_touchless: false) — THIS IS THE DEFAULT:
-- Website describes wash packages, tunnel washes, express washes, or specific wash chemicals (triple foam, wheel cleaner, tire shine, ceramic coating, etc.) WITHOUT mentioning touchless/touch-free/contactless
+CLASSIFY is_touchless = false (THIS IS THE DEFAULT) when:
+- Website describes wash packages or tunnel washes WITHOUT touchless/touch-free/contactless language
 - Website mentions soft-touch, friction, brush, foam brush, cloth, or conveyor wash
-- Website has enough content about their wash services but no touchless language
-- Businesses that are clearly not car washes (detail shops only, auto repair, etc.)
+- Website describes ONLY self-service wand bays (customer uses wand themselves) — self-service is NOT touchless for our directory
+- Website mentions "self-serve bays", "self service", "wand", "spray bay", "coin-op", "coin operated" as their PRIMARY or ONLY offering
+- The business is not a car wash (detail shop, auto repair, etc.)
 
-ONLY classify as UNKNOWN (is_touchless: null) when:
-- The website has almost no content at all (just an address, phone number, and maybe a logo — no description of services)
-- The page failed to load meaningful content
+CLASSIFY is_touchless = null ONLY when:
+- The page has almost no content (just address/phone/logo, no service description)
+- Page failed to load meaningful content
 
-The overwhelming majority of car washes are friction/soft-touch. Do NOT default to unknown just because touchless isn't mentioned — if they describe their wash services without using touchless language, classify as NOT touchless.
+CLASSIFY is_self_service = true when:
+- Website mentions self-service bays, wand bays, spray bays, coin-operated bays, or customers washing their own car
+
+IMPORTANT: Self-service wand washes are NOT touchless automated washes. If a business offers ONLY self-service bays with no automated touchless tunnel, set is_touchless = false and is_self_service = true.
 
 Respond in this exact JSON format:
-{"is_touchless": true/false/null, "evidence": "Brief 1-2 sentence explanation of what you found", "amenities": ["list", "of", "amenities", "mentioned"]}
+{"is_touchless": true/false/null, "is_self_service": true/false, "evidence": "Brief 1-2 sentence explanation", "amenities": ["list", "of", "amenities"]}
 
-For amenities, extract any of these if mentioned: free vacuum, unlimited wash club, membership program, self-serve bays, RV or oversized vehicle washing, interior cleaning, detailing, ceramic coating, wax, undercarriage wash, tire shine, air freshener, mat cleaner, dog wash.`;
+For amenities, extract any mentioned: free vacuum, unlimited wash club, membership program, self-serve bays, RV or oversized vehicle washing, interior cleaning, detailing, ceramic coating, wax, undercarriage wash, tire shine, air freshener, mat cleaner, dog wash.`;
 
-async function classifyWithClaude(text: string, apiKey: string): Promise<{ is_touchless: boolean | null; evidence: string; amenities: string[] }> {
+async function classifyWithClaude(text: string, apiKey: string): Promise<{ is_touchless: boolean | null; is_self_service: boolean; evidence: string; amenities: string[] }> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -119,7 +125,7 @@ async function classifyOne(
     return "fetch_failed";
   }
 
-  let classification: { is_touchless: boolean | null; evidence: string; amenities: string[] };
+  let classification: { is_touchless: boolean | null; is_self_service: boolean; evidence: string; amenities: string[] };
   try {
     classification = await classifyWithClaude(fetched.text, apiKey);
   } catch (e) {
@@ -137,10 +143,13 @@ async function classifyOne(
       ? false
       : null;
 
+  const is_self_service = classification.is_self_service === true;
+
   const crawl_status = is_touchless === null ? "unknown" : "classified";
 
   const updatePayload: Record<string, unknown> = {
     is_touchless,
+    is_self_service,
     crawl_status,
     touchless_evidence: classification.evidence ?? "",
     last_crawled_at: new Date().toISOString(),
