@@ -83,6 +83,8 @@ CRITICAL RULES — these are the most common classification errors:
 
 3. GENERIC MENTIONS DO NOT COUNT: Phrases like "we use state-of-the-art equipment such as touchless wash systems" appearing in generic/template copy do not count. Look for specific first-person service claims: "our touchless wash", "we offer touch-free", "2 touchless automatic bays", specific brand names (LaserWash, Razor®, Petit, etc.).
 
+4. WATERLESS / MOBILE / HAND WASH IS NOT TOUCHLESS: "Waterless car wash", "no-water wash", "waterless carwash", or mobile detailing services where a person comes to your car and hand-wipes it with spray products are NOT automated touchless washes. These are manual detailing services. Similarly, mobile car washes where someone hand-washes your car at your location are NOT automated touchless. The business must operate a fixed drive-through bay or tunnel with automated equipment. If a website describes a waterless, hand-applied, or mobile service, set is_touchless = false.
+
 Respond in this exact JSON format:
 {"is_touchless": true/false/null, "is_self_service": true/false, "evidence": "Brief 1-2 sentence explanation", "amenities": ["list", "of", "amenities"]}
 
