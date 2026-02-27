@@ -58,15 +58,7 @@ export default function SelfServiceAuditPage() {
       .from('listings')
       .select('id, name, city, state, website, amenities, touchless_evidence, is_touchless, is_self_service, slug', { count: 'exact' })
       .eq('is_touchless', true)
-      .or(
-        'amenities.cs.{"self-serve bays"},' +
-        'touchless_evidence.ilike.%self-serv%,' +
-        'touchless_evidence.ilike.%self serv%,' +
-        'touchless_evidence.ilike.%wand%,' +
-        'touchless_evidence.ilike.%spray bay%,' +
-        'touchless_evidence.ilike.%coin-op%,' +
-        'touchless_evidence.ilike.%coin op%'
-      )
+      .eq('is_self_service', true)
       .order('state')
       .order('name')
       .range(from, to);
@@ -165,8 +157,10 @@ export default function SelfServiceAuditPage() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-[#0F2744] mb-1">Self-Service Audit</h1>
           <p className="text-gray-500 text-sm">
-            These listings are marked <strong>touchless = yes</strong> but their evidence or amenities mention
-            self-service wand bays, coin-op, or spray bays. Review each one and correct as needed.
+            These listings are marked <strong>touchless = yes</strong> AND <strong>self-service = yes</strong> — meaning
+            the AI found evidence of both. These are <em>hybrid washes</em> that may offer automated touchless
+            service alongside self-serve bays, but each one needs a human check. Listings with self-service evidence
+            and <em>no</em> touchless keywords were already automatically corrected.
           </p>
         </div>
 
@@ -190,12 +184,12 @@ export default function SelfServiceAuditPage() {
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
           <div className="text-sm text-amber-800">
-            <p className="font-semibold mb-1">How to use this tool</p>
+            <p className="font-semibold mb-1">How to review each listing</p>
             <ul className="space-y-1 list-disc list-inside text-amber-700">
-              <li><strong>Re-classify</strong> — re-runs AI on the website with the updated prompt that correctly identifies self-service-only washes</li>
-              <li><strong>Not touchless + self-service</strong> — manually mark as not touchless and tag as self-service (use when you can tell from the evidence)</li>
-              <li><strong>Tag self-service only</strong> — keeps touchless = yes but marks is_self_service = true (for hybrid washes that offer both)</li>
-              <li><strong>Confirm touchless</strong> — the listing is a genuine automated touchless wash, removes it from this list</li>
+              <li><strong>Re-classify</strong> — re-runs AI on the website with the corrected prompt (best option when in doubt)</li>
+              <li><strong>Not touchless</strong> — the wash is self-service only with no automated touchless tunnel</li>
+              <li><strong>Tag self-service</strong> — genuinely offers both automated touchless AND self-serve bays; keeps touchless = yes</li>
+              <li><strong>Confirm touchless</strong> — the self-service mention is incidental (e.g. free vacuums); it is a genuine automated touchless wash</li>
             </ul>
           </div>
         </div>
