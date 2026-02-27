@@ -261,6 +261,56 @@ export function useHeroReview() {
     );
   };
 
+  const handleUploadHero = async (listingId: string, file: File) => {
+    const listing = listings.find(l => l.id === listingId);
+    const oldHero = listing?.hero_image ?? null;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('listingId', listingId);
+    formData.append('type', 'hero');
+
+    const res = await fetch('/api/upload-image', { method: 'POST', body: formData });
+    if (!res.ok) return;
+    const { url } = await res.json() as { url: string };
+
+    const currentPhotos = listing?.photos ?? [];
+    const updatedPhotos = oldHero && !currentPhotos.includes(oldHero)
+      ? [oldHero, ...currentPhotos]
+      : currentPhotos;
+
+    await supabase
+      .from('listings')
+      .update({
+        hero_image: url,
+        hero_image_source: 'gallery',
+        photos: updatedPhotos.length > 0 ? updatedPhotos : null,
+      })
+      .eq('id', listingId);
+
+    await supabase.from('hero_reviews').insert({
+      listing_id: listingId,
+      action: 'replaced',
+      old_hero_url: oldHero,
+      new_hero_url: url,
+      new_source: 'gallery',
+    });
+
+    setListings(prev =>
+      prev.map(l => l.id === listingId
+        ? {
+            ...l,
+            hero_image: url,
+            hero_image_source: 'gallery' as HeroListing['hero_image_source'],
+            photos: updatedPhotos.length > 0 ? updatedPhotos : null,
+          }
+        : l
+      )
+    );
+
+    setStats(prev => ({ ...prev, replacements: prev.replacements + 1 }));
+  };
+
   const handleMarkNotTouchless = async (listingId: string) => {
     await supabase
       .from('listings')
@@ -331,6 +381,7 @@ export function useHeroReview() {
     handleDeleteExternalPhoto,
     handleRemoveGalleryPhoto,
     handleCropSave,
+    handleUploadHero,
     handleMarkNotTouchless,
     handleFlag,
     navigateFocus,

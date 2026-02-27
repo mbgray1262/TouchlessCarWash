@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useState } from 'react';
-import { X, Flag, ImageOff, ZoomIn, Crop, ExternalLink, CarFront, Star, Trash2, ChevronDown, ImageIcon } from 'lucide-react';
+import { X, Flag, ImageOff, ZoomIn, Crop, ExternalLink, CarFront, Star, Trash2, ChevronDown, ImageIcon, Upload } from 'lucide-react';
 import { HeroListing, ReplacementOption } from './types';
 import HeroImageFallback from '@/components/HeroImageFallback';
 import { CropModal } from './CropModal';
@@ -118,6 +118,7 @@ interface Props {
   onDeleteExternalPhoto: (field: 'google_photo_url' | 'street_view_url') => void;
   onRemoveGalleryPhoto: (url: string) => void;
   onCropSave: (url: string) => void;
+  onUploadHero: (file: File) => void;
   onMarkNotTouchless: () => void;
   onFlag: () => void;
   onFocus: () => void;
@@ -137,14 +138,17 @@ export function HeroCard({
   onDeleteExternalPhoto,
   onRemoveGalleryPhoto,
   onCropSave,
+  onUploadHero,
   onMarkNotTouchless,
   onFlag,
   onFocus,
   confirmIndex,
 }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
   const [lightbox, setLightbox] = useState<{ url: string; label: string; onUseAsHero: () => void; onDelete?: () => void } | null>(null);
   const [cropOpen, setCropOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (isFocused && cardRef.current) {
@@ -195,8 +199,27 @@ export function HeroCard({
     },
   ];
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      await onUploadHero(file);
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
   return (
     <>
+    <input
+      ref={uploadInputRef}
+      type="file"
+      accept="image/jpeg,image/png,image/webp"
+      className="hidden"
+      onChange={handleFileChange}
+    />
     {lightbox && (
       <PhotoLightbox
         url={lightbox.url}
@@ -410,7 +433,16 @@ export function HeroCard({
             })}
           </div>
 
-          <div className="mt-3 pt-2.5 border-t border-orange-200 flex items-center gap-2">
+          <div className="mt-3 pt-2.5 border-t border-orange-200 flex items-center gap-2 flex-wrap">
+            <button
+              onClick={(e) => { e.stopPropagation(); uploadInputRef.current?.click(); }}
+              disabled={uploading}
+              className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-white border border-gray-300 text-gray-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Upload a photo as hero"
+            >
+              <Upload className="w-3 h-3" />
+              {uploading ? 'Uploading…' : 'Upload'}
+            </button>
             <button
               onClick={onFlag}
               className={`flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors ${
