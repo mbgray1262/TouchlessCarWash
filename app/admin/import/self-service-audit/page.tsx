@@ -41,16 +41,14 @@ interface RowState {
 }
 
 const STRONG_TOUCHLESS_KEYWORDS = [
+  'touchless', 'touch-free', 'touch free',
+  'no-touch', 'no touch',
+  'contactless', 'contact-free', 'contact free',
+  'without surface contact', 'no surface contact',
   'laser wash', 'laserwash', 'laser car wash',
-  'touchless automatic', 'automatic touchless',
-  'touchless tunnel', 'touchless wash',
-  'touch-free automatic', 'automatic touch-free',
-  'touchless in-bay', 'in-bay touchless',
-  'no-touch automatic', 'automatic no-touch',
   'brushless automatic', 'automatic brushless',
-  'contactless automatic',
-  '24/7 touchless', 'touchless tech',
-  'touchless wash club', 'touchless car wash',
+  'no brushes', 'without brushes', 'no friction',
+  'nothing but water and cleaning',
 ];
 
 function hasStrongTouchlessEvidence(evidence: string | null): boolean {
@@ -190,9 +188,9 @@ export default function SelfServiceAuditPage() {
           <h1 className="text-2xl font-bold text-[#0F2744] mb-1">Self-Service Audit</h1>
           <p className="text-gray-500 text-sm">
             These listings are tagged <strong>touchless = yes</strong> and <strong>self-service = yes</strong>,
-            but their evidence does not contain strong independent touchless keywords (e.g. laser wash,
-            touchless automatic, touch-free). They may be self-service only, mislabeled by an older AI prompt
-            that called wand washes "touchless by definition."
+            but their evidence does not contain strong independent touchless keywords (e.g. touchless,
+            touch-free, touch free, no-touch, contactless, laser wash, no brushes). They may be self-service
+            only, mislabeled by an older AI prompt that called wand washes "touchless by definition."
           </p>
         </div>
 
