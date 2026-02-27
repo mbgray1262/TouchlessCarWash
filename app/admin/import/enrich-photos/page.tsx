@@ -305,18 +305,22 @@ export default function EnrichPhotosPage() {
   }, []);
 
   const loadStats = useCallback(async () => {
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/photo-enrich`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
-      body: JSON.stringify({ action: 'status' }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setStats(data);
-    }
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/photo-enrich`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ action: 'status' }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setStats(data);
+      }
+    } catch { /* ignore transient fetch errors */ }
 
-    const { data: gData } = await supabase.rpc('gallery_photo_stats');
-    if (gData) setGalleryStats(gData as GalleryStats);
+    try {
+      const { data: gData } = await supabase.rpc('gallery_photo_stats');
+      if (gData) setGalleryStats(gData as GalleryStats);
+    } catch { /* ignore */ }
   }, []);
 
   const loadRecentListings = useCallback(async () => {
