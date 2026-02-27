@@ -9,6 +9,7 @@ const corsHeaders = {
 const SKIP_DOMAINS = [
   'facebook.com', 'yelp.com', 'google.com', 'yellowpages.com',
   'bbb.org', 'instagram.com', 'twitter.com', 'tiktok.com',
+  'rocketstores.com',
 ];
 
 const AMENITY_TO_FILTER_SLUG: Record<string, string> = {

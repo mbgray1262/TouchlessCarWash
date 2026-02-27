@@ -19,6 +19,7 @@ const SKIP_DOMAINS = [
   'bbb.org', 'instagram.com', 'twitter.com', 'x.com', 'tiktok.com',
   'youtube.com', 'linkedin.com', 'pinterest.com', 'nextdoor.com',
   'foursquare.com', 'tripadvisor.com', 'angieslist.com', 'manta.com',
+  'rocketstores.com',
 ];
 
 async function fetchImageAsBase64(url: string): Promise<{ base64: string; mediaType: string } | null> {

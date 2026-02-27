@@ -16,7 +16,7 @@ const SKIP_DOMAINS = [
   'linkedin.com', 'pinterest.com', 'nextdoor.com', 'foursquare.com',
   'tripadvisor.com', 'angieslist.com', 'homeadvisor.com', 'thumbtack.com',
   'citysearch.com', 'superpages.com', 'whitepages.com', 'manta.com',
-  'waze.com',
+  'waze.com', 'rocketstores.com',
 ];
 
 const AMENITY_TO_FILTER_SLUG: Record<string, string> = {
