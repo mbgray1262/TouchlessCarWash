@@ -89,9 +89,12 @@ Deno.serve(async (req: Request) => {
         reset_to_pending: reset,
       };
 
-      // If nothing is in_progress but work remains, the job has stalled — kick it
-      if ((inProgressCount ?? 0) === 0 && (pendingCount ?? 0) > 0) {
-        jobEntry.action = 'KICKED — stalled';
+      const needsKick =
+        ((inProgressCount ?? 0) === 0 && (pendingCount ?? 0) > 0) ||
+        (reset > 0 && (pendingCount ?? 0) > 0);
+
+      if (needsKick) {
+        jobEntry.action = (inProgressCount ?? 0) === 0 ? 'KICKED — stalled' : 'KICKED — reset stuck tasks';
         const kickUrl = `${supabaseUrl}/functions/v1/photo-enrich`;
         const kickHeaders = {
           'Content-Type': 'application/json',
@@ -105,8 +108,8 @@ Deno.serve(async (req: Request) => {
             )
           )
         );
-      } else if (markedDone > 0 || reset > 0) {
-        jobEntry.action = 'FIXED stuck tasks';
+      } else if (markedDone > 0) {
+        jobEntry.action = 'FIXED stuck tasks (exhausted)';
       } else if ((pendingCount ?? 0) === 0 && (inProgressCount ?? 0) === 0) {
         // All done — mark job complete
         await supabase

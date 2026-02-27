@@ -672,11 +672,12 @@ Deno.serve(async (req: Request) => {
       const selfUrl = `${supabaseUrl}/functions/v1/photo-enrich`;
       const kickHeaders = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseAnon}` };
 
-      // 3 staggered kicks — redundancy ensures chain survives a dropped request.
+      // Staggered kicks — redundancy ensures chain survives a dropped request.
       // Concurrency cap in claim RPC prevents fan-out; extra kicks return empty immediately.
+      // Use more kicks with longer spread so the chain stays alive even if early ones are dropped.
       const nextKickBody = JSON.stringify({ action: 'process_batch', job_id: jobId });
       EdgeRuntime.waitUntil(
-        Promise.all([200, 2000, 6000].map(delay =>
+        Promise.all([200, 1500, 4000, 8000, 15000].map(delay =>
           new Promise(r => setTimeout(r, delay)).then(() =>
             fetch(selfUrl, { method: 'POST', headers: kickHeaders, body: nextKickBody }).catch(() => {})
           )
