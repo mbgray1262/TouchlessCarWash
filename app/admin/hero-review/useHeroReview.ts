@@ -150,7 +150,6 @@ export function useHeroReview() {
 
     setTimeout(() => {
       setConfirmMap(prev => { const n = { ...prev }; delete n[listingId]; return n; });
-      setExpandedId(null);
     }, 800);
   };
 

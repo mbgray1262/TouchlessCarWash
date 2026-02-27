@@ -153,7 +153,10 @@ export function HeroCard({
   }, [isFocused]);
 
   const hasHero = !!listing.hero_image;
-  const galleryPhotos = (listing.photos ?? []).filter(p => p !== listing.hero_image);
+  const replacementUrls = new Set(replacements.map(r => r.url));
+  const galleryPhotos = (listing.photos ?? []).filter(
+    p => p !== listing.hero_image && !replacementUrls.has(p)
+  );
 
   const externalFieldFor = (url: string): 'google_photo_url' | 'street_view_url' | null => {
     if (url === listing.google_photo_url) return 'google_photo_url';
