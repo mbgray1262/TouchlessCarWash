@@ -135,7 +135,11 @@ export default function AdminListingsPage() {
   };
 
   const fetchVendors = async () => {
-    const { data } = await supabase.from('vendors').select('id, canonical_name').order('canonical_name', { ascending: true });
+    const { data } = await supabase
+      .from('vendors_with_listing_counts')
+      .select('id, canonical_name')
+      .gt('listing_count', 0)
+      .order('canonical_name', { ascending: true });
     if (data) setVendors(data as VendorOption[]);
   };
 
@@ -145,8 +149,8 @@ export default function AdminListingsPage() {
     let q = supabase.from('listings').select('*');
 
     if (debouncedSearch.trim()) {
-      const term = `%${debouncedSearch.trim()}%`;
-      q = q.or(`name.ilike.${term},city.ilike.${term},state.ilike.${term},parent_chain.ilike.${term}`);
+      const term = debouncedSearch.trim().replace(/"/g, '');
+      q = q.or(`name.ilike."*${term}*",city.ilike."*${term}*",state.ilike."*${term}*",parent_chain.ilike."*${term}*"`);
     }
 
     if (statusFilter === 'touchless') {
