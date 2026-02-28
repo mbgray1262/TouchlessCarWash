@@ -84,14 +84,16 @@ export default function AdminVendorsPage() {
     try {
       const { data, error } = await supabase
         .from('vendors')
-        .select('*, listings(id)')
+        .select('*, listings(id, is_touchless)')
         .order('canonical_name', { ascending: true });
       if (error) throw error;
-      const withCounts = (data || []).map((v: any) => ({
-        ...v,
-        listing_count: Array.isArray(v.listings) ? v.listings.length : 0,
-        listings: undefined,
-      }));
+      const withCounts = (data || [])
+        .map((v: any) => ({
+          ...v,
+          listing_count: Array.isArray(v.listings) ? v.listings.filter((l: any) => l.is_touchless).length : 0,
+          listings: undefined,
+        }))
+        .filter((v: any) => v.listing_count > 0);
       setVendors(withCounts);
     } catch (err) {
       toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to load vendors', variant: 'destructive' });
