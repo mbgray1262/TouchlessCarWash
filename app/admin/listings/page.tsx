@@ -97,6 +97,8 @@ export default function AdminListingsPage() {
   const [vendors, setVendors] = useState<VendorOption[]>([]);
   const [assigningVendor, setAssigningVendor] = useState<string | null>(null);
   const [vendorPopover, setVendorPopover] = useState<string | null>(null);
+  const [vendorSearch, setVendorSearch] = useState('');
+  const [vendorSearchLoading, setVendorSearchLoading] = useState(false);
   const [savingTouchless, setSavingTouchless] = useState<Set<string>>(new Set());
 
   const filtersRef = useRef({ statusFilter, sortField, sortDir, chainFilter, featuredFilter, debouncedSearch });
@@ -105,7 +107,6 @@ export default function AdminListingsPage() {
   useEffect(() => {
     fetchStats();
     fetchChainNames();
-    fetchVendors();
   }, []);
 
   useEffect(() => {
@@ -134,13 +135,16 @@ export default function AdminListingsPage() {
     if (data) setChainNames(data as string[]);
   };
 
-  const fetchVendors = async () => {
-    const { data } = await supabase
-      .from('vendors_with_listing_counts')
-      .select('id, canonical_name')
-      .gt('listing_count', 0)
-      .order('canonical_name', { ascending: true });
-    if (data) setVendors(data as VendorOption[]);
+  const searchVendors = async (term: string) => {
+    setVendorSearchLoading(true);
+    try {
+      let q = supabase.from('vendors').select('id, canonical_name').order('canonical_name', { ascending: true }).limit(30);
+      if (term.trim()) q = q.ilike('canonical_name', `%${term.trim()}%`);
+      const { data } = await q;
+      if (data) setVendors(data as VendorOption[]);
+    } finally {
+      setVendorSearchLoading(false);
+    }
   };
 
   const fetchFilteredCount = async () => {
@@ -1214,7 +1218,7 @@ export default function AdminListingsPage() {
                                       {vendors.find((v) => v.id === listing.vendor_id)?.canonical_name ?? 'Vendor'}
                                     </Link>
                                     <button
-                                      onClick={(e) => { e.stopPropagation(); setVendorPopover(vendorPopover === listing.id ? null : listing.id); }}
+                                      onClick={(e) => { e.stopPropagation(); if (vendorPopover === listing.id) { setVendorPopover(null); } else { setVendorPopover(listing.id); setVendorSearch(''); searchVendors(''); } }}
                                       className="px-1.5 py-0.5 text-[#16A34A] hover:bg-[#22C55E]/20 transition-colors border-l border-[#22C55E]/30"
                                       title="Change vendor"
                                     >
@@ -1223,7 +1227,7 @@ export default function AdminListingsPage() {
                                   </div>
                                 ) : (
                                   <button
-                                    onClick={() => setVendorPopover(vendorPopover === listing.id ? null : listing.id)}
+                                    onClick={() => { if (vendorPopover === listing.id) { setVendorPopover(null); } else { setVendorPopover(listing.id); setVendorSearch(''); searchVendors(''); } }}
                                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-dashed border-gray-300 text-gray-400 text-xs hover:border-gray-400 hover:text-gray-500 transition-colors"
                                   >
                                     <Plus className="w-3 h-3" />
@@ -1231,10 +1235,19 @@ export default function AdminListingsPage() {
                                   </button>
                                 )}
                                 {vendorPopover === listing.id && (
-                                  <div className="absolute left-0 top-full mt-1 z-20 bg-white rounded-lg shadow-lg border border-gray-200 w-56 py-1">
+                                  <div className="absolute left-0 top-full mt-1 z-20 bg-white rounded-lg shadow-lg border border-gray-200 w-64 py-1">
                                     <div className="px-3 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide border-b">Assign Vendor</div>
+                                    <div className="px-2 pt-2 pb-1">
+                                      <input
+                                        autoFocus
+                                        placeholder="Search vendors..."
+                                        value={vendorSearch}
+                                        onChange={(e) => { setVendorSearch(e.target.value); searchVendors(e.target.value); }}
+                                        className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-[#0F2744]"
+                                      />
+                                    </div>
                                     <div className="max-h-48 overflow-y-auto">
-                                      {listing.vendor_id && (
+                                      {listing.vendor_id && !vendorSearch && (
                                         <button
                                           className="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2"
                                           onClick={() => assignVendor(listing.id, null)}
@@ -1244,7 +1257,11 @@ export default function AdminListingsPage() {
                                           Remove vendor
                                         </button>
                                       )}
-                                      {vendors.map((v) => (
+                                      {vendorSearchLoading ? (
+                                        <div className="px-3 py-2 text-xs text-gray-400 text-center flex items-center justify-center gap-1"><Loader2 className="w-3 h-3 animate-spin" />Loading...</div>
+                                      ) : vendors.length === 0 ? (
+                                        <div className="px-3 py-2 text-xs text-gray-400 text-center">No vendors found</div>
+                                      ) : vendors.map((v) => (
                                         <button
                                           key={v.id}
                                           className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 transition-colors flex items-center gap-2 ${listing.vendor_id === v.id ? 'text-[#0F2744] font-medium bg-blue-50' : 'text-gray-700'}`}
@@ -1255,9 +1272,6 @@ export default function AdminListingsPage() {
                                           {v.canonical_name}
                                         </button>
                                       ))}
-                                      {vendors.length === 0 && (
-                                        <div className="px-3 py-2 text-xs text-gray-400 text-center">No vendors yet</div>
-                                      )}
                                     </div>
                                   </div>
                                 )}
