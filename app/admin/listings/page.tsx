@@ -124,13 +124,13 @@ export default function AdminListingsPage() {
   }, [page, statusFilter, sortField, sortDir, chainFilter, featuredFilter, debouncedSearch]);
 
   const fetchStats = async () => {
-    const { data, error } = await supabase.rpc('admin_listing_stats');
-    if (error) {
-      console.error('admin_listing_stats error:', error);
-      return;
-    }
-    if (data) {
-      setDbStats(data as DbStats);
+    try {
+      const res = await fetch('/api/admin/listings/stats');
+      const json = await res.json();
+      if (json.error) { console.error('fetchStats error:', json.error); return; }
+      setDbStats(json as DbStats);
+    } catch (err) {
+      console.error('fetchStats fetch error:', err);
     }
   };
 

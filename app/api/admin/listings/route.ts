@@ -19,34 +19,30 @@ export async function GET(req: NextRequest) {
   const countOnly = searchParams.get('count_only') === 'true';
 
   try {
-    let q = supabase.from('listings').select('*', countOnly ? { count: 'exact', head: true } : { count: 'exact' });
-
-    if (search) {
-      q = q.or(`name.ilike.%${search}%,city.ilike.%${search}%,state.ilike.%${search}%,parent_chain.ilike.%${search}%`);
+    if (countOnly) {
+      const { data, error } = await supabase.rpc('listings_filtered_count', {
+        p_search: search || null,
+        p_status: status,
+        p_chain: chain,
+        p_featured: featured,
+      });
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ count: data ?? 0 });
     }
 
-    if (status === 'touchless') q = q.eq('is_touchless', true);
-    else if (status === 'not_touchless') q = q.eq('is_touchless', false);
-    else if (status === 'unknown') q = q.is('is_touchless', null).not('website', 'is', null);
-    else if (status === 'fetch_failed') q = q.eq('crawl_status', 'fetch_failed');
-    else if (status === 'no_website') q = q.or('website.is.null,crawl_status.eq.no_website');
+    const { data, error } = await supabase.rpc('search_listings', {
+      p_search: search || null,
+      p_status: status,
+      p_chain: chain,
+      p_featured: featured,
+      p_sort: sort,
+      p_sort_dir: sortDir,
+      p_limit: limit,
+      p_offset: offset,
+    });
 
-    if (featured) q = q.eq('is_featured', true);
-
-    if (chain === 'chains_only') q = q.not('parent_chain', 'is', null);
-    else if (chain === 'independent') q = q.is('parent_chain', null);
-    else if (chain === 'missing_location_url') q = q.not('parent_chain', 'is', null).is('location_page_url', null);
-    else if (chain !== 'all') q = q.eq('parent_chain', chain);
-
-    const orderCol = sort === 'name' ? 'name' : sort === 'city' ? 'city' : 'last_crawled_at';
-    q = q.order(orderCol, { ascending: sortDir === 'asc', nullsFirst: false });
-
-    if (!countOnly) q = q.range(offset, offset + limit - 1);
-
-    const { data, error, count } = await q;
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-    return NextResponse.json({ data: data ?? [], count: count ?? 0 });
+    return NextResponse.json({ data: data ?? [] });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
