@@ -125,7 +125,11 @@ export default function AdminListingsPage() {
 
   const fetchStats = async () => {
     const { data, error } = await supabase.rpc('admin_listing_stats');
-    if (!error && data) {
+    if (error) {
+      console.error('admin_listing_stats error:', error);
+      return;
+    }
+    if (data) {
       setDbStats(data as DbStats);
     }
   };
@@ -147,41 +151,48 @@ export default function AdminListingsPage() {
     }
   };
 
-  const fetchFilteredCount = async () => {
-    const { statusFilter, chainFilter, featuredFilter, debouncedSearch } = filtersRef.current;
-    const { data, error } = await supabase.rpc('listings_filtered_count', {
-      p_search: debouncedSearch.trim() || null,
-      p_status: statusFilter,
-      p_chain: chainFilter,
-      p_featured: featuredFilter,
+  const buildSearchUrl = (pageNum: number, countOnly = false) => {
+    const { statusFilter, sortField, sortDir, chainFilter, featuredFilter, debouncedSearch } = filtersRef.current;
+    const offset = (pageNum - 1) * PAGE_SIZE;
+    const params = new URLSearchParams({
+      search: debouncedSearch.trim(),
+      status: statusFilter,
+      chain: chainFilter,
+      featured: String(featuredFilter),
+      sort: sortField,
+      sort_dir: sortDir,
+      limit: String(PAGE_SIZE),
+      offset: String(offset),
+      ...(countOnly ? { count_only: 'true' } : {}),
     });
-    if (!error && data !== null) setTotalCount(data as number);
+    return `/api/admin/listings?${params}`;
+  };
+
+  const fetchFilteredCount = async () => {
+    try {
+      const res = await fetch(buildSearchUrl(1, true));
+      const json = await res.json();
+      if (json.error) { console.error('fetchFilteredCount error:', json.error); return; }
+      setTotalCount(json.count ?? 0);
+    } catch (err) {
+      console.error('fetchFilteredCount fetch error:', err);
+    }
   };
 
   const doFetchPage = async (pageNum: number) => {
     setLoading(true);
     setError(null);
     try {
-      const { statusFilter, sortField, sortDir, chainFilter, featuredFilter, debouncedSearch } = filtersRef.current;
-      const offset = (pageNum - 1) * PAGE_SIZE;
-
-      const [{ data, error }] = await Promise.all([
-        supabase.rpc('search_listings', {
-          p_search: debouncedSearch.trim() || null,
-          p_status: statusFilter,
-          p_chain: chainFilter,
-          p_featured: featuredFilter,
-          p_sort: sortField,
-          p_sort_dir: sortDir,
-          p_limit: PAGE_SIZE,
-          p_offset: offset,
-        }),
+      const [listingsRes] = await Promise.all([
+        fetch(buildSearchUrl(pageNum)),
         pageNum === 1 ? fetchFilteredCount() : Promise.resolve(),
       ]);
-      if (error) throw error;
-      setListings((data as Listing[]) || []);
+      const json = await listingsRes.json();
+      if (json.error) throw new Error(json.error);
+      setListings((json.data as Listing[]) || []);
+      if (json.count !== undefined) setTotalCount(json.count);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to fetch listings';
+      const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
       toast({ title: 'Error', description: msg, variant: 'destructive' });
     } finally {
