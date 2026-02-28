@@ -124,14 +124,9 @@ export default function AdminListingsPage() {
   }, [page, statusFilter, sortField, sortDir, chainFilter, featuredFilter, debouncedSearch]);
 
   const fetchStats = async () => {
-    try {
-      const res = await fetch('/api/admin/listings/stats');
-      const json = await res.json();
-      if (json.error) { console.error('fetchStats error:', json.error); return; }
-      setDbStats(json as DbStats);
-    } catch (err) {
-      console.error('fetchStats fetch error:', err);
-    }
+    const { data, error } = await supabase.rpc('admin_listing_stats');
+    if (error) { console.error('fetchStats error:', error); return; }
+    if (data && typeof data === 'object') setDbStats(data as DbStats);
   };
 
   const fetchChainNames = async () => {
