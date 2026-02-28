@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Plus, Building2, Link2, Globe, ChevronDown, ChevronUp, X, Check, Loader2, ChevronRight } from 'lucide-react';
+import { Search, Plus, Building2, Link2, ChevronDown, ChevronUp, X, Check, Loader2, ChevronRight, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -43,58 +43,74 @@ const emptyForm: VendorFormData = {
   is_chain: false,
 };
 
+const PAGE_SIZE = 50;
+
 export default function AdminVendorsPage() {
   const { toast } = useToast();
   const router = useRouter();
   const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [filtered, setFiltered] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [chainFilter, setChainFilter] = useState<'all' | 'chain' | 'standalone'>('all');
   const [sortField, setSortField] = useState<'canonical_name' | 'listing_count'>('canonical_name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState<VendorFormData>(emptyForm);
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => { fetchVendors(); }, []);
+  const [stats, setStats] = useState({ total: 0, chains: 0, standalone: 0, linkedListings: 0 });
 
   useEffect(() => {
-    let result = [...vendors];
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (v) => v.canonical_name.toLowerCase().includes(q) || (v.domain ?? '').toLowerCase().includes(q)
-      );
-    }
-    if (chainFilter === 'chain') result = result.filter((v) => v.is_chain);
-    if (chainFilter === 'standalone') result = result.filter((v) => !v.is_chain);
-    result.sort((a, b) => {
-      const valA = sortField === 'canonical_name' ? a.canonical_name.toLowerCase() : a.listing_count;
-      const valB = sortField === 'canonical_name' ? b.canonical_name.toLowerCase() : b.listing_count;
-      if (valA < valB) return sortDir === 'asc' ? -1 : 1;
-      if (valA > valB) return sortDir === 'asc' ? 1 : -1;
-      return 0;
-    });
-    setFiltered(result);
-  }, [vendors, searchQuery, chainFilter, sortField, sortDir]);
+    fetchStats();
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery), 350);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedSearch, chainFilter, sortField, sortDir]);
+
+  useEffect(() => {
+    fetchVendors();
+  }, [page, debouncedSearch, chainFilter, sortField, sortDir]);
+
+  const fetchStats = async () => {
+    const [totalRes, chainsRes, linkedRes] = await Promise.all([
+      supabase.from('vendors').select('*', { count: 'exact', head: true }),
+      supabase.from('vendors').select('*', { count: 'exact', head: true }).eq('is_chain', true),
+      supabase.from('listings').select('*', { count: 'exact', head: true }).not('vendor_id', 'is', null),
+    ]);
+    const total = totalRes.count ?? 0;
+    const chains = chainsRes.count ?? 0;
+    setStats({ total, chains, standalone: total - chains, linkedListings: linkedRes.count ?? 0 });
+  };
 
   const fetchVendors = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('vendors')
-        .select('*, listings(id, is_touchless)')
-        .order('canonical_name', { ascending: true });
+      let q = supabase
+        .from('vendors_with_listing_counts')
+        .select('*', { count: 'exact' });
+
+      if (debouncedSearch.trim()) {
+        const s = debouncedSearch.trim();
+        q = q.or(`canonical_name.ilike.%${s}%,domain.ilike.%${s}%`);
+      }
+      if (chainFilter === 'chain') q = q.eq('is_chain', true);
+      if (chainFilter === 'standalone') q = q.eq('is_chain', false);
+
+      q = q.order(sortField, { ascending: sortDir === 'asc' });
+      q = q.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+      const { data, error, count } = await q;
       if (error) throw error;
-      const withCounts = (data || [])
-        .map((v: any) => ({
-          ...v,
-          listing_count: Array.isArray(v.listings) ? v.listings.filter((l: any) => l.is_touchless).length : 0,
-          listings: undefined,
-        }))
-        .filter((v: any) => v.listing_count > 0);
-      setVendors(withCounts);
+      setVendors((data as Vendor[]) || []);
+      setTotalCount(count ?? 0);
     } catch (err) {
       toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to load vendors', variant: 'destructive' });
     } finally {
@@ -139,9 +155,7 @@ export default function AdminVendorsPage() {
     return sortDir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />;
   };
 
-  const chainCount = vendors.filter((v) => v.is_chain).length;
-  const standaloneCount = vendors.filter((v) => !v.is_chain).length;
-  const totalListings = vendors.reduce((s, v) => s + v.listing_count, 0);
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -164,14 +178,14 @@ export default function AdminVendorsPage() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           {[
-            { label: 'Total Vendors', value: vendors.length },
-            { label: 'Chains', value: chainCount },
-            { label: 'Standalone', value: standaloneCount },
-            { label: 'Linked Listings', value: totalListings },
+            { label: 'Total Vendors', value: stats.total },
+            { label: 'Chains', value: stats.chains },
+            { label: 'Standalone', value: stats.standalone },
+            { label: 'Linked Listings', value: stats.linkedListings },
           ].map((s) => (
             <Card key={s.label}>
               <CardContent className="pt-4 pb-4">
-                <div className="text-2xl font-bold text-gray-900">{s.value}</div>
+                <div className="text-2xl font-bold text-gray-900">{s.value.toLocaleString()}</div>
                 <div className="text-sm text-gray-500 mt-0.5">{s.label}</div>
               </CardContent>
             </Card>
@@ -236,10 +250,10 @@ export default function AdminVendorsPage() {
                         Loading vendors...
                       </td>
                     </tr>
-                  ) : filtered.length === 0 ? (
+                  ) : vendors.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="text-center py-12 text-gray-400">
-                        {vendors.length === 0 ? (
+                        {stats.total === 0 ? (
                           <div>
                             <Building2 className="w-8 h-8 mx-auto mb-2 opacity-30" />
                             <p>No vendors yet. Click &ldquo;Create Vendor&rdquo; to get started.</p>
@@ -248,7 +262,7 @@ export default function AdminVendorsPage() {
                       </td>
                     </tr>
                   ) : (
-                    filtered.map((vendor) => (
+                    vendors.map((vendor) => (
                       <tr
                         key={vendor.id}
                         className="border-b last:border-0 hover:bg-gray-50 transition-colors cursor-pointer"
@@ -293,9 +307,28 @@ export default function AdminVendorsPage() {
                 </tbody>
               </table>
             </div>
-            {filtered.length > 0 && (
-              <div className="px-4 py-2 border-t text-xs text-gray-400">
-                Showing {filtered.length} of {vendors.length} vendors
+            {totalCount > 0 && (
+              <div className="px-4 py-3 border-t flex items-center justify-between text-xs text-gray-500">
+                <span>
+                  Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, totalCount)} of {totalCount.toLocaleString()} vendors
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(0, p - 1))}
+                    disabled={page === 0}
+                    className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span>Page {page + 1} of {totalPages}</span>
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                    disabled={page >= totalPages - 1}
+                    className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             )}
           </CardContent>

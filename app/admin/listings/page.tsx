@@ -143,48 +143,6 @@ export default function AdminListingsPage() {
     if (data) setVendors(data as VendorOption[]);
   };
 
-  const buildDataQuery = () => {
-    const { statusFilter, sortField, sortDir, chainFilter, featuredFilter, debouncedSearch } = filtersRef.current;
-
-    let q = supabase.from('listings').select('*');
-
-    if (debouncedSearch.trim()) {
-      const term = debouncedSearch.trim().replace(/"/g, '');
-      q = q.or(`name.ilike."*${term}*",city.ilike."*${term}*",state.ilike."*${term}*",parent_chain.ilike."*${term}*"`);
-    }
-
-    if (statusFilter === 'touchless') {
-      q = q.eq('is_touchless', true);
-    } else if (statusFilter === 'not_touchless') {
-      q = q.eq('is_touchless', false);
-    } else if (statusFilter === 'unknown') {
-      q = q.is('is_touchless', null).not('website', 'is', null).neq('crawl_status', 'no_website');
-    } else if (statusFilter === 'fetch_failed') {
-      q = q.eq('crawl_status', 'fetch_failed');
-    } else if (statusFilter === 'no_website') {
-      q = q.or('website.is.null,crawl_status.eq.no_website');
-    }
-
-    if (featuredFilter) {
-      q = q.eq('is_featured', true);
-    }
-
-    if (chainFilter === 'chains_only') {
-      q = q.not('parent_chain', 'is', null);
-    } else if (chainFilter === 'independent') {
-      q = q.is('parent_chain', null);
-    } else if (chainFilter === 'missing_location_url') {
-      q = q.not('parent_chain', 'is', null).is('location_page_url', null);
-    } else if (chainFilter !== 'all') {
-      q = q.eq('parent_chain', chainFilter);
-    }
-
-    const orderField = sortField === 'last_crawled_at' ? 'last_crawled_at' : sortField;
-    q = q.order(orderField, { ascending: sortDir === 'asc', nullsFirst: false });
-
-    return q;
-  };
-
   const fetchFilteredCount = async () => {
     const { statusFilter, chainFilter, featuredFilter, debouncedSearch } = filtersRef.current;
     const { data, error } = await supabase.rpc('listings_filtered_count', {
@@ -200,14 +158,24 @@ export default function AdminListingsPage() {
     setLoading(true);
     setError(null);
     try {
-      const from = (pageNum - 1) * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
-      const [{ data, error }, ] = await Promise.all([
-        buildDataQuery().range(from, to),
+      const { statusFilter, sortField, sortDir, chainFilter, featuredFilter, debouncedSearch } = filtersRef.current;
+      const offset = (pageNum - 1) * PAGE_SIZE;
+
+      const [{ data, error }] = await Promise.all([
+        supabase.rpc('search_listings', {
+          p_search: debouncedSearch.trim() || null,
+          p_status: statusFilter,
+          p_chain: chainFilter,
+          p_featured: featuredFilter,
+          p_sort: sortField,
+          p_sort_dir: sortDir,
+          p_limit: PAGE_SIZE,
+          p_offset: offset,
+        }),
         pageNum === 1 ? fetchFilteredCount() : Promise.resolve(),
       ]);
       if (error) throw error;
-      setListings(data as Listing[]);
+      setListings((data as Listing[]) || []);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to fetch listings';
       setError(msg);
