@@ -5,6 +5,7 @@ import { X, Flag, ImageOff, ZoomIn, Crop, ExternalLink, CarFront, Star, Trash2, 
 import { HeroListing, ReplacementOption } from './types';
 import HeroImageFallback from '@/components/HeroImageFallback';
 import { CropModal } from './CropModal';
+import { getStateSlug, slugify } from '@/lib/constants';
 
 const SOURCE_COLORS: Record<string, string> = {
   gallery: 'bg-emerald-100 text-emerald-700',
@@ -323,6 +324,18 @@ export function HeroCard({
       <div className="p-2.5 bg-white">
         <div className="flex items-center gap-1 min-w-0">
           <p className="text-sm font-semibold text-gray-800 truncate leading-tight flex-1">{listing.name}</p>
+          {listing.slug && (
+            <a
+              href={`/state/${getStateSlug(listing.state)}/${slugify(listing.city)}/${listing.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex-shrink-0 text-gray-400 hover:text-emerald-500 transition-colors"
+              title="Open listing page"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          )}
           {listing.website && (
             <a
               href={listing.website}

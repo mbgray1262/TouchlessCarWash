@@ -7,6 +7,7 @@ export interface HeroListing {
   name: string;
   city: string;
   state: string;
+  slug: string | null;
   hero_image: string | null;
   hero_image_source: HeroSource;
   photos: string[] | null;
