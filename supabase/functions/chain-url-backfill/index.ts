@@ -36,15 +36,24 @@ function normalize(s: string): string {
 
 function scoreMatch(listing: Listing, url: string): number {
   const u = url.toLowerCase();
-  const citySlug = toSlug(listing.city);        // e.g. "san-antonio"
-  const cityNorm = normalize(listing.city);      // e.g. "sanantonio"
-  const state = listing.state.toLowerCase();     // e.g. "tx"
+  const citySlug = toSlug(listing.city);
+  const cityNorm = normalize(listing.city);
+  const state = listing.state.toLowerCase();
   const zip = (listing.zip || '').replace(/\D/g, '');
 
-  // State appears somewhere in the URL path
-  const hasState = new RegExp(`[/\\-_]${state}[/\\-_.]|[/\\-_]${state}$`).test(u);
+  // State as its own path segment: /tx/ or /tx- or -tx- or -tx/ or -tx (end)
+  // Use explicit string checks to avoid regex character class issues
+  const hasState = (
+    u.includes(`/${state}/`) ||
+    u.includes(`/${state}-`) ||
+    u.includes(`-${state}-`) ||
+    u.includes(`-${state}/`) ||
+    u.endsWith(`/${state}`) ||
+    u.endsWith(`-${state}`)
+  );
 
-  // City appears as a slug segment or within a segment (e.g. /san-antonio-tx-street/)
+  // City as a slug segment or embedded within a segment
+  // e.g. /city-name/ OR /city-name- (city-state-street) OR -city-name/ OR ends with /city-name
   const hasCitySlug = citySlug.length > 2 && (
     u.includes(`/${citySlug}/`) ||
     u.includes(`/${citySlug}-`) ||
@@ -52,6 +61,7 @@ function scoreMatch(listing: Listing, url: string): number {
     u.includes(`-${citySlug}-`) ||
     u.endsWith(`/${citySlug}`)
   );
+  // Also try the no-separator normalized form: /sanantonio/
   const hasCityNorm = cityNorm.length > 2 && (
     u.includes(`/${cityNorm}/`) ||
     u.includes(`/${cityNorm}-`) ||
@@ -63,7 +73,6 @@ function scoreMatch(listing: Listing, url: string): number {
   if (hasCitySlug) return 75;
   if (hasCityNorm) return 70;
   if (zip && zip.length === 5 && u.includes(zip)) return 65;
-  if (hasState) return 30; // state alone is too weak
 
   return 0;
 }
@@ -76,18 +85,36 @@ function isLocationLikeUrl(url: string, domain: string): boolean {
     const path = u.pathname;
     if (path === '/' || path === '') return false;
     const segments = path.split('/').filter(Boolean);
-    // Must have at least 2 path segments (e.g. /locations/city-name/)
-    if (segments.length < 2) return false;
+    if (segments.length < 1) return false;
 
     const pathLower = path.toLowerCase();
-    const skipPatterns = [
+
+    // Skip content/utility pages
+    const skipPrefixes = [
       '/blog', '/news', '/press', '/about', '/contact', '/careers', '/jobs',
       '/privacy', '/terms', '/faq', '/help', '/support', '/login', '/signup',
-      '/account', '/cart', '/shop', '/store', '/product', '/pricing',
+      '/account', '/cart', '/shop', '/product', '/pricing', '/membership',
       '/api', '/cdn', '/assets', '/static', '/img', '/images', '/css', '/js',
-      '/wp-', '/wp-content', '/wp-admin',
+      '/wp-', '/wp-content', '/wp-admin', '/app/', '/sitemap',
+      '/services', '/service/', '/menu', '/reviews', '/gallery', '/media',
+      '/tag/', '/category/', '/author/',
     ];
-    if (skipPatterns.some(p => pathLower.startsWith(p))) return false;
+    if (skipPrefixes.some(p => pathLower.startsWith(p))) return false;
+
+    // Skip date-based blog paths like /2019/09/17/some-post/
+    if (/^\/\d{4}\/\d{2}\//.test(path)) return false;
+
+    // Skip file extensions that are clearly not pages
+    if (/\.(xml|json|css|js|jpg|jpeg|png|gif|svg|webp|ico|pdf|zip|txt)(\?|$)/.test(pathLower)) return false;
+
+    // Must have at least 2 segments for location-like paths (prefix + slug)
+    // UNLESS the path itself contains location-indicating keywords
+    const locationPrefixes = [
+      '/location', '/find-a', '/store', '/branch', '/site/', '/wash/',
+      '/car-wash/', '/office/', '/w2gm-location/',
+    ];
+    const hasLocationPrefix = locationPrefixes.some(p => pathLower.startsWith(p));
+    if (!hasLocationPrefix && segments.length < 2) return false;
 
     return true;
   } catch {
