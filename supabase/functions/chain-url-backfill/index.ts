@@ -7,7 +7,9 @@ const corsHeaders = {
 };
 
 const FIRECRAWL_API = 'https://api.firecrawl.dev/v1';
-const MIN_SCORE = 70;
+const MIN_SCORE = 55;
+// Process a small batch per invocation to stay within edge function limits
+const BATCH_SIZE = 15;
 
 interface Listing {
   id: string;
@@ -24,30 +26,45 @@ interface MatchResult {
   new_url: string;
 }
 
+function toSlug(s: string): string {
+  return (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
 function normalize(s: string): string {
   return (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
 function scoreMatch(listing: Listing, url: string): number {
-  const normalUrl = url.toLowerCase();
-  const city = normalize(listing.city);
-  const state = listing.state.toLowerCase();
+  const u = url.toLowerCase();
+  const citySlug = toSlug(listing.city);        // e.g. "san-antonio"
+  const cityNorm = normalize(listing.city);      // e.g. "sanantonio"
+  const state = listing.state.toLowerCase();     // e.g. "tx"
   const zip = (listing.zip || '').replace(/\D/g, '');
 
-  const citySlug = listing.city.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-  const cityNorm = city;
+  // State appears somewhere in the URL path
+  const hasState = new RegExp(`[/\\-_]${state}[/\\-_.]|[/\\-_]${state}$`).test(u);
 
-  const hasState = normalUrl.includes(`/${state}/`) || normalUrl.includes(`-${state}/`) || normalUrl.includes(`/${state}-`) || normalUrl.endsWith(`/${state}`);
+  // City appears as a slug segment or within a segment (e.g. /san-antonio-tx-street/)
+  const hasCitySlug = citySlug.length > 2 && (
+    u.includes(`/${citySlug}/`) ||
+    u.includes(`/${citySlug}-`) ||
+    u.includes(`-${citySlug}/`) ||
+    u.includes(`-${citySlug}-`) ||
+    u.endsWith(`/${citySlug}`)
+  );
+  const hasCityNorm = cityNorm.length > 2 && (
+    u.includes(`/${cityNorm}/`) ||
+    u.includes(`/${cityNorm}-`) ||
+    u.endsWith(`/${cityNorm}`)
+  );
 
-  if (cityNorm && normalUrl.includes(`/${cityNorm}/`)) {
-    return hasState ? 100 : 80;
-  }
-  if (citySlug && citySlug !== cityNorm && (normalUrl.includes(`/${citySlug}/`) || normalUrl.includes(`/${citySlug}-`) || normalUrl.includes(`-${citySlug}/`))) {
-    return hasState ? 95 : 75;
-  }
-  if (zip && zip.length === 5 && normalUrl.includes(zip)) {
-    return 65;
-  }
+  if (hasCitySlug && hasState) return 100;
+  if (hasCityNorm && hasState) return 100;
+  if (hasCitySlug) return 75;
+  if (hasCityNorm) return 70;
+  if (zip && zip.length === 5 && u.includes(zip)) return 65;
+  if (hasState) return 30; // state alone is too weak
+
   return 0;
 }
 
@@ -59,6 +76,7 @@ function isLocationLikeUrl(url: string, domain: string): boolean {
     const path = u.pathname;
     if (path === '/' || path === '') return false;
     const segments = path.split('/').filter(Boolean);
+    // Must have at least 2 path segments (e.g. /locations/city-name/)
     if (segments.length < 2) return false;
 
     const pathLower = path.toLowerCase();
@@ -67,6 +85,7 @@ function isLocationLikeUrl(url: string, domain: string): boolean {
       '/privacy', '/terms', '/faq', '/help', '/support', '/login', '/signup',
       '/account', '/cart', '/shop', '/store', '/product', '/pricing',
       '/api', '/cdn', '/assets', '/static', '/img', '/images', '/css', '/js',
+      '/wp-', '/wp-content', '/wp-admin',
     ];
     if (skipPatterns.some(p => pathLower.startsWith(p))) return false;
 
@@ -99,17 +118,14 @@ async function discoverLocationUrls(domain: string, firecrawlKey: string): Promi
 
   const data = await resp.json();
   const allLinks: string[] = data?.links || [];
-
   return allLinks.filter(link => isLocationLikeUrl(link, domain));
 }
 
 function matchListingsToUrls(listings: Listing[], locationUrls: string[]): MatchResult[] {
   const results: MatchResult[] = [];
-
   for (const listing of listings) {
     let bestScore = MIN_SCORE - 1;
     let bestUrl = '';
-
     for (const url of locationUrls) {
       const score = scoreMatch(listing, url);
       if (score > bestScore) {
@@ -117,13 +133,39 @@ function matchListingsToUrls(listings: Listing[], locationUrls: string[]): Match
         bestUrl = url;
       }
     }
-
-    if (bestUrl) {
-      results.push({ listing_id: listing.id, new_url: bestUrl });
-    }
+    if (bestUrl) results.push({ listing_id: listing.id, new_url: bestUrl });
   }
-
   return results;
+}
+
+async function getListingsNeedingUpdate(
+  supabase: ReturnType<typeof createClient>,
+  vendorId: number,
+  domain: string
+): Promise<Listing[]> {
+  // Fetch ALL listings for this vendor
+  const { data: all, error } = await supabase
+    .from('listings')
+    .select('id, name, address, city, state, zip, website')
+    .eq('vendor_id', vendorId);
+
+  if (error) throw new Error(error.message);
+  if (!all) return [];
+
+  // Keep only listings whose website is null or points to a root domain URL
+  // (i.e. hasn't already been given an individual location page)
+  return (all as Listing[]).filter(l => {
+    if (!l.website) return true;
+    try {
+      const u = new URL(l.website);
+      const host = u.hostname.replace(/^www\./, '');
+      // Only process if website is just the root/homepage (path is / or empty)
+      const isRoot = (u.pathname === '/' || u.pathname === '') && !u.search;
+      return host === domain && isRoot;
+    } catch {
+      return false;
+    }
+  });
 }
 
 async function processVendor(
@@ -131,22 +173,10 @@ async function processVendor(
   vendor: { id: number; canonical_name: string; domain: string },
   firecrawlKey: string
 ): Promise<{ matched: number; unmatched: number; links_found: number; locations_url: string; error?: string }> {
-  const parentUrlVariants = [
-    `https://${vendor.domain}`, `http://${vendor.domain}`,
-    `https://www.${vendor.domain}`, `http://www.${vendor.domain}`,
-    `https://${vendor.domain}/`, `http://${vendor.domain}/`,
-    `https://www.${vendor.domain}/`, `http://www.${vendor.domain}/`,
-  ];
+  const listings = await getListingsNeedingUpdate(supabase, vendor.id, vendor.domain);
 
-  const { data: listings, error: listingsError } = await supabase
-    .from('listings')
-    .select('id, name, address, city, state, zip, website')
-    .eq('vendor_id', vendor.id)
-    .or(`website.is.null,website.in.(${parentUrlVariants.map(u => `"${u}"`).join(',')})`);
-
-  if (listingsError) throw new Error(listingsError.message);
-  if (!listings || listings.length === 0) {
-    return { matched: 0, unmatched: 0, links_found: 0, locations_url: '' };
+  if (listings.length === 0) {
+    return { matched: 0, unmatched: 0, links_found: 0, locations_url: `https://www.${vendor.domain}` };
   }
 
   const locationUrls = await discoverLocationUrls(vendor.domain, firecrawlKey);
@@ -155,7 +185,7 @@ async function processVendor(
     return { matched: 0, unmatched: listings.length, links_found: 0, locations_url: `https://www.${vendor.domain}` };
   }
 
-  const matches = matchListingsToUrls(listings as Listing[], locationUrls);
+  const matches = matchListingsToUrls(listings, locationUrls);
 
   if (matches.length > 0) {
     await Promise.all(
@@ -171,6 +201,18 @@ async function processVendor(
   };
 }
 
+async function selfInvoke(supabaseUrl: string, anonKey: string, jobId: number, offset: number) {
+  // Fire-and-forget: invoke ourselves to process the next batch
+  fetch(`${supabaseUrl}/functions/v1/chain-url-backfill`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${anonKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ action: 'continue', job_id: jobId, offset }),
+  }).catch(() => {});
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -179,6 +221,7 @@ Deno.serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY');
 
     if (!firecrawlKey) {
@@ -192,6 +235,7 @@ Deno.serve(async (req: Request) => {
     const body = await req.json().catch(() => ({}));
     const action = body.action || 'start';
 
+    // ── STATUS ──────────────────────────────────────────────────────────────
     if (action === 'status') {
       const jobId = body.job_id;
       if (!jobId) {
@@ -215,6 +259,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    // ── CANCEL ───────────────────────────────────────────────────────────────
     if (action === 'cancel') {
       const jobId = body.job_id;
       await supabase.from('chain_url_backfill_jobs')
@@ -225,42 +270,76 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { data: chains, error: chainsError } = await supabase.rpc('get_chains_with_parent_urls');
-    if (chainsError) throw new Error(chainsError.message);
-    if (!chains || chains.length === 0) {
-      return new Response(JSON.stringify({ message: 'No chains with parent URLs found' }), {
+    // ── START ────────────────────────────────────────────────────────────────
+    if (action === 'start') {
+      const { data: chains, error: chainsError } = await supabase.rpc('get_chains_with_parent_urls');
+      if (chainsError) throw new Error(chainsError.message);
+      if (!chains || chains.length === 0) {
+        return new Response(JSON.stringify({ message: 'No chains with parent URLs found' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const { data: jobRow, error: jobError } = await supabase
+        .from('chain_url_backfill_jobs')
+        .insert({
+          status: 'running',
+          total_chains: chains.length,
+          chains_processed: 0,
+          total_matched: 0,
+          total_unmatched: 0,
+        })
+        .select('id')
+        .single();
+
+      if (jobError) throw new Error(jobError.message);
+      const jobId = jobRow.id;
+
+      // Kick off first batch immediately (don't wait, return job_id to client)
+      EdgeRuntime.waitUntil(selfInvoke(supabaseUrl, anonKey, jobId, 0));
+
+      return new Response(JSON.stringify({ job_id: jobId, chains_to_process: chains.length }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const { data: jobRow, error: jobError } = await supabase
-      .from('chain_url_backfill_jobs')
-      .insert({
-        status: 'running',
-        total_chains: chains.length,
-        chains_processed: 0,
-        total_matched: 0,
-        total_unmatched: 0,
-      })
-      .select('id')
-      .single();
+    // ── CONTINUE (called by self-invoke) ─────────────────────────────────────
+    if (action === 'continue') {
+      const jobId: number = body.job_id;
+      const offset: number = body.offset ?? 0;
 
-    if (jobError) throw new Error(jobError.message);
-    const jobId = jobRow.id;
+      // Check if cancelled
+      const { data: jobCheck } = await supabase
+        .from('chain_url_backfill_jobs')
+        .select('status, total_chains, chains_processed, total_matched, total_unmatched')
+        .eq('id', jobId)
+        .maybeSingle();
 
-    EdgeRuntime.waitUntil((async () => {
-      let processed = 0;
-      let totalMatched = 0;
-      let totalUnmatched = 0;
+      if (!jobCheck || jobCheck.status === 'cancelled') {
+        return new Response(JSON.stringify({ ok: true, stopped: 'cancelled' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
 
-      for (const vendor of chains) {
-        const { data: jobCheck } = await supabase
+      // Load all chains (same RPC)
+      const { data: chains, error: chainsError } = await supabase.rpc('get_chains_with_parent_urls');
+      if (chainsError) throw new Error(chainsError.message);
+      if (!chains) throw new Error('No chains returned');
+
+      const batch = chains.slice(offset, offset + BATCH_SIZE);
+
+      let processed = jobCheck.chains_processed;
+      let totalMatched = jobCheck.total_matched;
+      let totalUnmatched = jobCheck.total_unmatched;
+
+      for (const vendor of batch) {
+        // Re-check cancel between each vendor
+        const { data: mid } = await supabase
           .from('chain_url_backfill_jobs')
           .select('status')
           .eq('id', jobId)
           .maybeSingle();
-
-        if (jobCheck?.status === 'cancelled') break;
+        if (mid?.status === 'cancelled') break;
 
         await supabase.from('chain_url_backfill_jobs').update({
           current_vendor_name: vendor.canonical_name,
@@ -300,28 +379,41 @@ Deno.serve(async (req: Request) => {
           updated_at: new Date().toISOString(),
         }).eq('id', jobId);
 
-        await new Promise(r => setTimeout(r, 300));
+        await new Promise(r => setTimeout(r, 200));
       }
 
-      const { data: finalCheck } = await supabase
-        .from('chain_url_backfill_jobs')
-        .select('status')
-        .eq('id', jobId)
-        .maybeSingle();
+      const nextOffset = offset + BATCH_SIZE;
 
-      const finalStatus = finalCheck?.status === 'cancelled' ? 'cancelled' : 'completed';
+      if (nextOffset >= chains.length) {
+        // All done
+        const { data: finalCheck } = await supabase
+          .from('chain_url_backfill_jobs')
+          .select('status')
+          .eq('id', jobId)
+          .maybeSingle();
 
-      await supabase.from('chain_url_backfill_jobs').update({
-        status: finalStatus,
-        current_vendor_name: null,
-        completed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }).eq('id', jobId);
-    })());
+        const finalStatus = finalCheck?.status === 'cancelled' ? 'cancelled' : 'completed';
+        await supabase.from('chain_url_backfill_jobs').update({
+          status: finalStatus,
+          current_vendor_name: null,
+          completed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }).eq('id', jobId);
+      } else {
+        // Schedule next batch
+        EdgeRuntime.waitUntil(selfInvoke(supabaseUrl, anonKey, jobId, nextOffset));
+      }
 
-    return new Response(JSON.stringify({ job_id: jobId, chains_to_process: chains.length }), {
+      return new Response(JSON.stringify({ ok: true, next_offset: nextOffset }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    return new Response(JSON.stringify({ error: `Unknown action: ${action}` }), {
+      status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+
   } catch (err) {
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : 'Unknown error' }), {
       status: 500,
