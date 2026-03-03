@@ -599,6 +599,8 @@ Deno.serve(async (req: Request) => {
         touchless_evidence: string;
         amenities: string[];
         images: string[];
+        markdown: string;
+        metadata: Record<string, unknown>;
       };
 
       const results = await Promise.all(items.map(async (item): Promise<ClassifiedResult | null> => {
@@ -636,14 +638,14 @@ Deno.serve(async (req: Request) => {
           }
         }
 
-        return { listings, crawl_status, is_touchless, touchless_evidence, amenities, images };
+        return { listings, crawl_status, is_touchless, touchless_evidence, amenities, images, markdown, metadata: item.metadata ?? {} };
       }));
 
       // Write all results to DB — apply each classification to ALL listings sharing that URL
       const processedItems = results.filter(Boolean) as ClassifiedResult[];
       let totalProcessed = 0;
 
-      await Promise.all(processedItems.map(async ({ listings, crawl_status, is_touchless, touchless_evidence, amenities, images }) => {
+      await Promise.all(processedItems.map(async ({ listings, crawl_status, is_touchless, touchless_evidence, amenities, images, markdown: md, metadata: meta }) => {
         const filteredImages = filterImages(images);
         totalProcessed += listings.length;
 
@@ -655,6 +657,15 @@ Deno.serve(async (req: Request) => {
             crawl_status,
             touchless_evidence,
           };
+
+          // Save crawl snapshot for future rich data extraction
+          if (md && md.trim().length >= 50) {
+            updatePayload.crawl_snapshot = {
+              data: { markdown: md.slice(0, 100000), images: images.slice(0, 30), metadata: meta },
+              crawled_at: new Date().toISOString(),
+              source: 'firecrawl-pipeline',
+            };
+          }
 
           if (listing.is_touchless === null && is_touchless !== null) {
             updatePayload.is_touchless = is_touchless;
@@ -1160,14 +1171,14 @@ Deno.serve(async (req: Request) => {
           }
         }
 
-        return { listings, crawl_status, is_touchless, touchless_evidence, amenities, images };
+        return { listings, crawl_status, is_touchless, touchless_evidence, amenities, images, markdown, metadata: item.metadata ?? {} };
       }));
 
-      type APResult = { listings: ListingRowAP[]; crawl_status: string; is_touchless: boolean | null; touchless_evidence: string; amenities: string[]; images: string[] };
+      type APResult = { listings: ListingRowAP[]; crawl_status: string; is_touchless: boolean | null; touchless_evidence: string; amenities: string[]; images: string[]; markdown: string; metadata: Record<string, unknown> };
       const processed = results.filter(Boolean) as APResult[];
       let totalProcessedAP = 0;
 
-      await Promise.all(processed.map(async ({ listings: rowListings, crawl_status, is_touchless, touchless_evidence, amenities, images }) => {
+      await Promise.all(processed.map(async ({ listings: rowListings, crawl_status, is_touchless, touchless_evidence, amenities, images, markdown: md, metadata: meta }) => {
         const filteredImages = filterImages(images);
         totalProcessedAP += rowListings.length;
 
@@ -1178,6 +1189,16 @@ Deno.serve(async (req: Request) => {
             touchless_evidence,
             website_photos: filteredImages.length > 0 ? filteredImages : null,
           };
+
+          // Save crawl snapshot for future rich data extraction
+          if (md && md.trim().length >= 50) {
+            updatePayload.crawl_snapshot = {
+              data: { markdown: md.slice(0, 100000), images: images.slice(0, 30), metadata: meta },
+              crawled_at: new Date().toISOString(),
+              source: 'firecrawl-pipeline-auto',
+            };
+          }
+
           if (listing.is_touchless === null && is_touchless !== null) updatePayload.is_touchless = is_touchless;
           if (!listing.hero_image && filteredImages.length > 0) updatePayload.hero_image = filteredImages[0];
           if (amenities.length > 0) updatePayload.amenities = amenities;
@@ -1482,7 +1503,7 @@ Deno.serve(async (req: Request) => {
           .filter(Boolean) as EnrichRow[];
       };
 
-      type EnrichResult = { listings: EnrichRow[]; amenities: string[]; images: string[] };
+      type EnrichResult = { listings: EnrichRow[]; amenities: string[]; images: string[]; markdown: string; metadata: Record<string, unknown> };
       const processed: EnrichResult[] = [];
       for (const item of items) {
         const sourceURL = item.metadata?.sourceURL ?? '';
@@ -1499,12 +1520,12 @@ Deno.serve(async (req: Request) => {
           const classification = await classifyWithClaude(markdown, anthropicKey);
           amenities = classification.amenities ?? [];
         } catch { /* skip */ }
-        processed.push({ listings, amenities, images });
+        processed.push({ listings, amenities, images, markdown, metadata: item.metadata ?? {} });
       }
 
       let totalProcessed = 0;
 
-      for (const { listings: rowListings, amenities, images } of processed) {
+      for (const { listings: rowListings, amenities, images, markdown: md, metadata: meta } of processed) {
         const websiteImages = filterImages(images);
         totalProcessed += rowListings.length;
 
@@ -1512,6 +1533,15 @@ Deno.serve(async (req: Request) => {
           const updatePayload: Record<string, unknown> = {
             last_crawled_at: new Date().toISOString(),
           };
+
+          // Save crawl snapshot for future rich data extraction
+          if (md && md.trim().length >= 50) {
+            updatePayload.crawl_snapshot = {
+              data: { markdown: md.slice(0, 100000), images: images.slice(0, 30), metadata: meta },
+              crawled_at: new Date().toISOString(),
+              source: 'firecrawl-pipeline-enrich',
+            };
+          }
 
           const knownLogoUrl = listing.google_logo_url ?? listing.logo_photo ?? null;
           const extraPhotos = [
