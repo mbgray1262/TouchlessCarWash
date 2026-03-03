@@ -59,11 +59,28 @@ async function classifyPhotoWithClaude(
     ? '\nAlso reject this photo (as BAD_OTHER) if it shows essentially the same view as any of the already-approved photos shown above — we want visual variety, not multiple shots of the same angle.'
     : '';
 
-  const prompt = `You are evaluating a photo for a touchless car wash directory. Classify this image as:
-GOOD (clear exterior shot of an automated/touchless car wash facility, wash tunnel, or building signage),
-BAD_CONTACT (shows brushes, cloth strips, mops, or any contact wash equipment), or
-BAD_OTHER (poor quality, car interior, people only, logo/graphic, blurry, or not clearly a car wash).${dedupClause}
-Reply with only the classification and a one-sentence reason, formatted as: VERDICT: reason`;
+  const prompt = `You are selecting photos for a car wash directory listing. Be GENEROUS — having some photos is much better than having none.
+
+GOOD — Accept if ANY of these are true:
+- A car wash building, bay, tunnel, canopy, or sign is visible anywhere in the photo (it does NOT need to be the main subject)
+- The photo is taken from a road or parking lot but you can see a car wash business in the scene
+- A car is entering, inside, or exiting a wash bay
+- Car wash equipment (touchless nozzles, spray arches, dryers) is visible
+- A car wash sign, menu board, or price sign is shown
+- The photo shows the exterior of a business that is clearly a car wash
+When in doubt, lean toward GOOD. A mediocre photo of the right place is better than no photo.
+
+BAD_CONTACT — Reject ONLY if you can clearly see brushes, cloth strips, foam rollers, or spinning mops physically making contact with a car's surface.
+
+BAD_OTHER — Reject ONLY if:
+- The photo has absolutely nothing to do with a car wash (food, random products, landscapes with no business)
+- It is a close-up of a car body (hood, bumper, wheel) with NO car wash facility visible at all
+- Interior of a car (dashboard, seats) with no wash visible
+- A selfie or group photo with no car wash visible
+- A logo, graphic, clip art, or promotional flyer (not a real photograph)
+- So blurry or dark that you cannot tell what is in the photo at all${dedupClause}
+
+Reply with ONLY: VERDICT: one-sentence reason`;
 
   const refBlocks = refImages.flatMap((r, i) => [
     { type: 'text' as const, text: `Already-approved photo ${i + 1}:` },

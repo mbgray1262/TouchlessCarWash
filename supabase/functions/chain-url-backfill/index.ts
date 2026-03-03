@@ -6,9 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
 };
 
-const FIRECRAWL_API = 'https://api.firecrawl.dev/v1';
 // Process a small batch per invocation to stay within edge function limits
-const BATCH_SIZE = 10;
+const BATCH_SIZE = 5;
 // Max listings per Claude matching call to keep prompt size reasonable
 const MATCH_BATCH_SIZE = 50;
 
@@ -27,30 +26,43 @@ interface MatchResult {
   new_url: string;
 }
 
-// ── Firecrawl helpers ──────────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
-async function scrapeWithFirecrawl(
-  url: string,
-  firecrawlKey: string,
-  formats: string[],
-  waitFor?: number
-): Promise<{ markdown: string; links: string[] }> {
-  const body: Record<string, unknown> = { url, formats, onlyMainContent: false };
-  if (waitFor) body.waitFor = waitFor;
-  const response = await fetch('https://api.firecrawl.dev/v2/scrape', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${firecrawlKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) return { markdown: '', links: [] };
-  const data = await response.json();
-  return {
-    markdown: data.data?.markdown || '',
-    links: data.data?.links || [],
-  };
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Extract all <loc> URLs from sitemap XML (works for both urlset and sitemapindex)
+function extractLocsFromXml(xml: string): string[] {
+  const urls: string[] = [];
+  const regex = /<loc>\s*(.*?)\s*<\/loc>/g;
+  let match;
+  while ((match = regex.exec(xml)) !== null) {
+    const url = match[1].trim();
+    if (url) urls.push(url);
+  }
+  return urls;
+}
+
+function isSitemapIndex(xml: string): boolean {
+  return xml.includes('<sitemapindex');
+}
+
+// Extract href links from raw HTML (no DOM parser needed)
+function extractLinksFromHtml(html: string, baseUrl: string): string[] {
+  const links: string[] = [];
+  const regex = /href=["'](.*?)["']/gi;
+  let match;
+  while ((match = regex.exec(html)) !== null) {
+    let href = match[1].trim();
+    if (!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('mailto:')) continue;
+    try {
+      // Resolve relative URLs
+      const resolved = new URL(href, baseUrl).href;
+      links.push(resolved);
+    } catch { /* skip invalid URLs */ }
+  }
+  return [...new Set(links)]; // deduplicate
 }
 
 function isLocationLikeUrl(url: string, domain: string): boolean {
@@ -92,30 +104,132 @@ function isLocationLikeUrl(url: string, domain: string): boolean {
   }
 }
 
-async function discoverLocationUrls(domain: string, firecrawlKey: string): Promise<string[]> {
-  const siteUrl = `https://www.${domain}`;
+// ── Sitemap-based URL discovery (FREE — no Firecrawl needed) ────────────────
 
-  const resp = await fetch(`${FIRECRAWL_API}/map`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${firecrawlKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      url: siteUrl,
-      limit: 1000,
-      includeSubdomains: false,
-    }),
-  });
+async function fetchText(url: string, timeoutMs = 15000): Promise<string | null> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const resp = await fetch(url, {
+      signal: controller.signal,
+      redirect: 'follow',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; TouchlessCarWashFinder/1.0)',
+        'Accept': 'text/xml, application/xml, text/html, */*',
+      },
+    });
+    clearTimeout(timer);
+    if (!resp.ok) return null;
+    return await resp.text();
+  } catch {
+    return null;
+  }
+}
 
-  if (!resp.ok) {
-    const text = await resp.text();
-    throw new Error(`Firecrawl map failed for ${domain}: ${resp.status} ${text.slice(0, 200)}`);
+async function discoverSitemapUrls(domain: string): Promise<string[]> {
+  const allUrls: string[] = [];
+
+  // Step 1: Check robots.txt for Sitemap directives
+  const sitemapCandidates: string[] = [];
+  for (const prefix of [`https://www.${domain}`, `https://${domain}`]) {
+    const robotsTxt = await fetchText(`${prefix}/robots.txt`);
+    if (robotsTxt) {
+      const sitemapLines = robotsTxt.match(/^Sitemap:\s*(.+)$/gmi);
+      if (sitemapLines) {
+        for (const line of sitemapLines) {
+          const url = line.replace(/^Sitemap:\s*/i, '').trim();
+          if (!sitemapCandidates.includes(url)) sitemapCandidates.push(url);
+        }
+      }
+      break; // Found robots.txt, no need to try both prefixes
+    }
   }
 
-  const data = await resp.json();
-  const allLinks: string[] = data?.links || [];
-  return allLinks.filter(link => isLocationLikeUrl(link, domain));
+  // Step 2: Add common sitemap locations as fallback
+  const commonPaths = ['/sitemap_index.xml', '/sitemap.xml', '/sitemap/sitemap-index.xml'];
+  for (const path of commonPaths) {
+    for (const prefix of [`https://www.${domain}`, `https://${domain}`]) {
+      const url = `${prefix}${path}`;
+      if (!sitemapCandidates.includes(url)) sitemapCandidates.push(url);
+    }
+  }
+
+  // Step 3: Try each candidate until we find a working sitemap
+  for (const sitemapUrl of sitemapCandidates) {
+    const xml = await fetchText(sitemapUrl);
+    if (!xml || !xml.includes('<loc>')) continue;
+
+    if (isSitemapIndex(xml)) {
+      // It's a sitemap index — fetch child sitemaps
+      const childUrls = extractLocsFromXml(xml);
+
+      // Prioritize child sitemaps that look location-related
+      const locationSitemaps = childUrls.filter(u =>
+        /location|store|branch|wash|place/i.test(u)
+      );
+      const otherSitemaps = childUrls.filter(u =>
+        !locationSitemaps.includes(u)
+      );
+
+      // Fetch location sitemaps first, then others if needed
+      const toFetch = [...locationSitemaps, ...otherSitemaps];
+
+      for (const childUrl of toFetch) {
+        const childXml = await fetchText(childUrl);
+        if (!childXml) continue;
+        const childLocs = extractLocsFromXml(childXml);
+        allUrls.push(...childLocs);
+      }
+    } else {
+      // Regular sitemap — extract all URLs
+      allUrls.push(...extractLocsFromXml(xml));
+    }
+
+    if (allUrls.length > 0) break; // Found URLs, no need to try more candidates
+  }
+
+  return allUrls;
+}
+
+// ── Fallback: extract links from the actual website pages (FREE) ────────────
+
+async function discoverViaWebpageScraping(
+  domain: string,
+  anthropicKey: string
+): Promise<string[]> {
+  const rootUrl = `https://www.${domain}`;
+
+  // Step 1: Fetch the homepage HTML
+  const homepageHtml = await fetchText(rootUrl);
+  if (!homepageHtml) {
+    // Try without www
+    const altHtml = await fetchText(`https://${domain}`);
+    if (!altHtml) return [];
+    return extractLinksFromHtml(altHtml, `https://${domain}`)
+      .filter(link => isLocationLikeUrl(link, domain));
+  }
+
+  const homepageLinks = extractLinksFromHtml(homepageHtml, rootUrl);
+
+  // Step 2: Use AI to find the locations page URL
+  const locPageUrl = await findLocationsPageUrl(anthropicKey, rootUrl, homepageLinks);
+  if (!locPageUrl) {
+    // No locations page found — return any location-like links from homepage
+    return homepageLinks.filter(link => isLocationLikeUrl(link, domain));
+  }
+
+  // Step 3: Fetch the locations page and extract links
+  const locPageHtml = await fetchText(locPageUrl);
+  if (!locPageHtml) return [];
+
+  const locPageLinks = extractLinksFromHtml(locPageHtml, locPageUrl);
+
+  // Step 4: Use AI to identify individual location URLs from the links
+  const locationUrls = await extractLocationUrlsFromLinks(
+    anthropicKey, domain, locPageUrl, locPageLinks
+  );
+
+  return locationUrls;
 }
 
 // ── Claude AI helpers ──────────────────────────────────────────────────────────
@@ -123,25 +237,29 @@ async function discoverLocationUrls(domain: string, firecrawlKey: string): Promi
 async function findLocationsPageUrl(
   anthropicKey: string,
   rootUrl: string,
-  pageMarkdown: string,
   links: string[]
 ): Promise<string | null> {
   if (links.length === 0) return null;
 
-  const linkList = links.slice(0, 100).join('\n');
+  // Filter to same-domain links only
+  const domain = new URL(rootUrl).hostname.replace(/^www\./, '');
+  const sameDomainLinks = links.filter(link => {
+    try {
+      return new URL(link).hostname.replace(/^www\./, '') === domain;
+    } catch { return false; }
+  });
+
+  const linkList = sameDomainLinks.slice(0, 150).join('\n');
 
   const prompt = `You are helping find the "locations" or "find a store" page for a car wash chain website.
 
 Root URL: ${rootUrl}
 
-Here are all the links found on the page:
+Here are all the links found on the homepage:
 ${linkList}
 
-Here is the page content (truncated):
-${pageMarkdown.substring(0, 3000)}
-
 Which single link URL is most likely the page that lists ALL physical locations / branches / stores for this car wash chain?
-Look for links whose URL path or surrounding context suggests: locations, stores, find us, our washes, where to find us, car wash locations, etc.
+Look for links whose URL path suggests: locations, stores, find us, our washes, where to find us, car wash locations, etc.
 
 Respond with ONLY the full URL string, nothing else. If you cannot identify any such link, respond with the single word: none`;
 
@@ -166,6 +284,70 @@ Respond with ONLY the full URL string, nothing else. If you cannot identify any 
 
   if (answer.startsWith('http')) return answer;
   return `${rootUrl.replace(/\/$/, '')}${answer.startsWith('/') ? answer : `/${answer}`}`;
+}
+
+async function extractLocationUrlsFromLinks(
+  anthropicKey: string,
+  domain: string,
+  pageUrl: string,
+  links: string[]
+): Promise<string[]> {
+  // Filter links to same domain
+  const domainLinks = links.filter(link => {
+    try {
+      const u = new URL(link);
+      return u.hostname.replace(/^www\./, '') === domain;
+    } catch { return false; }
+  });
+
+  if (domainLinks.length === 0) return [];
+
+  const prompt = `Extract all individual car wash location/store page URLs from this list of links found on a locations page.
+
+Page URL: ${pageUrl}
+Domain: ${domain}
+
+Links found on page (same domain only):
+${domainLinks.slice(0, 500).join('\n')}
+
+Return ONLY a JSON array of individual location page URLs. These are URLs that each lead to a SPECIFIC store/location page — not the main locations index, not the homepage, not service pages.
+
+Examples of good location URLs:
+- https://example.com/locations/boston-ma
+- https://example.com/store/1234
+- https://example.com/car-wash/downtown-dallas
+
+Return: ["url1", "url2", ...]
+If no individual location URLs can be identified, return: []`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': anthropicKey,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 4096,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+
+  if (!res.ok) return [];
+  const data = await res.json();
+  const text: string = data.content[0]?.text || '';
+
+  try {
+    const arrMatch = text.match(/\[[\s\S]*\]/);
+    if (!arrMatch) return [];
+    const urls = JSON.parse(arrMatch[0]);
+    return (urls as string[]).filter(
+      u => typeof u === 'string' && u.startsWith('http')
+    );
+  } catch {
+    return [];
+  }
 }
 
 async function matchListingsWithClaude(
@@ -270,106 +452,6 @@ Rules:
   }
 }
 
-async function extractLocationUrlsFromPage(
-  anthropicKey: string,
-  domain: string,
-  pageUrl: string,
-  pageMarkdown: string,
-  pageLinks: string[]
-): Promise<string[]> {
-  // Filter links to same domain first
-  const domainLinks = pageLinks.filter(link => {
-    try {
-      const u = new URL(link);
-      return u.hostname.replace(/^www\./, '') === domain;
-    } catch { return false; }
-  });
-
-  const prompt = `Extract all individual car wash location/store page URLs from this locations page.
-
-Page URL: ${pageUrl}
-Domain: ${domain}
-
-Links found on page (same domain only):
-${domainLinks.slice(0, 300).join('\n')}
-
-Page content (truncated):
-${pageMarkdown.substring(0, 10000)}
-
-Return ONLY a JSON array of individual location page URLs. These are URLs that each lead to a SPECIFIC store/location page — not the main locations index, not the homepage, not service pages.
-
-Examples of good location URLs:
-- https://example.com/locations/boston-ma
-- https://example.com/store/1234
-- https://example.com/car-wash/downtown-dallas
-
-Return: ["url1", "url2", ...]
-If no individual location URLs can be identified, return: []`;
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': anthropicKey,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4096,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  });
-
-  if (!res.ok) return [];
-  const data = await res.json();
-  const text: string = data.content[0]?.text || '';
-
-  try {
-    const arrMatch = text.match(/\[[\s\S]*\]/);
-    if (!arrMatch) return [];
-    const urls = JSON.parse(arrMatch[0]);
-    return (urls as string[]).filter(
-      u => typeof u === 'string' && u.startsWith('http')
-    );
-  } catch {
-    return [];
-  }
-}
-
-// ── Fallback: discover URLs via locations page scraping ────────────────────────
-
-async function discoverViaLocationsPage(
-  domain: string,
-  firecrawlKey: string,
-  anthropicKey: string
-): Promise<string[]> {
-  const rootUrl = `https://www.${domain}`;
-
-  // Step 1: Scrape the homepage
-  const rootResult = await scrapeWithFirecrawl(rootUrl, firecrawlKey, ['markdown', 'links']);
-  if (!rootResult.markdown && rootResult.links.length === 0) return [];
-
-  // Step 2: Find the locations page
-  const locPageUrl = await findLocationsPageUrl(
-    anthropicKey, rootUrl, rootResult.markdown, rootResult.links
-  );
-  if (!locPageUrl) return [];
-
-  // Step 3: Scrape the locations page (with JS wait)
-  let locResult = await scrapeWithFirecrawl(locPageUrl, firecrawlKey, ['markdown', 'links']);
-  if (locResult.markdown.length < 300) {
-    locResult = await scrapeWithFirecrawl(locPageUrl, firecrawlKey, ['markdown', 'links'], 3000);
-  }
-  if (!locResult.markdown && locResult.links.length === 0) return [];
-
-  // Step 4: Extract individual location URLs from the page
-  const urls = await extractLocationUrlsFromPage(
-    anthropicKey, domain, locPageUrl, locResult.markdown, locResult.links
-  );
-
-  return urls;
-}
-
 // ── Core processing ────────────────────────────────────────────────────────────
 
 async function getListingsNeedingUpdate(
@@ -380,7 +462,8 @@ async function getListingsNeedingUpdate(
   const { data: all, error } = await supabase
     .from('listings')
     .select('id, name, address, city, state, zip, website')
-    .eq('vendor_id', vendorId);
+    .eq('vendor_id', vendorId)
+    .eq('is_touchless', true);
 
   if (error) throw new Error(error.message);
   if (!all) return [];
@@ -401,7 +484,6 @@ async function getListingsNeedingUpdate(
 async function processVendor(
   supabase: ReturnType<typeof createClient>,
   vendor: { id: number; canonical_name: string; domain: string },
-  firecrawlKey: string,
   anthropicKey: string
 ): Promise<{
   matched: number;
@@ -417,17 +499,22 @@ async function processVendor(
     return { matched: 0, unmatched: 0, links_found: 0, locations_url: `https://www.${vendor.domain}`, fallback_used: false };
   }
 
-  // Stage 1: Discover location URLs via /map
-  let locationUrls = await discoverLocationUrls(vendor.domain, firecrawlKey);
+  // Stage 1: Discover location URLs via sitemaps (FREE)
+  const sitemapUrls = await discoverSitemapUrls(vendor.domain);
+  let locationUrls = sitemapUrls.filter(link => isLocationLikeUrl(link, vendor.domain));
   let fallbackUsed = false;
 
-  // Stage 1b: Fallback — scrape locations page if /map found too few
+  console.log(`[${vendor.canonical_name}] Sitemap found ${sitemapUrls.length} total URLs, ${locationUrls.length} location-like URLs`);
+
+  // Stage 1b: Fallback — scrape actual website pages if sitemap found too few
   if (locationUrls.length < 3) {
     try {
-      const fallbackUrls = await discoverViaLocationsPage(vendor.domain, firecrawlKey, anthropicKey);
+      console.log(`[${vendor.canonical_name}] Sitemap insufficient, trying webpage scraping fallback...`);
+      const fallbackUrls = await discoverViaWebpageScraping(vendor.domain, anthropicKey);
       if (fallbackUrls.length > locationUrls.length) {
         locationUrls = fallbackUrls;
         fallbackUsed = true;
+        console.log(`[${vendor.canonical_name}] Fallback found ${fallbackUrls.length} location URLs`);
       }
     } catch (err) {
       console.error(`Fallback failed for ${vendor.domain}:`, err);
@@ -503,15 +590,7 @@ Deno.serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY');
     const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
-
-    if (!firecrawlKey) {
-      return new Response(JSON.stringify({ error: 'FIRECRAWL_API_KEY not configured' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
 
     if (!anthropicKey) {
       return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' }), {
@@ -642,7 +721,7 @@ Deno.serve(async (req: Request) => {
         };
 
         try {
-          const r = await processVendor(supabase, vendor, firecrawlKey, anthropicKey);
+          const r = await processVendor(supabase, vendor, anthropicKey);
           result = { ...r, error: r.error };
         } catch (err) {
           result.error = err instanceof Error ? err.message : String(err);
@@ -673,8 +752,8 @@ Deno.serve(async (req: Request) => {
           updated_at: new Date().toISOString(),
         }).eq('id', jobId);
 
-        // Small delay between vendors to be respectful to APIs
-        await new Promise(r => setTimeout(r, 300));
+        // Small delay between vendors
+        await sleep(1000);
       }
 
       const nextOffset = offset + BATCH_SIZE;
