@@ -165,7 +165,7 @@ export default function HeroSection() {
       router.push(`/state/${getStateSlug(c.state)}/${slugify(c.city)}`);
     } else {
       const l = item.data as ListingResult;
-      router.push(`/car-washes/${getStateSlug(l.state)}/${slugify(l.city)}/${l.slug}`);
+      router.push(`/state/${getStateSlug(l.state)}/${slugify(l.city)}/${l.slug}`);
     }
   }, [router]);
 
@@ -210,7 +210,7 @@ export default function HeroSection() {
       .maybeSingle();
 
     if (nameMatch) {
-      router.push(`/car-washes/${getStateSlug(nameMatch.state)}/${slugify(nameMatch.city)}/${nameMatch.slug}`);
+      router.push(`/state/${getStateSlug(nameMatch.state)}/${slugify(nameMatch.city)}/${nameMatch.slug}`);
       return;
     }
 

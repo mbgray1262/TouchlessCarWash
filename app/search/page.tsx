@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { supabase, type Listing } from '@/lib/supabase';
 import { ListingCard } from '@/components/ListingCard';
+import { ClientPagination, PAGE_SIZE } from '@/components/Pagination';
 
 interface Filter {
   id: number;
@@ -36,6 +37,7 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<Filter[]>([]);
   const [activeFilters, setActiveFilters] = useState<Set<number>>(new Set());
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     async function loadFilters() {
@@ -114,6 +116,7 @@ export default function SearchPage() {
     } else {
       setLoading(false);
     }
+    setPage(1);
   }, [query, activeFilters]);
 
   function toggleFilter(id: number) {
@@ -212,11 +215,18 @@ export default function SearchPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {listings.map((listing) => (
-              <ListingCard key={listing.id} listing={listing} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {listings.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((listing) => (
+                <ListingCard key={listing.id} listing={listing} />
+              ))}
+            </div>
+            <ClientPagination
+              currentPage={page}
+              totalItems={listings.length}
+              onPageChange={(p) => { setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            />
+          </>
         )}
       </div>
     </div>
