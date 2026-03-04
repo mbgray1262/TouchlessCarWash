@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { supabase, type Listing } from '@/lib/supabase';
+import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { getStateSlug, slugify } from '@/lib/constants';
 import { ListingCard } from '@/components/ListingCard';
 import { Pagination, PAGE_SIZE } from '@/components/Pagination';
@@ -61,7 +61,7 @@ async function searchListings(
 
     let q = supabase
       .from('listings')
-      .select('*')
+      .select(LISTING_CARD_COLUMNS)
       .in('id', qualifiedIds)
       .order('rating', { ascending: false });
 
@@ -70,11 +70,11 @@ async function searchListings(
     }
 
     const { data } = await q;
-    return data ?? [];
+    return (data as Listing[]) ?? [];
   } else {
     let q = supabase
       .from('listings')
-      .select('*')
+      .select(LISTING_CARD_COLUMNS)
       .order('rating', { ascending: false });
 
     if (query) {
@@ -82,7 +82,7 @@ async function searchListings(
     }
 
     const { data } = await q;
-    return data ?? [];
+    return (data as Listing[]) ?? [];
   }
 }
 
