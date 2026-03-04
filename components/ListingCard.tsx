@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Star, MapPin, Phone, CheckCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { type Listing } from '@/lib/supabase';
@@ -41,12 +42,12 @@ export function ListingCard({ listing, href, showVerifiedBadge = false }: Listin
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-xl hover:border-[#22C55E] transition-all duration-200 h-full flex flex-col">
         {cardImage ? (
           <div className="relative h-48 overflow-hidden shrink-0">
-            <img
+            <Image
               src={cardImage}
               alt={listing.name}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              loading="lazy"
-              decoding="async"
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              className="object-cover group-hover:scale-105 transition-transform duration-300"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
             {cardLogo && (
