@@ -25,6 +25,7 @@ function getOpenStatus(hours: Record<string, string> | null): 'open' | 'closed' 
   const todayKey = getTodayKey();
   const todayHours = hours[todayKey];
   if (!todayHours) return 'closed';
+  if (typeof todayHours !== 'string') return null;
   if (todayHours.toLowerCase().includes('24') || todayHours.toLowerCase().includes('open 24')) return 'open';
   if (todayHours.toLowerCase() === 'closed') return 'closed';
   const parts = todayHours.split(/[-–]/);

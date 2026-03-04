@@ -53,15 +53,22 @@ export async function generateMetadata({ params }: StatePageProps): Promise<Meta
   const month = now.toLocaleString('default', { month: 'long' });
   const year = now.getFullYear();
 
-  const { count } = await supabase
-    .from('listings')
-    .select('*', { count: 'exact', head: true })
-    .eq('is_touchless', true)
-    .eq('state', stateCode);
+  const [{ count }, stateDesc] = await Promise.all([
+    supabase
+      .from('listings')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_touchless', true)
+      .eq('state', stateCode),
+    getStateDescription(stateCode),
+  ]);
+
+  const metaDescription = stateDesc
+    ? stateDesc.substring(0, 155) + (stateDesc.length > 155 ? '...' : '')
+    : `Find ${count ?? 0} verified touchless & touch-free car washes in ${stateName}. Browse laser car wash and no-touch locations by city with ratings, hours, and contact info. Updated ${month} ${year}.`;
 
   return {
     title: `Touchless Car Washes in ${stateName} | ${stateName} Car Wash Directory`,
-    description: `Find ${count ?? 0} verified touchless & touch-free car washes in ${stateName}. Browse laser car wash and no-touch locations by city with ratings, hours, and contact info. Updated ${month} ${year}.`,
+    description: metaDescription,
   };
 }
 
@@ -87,6 +94,15 @@ async function getStatesWithListings(): Promise<string[]> {
   return data as string[];
 }
 
+async function getStateDescription(stateCode: string): Promise<string | null> {
+  const { data } = await supabase
+    .from('state_descriptions')
+    .select('description')
+    .eq('state', stateCode)
+    .maybeSingle();
+  return data?.description ?? null;
+}
+
 export default async function StatePage({ params, searchParams }: StatePageProps) {
   const stateCode = getStateCode(params.state);
 
@@ -95,9 +111,10 @@ export default async function StatePage({ params, searchParams }: StatePageProps
   }
 
   const stateName = getStateName(stateCode);
-  const [listings, statesWithListings] = await Promise.all([
+  const [listings, statesWithListings, stateDescription] = await Promise.all([
     getStateListings(stateCode),
     getStatesWithListings(),
+    getStateDescription(stateCode),
   ]);
 
   if (listings.length === 0) {
@@ -180,10 +197,14 @@ export default async function StatePage({ params, searchParams }: StatePageProps
 
           <div className="mb-8 p-5 bg-blue-50 border border-blue-100 rounded-xl">
             <p className="text-gray-700 text-base leading-relaxed">
-              Browse <strong>{listings.length} verified touchless, touch-free, and laser car wash{listings.length !== 1 ? ' locations' : ' location'}</strong>{' '}
-              across <strong>{cities.length} {cities.length === 1 ? 'city' : 'cities'}</strong> in {nickname}.
-              Every listing is confirmed to offer brushless, no-touch washing that&apos;s safe for all paint
-              types and finishes — no bristles, no scratches, no swirl marks. Last updated {month} {year}.
+              {stateDescription ? stateDescription : (
+                <>
+                  Browse <strong>{listings.length} verified touchless, touch-free, and laser car wash{listings.length !== 1 ? ' locations' : ' location'}</strong>{' '}
+                  across <strong>{cities.length} {cities.length === 1 ? 'city' : 'cities'}</strong> in {nickname}.
+                  Every listing is confirmed to offer brushless, no-touch washing that&apos;s safe for all paint
+                  types and finishes — no bristles, no scratches, no swirl marks. Last updated {month} {year}.
+                </>
+              )}
             </p>
           </div>
 
