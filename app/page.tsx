@@ -11,6 +11,9 @@ import type { Metadata } from 'next';
 
 const SITE_URL = 'https://touchlesscarwashfinder.com';
 
+// Re-fetch data every hour so counts stay fresh without redeploying
+export const revalidate = 3600;
+
 const TOP_STATES = ['CA', 'TX', 'FL', 'NY', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI', 'AZ', 'WA'];
 
 export const metadata: Metadata = {
