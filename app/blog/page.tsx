@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { ChevronRight, Calendar, User } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { supabase, type BlogPost } from '@/lib/supabase';
 import type { Metadata } from 'next';
 
@@ -110,16 +109,6 @@ export default async function BlogPage() {
                   )}
 
                   <div className="p-5 flex flex-col flex-1">
-                    {post.tags && post.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mb-2.5">
-                        {post.tags.slice(0, 3).map((tag) => (
-                          <Badge key={tag} variant="secondary" className="text-xs bg-blue-50 text-blue-700 border-blue-100">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-
                     <h2 className="text-lg font-bold text-[#0F2744] mb-2 group-hover:text-blue-700 transition-colors leading-snug line-clamp-2">
                       {post.title}
                     </h2>
