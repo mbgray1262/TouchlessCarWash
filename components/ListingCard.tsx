@@ -12,11 +12,21 @@ interface ListingCardProps {
   showVerifiedBadge?: boolean;
 }
 
+const WASH_TYPE_LABELS: Record<string, string> = {
+  touchless_automatic: 'Touchless Automatic',
+  self_serve_spray: 'Self-Serve Spray',
+};
+
 export function ListingCard({ listing, href, showVerifiedBadge = false }: ListingCardProps) {
   const defaultHref = `/state/${getStateSlug(listing.state)}/${listing.city.toLowerCase().replace(/\s+/g, '-')}/${listing.slug}`;
   const linkHref = href ?? defaultHref;
 
-  const washType = listing.amenities?.find((a) =>
+  // Prefer touchless_wash_types, fallback to amenity-based inference
+  const washTypeLabel = listing.touchless_wash_types && listing.touchless_wash_types.length > 0
+    ? listing.touchless_wash_types.map(wt => WASH_TYPE_LABELS[wt] || wt).join(' · ')
+    : null;
+
+  const washType = washTypeLabel ?? listing.amenities?.find((a) =>
     /touchless automatic|automatic wash|touchless\/automatic/i.test(a)
   ) ?? listing.amenities?.find((a) =>
     /automatic|tunnel|self.serve|express/i.test(a)
@@ -100,20 +110,45 @@ export function ListingCard({ listing, href, showVerifiedBadge = false }: Listin
             </div>
           )}
 
-          {listing.amenities && listing.amenities.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-auto pt-3">
-              {listing.amenities.slice(0, 4).map((a) => (
-                <Badge key={a} variant="outline" className="text-xs text-gray-600 border-gray-200">
-                  {a}
-                </Badge>
-              ))}
-              {listing.amenities.length > 4 && (
-                <Badge variant="outline" className="text-xs text-gray-400 border-gray-200">
-                  +{listing.amenities.length - 4} more
-                </Badge>
-              )}
-            </div>
-          )}
+          {(() => {
+            // Build feature badges from extracted_data highlights + amenities
+            const badges: string[] = [];
+            const ed = listing.extracted_data;
+            if (ed?.membership_plans?.length) badges.push('membership program');
+            if (ed?.special_features) {
+              for (const f of ed.special_features) {
+                const fl = f.toLowerCase();
+                if (fl.includes('free vacuum') && !badges.includes('free vacuum')) badges.push('free vacuum');
+                if (fl.includes('ceramic') && !badges.includes('ceramic coating')) badges.push('ceramic coating');
+                if ((fl.includes('mobile') || fl.includes('app')) && !badges.includes('mobile pay')) badges.push('mobile pay');
+              }
+            }
+            // Fill remaining slots from amenities
+            const remaining = 4 - badges.length;
+            if (remaining > 0 && listing.amenities?.length) {
+              for (const a of listing.amenities) {
+                if (badges.length >= 4) break;
+                const al = a.toLowerCase();
+                if (!badges.some(b => b.toLowerCase() === al)) badges.push(a);
+              }
+            }
+            const totalExtra = (listing.amenities?.length || 0) + (ed?.special_features?.length || 0) - badges.length;
+
+            return badges.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5 mt-auto pt-3">
+                {badges.slice(0, 4).map((b) => (
+                  <Badge key={b} variant="outline" className="text-xs text-gray-600 border-gray-200">
+                    {b}
+                  </Badge>
+                ))}
+                {totalExtra > 0 && (
+                  <Badge variant="outline" className="text-xs text-gray-400 border-gray-200">
+                    +{totalExtra} more
+                  </Badge>
+                )}
+              </div>
+            ) : null;
+          })()}
         </div>
       </div>
     </Link>

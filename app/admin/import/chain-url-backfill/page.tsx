@@ -34,6 +34,7 @@ interface VendorResult {
   links_found: number;
   matched: number;
   unmatched: number;
+  fallback_used: boolean;
   error_message: string | null;
   created_at: string;
 }
@@ -150,7 +151,7 @@ export default function ChainUrlBackfillPage() {
             <h1 className="text-2xl font-bold text-[#0F2744]">Chain URL Backfill</h1>
           </div>
           <p className="text-gray-500 text-sm mt-1">
-            Automatically discovers individual location URLs for all chain car washes and updates listings. Uses Firecrawl to map each chain&apos;s website and match locations by city and state.
+            Automatically discovers individual location URLs for all chain car washes and updates listings. Uses Firecrawl site mapping + AI-powered matching via Claude to resolve URLs. Falls back to scraping the chain&apos;s locations page when site mapping yields insufficient results.
           </p>
         </div>
 
@@ -324,19 +325,26 @@ export default function ChainUrlBackfillPage() {
                                 )}
                               </td>
                               <td className="px-3 py-2">
-                                {r.error_message ? (
-                                  <Badge variant="outline" className="border-red-200 text-red-600 bg-red-50 text-xs">
-                                    Error
-                                  </Badge>
-                                ) : r.matched > 0 ? (
-                                  <Badge variant="outline" className="border-green-200 text-green-700 bg-green-50 text-xs">
-                                    <CheckCircle2 className="w-3 h-3 mr-1" />Updated
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="border-gray-200 text-gray-500 text-xs">
-                                    No match
-                                  </Badge>
-                                )}
+                                <div className="flex items-center gap-1.5">
+                                  {r.error_message ? (
+                                    <Badge variant="outline" className="border-red-200 text-red-600 bg-red-50 text-xs">
+                                      Error
+                                    </Badge>
+                                  ) : r.matched > 0 ? (
+                                    <Badge variant="outline" className="border-green-200 text-green-700 bg-green-50 text-xs">
+                                      <CheckCircle2 className="w-3 h-3 mr-1" />Updated
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="border-gray-200 text-gray-500 text-xs">
+                                      No match
+                                    </Badge>
+                                  )}
+                                  {r.fallback_used && (
+                                    <Badge variant="outline" className="border-blue-200 text-blue-600 bg-blue-50 text-xs">
+                                      Fallback
+                                    </Badge>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           ))}

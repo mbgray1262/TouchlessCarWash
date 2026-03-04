@@ -59,11 +59,28 @@ async function classifyPhotoWithClaude(
     ? '\nAlso reject this photo (as BAD_OTHER) if it shows essentially the same view as any of the already-approved photos shown above — we want visual variety, not multiple shots of the same angle.'
     : '';
 
-  const prompt = `You are evaluating a photo for a touchless car wash directory. Classify this image as:
-GOOD (clear exterior shot of an automated/touchless car wash facility, wash tunnel, or building signage),
-BAD_CONTACT (shows brushes, cloth strips, mops, or any contact wash equipment), or
-BAD_OTHER (poor quality, car interior, people only, logo/graphic, blurry, or not clearly a car wash).${dedupClause}
-Reply with only the classification and a one-sentence reason, formatted as: VERDICT: reason`;
+  const prompt = `You are selecting photos for a car wash directory listing. Be GENEROUS — having some photos is much better than having none.
+
+GOOD — Accept if ANY of these are true:
+- A car wash building, bay, tunnel, canopy, or sign is visible anywhere in the photo (it does NOT need to be the main subject)
+- The photo is taken from a road or parking lot but you can see a car wash business in the scene
+- A car is entering, inside, or exiting a wash bay
+- Car wash equipment (touchless nozzles, spray arches, dryers) is visible
+- A car wash sign, menu board, or price sign is shown
+- The photo shows the exterior of a business that is clearly a car wash
+When in doubt, lean toward GOOD. A mediocre photo of the right place is better than no photo.
+
+BAD_CONTACT — Reject ONLY if you can clearly see brushes, cloth strips, foam rollers, or spinning mops physically making contact with a car's surface.
+
+BAD_OTHER — Reject ONLY if:
+- The photo has absolutely nothing to do with a car wash (food, random products, landscapes with no business)
+- It is a close-up of a car body (hood, bumper, wheel) with NO car wash facility visible at all
+- Interior of a car (dashboard, seats) with no wash visible
+- A selfie or group photo with no car wash visible
+- A logo, graphic, clip art, or promotional flyer (not a real photograph)
+- So blurry or dark that you cannot tell what is in the photo at all${dedupClause}
+
+Reply with ONLY: VERDICT: one-sentence reason`;
 
   const refBlocks = refImages.flatMap((r, i) => [
     { type: 'text' as const, text: `Already-approved photo ${i + 1}:` },
@@ -252,11 +269,15 @@ Deno.serve(async (req: Request) => {
         hero_image: string | null;
       }>).filter(l => {
         const count = Array.isArray(l.photos) ? l.photos.length : 0;
-        return count < MIN_GALLERY_TARGET;
+        const needsGallery = count < MIN_GALLERY_TARGET;
+        const needsHero = !l.hero_image
+          || l.hero_image.includes('streetviewpixels')
+          || l.hero_image.includes('street_view');
+        return needsGallery || needsHero;
       });
 
       if (eligible.length === 0) {
-        return Response.json({ error: `No listings found with fewer than ${MIN_GALLERY_TARGET} gallery photos` }, { status: 404, headers: corsHeaders });
+        return Response.json({ error: 'No listings need gallery photos or hero image fixes' }, { status: 404, headers: corsHeaders });
       }
 
       const toProcess = limit > 0 ? eligible.slice(0, limit) : eligible;
@@ -368,11 +389,15 @@ Deno.serve(async (req: Request) => {
           const heroImage: string | null = (listingData?.hero_image as string | null) ?? null;
           const blockedPhotos: string[] = (listingData?.blocked_photos as string[]) ?? [];
 
+          const heroNeedsUpgrade = !heroImage
+            || heroImage.includes('streetviewpixels')
+            || heroImage.includes('street_view');
+
           const existingUrls = [...currentPhotos, ...(heroImage ? [heroImage] : []), ...blockedPhotos];
 
           const needed = MAX_GALLERY_PHOTOS - currentPhotos.length;
-          if (needed <= 0) {
-            fallbackReason = 'Already has enough gallery photos';
+          if (needed <= 0 && !heroNeedsUpgrade) {
+            fallbackReason = 'Already has enough gallery photos and a good hero';
           } else {
             const fetchCount = Math.min(15, needed + 2);
             const placePhotoUrls = await fetchGooglePlacePhotoUrls(
@@ -405,10 +430,21 @@ Deno.serve(async (req: Request) => {
 
               if (newApproved.length > 0) {
                 const updatedPhotos = [...currentPhotos, ...newApproved];
-                await supabase.from('listings').update({
-                  photos: updatedPhotos,
-                }).eq('id', task.listing_id);
+                const updatePayload: Record<string, unknown> = { photos: updatedPhotos };
+
+                // Also upgrade hero image if it's missing or Street View
+                if (heroNeedsUpgrade) {
+                  updatePayload.hero_image = newApproved[0];
+                }
+
+                await supabase.from('listings').update(updatePayload).eq('id', task.listing_id);
                 photosAfter = updatedPhotos.length;
+              } else if (heroNeedsUpgrade && currentPhotos.length > 0) {
+                // No new photos found, but listing has existing gallery photos — promote first one to hero
+                await supabase.from('listings').update({
+                  hero_image: currentPhotos[0],
+                }).eq('id', task.listing_id);
+                fallbackReason = `${placePhotosScreened} photos screened — none new, but promoted existing gallery photo to hero`;
               } else {
                 fallbackReason = `${placePhotosScreened} photos screened by Claude — none passed GOOD verdict`;
               }

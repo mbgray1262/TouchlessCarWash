@@ -51,6 +51,21 @@ export type Listing = {
   google_place_id: string | null;
   description: string | null;
   description_generated_at: string | null;
+  touchless_wash_types: string[] | null;
+  equipment_brand: string | null;
+  equipment_model: string | null;
+  extracted_data: {
+    service_types?: string[];
+    wash_packages?: Array<{ name: string; price?: string; features?: string[] }>;
+    membership_plans?: Array<{ name: string; price?: string; features?: string[] }>;
+    equipment_technology?: string[];
+    special_features?: string[];
+    payment_methods?: string[];
+    amenities_detailed?: string[];
+    hours_notes?: string[];
+    review_highlights?: string[];
+    unique_selling_points?: string[];
+  } | null;
 };
 
 export type Review = {

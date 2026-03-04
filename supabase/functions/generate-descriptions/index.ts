@@ -34,13 +34,15 @@ interface ListingData {
   review_count: number | null;
   is_touchless: boolean;
   amenities: string[] | null;
-  wash_packages: Array<{ name: string; price?: string; description?: string }> | null;
+  wash_packages: Array<{ name: string; price?: string; description?: string; features?: string[] }> | null;
   hours: Record<string, string> | null;
   google_description: string | null;
   google_category: string | null;
   google_subtypes: string | null;
   typical_time_spent: string | null;
   price_range: string | null;
+  crawl_snapshot: { data?: { markdown?: string } } | null;
+  extracted_data: Record<string, unknown> | null;
 }
 
 async function generateDescriptionWithClaude(listing: ListingData, apiKey: string): Promise<string> {
@@ -100,16 +102,60 @@ async function generateDescriptionWithClaude(listing: ListingData, apiKey: strin
     parts.push(`Business subtypes: ${listing.google_subtypes}`);
   }
 
+  // Enrich with extracted_data if available (from crawl snapshot extraction)
+  const ed = listing.extracted_data;
+  if (ed) {
+    const edPkgs = ed.wash_packages as Array<{ name: string; price?: string; features?: string[] }> | undefined;
+    if (Array.isArray(edPkgs) && edPkgs.length > 0 && (!listing.wash_packages || edPkgs.length > listing.wash_packages.length)) {
+      const pkgs = edPkgs.map(p => {
+        let s = p.name;
+        if (p.price) s += ` (${p.price})`;
+        if (p.features?.length) s += ` — includes ${p.features.join(', ')}`;
+        return s;
+      }).join('; ');
+      parts.push(`Wash packages from website: ${pkgs}`);
+    }
+    const plans = ed.membership_plans as Array<{ name: string; price?: string }> | undefined;
+    if (Array.isArray(plans) && plans.length > 0) {
+      parts.push(`Membership options: ${plans.map(m => `${m.name} at ${m.price}`).join(', ')}`);
+    }
+    const equip = ed.equipment_technology as string[] | undefined;
+    if (Array.isArray(equip) && equip.length > 0) {
+      parts.push(`Equipment/Technology: ${equip.join(', ')}`);
+    }
+    const features = ed.special_features as string[] | undefined;
+    if (Array.isArray(features) && features.length > 0) {
+      parts.push(`Special features: ${features.join(', ')}`);
+    }
+    const usp = ed.unique_selling_points as string[] | undefined;
+    if (Array.isArray(usp) && usp.length > 0) {
+      parts.push(`Unique selling points: ${usp.join(', ')}`);
+    }
+    if (ed.review_highlights) {
+      parts.push(`Customer feedback: ${ed.review_highlights}`);
+    }
+  }
+
+  // Include relevant excerpt from crawl snapshot if available
+  const snapshotMd = listing.crawl_snapshot?.data?.markdown;
+  if (snapshotMd && snapshotMd.length > 200) {
+    parts.push(`\nWebsite content excerpt:\n${snapshotMd.substring(0, 3000)}`);
+  }
+
   const context = parts.join('\n');
 
+  const hasRichData = !!(ed || snapshotMd);
+
   const prompt = `You are writing a helpful, informative description for a car wash business listing page. The description should:
-- Be 2-3 concise paragraphs (roughly 80-150 words total)
+- Be 2-${hasRichData ? '4' : '3'} concise paragraphs (roughly ${hasRichData ? '100-200' : '80-150'} words total)
 - Naturally highlight the most compelling details: touchless/brushless technology, amenities, ratings, wash options, hours, and location
+${hasRichData ? '- Mention specific equipment or technology if known (e.g., "LaserWash 360 system")\n- Include specific pricing if available (e.g., "starting at $8.99")\n- Reference membership/unlimited plans if offered' : ''}
 - Use a friendly but factual tone — helpful to a customer deciding whether to visit
 - Be optimized for SEO by naturally including the business name, city, and state
 - NOT use generic filler phrases like "look no further" or "best in town"
 - NOT make up any details not provided in the data below
 - NOT include a title/heading — just the paragraph text
+- Each listing's description should be UNIQUE and specific to that business
 
 Business data:
 ${context}
@@ -124,8 +170,8 @@ Write the description now:`;
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'claude-haiku-4-5',
-      max_tokens: 400,
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 600,
       messages: [{ role: 'user', content: prompt }],
     }),
   });
@@ -270,7 +316,7 @@ Deno.serve(async (req: Request) => {
       try {
         const { data: listing } = await supabase
           .from('listings')
-          .select('id, name, city, state, address, zip, phone, website, rating, review_count, is_touchless, amenities, wash_packages, hours, google_description, google_category, google_subtypes, typical_time_spent, price_range')
+          .select('id, name, city, state, address, zip, phone, website, rating, review_count, is_touchless, amenities, wash_packages, hours, google_description, google_category, google_subtypes, typical_time_spent, price_range, crawl_snapshot, extracted_data')
           .eq('id', task.listing_id)
           .maybeSingle();
 

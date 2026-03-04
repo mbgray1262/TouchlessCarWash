@@ -1,0 +1,142 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 384" fill="none">
+  <defs>
+    <!-- Background gradient -->
+    <linearGradient id="bg" x1="0" y1="0" x2="600" y2="384" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0F2744"/>
+      <stop offset="40%" stop-color="#1a3a5c"/>
+      <stop offset="70%" stop-color="#0d4f6b"/>
+      <stop offset="100%" stop-color="#0a3d54"/>
+    </linearGradient>
+    <!-- Water spray gradient -->
+    <radialGradient id="spray1" cx="50%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#38BDF8" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="spray2" cx="30%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#22D3EE" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#22D3EE" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Floor reflection -->
+    <linearGradient id="floor" x1="0" y1="300" x2="0" y2="384" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0F2744" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#060E1A" stop-opacity="0.6"/>
+    </linearGradient>
+    <!-- Green accent glow -->
+    <radialGradient id="accentGlow" cx="50%" cy="80%" r="40%">
+      <stop offset="0%" stop-color="#22C55E" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#22C55E" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="600" height="384" fill="url(#bg)"/>
+
+  <!-- Ambient water spray effects -->
+  <rect width="600" height="384" fill="url(#spray1)"/>
+  <rect width="600" height="384" fill="url(#spray2)"/>
+
+  <!-- Tunnel arch structure -->
+  <path d="M80 384 L80 140 Q80 60 180 60 L420 60 Q520 60 520 140 L520 384"
+        fill="none" stroke="white" stroke-opacity="0.06" stroke-width="3"/>
+  <path d="M60 384 L60 150 Q60 50 170 50 L430 50 Q540 50 540 150 L540 384"
+        fill="none" stroke="white" stroke-opacity="0.03" stroke-width="2"/>
+
+  <!-- Overhead spray nozzles (left side) -->
+  <g opacity="0.5">
+    <!-- Nozzle 1 -->
+    <rect x="130" y="78" width="8" height="14" rx="2" fill="#64748B" opacity="0.6"/>
+    <!-- Spray arc -->
+    <path d="M134 92 Q120 140 180 180" stroke="#38BDF8" stroke-opacity="0.25" stroke-width="1.5" fill="none" stroke-dasharray="3 4"/>
+    <path d="M134 92 Q125 135 170 165" stroke="#38BDF8" stroke-opacity="0.15" stroke-width="1" fill="none" stroke-dasharray="2 3"/>
+    <!-- Droplets -->
+    <circle cx="165" cy="158" r="2" fill="#38BDF8" opacity="0.3"/>
+    <circle cx="175" cy="172" r="1.5" fill="#38BDF8" opacity="0.25"/>
+    <circle cx="155" cy="148" r="1.5" fill="#38BDF8" opacity="0.2"/>
+  </g>
+
+  <!-- Nozzle 2 -->
+  <g opacity="0.5">
+    <rect x="210" y="62" width="8" height="14" rx="2" fill="#64748B" opacity="0.6"/>
+    <path d="M214 76 Q200 120 240 165" stroke="#38BDF8" stroke-opacity="0.25" stroke-width="1.5" fill="none" stroke-dasharray="3 4"/>
+    <path d="M214 76 Q210 130 250 155" stroke="#38BDF8" stroke-opacity="0.15" stroke-width="1" fill="none" stroke-dasharray="2 3"/>
+    <circle cx="235" cy="155" r="2" fill="#38BDF8" opacity="0.3"/>
+    <circle cx="245" cy="148" r="1.5" fill="#38BDF8" opacity="0.2"/>
+  </g>
+
+  <!-- Right side nozzles -->
+  <g opacity="0.5">
+    <rect x="462" y="78" width="8" height="14" rx="2" fill="#64748B" opacity="0.6"/>
+    <path d="M466 92 Q480 140 420 180" stroke="#38BDF8" stroke-opacity="0.25" stroke-width="1.5" fill="none" stroke-dasharray="3 4"/>
+    <path d="M466 92 Q475 135 430 165" stroke="#38BDF8" stroke-opacity="0.15" stroke-width="1" fill="none" stroke-dasharray="2 3"/>
+    <circle cx="435" cy="158" r="2" fill="#38BDF8" opacity="0.3"/>
+    <circle cx="425" cy="172" r="1.5" fill="#38BDF8" opacity="0.25"/>
+  </g>
+
+  <g opacity="0.5">
+    <rect x="382" y="62" width="8" height="14" rx="2" fill="#64748B" opacity="0.6"/>
+    <path d="M386 76 Q400 120 360 165" stroke="#38BDF8" stroke-opacity="0.25" stroke-width="1.5" fill="none" stroke-dasharray="3 4"/>
+    <path d="M386 76 Q390 130 350 155" stroke="#38BDF8" stroke-opacity="0.15" stroke-width="1" fill="none" stroke-dasharray="2 3"/>
+    <circle cx="365" cy="155" r="2" fill="#38BDF8" opacity="0.3"/>
+    <circle cx="355" cy="148" r="1.5" fill="#38BDF8" opacity="0.2"/>
+  </g>
+
+  <!-- Car silhouette (sedan, viewed from side-angle perspective) -->
+  <g transform="translate(170, 195)">
+    <!-- Car body -->
+    <path d="M30 85 L30 65 Q30 55 45 50 L75 38 Q90 33 105 25 L175 25 Q195 25 205 35 L230 55 Q240 60 250 60 L250 85 Z"
+          fill="#1E3A5F" stroke="#2A5080" stroke-width="1.5" opacity="0.8"/>
+    <!-- Windows -->
+    <path d="M80 40 L110 28 L170 28 Q185 28 195 38 L210 52 L130 52 Z"
+          fill="#38BDF8" opacity="0.12" stroke="#38BDF8" stroke-opacity="0.2" stroke-width="0.5"/>
+    <!-- Window divider -->
+    <line x1="150" y1="28" x2="145" y2="52" stroke="#2A5080" stroke-width="1.5" opacity="0.6"/>
+    <!-- Wheels -->
+    <circle cx="75" cy="85" r="18" fill="#0D1B2A" stroke="#2A5080" stroke-width="1.5" opacity="0.9"/>
+    <circle cx="75" cy="85" r="10" fill="#1E3A5F" stroke="#3A6090" stroke-width="1" opacity="0.7"/>
+    <circle cx="75" cy="85" r="3" fill="#3A6090" opacity="0.5"/>
+    <circle cx="210" cy="85" r="18" fill="#0D1B2A" stroke="#2A5080" stroke-width="1.5" opacity="0.9"/>
+    <circle cx="210" cy="85" r="10" fill="#1E3A5F" stroke="#3A6090" stroke-width="1" opacity="0.7"/>
+    <circle cx="210" cy="85" r="3" fill="#3A6090" opacity="0.5"/>
+    <!-- Headlight -->
+    <ellipse cx="248" cy="68" rx="5" ry="8" fill="#FCD34D" opacity="0.3"/>
+    <!-- Taillight -->
+    <rect x="30" y="58" width="4" height="12" rx="2" fill="#EF4444" opacity="0.3"/>
+  </g>
+
+  <!-- Water mist around car -->
+  <g opacity="0.15">
+    <circle cx="220" cy="240" r="30" fill="#38BDF8"/>
+    <circle cx="380" cy="235" r="25" fill="#38BDF8"/>
+    <circle cx="300" cy="220" r="35" fill="#22D3EE"/>
+    <circle cx="260" cy="260" r="20" fill="#38BDF8"/>
+    <circle cx="350" cy="255" r="22" fill="#22D3EE"/>
+  </g>
+
+  <!-- Scattered water droplets -->
+  <g fill="#38BDF8">
+    <circle cx="150" cy="200" r="1.5" opacity="0.3"/>
+    <circle cx="450" cy="190" r="2" opacity="0.25"/>
+    <circle cx="320" cy="170" r="1.5" opacity="0.3"/>
+    <circle cx="250" cy="310" r="2" opacity="0.2"/>
+    <circle cx="380" cy="300" r="1.5" opacity="0.25"/>
+    <circle cx="180" cy="280" r="1" opacity="0.3"/>
+    <circle cx="420" cy="270" r="1.5" opacity="0.2"/>
+    <circle cx="290" cy="140" r="1" opacity="0.2"/>
+    <circle cx="350" cy="120" r="1.5" opacity="0.15"/>
+    <circle cx="200" cy="150" r="1" opacity="0.25"/>
+  </g>
+
+  <!-- Floor/ground with wet reflection -->
+  <rect x="0" y="300" width="600" height="84" fill="url(#floor)"/>
+  <!-- Wet floor streak lines -->
+  <line x1="100" y1="320" x2="500" y2="320" stroke="white" stroke-opacity="0.03" stroke-width="1"/>
+  <line x1="80" y1="340" x2="520" y2="340" stroke="white" stroke-opacity="0.02" stroke-width="1"/>
+  <line x1="120" y1="360" x2="480" y2="360" stroke="white" stroke-opacity="0.015" stroke-width="1"/>
+
+  <!-- Green accent glow at bottom -->
+  <rect width="600" height="384" fill="url(#accentGlow)"/>
+
+  <!-- Subtle brand-color track lines on floor -->
+  <line x1="170" y1="300" x2="170" y2="384" stroke="#22C55E" stroke-opacity="0.05" stroke-width="2"/>
+  <line x1="430" y1="300" x2="430" y2="384" stroke="#22C55E" stroke-opacity="0.05" stroke-width="2"/>
+</svg>

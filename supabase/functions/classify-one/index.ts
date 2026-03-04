@@ -48,22 +48,22 @@ async function fetchWebsite(url: string): Promise<{ text: string; ok: boolean; e
   }
 }
 
-const SYSTEM_PROMPT = `You are classifying car wash businesses for an AUTOMATED TOUCHLESS car wash directory. Your job is to determine whether this business offers an AUTOMATED drive-through touchless wash — and separately, whether it offers self-service wand bays.
+const SYSTEM_PROMPT = `You are classifying car wash businesses for a touchless car wash directory. Your job is to determine whether this business offers any form of touchless washing — including automated touchless bays AND self-service wand/spray bays.
 
-DEFINITIONS:
-- AUTOMATED TOUCHLESS: A drive-through tunnel or bay where the car moves through (or equipment moves around the car) using only high-pressure water jets, foam, and chemicals with NO brushes, cloth, or friction. Keywords: "touchless", "touch-free", "touch free", "contactless", "no-touch", "brushless", "laser wash", "automatic touchless".
-- SELF-SERVICE: Coin-operated or pay-per-use open bays where the CUSTOMER operates a handheld wand or pressure washer themselves to wash their own car. This is NOT automated and should NOT be classified as touchless even though no brushes contact the car.
+DEFINITION OF TOUCHLESS: No automated friction contact with the vehicle. This includes:
+- AUTOMATED TOUCHLESS: Drive-through tunnel or bay using only high-pressure water jets, foam, and chemicals with NO brushes, cloth, or friction. Keywords: "touchless", "touch-free", "touch free", "contactless", "no-touch", "brushless", "laser wash", "automatic touchless".
+- SELF-SERVICE WAND/SPRAY BAYS: Coin-operated or pay-per-use open bays where the customer operates a handheld wand or pressure washer. These ARE touchless because no automated friction materials contact the vehicle — the customer controls a high-pressure spray only.
 
-CLASSIFY is_touchless = true ONLY when:
-- The business itself claims to offer "touchless", "touch-free", "contactless", "no-touch", "brushless", or "laser wash" as a service THEY provide
-- This refers to an AUTOMATED service, not a self-service wand bay
-- Hybrid facilities that offer BOTH automated touchless AND other wash types
+IMPORTANT: Self-service wand/spray bays are TOUCHLESS. However, self-service bays that include foam brushes, hog's-hair brushes, or any hand-held brush that contacts the vehicle are NOT touchless.
+
+CLASSIFY is_touchless = true when:
+- The business offers automated touchless/touch-free/contactless/brushless/laser wash services
+- The business offers self-service wand/spray bays WITHOUT brushes (pressure wand only)
+- Hybrid facilities that offer touchless AND other wash types (even if they also have soft-touch tunnels — the touchless option qualifies them)
 
 CLASSIFY is_touchless = false (THIS IS THE DEFAULT) when:
-- Website describes wash packages or tunnel washes WITHOUT touchless/touch-free/contactless language
-- Website mentions soft-touch, friction, brush, foam brush, cloth, or conveyor wash
-- Website describes ONLY self-service wand bays (customer uses wand themselves) — self-service is NEVER touchless for our directory
-- Website mentions "self-serve bays", "self service", "wand", "spray bay", "coin-op", "coin operated" as their PRIMARY or ONLY offering
+- Website describes ONLY soft-touch, friction, brush, foam brush, cloth, or conveyor tunnel washes with NO touchless or self-serve spray-only option
+- Self-service bays that explicitly include foam brushes, hog's-hair brushes, or other friction tools as part of the wash
 - The business is not a car wash (detail shop, auto repair, etc.)
 
 CLASSIFY is_touchless = null ONLY when:
@@ -77,18 +77,29 @@ CRITICAL RULES — these are the most common classification errors:
 
 1. IGNORE BOILERPLATE INDUSTRY COPY: Many websites (especially on platforms like edan.io, keeq.io, jany.io, lany.io, webbo.me) contain auto-generated "industry analysis", "industry overview", "expert analysis", or "comprehensive industry overview" sections that describe the car wash industry in general terms. These sections often mention touchless technology as an industry trend. This does NOT mean the specific business offers touchless washing. ONLY classify as touchless if the business is describing its own services.
 
-2. SELF-SERVICE IS NEVER TOUCHLESS: Self-service wand bays are NOT automated touchless washes. Never reason that "self-service is touchless by definition." The customer operating a pressure wand does not make it an automated touchless facility. is_self_service = true means is_touchless should be false (unless there is also a separate automated touchless bay).
+2. SELF-SERVICE BAYS — CHECK FOR BRUSHES: Self-service wand/spray bays ARE touchless (is_touchless = true). BUT if the website mentions foam brushes, hog's-hair brushes, or hand-held brushes in the self-service bays, those bays involve friction contact and are NOT touchless (is_touchless = false). Look carefully at the wash steps/options listed for the self-serve bays.
 
 3. GENERIC MENTIONS DO NOT COUNT: Phrases like "we use state-of-the-art equipment such as touchless wash systems" appearing in generic/template copy do not count. Look for specific first-person service claims: "our touchless wash", "we offer touch-free", "2 touchless automatic bays", specific brand names (LaserWash, Razor®, Petit, etc.).
 
-4. WATERLESS / MOBILE / HAND WASH IS NOT TOUCHLESS: "Waterless car wash", "no-water wash", "waterless carwash", or mobile detailing services where a person comes to your car and hand-wipes it with spray products are NOT automated touchless washes. These are manual detailing services. Similarly, mobile car washes where someone hand-washes your car at your location are NOT automated touchless. The business must operate a fixed drive-through bay or tunnel with automated equipment. If a website describes a waterless, hand-applied, or mobile service, set is_touchless = false.
+4. WATERLESS / MOBILE / HAND WASH IS NOT TOUCHLESS: "Waterless car wash", "no-water wash", "waterless carwash", or mobile detailing services where a person hand-wipes with spray products are NOT touchless. Similarly, mobile car washes where someone hand-washes your car are NOT touchless. The business must operate a fixed facility.
+
+TOUCHLESS WASH TYPES — when is_touchless = true, also classify the type(s) offered:
+- "touchless_automatic": Automated in-bay or tunnel wash using high-pressure jets, chemicals, and no friction. Includes LaserWash, PDQ, Washworld, Petit, Razor, and similar systems. The machine does the work — the customer stays in or out of the car.
+- "self_serve_spray": Customer-operated open bay with a pressure wand or spray gun. No brushes — spray only.
+A listing can have BOTH types (e.g., a facility with automatic touchless bays AND self-serve spray bays).
+If is_touchless = false or null, set touchless_wash_types to [].
+
+EQUIPMENT — if the website mentions specific touchless wash equipment, extract the brand and model:
+- equipment_brand: Normalized lowercase brand name. Known brands: "laserwash", "washworld", "pdq", "petit", "belanger", "istobal", "ryko", "ds". If you see a brand not in this list, still include it in lowercase.
+- equipment_model: The specific model name as written on the website (e.g., "LaserWash 360 Plus", "Razor EDGE", "Kondor", "G5", "Profile", "Petit AutoWash", "SpinLite", "Tandem").
+Only set these if the website explicitly names the equipment. Do not guess.
 
 Respond in this exact JSON format:
-{"is_touchless": true/false/null, "is_self_service": true/false, "evidence": "Brief 1-2 sentence explanation", "amenities": ["list", "of", "amenities"]}
+{"is_touchless": true/false/null, "is_self_service": true/false, "touchless_wash_types": ["touchless_automatic", "self_serve_spray"], "equipment_brand": "laserwash" or null, "equipment_model": "LaserWash 360" or null, "evidence": "Brief 1-2 sentence explanation", "amenities": ["list", "of", "amenities"]}
 
 For amenities, extract any mentioned: free vacuum, unlimited wash club, membership program, self-serve bays, RV or oversized vehicle washing, interior cleaning, detailing, ceramic coating, wax, undercarriage wash, tire shine, air freshener, mat cleaner, dog wash.`;
 
-async function classifyWithClaude(text: string, apiKey: string): Promise<{ is_touchless: boolean | null; is_self_service: boolean; evidence: string; amenities: string[] }> {
+async function classifyWithClaude(text: string, apiKey: string): Promise<{ is_touchless: boolean | null; is_self_service: boolean; touchless_wash_types: string[]; equipment_brand: string | null; equipment_model: string | null; evidence: string; amenities: string[] }> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -169,7 +180,7 @@ Deno.serve(async (req: Request) => {
       return Response.json({ status: "fetch_failed", error: fetched.error }, { headers: corsHeaders });
     }
 
-    let classification: { is_touchless: boolean | null; is_self_service: boolean; evidence: string; amenities: string[] };
+    let classification: { is_touchless: boolean | null; is_self_service: boolean; touchless_wash_types: string[]; equipment_brand: string | null; equipment_model: string | null; evidence: string; amenities: string[] };
     try {
       classification = await classifyWithClaude(fetched.text, anthropicKey);
     } catch (e) {
@@ -201,6 +212,21 @@ Deno.serve(async (req: Request) => {
 
     if (classification.amenities && classification.amenities.length > 0) {
       updatePayload.amenities = classification.amenities;
+    }
+
+    // Save touchless wash types
+    const validTypes = ['touchless_automatic', 'self_serve_spray'];
+    const washTypes = (classification.touchless_wash_types ?? []).filter(t => validTypes.includes(t));
+    if (washTypes.length > 0) {
+      updatePayload.touchless_wash_types = washTypes;
+    }
+
+    // Save equipment brand/model
+    if (classification.equipment_brand) {
+      updatePayload.equipment_brand = classification.equipment_brand.toLowerCase().trim();
+    }
+    if (classification.equipment_model) {
+      updatePayload.equipment_model = classification.equipment_model.trim();
     }
 
     const { error: updateError } = await supabase

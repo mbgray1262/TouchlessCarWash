@@ -14,14 +14,14 @@ const SITE_URL = 'https://touchlesscarwashfinder.com';
 const TOP_STATES = ['CA', 'TX', 'FL', 'NY', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI', 'AZ', 'WA'];
 
 export const metadata: Metadata = {
-  title: 'Touchless Car Wash Near Me — Find 3,465+ Verified Locations | Touchless Car Wash Finder',
-  description: 'Find the nearest touchless car wash in your area. Browse 3,465+ verified brushless car wash locations across all 50 states + DC. No scratches, no brushes — just clean.',
+  title: 'Touchless Car Wash Near Me — Find 3,000+ Verified Locations | Touchless Car Wash Finder',
+  description: 'Find the nearest touchless car wash in your area. Browse 3,000+ verified brushless car wash locations across all 50 states + DC. No scratches, no brushes — just clean.',
   alternates: {
     canonical: SITE_URL + '/',
   },
   openGraph: {
-    title: 'Touchless Car Wash Near Me — Find 3,465+ Verified Locations',
-    description: 'Find the nearest touchless car wash in your area. Browse 3,465+ verified brushless car wash locations across all 50 states + DC. No scratches, no brushes — just clean.',
+    title: 'Touchless Car Wash Near Me — Find 3,000+ Verified Locations',
+    description: 'Find the nearest touchless car wash in your area. Browse 3,000+ verified brushless car wash locations across all 50 states + DC. No scratches, no brushes — just clean.',
     url: SITE_URL + '/',
     siteName: 'Touchless Car Wash Finder',
     images: [
@@ -36,8 +36,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Touchless Car Wash Near Me — Find 3,465+ Verified Locations',
-    description: 'Find the nearest touchless car wash in your area. Browse 3,465+ verified brushless car wash locations across all 50 states + DC.',
+    title: 'Touchless Car Wash Near Me — Find 3,000+ Verified Locations',
+    description: 'Find the nearest touchless car wash in your area. Browse 3,000+ verified brushless car wash locations across all 50 states + DC.',
     images: ['https://res.cloudinary.com/dret3qhyu/image/upload/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png'],
   },
 };
@@ -53,7 +53,7 @@ const faqItems = [
   },
   {
     question: 'How do I find a touchless car wash near me?',
-    answer: 'Use the search bar at the top of this page — enter your city, ZIP code, or the name of a car wash and we\'ll show you verified touchless locations nearby. Our directory lists 3,465+ verified touchless car wash locations across all 50 states + DC.',
+    answer: 'Use the search bar at the top of this page — enter your city, ZIP code, or the name of a car wash and we\'ll show you verified touchless locations nearby. Our directory lists 3,000+ verified touchless car wash locations across all 50 states + DC.',
   },
   {
     question: 'How much does a touchless car wash cost?',

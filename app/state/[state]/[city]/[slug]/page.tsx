@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import {
   Star, MapPin, Phone, Globe, Clock, CheckCircle, ArrowLeft,
   Sparkles, ExternalLink, ChevronRight, Navigation, HelpCircle,
-  CalendarCheck, ChevronDown
+  CalendarCheck, ChevronDown, Droplet, CreditCard, Zap
 } from 'lucide-react';
 import LogoImage from '@/components/LogoImage';
 import HeroImageFallback from '@/components/HeroImageFallback';
@@ -159,6 +159,7 @@ function getOpenStatus(hours: Record<string, string> | null): 'open' | 'closed' 
 }
 
 function buildDescription(listing: Listing): string {
+  if (listing.description) return listing.description;
   if (listing.google_description) return listing.google_description;
   const parts: string[] = [`Touchless automatic car wash in ${listing.city}, ${listing.state}`];
   const highlights = (listing.amenities || []).slice(0, 4);
@@ -167,6 +168,22 @@ function buildDescription(listing: Listing): string {
   }
   return parts.join(' ') + '.';
 }
+
+const WASH_TYPE_LABELS: Record<string, { label: string; color: string }> = {
+  touchless_automatic: { label: 'Touchless Automatic', color: 'bg-blue-100 text-blue-800 border-blue-200' },
+  self_serve_spray: { label: 'Self-Serve Spray', color: 'bg-purple-100 text-purple-800 border-purple-200' },
+};
+
+const BRAND_LABELS: Record<string, string> = {
+  laserwash: 'LaserWash',
+  pdq: 'PDQ',
+  washworld: 'WashWorld',
+  belanger: 'Belanger',
+  istobal: 'Istobal',
+  ryko: 'Ryko',
+  petit: 'Petit',
+  ds: 'D&S',
+};
 
 function buildLocalBusinessSchema(listing: Listing, canonicalUrl: string, hours: Record<string, string> | null): object {
   const hoursSpec = hours
@@ -475,68 +492,157 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
       <div className="min-h-screen bg-gray-50">
         <div className="relative bg-[#0F2744]">
           {heroImage ? (
-            <div className="relative h-80 md:h-[26rem] overflow-hidden">
-              <img
-                src={heroImage}
-                alt={listing.name}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0F2744] via-[#0F2744]/50 to-[#0F2744]/10" />
-            </div>
+            <>
+              <div className="relative h-80 md:h-[26rem] overflow-hidden">
+                <img
+                  src={heroImage}
+                  alt={listing.name}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0F2744] via-[#0F2744]/50 to-[#0F2744]/10" />
+              </div>
+
+              <div className="absolute inset-0 flex flex-col justify-end">
+                <div className="container mx-auto px-4 max-w-5xl pb-8 pt-4">
+                  <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-white/50 mb-5 flex-wrap">
+                    <Link href="/" className="hover:text-white transition-colors">Home</Link>
+                    <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+                    <Link href="/states" className="hover:text-white transition-colors">States</Link>
+                    <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+                    <Link href={`/state/${params.state}`} className="hover:text-white transition-colors">{stateName}</Link>
+                    <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+                    <Link href={`/state/${params.state}/${params.city}`} className="hover:text-white transition-colors">{cityName}</Link>
+                    <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+                    <span className="text-white/80 truncate">{listing.name}</span>
+                  </nav>
+
+                  <div className="flex items-end gap-4">
+                    {logoImage && (
+                      <LogoImage
+                        src={logoImage}
+                        alt={`${listing.name} logo`}
+                        wrapperClassName="shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-white p-1.5 shadow-lg mb-0.5"
+                        className="w-full h-full object-contain"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <Badge className="bg-[#22C55E] text-white border-0 shadow-sm">
+                          <CheckCircle className="w-3 h-3 mr-1" />Touchless Verified
+                        </Badge>
+                        {listing.is_featured && (
+                          <Badge className="bg-amber-400 text-amber-900 border-0">Featured</Badge>
+                        )}
+                      </div>
+                      <h1 className="text-3xl md:text-4xl font-bold text-white leading-tight mb-2">{listing.name}</h1>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-white/80 text-sm">
+                        <span className="flex items-center gap-1.5">
+                          <MapPin className="w-4 h-4 shrink-0" />
+                          {listing.address}, {listing.city}, {listing.state}
+                        </span>
+                        {ratingStars}
+                      </div>
+                      <p className="mt-2.5 text-sm text-white/65 max-w-2xl leading-relaxed line-clamp-2">{description}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
           ) : (
-            <HeroImageFallback variant="full" className="h-48 md:h-64" />
+            /* No-photo layout: clean gradient with content flowing naturally (no absolute overlay) */
+            <HeroImageFallback variant="full" className="absolute inset-0" />
           )}
 
-          <div className="absolute inset-0 flex flex-col justify-end">
-            <div className="container mx-auto px-4 max-w-5xl pb-8 pt-4">
-              <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-white/50 mb-5 flex-wrap">
-                <Link href="/" className="hover:text-white transition-colors">Home</Link>
-                <ChevronRight className="w-3.5 h-3.5 shrink-0" />
-                <Link href="/states" className="hover:text-white transition-colors">States</Link>
-                <ChevronRight className="w-3.5 h-3.5 shrink-0" />
-                <Link href={`/state/${params.state}`} className="hover:text-white transition-colors">{stateName}</Link>
-                <ChevronRight className="w-3.5 h-3.5 shrink-0" />
-                <Link href={`/state/${params.state}/${params.city}`} className="hover:text-white transition-colors">{cityName}</Link>
-                <ChevronRight className="w-3.5 h-3.5 shrink-0" />
-                <span className="text-white/80 truncate">{listing.name}</span>
-              </nav>
+          {!heroImage && (
+            <div className="relative">
+              <div className="container mx-auto px-4 max-w-5xl py-8">
+                <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-white/50 mb-5 flex-wrap">
+                  <Link href="/" className="hover:text-white transition-colors">Home</Link>
+                  <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+                  <Link href="/states" className="hover:text-white transition-colors">States</Link>
+                  <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+                  <Link href={`/state/${params.state}`} className="hover:text-white transition-colors">{stateName}</Link>
+                  <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+                  <Link href={`/state/${params.state}/${params.city}`} className="hover:text-white transition-colors">{cityName}</Link>
+                  <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+                  <span className="text-white/80 truncate">{listing.name}</span>
+                </nav>
 
-              <div className="flex items-end gap-4">
-                {logoImage && (
-                  <LogoImage
-                    src={logoImage}
-                    alt={`${listing.name} logo`}
-                    wrapperClassName="shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-white p-1.5 shadow-lg mb-0.5"
-                    className="w-full h-full object-contain"
-                  />
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <Badge className="bg-[#22C55E] text-white border-0 shadow-sm">
-                      <CheckCircle className="w-3 h-3 mr-1" />Touchless Verified
-                    </Badge>
-                    {listing.is_featured && (
-                      <Badge className="bg-amber-400 text-amber-900 border-0">Featured</Badge>
-                    )}
+                <div className="flex items-end gap-4">
+                  {logoImage && (
+                    <LogoImage
+                      src={logoImage}
+                      alt={`${listing.name} logo`}
+                      wrapperClassName="shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-white p-1.5 shadow-lg mb-0.5"
+                      className="w-full h-full object-contain"
+                    />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <Badge className="bg-[#22C55E] text-white border-0 shadow-sm">
+                        <CheckCircle className="w-3 h-3 mr-1" />Touchless Verified
+                      </Badge>
+                      {listing.is_featured && (
+                        <Badge className="bg-amber-400 text-amber-900 border-0">Featured</Badge>
+                      )}
+                    </div>
+                    <h1 className="text-3xl md:text-4xl font-bold text-white leading-tight mb-2">{listing.name}</h1>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-white/80 text-sm">
+                      <span className="flex items-center gap-1.5">
+                        <MapPin className="w-4 h-4 shrink-0" />
+                        {listing.address}, {listing.city}, {listing.state}
+                      </span>
+                      {ratingStars}
+                    </div>
+                    <p className="mt-2.5 text-sm text-white/60 max-w-2xl leading-relaxed line-clamp-2">{description}</p>
                   </div>
-                  <h1 className="text-3xl md:text-4xl font-bold text-white leading-tight mb-2">{listing.name}</h1>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-white/80 text-sm">
-                    <span className="flex items-center gap-1.5">
-                      <MapPin className="w-4 h-4 shrink-0" />
-                      {listing.address}, {listing.city}, {listing.state}
-                    </span>
-                    {ratingStars}
-                  </div>
-                  <p className="mt-2.5 text-sm text-white/65 max-w-2xl leading-relaxed">{description}</p>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="container mx-auto px-4 max-w-5xl py-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
+              {/* AI-Generated Description */}
+              {listing.description && (
+                <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                  <h2 className="text-lg font-bold text-[#0F2744] mb-3">About {listing.name}</h2>
+                  <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+                    {listing.description}
+                  </div>
+                </div>
+              )}
+
+              {/* Wash Type & Equipment */}
+              {((listing.touchless_wash_types && listing.touchless_wash_types.length > 0) || listing.equipment_brand) && (
+                <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                  <h2 className="text-lg font-bold text-[#0F2744] mb-4 flex items-center gap-2">
+                    <Droplet className="w-5 h-5 text-blue-500" />
+                    Wash Type & Equipment
+                  </h2>
+                  {listing.touchless_wash_types && listing.touchless_wash_types.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {listing.touchless_wash_types.map((wt: string) => {
+                        const info = WASH_TYPE_LABELS[wt] || { label: wt, color: 'bg-gray-100 text-gray-700 border-gray-200' };
+                        return (
+                          <Badge key={wt} className={`${info.color} border text-sm py-1 px-3`}>
+                            {info.label}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {listing.equipment_brand && (
+                    <div className="text-sm text-gray-700">
+                      <span className="font-medium">Equipment: </span>
+                      {listing.equipment_model || BRAND_LABELS[listing.equipment_brand] || listing.equipment_brand}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {listing.amenities && listing.amenities.length > 0 && (
                 <div className="bg-white rounded-2xl border border-gray-200 p-6">
                   <h2 className="text-lg font-bold text-[#0F2744] mb-4 flex items-center gap-2">
@@ -569,6 +675,74 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Membership Plans from extracted_data */}
+              {listing.extracted_data?.membership_plans && listing.extracted_data.membership_plans.length > 0 && (
+                <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                  <h2 className="text-lg font-bold text-[#0F2744] mb-4 flex items-center gap-2">
+                    <CreditCard className="w-5 h-5 text-[#22C55E]" />
+                    Membership Plans
+                  </h2>
+                  <div className="space-y-3">
+                    {listing.extracted_data.membership_plans.map((plan, i) => (
+                      <div key={i} className="p-3 rounded-lg bg-green-50 border border-green-100">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="font-semibold text-[#0F2744]">{plan.name}</div>
+                            {plan.features && plan.features.length > 0 && (
+                              <ul className="mt-1.5 space-y-0.5">
+                                {plan.features.map((f, j) => (
+                                  <li key={j} className="text-sm text-gray-600 flex items-start gap-1.5">
+                                    <CheckCircle className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" />
+                                    {f}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                          {plan.price && (
+                            <span className="shrink-0 font-bold text-[#22C55E] text-lg">{plan.price}</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Special Features & Payment Methods from extracted_data */}
+              {listing.extracted_data && (listing.extracted_data.special_features?.length || listing.extracted_data.payment_methods?.length) && (
+                <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                  <h2 className="text-lg font-bold text-[#0F2744] mb-4 flex items-center gap-2">
+                    <Zap className="w-5 h-5 text-amber-500" />
+                    Additional Details
+                  </h2>
+                  {listing.extracted_data.special_features && listing.extracted_data.special_features.length > 0 && (
+                    <div className="mb-4">
+                      <h3 className="text-sm font-semibold text-gray-600 mb-2">Special Features</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {listing.extracted_data.special_features.map((f, i) => (
+                          <Badge key={i} variant="outline" className="text-sm py-1 px-3 border-amber-200 bg-amber-50 text-amber-800">
+                            {f}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {listing.extracted_data.payment_methods && listing.extracted_data.payment_methods.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-600 mb-2">Payment Methods</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {listing.extracted_data.payment_methods.map((pm, i) => (
+                          <Badge key={i} variant="outline" className="text-sm py-1 px-3 border-gray-200 text-gray-700">
+                            {pm}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -637,7 +811,10 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
 
                 {listing.latitude && listing.longitude && (
                   <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${listing.latitude},${listing.longitude}`}
+                    href={listing.google_place_id
+                      ? `https://www.google.com/maps/place/?q=place_id:${listing.google_place_id}`
+                      : `https://www.google.com/maps/search/?api=1&query=${listing.latitude},${listing.longitude}`
+                    }
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-4 flex items-center justify-center gap-2 w-full bg-[#22C55E] text-white text-sm font-semibold py-3 rounded-xl hover:bg-[#16A34A] transition-colors shadow-sm"
