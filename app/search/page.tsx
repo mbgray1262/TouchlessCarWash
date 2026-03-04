@@ -1,14 +1,12 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Sparkles, Clock, Wind, RefreshCw, Hand, Truck, IdCard, Car } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { supabase, type Listing } from '@/lib/supabase';
+import { getStateSlug, slugify } from '@/lib/constants';
 import { ListingCard } from '@/components/ListingCard';
-import { ClientPagination, PAGE_SIZE } from '@/components/Pagination';
+import { Pagination, PAGE_SIZE } from '@/components/Pagination';
+import { SearchFilters } from '@/components/SearchFilters';
+import type { Metadata } from 'next';
 
 interface Filter {
   id: number;
@@ -18,177 +16,186 @@ interface Filter {
   icon: string | null;
 }
 
-const ICON_MAP: Record<string, React.ElementType> = {
-  sparkles: Sparkles,
-  clock: Clock,
-  wind: Wind,
-  'refresh-cw': RefreshCw,
-  hand: Hand,
-  truck: Truck,
-  'id-card': IdCard,
-  car: Car,
-};
+interface SearchPageProps {
+  searchParams: {
+    q?: string;
+    filters?: string;
+    page?: string;
+  };
+}
 
-export default function SearchPage() {
-  const searchParams = useSearchParams();
-  const query = searchParams.get('q') || '';
+async function getFilters(): Promise<Filter[]> {
+  const { data } = await supabase
+    .from('filters')
+    .select('id, name, slug, category, icon')
+    .order('sort_order');
+  return data ?? [];
+}
 
-  const [listings, setListings] = useState<Listing[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState<Filter[]>([]);
-  const [activeFilters, setActiveFilters] = useState<Set<number>>(new Set());
-  const [page, setPage] = useState(1);
+async function searchListings(
+  query: string,
+  activeFilterSlugs: string[],
+  allFilters: Filter[]
+): Promise<Listing[]> {
+  const filterIds = activeFilterSlugs
+    .map(slug => allFilters.find(f => f.slug === slug)?.id)
+    .filter((id): id is number => id != null);
 
-  useEffect(() => {
-    async function loadFilters() {
-      const { data } = await supabase
-        .from('filters')
-        .select('id, name, slug, category, icon')
-        .order('sort_order');
-      if (data) setFilters(data);
+  if (filterIds.length > 0) {
+    const { data: matchedRows } = await supabase
+      .from('listing_filters')
+      .select('listing_id')
+      .in('filter_id', filterIds);
+
+    if (!matchedRows || matchedRows.length === 0) return [];
+
+    const idCounts: Record<string, number> = {};
+    for (const row of matchedRows) {
+      idCounts[row.listing_id] = (idCounts[row.listing_id] ?? 0) + 1;
     }
-    loadFilters();
-  }, []);
+    const qualifiedIds = Object.entries(idCounts)
+      .filter(([, count]) => count === filterIds.length)
+      .map(([id]) => id);
 
-  useEffect(() => {
-    async function searchListings() {
-      setLoading(true);
+    if (qualifiedIds.length === 0) return [];
 
-      if (activeFilters.size > 0) {
-        const filterIds = Array.from(activeFilters);
+    let q = supabase
+      .from('listings')
+      .select('*')
+      .in('id', qualifiedIds)
+      .order('rating', { ascending: false });
 
-        const { data: matchedListingIds } = await supabase
-          .from('listing_filters')
-          .select('listing_id')
-          .in('filter_id', filterIds);
-
-        if (!matchedListingIds || matchedListingIds.length === 0) {
-          setListings([]);
-          setLoading(false);
-          return;
-        }
-
-        const idCounts: Record<string, number> = {};
-        for (const row of matchedListingIds) {
-          idCounts[row.listing_id] = (idCounts[row.listing_id] ?? 0) + 1;
-        }
-        const qualifiedIds = Object.entries(idCounts)
-          .filter(([, count]) => count === filterIds.length)
-          .map(([id]) => id);
-
-        if (qualifiedIds.length === 0) {
-          setListings([]);
-          setLoading(false);
-          return;
-        }
-
-        let q = supabase
-          .from('listings')
-          .select('*')
-          .in('id', qualifiedIds)
-          .order('rating', { ascending: false });
-
-        if (query) {
-          q = q.or(`city.ilike.%${query}%,zip.ilike.%${query}%,state.ilike.%${query}%,name.ilike.%${query}%`);
-        }
-
-        const { data, error } = await q;
-        if (!error && data) setListings(data);
-      } else {
-        let q = supabase
-          .from('listings')
-          .select('*')
-          .order('rating', { ascending: false });
-
-        if (query) {
-          q = q.or(`city.ilike.%${query}%,zip.ilike.%${query}%,state.ilike.%${query}%,name.ilike.%${query}%`);
-        }
-
-        const { data, error } = await q;
-        if (!error && data) setListings(data);
-      }
-
-      setLoading(false);
+    if (query) {
+      q = q.or(`city.ilike.%${query}%,zip.ilike.%${query}%,state.ilike.%${query}%,name.ilike.%${query}%`);
     }
 
-    if (query || activeFilters.size > 0) {
-      searchListings();
-    } else {
-      setLoading(false);
-    }
-    setPage(1);
-  }, [query, activeFilters]);
+    const { data } = await q;
+    return data ?? [];
+  } else {
+    let q = supabase
+      .from('listings')
+      .select('*')
+      .order('rating', { ascending: false });
 
-  function toggleFilter(id: number) {
-    setActiveFilters(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
+    if (query) {
+      q = q.or(`city.ilike.%${query}%,zip.ilike.%${query}%,state.ilike.%${query}%,name.ilike.%${query}%`);
+    }
+
+    const { data } = await q;
+    return data ?? [];
+  }
+}
+
+function buildBaseHref(query: string, activeFilterSlugs: string[]): string {
+  const params = new URLSearchParams();
+  if (query) params.set('q', query);
+  if (activeFilterSlugs.length > 0) params.set('filters', activeFilterSlugs.join(','));
+  const qs = params.toString();
+  return `/search${qs ? `?${qs}` : ''}`;
+}
+
+export async function generateMetadata({ searchParams }: SearchPageProps): Promise<Metadata> {
+  const query = searchParams.q || '';
+  const filterSlugs = searchParams.filters?.split(',').filter(Boolean) ?? [];
+
+  if (!query && filterSlugs.length === 0) {
+    return {
+      title: 'Search Touchless Car Washes',
+      description: 'Search for touchless, touch-free, and brushless car washes by city, zip code, or filter. Find verified no-scratch car wash locations near you.',
+    };
   }
 
-  const resultLabel = activeFilters.size > 0 || query
+  let title = '';
+  if (query) {
+    const displayQuery = query.replace(/\b\w/g, c => c.toUpperCase());
+    title = `Touchless Car Washes in ${displayQuery}`;
+  } else {
+    title = 'Touchless Car Washes';
+  }
+
+  if (filterSlugs.length > 0) {
+    const allFilters = await getFilters();
+    const filterNames = filterSlugs
+      .map(slug => allFilters.find(f => f.slug === slug)?.name)
+      .filter(Boolean);
+    if (filterNames.length > 0) {
+      title += ` with ${filterNames.join(', ')}`;
+    }
+  }
+
+  return {
+    title,
+    description: `Find touchless car washes${query ? ` in ${query}` : ''}${filterSlugs.length > 0 ? ' matching your filters' : ''}. Browse verified no-scratch car wash locations with ratings and reviews.`,
+  };
+}
+
+export default async function SearchPage({ searchParams }: SearchPageProps) {
+  const query = searchParams.q || '';
+  const activeFilterSlugs = searchParams.filters?.split(',').filter(Boolean) ?? [];
+  const currentPage = Math.max(1, parseInt(searchParams.page || '1', 10) || 1);
+
+  const allFilters = await getFilters();
+
+  const hasSearch = query.length > 0 || activeFilterSlugs.length > 0;
+  const listings = hasSearch
+    ? await searchListings(query, activeFilterSlugs, allFilters)
+    : [];
+
+  const totalPages = Math.ceil(listings.length / PAGE_SIZE);
+  const page = Math.min(currentPage, Math.max(1, totalPages));
+  const paginatedListings = listings.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const resultLabel = hasSearch
     ? listings.length > 0
       ? `Found ${listings.length} car wash${listings.length !== 1 ? 'es' : ''}`
       : 'No results found'
     : null;
 
+  const baseHref = buildBaseHref(query, activeFilterSlugs);
+
+  const jsonLd = hasSearch && listings.length > 0
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'ItemList',
+        name: query ? `Touchless Car Washes in ${query}` : 'Touchless Car Wash Search Results',
+        numberOfItems: listings.length,
+        itemListElement: paginatedListings.map((listing, index) => ({
+          '@type': 'ListItem',
+          position: (page - 1) * PAGE_SIZE + index + 1,
+          name: listing.name,
+          url: `https://touchlesscarwashfinder.com/state/${getStateSlug(listing.state)}/${slugify(listing.city)}/${listing.slug}`,
+        })),
+      }
+    : null;
+
   return (
     <div className="min-h-screen">
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      )}
+
       <div className="bg-[#0F2744] py-10">
         <div className="container mx-auto px-4 max-w-6xl">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
             {query ? <>Results for &ldquo;{query}&rdquo;</> : 'Find a Car Wash'}
           </h1>
-          {!loading && resultLabel && (
+          {resultLabel && (
             <p className="text-white/70 text-lg">{resultLabel}</p>
           )}
         </div>
       </div>
 
       <div className="container mx-auto px-4 max-w-6xl py-8">
-        {filters.length > 0 && (
-          <div className="mb-8">
-            <div className="flex flex-wrap gap-2">
-              {filters.map(f => {
-                const Icon = ICON_MAP[f.icon ?? ''] ?? Sparkles;
-                const active = activeFilters.has(f.id);
-                return (
-                  <button
-                    key={f.id}
-                    onClick={() => toggleFilter(f.id)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
-                      active
-                        ? 'bg-[#0F2744] border-[#0F2744] text-white'
-                        : 'bg-white border-gray-200 text-gray-700 hover:border-[#0F2744] hover:text-[#0F2744]'
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                    {f.name}
-                  </button>
-                );
-              })}
-            </div>
-            {activeFilters.size > 0 && (
-              <button
-                onClick={() => setActiveFilters(new Set())}
-                className="mt-3 text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors"
-              >
-                Clear all filters
-              </button>
-            )}
-          </div>
-        )}
+        <SearchFilters
+          filters={allFilters}
+          activeFilterSlugs={activeFilterSlugs}
+          currentQuery={query}
+        />
 
-        {loading ? (
-          <div className="text-center py-16">
-            <p className="text-gray-400">Searching...</p>
-          </div>
-        ) : !query && activeFilters.size === 0 ? (
+        {!hasSearch ? (
           <Card>
             <CardContent className="p-12 text-center">
               <p className="text-lg text-muted-foreground mb-4">Enter a city name or zip code to search, or select filters above</p>
@@ -203,9 +210,9 @@ export default function SearchPage() {
               <p className="text-lg text-muted-foreground mb-2">No results found{query ? ` for \u201c${query}\u201d` : ''}</p>
               <p className="text-sm text-muted-foreground mb-6">Try adjusting your filters or searching a different area</p>
               <div className="flex gap-3 justify-center">
-                {activeFilters.size > 0 && (
-                  <Button variant="outline" onClick={() => setActiveFilters(new Set())}>
-                    Clear Filters
+                {activeFilterSlugs.length > 0 && (
+                  <Button variant="outline" asChild>
+                    <Link href={buildBaseHref(query, [])}>Clear Filters</Link>
                   </Button>
                 )}
                 <Button asChild>
@@ -217,14 +224,14 @@ export default function SearchPage() {
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {listings.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((listing) => (
+              {paginatedListings.map((listing) => (
                 <ListingCard key={listing.id} listing={listing} />
               ))}
             </div>
-            <ClientPagination
+            <Pagination
               currentPage={page}
               totalItems={listings.length}
-              onPageChange={(p) => { setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              baseHref={baseHref}
             />
           </>
         )}
