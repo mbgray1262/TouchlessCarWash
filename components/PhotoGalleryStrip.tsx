@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Props {
@@ -46,11 +47,12 @@ export default function PhotoGalleryStrip({ photos, listingName }: Props) {
             onClick={() => open(i)}
             className={`relative overflow-hidden bg-black/20 group focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${strip.length === 4 ? 'aspect-video' : 'aspect-[4/3]'}`}
           >
-            <img
+            <Image
               src={photo}
               alt={`${listingName} photo ${i + 1}`}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-              loading="lazy"
+              fill
+              sizes="(max-width: 768px) 50vw, 25vw"
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200" />
             {i === 3 && photos.length > 4 && (

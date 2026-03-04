@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { notFound } from 'next/navigation';
 import {
@@ -355,8 +356,8 @@ function NearbyListingCard({ nearby, stateSlug }: { nearby: Listing; stateSlug: 
       className="group flex gap-3 p-3 rounded-xl border border-gray-200 bg-white hover:border-[#22C55E] hover:shadow-sm transition-all"
     >
       {thumb && (
-        <div className="shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
-          <img src={thumb} alt={nearby.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+        <div className="relative shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
+          <Image src={thumb} alt={nearby.name} fill sizes="64px" className="object-cover group-hover:scale-105 transition-transform duration-300" />
         </div>
       )}
       <div className="flex-1 min-w-0">
@@ -494,10 +495,13 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
           {heroImage ? (
             <>
               <div className="relative h-80 md:h-[26rem] overflow-hidden">
-                <img
+                <Image
                   src={heroImage}
                   alt={listing.name}
-                  className="w-full h-full object-cover"
+                  fill
+                  priority
+                  sizes="100vw"
+                  className="object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0F2744] via-[#0F2744]/50 to-[#0F2744]/10" />
               </div>
