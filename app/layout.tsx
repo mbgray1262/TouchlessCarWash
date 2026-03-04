@@ -13,6 +13,9 @@ export const metadata: Metadata = {
   },
   description: 'Find verified touchless car washes near you. Browse 3,465+ brushless car wash locations across all 50 states + DC.',
   metadataBase: new URL('https://touchlesscarwashfinder.com'),
+  verification: {
+    google: 'aO6V2H3Yb4O904NRWtdJRkZZdb2AiVRtPNdf3Hy9Zzk',
+  },
   openGraph: {
     siteName: 'Touchless Car Wash Finder',
     type: 'website',
