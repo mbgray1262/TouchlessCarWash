@@ -82,8 +82,21 @@ export default async function StatesPage() {
     })),
   };
 
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://touchlesscarwashfinder.com' },
+      { '@type': 'ListItem', position: 2, name: 'States', item: 'https://touchlesscarwashfinder.com/states' },
+    ],
+  };
+
   return (
     <div className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
@@ -100,7 +113,7 @@ export default async function StatesPage() {
             Touchless Car Washes by State
           </h1>
           <p className="text-white/80 text-lg max-w-2xl">
-            Browse our complete directory of verified touchless car washes across all 51 US states. Every location has been verified as a true touchless (brushless) car wash. Select your state below to find the nearest touchless car wash.
+            Browse our complete directory of verified touchless, touch-free, and brushless car washes across all 51 US states. Every location has been verified as a true no-touch car wash. Select your state below to find the nearest touchless car wash.
           </p>
         </div>
       </div>

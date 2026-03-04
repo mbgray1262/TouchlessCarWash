@@ -116,9 +116,21 @@ export async function generateMetadata({ params }: StatePageProps): Promise<Meta
     ? stateDesc.substring(0, 155) + (stateDesc.length > 155 ? '...' : '')
     : `Find ${totalCount} verified touchless & touch-free car washes in ${stateName}. Browse laser car wash and no-touch locations by city with ratings, hours, and contact info. Updated ${month} ${year}.`;
 
+  const canonicalUrl = `https://touchlesscarwashfinder.com/state/${params.state}`;
+
   return {
     title: `Touchless Car Washes in ${stateName} | ${stateName} Car Wash Directory`,
     description: metaDescription,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    openGraph: {
+      title: `Touchless Car Washes in ${stateName} | ${stateName} Car Wash Directory`,
+      description: metaDescription,
+      url: canonicalUrl,
+      siteName: 'Touchless Car Wash Finder',
+      type: 'website',
+    },
   };
 }
 
@@ -175,6 +187,16 @@ export default async function StatePage({ params, searchParams }: StatePageProps
   const month = now.toLocaleString('default', { month: 'long' });
   const year = now.getFullYear();
 
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://touchlesscarwashfinder.com' },
+      { '@type': 'ListItem', position: 2, name: 'States', item: 'https://touchlesscarwashfinder.com/states' },
+      { '@type': 'ListItem', position: 3, name: stateName, item: `https://touchlesscarwashfinder.com/state/${params.state}` },
+    ],
+  };
+
   const itemListJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
@@ -191,6 +213,10 @@ export default async function StatePage({ params, searchParams }: StatePageProps
 
   return (
     <div className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
@@ -271,6 +297,41 @@ export default async function StatePage({ params, searchParams }: StatePageProps
               baseHref={`/state/${params.state}`}
             />
           </div>
+
+          <section className="mt-14 pt-10 border-t border-gray-200">
+            <h2 className="text-2xl font-bold text-foreground mb-6">
+              Frequently Asked Questions About Touchless Car Washes in {stateName}
+            </h2>
+            <div className="divide-y divide-gray-200 border border-gray-200 rounded-2xl overflow-hidden bg-white">
+              <details className="group bg-white">
+                <summary className="flex items-center justify-between gap-4 px-6 py-5 cursor-pointer list-none select-none hover:bg-gray-50 transition-colors">
+                  <span className="text-base font-semibold text-gray-900">How many touchless car washes are in {stateName}?</span>
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 group-open:rotate-45 transition-transform text-lg leading-none">+</span>
+                </summary>
+                <div className="px-6 pb-6 pt-1 text-gray-600 leading-relaxed text-sm">
+                  Our directory lists {totalCount} verified touchless car wash{totalCount !== 1 ? ' locations' : ' location'} across {cities.length} {cities.length === 1 ? 'city' : 'cities'} in {stateName}. Each listing has been verified to confirm it offers true touch-free, brushless washing — no physical contact with your vehicle.
+                </div>
+              </details>
+              <details className="group bg-white">
+                <summary className="flex items-center justify-between gap-4 px-6 py-5 cursor-pointer list-none select-none hover:bg-gray-50 transition-colors">
+                  <span className="text-base font-semibold text-gray-900">What is a touchless car wash?</span>
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 group-open:rotate-45 transition-transform text-lg leading-none">+</span>
+                </summary>
+                <div className="px-6 pb-6 pt-1 text-gray-600 leading-relaxed text-sm">
+                  A touchless car wash — also known as a touch-free, no-touch, or laser car wash — uses high-pressure water jets and specialized detergents to clean your vehicle without any physical contact from brushes, cloth, or foam pads. This brushless wash method eliminates the risk of scratches, swirl marks, and paint damage.
+                </div>
+              </details>
+              <details className="group bg-white">
+                <summary className="flex items-center justify-between gap-4 px-6 py-5 cursor-pointer list-none select-none hover:bg-gray-50 transition-colors">
+                  <span className="text-base font-semibold text-gray-900">Are touchless car washes safe for ceramic coatings and PPF?</span>
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 group-open:rotate-45 transition-transform text-lg leading-none">+</span>
+                </summary>
+                <div className="px-6 pb-6 pt-1 text-gray-600 leading-relaxed text-sm">
+                  Yes. Touch-free, brushless car washes are the safest option for vehicles with ceramic coatings, paint protection film (PPF), vinyl wraps, or matte finishes. Because nothing physically touches the surface, there is no risk of peeling, scratching, or damaging these protective layers.
+                </div>
+              </details>
+            </div>
+          </section>
 
           {nearbyStates.length > 0 && (
             <div className="mt-14 pt-10 border-t border-gray-200">

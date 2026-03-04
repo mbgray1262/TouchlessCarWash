@@ -16,47 +16,51 @@ export const revalidate = 3600;
 
 const TOP_STATES = ['CA', 'TX', 'FL', 'NY', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI', 'AZ', 'WA'];
 
-export const metadata: Metadata = {
-  title: 'Touchless Car Wash Near Me — Find 3,000+ Verified Locations | Touchless Car Wash Finder',
-  description: 'Find the nearest touchless car wash in your area. Browse 3,000+ verified brushless car wash locations across all 50 states + DC. No scratches, no brushes — just clean.',
-  alternates: {
-    canonical: SITE_URL + '/',
-  },
-  openGraph: {
-    title: 'Touchless Car Wash Near Me — Find 3,000+ Verified Locations',
-    description: 'Find the nearest touchless car wash in your area. Browse 3,000+ verified brushless car wash locations across all 50 states + DC. No scratches, no brushes — just clean.',
-    url: SITE_URL + '/',
-    siteName: 'Touchless Car Wash Finder',
-    images: [
-      {
-        url: 'https://res.cloudinary.com/dret3qhyu/image/upload/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png',
-        width: 1200,
-        height: 630,
-        alt: 'Touchless Car Wash Finder',
-      },
-    ],
-    type: 'website',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Touchless Car Wash Near Me — Find 3,000+ Verified Locations',
-    description: 'Find the nearest touchless car wash in your area. Browse 3,000+ verified brushless car wash locations across all 50 states + DC.',
-    images: ['https://res.cloudinary.com/dret3qhyu/image/upload/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png'],
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const count = await getTotalCount();
+  const countStr = count > 0 ? count.toLocaleString() + '+' : '3,000+';
+  return {
+    title: `Touchless Car Wash Near Me — Find ${countStr} Verified Locations | Touchless Car Wash Finder`,
+    description: `Find the nearest touchless (touch-free) car wash in your area. Browse ${countStr} verified brushless, no-touch car wash locations across all 50 states + DC. No scratches, no brushes — just clean.`,
+    alternates: {
+      canonical: SITE_URL + '/',
+    },
+    openGraph: {
+      title: `Touchless Car Wash Near Me — Find ${countStr} Verified Locations`,
+      description: `Find the nearest touchless (touch-free) car wash in your area. Browse ${countStr} verified brushless, no-touch car wash locations across all 50 states + DC. No scratches, no brushes — just clean.`,
+      url: SITE_URL + '/',
+      siteName: 'Touchless Car Wash Finder',
+      images: [
+        {
+          url: 'https://res.cloudinary.com/dret3qhyu/image/upload/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png',
+          width: 1200,
+          height: 630,
+          alt: 'Touchless Car Wash Finder',
+        },
+      ],
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `Touchless Car Wash Near Me — Find ${countStr} Verified Locations`,
+      description: `Find the nearest touchless (touch-free) car wash in your area. Browse ${countStr} verified brushless, no-touch car wash locations across all 50 states + DC.`,
+      images: ['https://res.cloudinary.com/dret3qhyu/image/upload/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png'],
+    },
+  };
+}
 
 const faqItems = [
   {
     question: 'What is a touchless car wash?',
-    answer: 'A touchless car wash uses high-pressure water jets and specialized detergents to clean your vehicle without any physical contact from brushes, cloth, or foam pads. Because nothing touches your car\'s surface, there is zero risk of scratches, swirl marks, or paint damage.',
+    answer: 'A touchless car wash — also called a touch-free, no-touch, or laser car wash — uses high-pressure water jets and specialized detergents to clean your vehicle without any physical contact from brushes, cloth, or foam pads. Because nothing touches your car\'s surface, this brushless wash method eliminates the risk of scratches, swirl marks, and paint damage.',
   },
   {
     question: 'Are touchless car washes better for your car?',
-    answer: 'Yes — touchless car washes are widely considered the safest option for your paint. They eliminate brush-induced scratches and swirl marks, preserve ceramic coatings and paint protection film (PPF), and are safe for all paint types including matte finishes. The high-pressure water removes dirt effectively without mechanical abrasion.',
+    answer: 'Yes — touchless (brushless) car washes are widely considered the safest option for your paint. Because touch-free washes use only water pressure and chemistry with no physical contact, they eliminate brush-induced scratches and swirl marks, preserve ceramic coatings and paint protection film (PPF), and are safe for all paint types including matte finishes.',
   },
   {
     question: 'How do I find a touchless car wash near me?',
-    answer: 'Use the search bar at the top of this page — enter your city, ZIP code, or the name of a car wash and we\'ll show you verified touchless locations nearby. Our directory lists 3,000+ verified touchless car wash locations across all 50 states + DC.',
+    answer: 'Use the search bar at the top of this page — enter your city, ZIP code, or the name of a car wash and we\'ll show you verified touchless locations nearby. Whether you search for a touch-free car wash, brushless wash, laser car wash, or no-touch wash, our directory lists 3,000+ verified locations across all 50 states + DC.',
   },
   {
     question: 'How much does a touchless car wash cost?',
@@ -64,7 +68,7 @@ const faqItems = [
   },
   {
     question: 'Are touchless car washes safe for new cars?',
-    answer: 'Touchless car washes are the safest type of car wash for new vehicles. New paint is especially vulnerable to micro-scratches caused by brushes and cloth friction. Touchless washes rely entirely on water pressure and chemistry, making them ideal for new cars, vehicles with ceramic coatings, paint protection film (PPF), or any paint-sensitive finish.',
+    answer: 'Touchless car washes are the safest type of car wash for new vehicles. New paint is especially vulnerable to micro-scratches caused by brushes and cloth friction. Touch-free, no-touch washes rely entirely on water pressure and chemistry, making them ideal for new cars, vehicles with ceramic coatings, paint protection film (PPF), or any paint-sensitive finish.',
   },
 ];
 
@@ -116,6 +120,21 @@ export default async function Home() {
     description: 'The only directory dedicated exclusively to verified touchless car washes across the United States.',
   };
 
+  const websiteSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Touchless Car Wash Finder',
+    url: SITE_URL,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${SITE_URL}/search?q={search_term_string}`,
+      },
+      'query-input': 'required name=search_term_string',
+    },
+  };
+
   const faqSchema = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
@@ -139,6 +158,10 @@ export default async function Home() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
       />
       <script
         type="application/ld+json"

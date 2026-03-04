@@ -53,12 +53,20 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
   const post = await getBlogPost(params.slug);
   if (!post) return { title: 'Post Not Found' };
 
+  const canonicalUrl = `https://touchlesscarwashfinder.com/blog/${params.slug}`;
+
   return {
     title: post.meta_title || `${post.title} | Touchless Car Wash Finder Blog`,
     description: post.meta_description || post.excerpt || post.title,
-    openGraph: post.featured_image_url
-      ? { images: [{ url: post.featured_image_url }] }
-      : undefined,
+    alternates: { canonical: canonicalUrl },
+    openGraph: {
+      title: post.meta_title || `${post.title} | Touchless Car Wash Finder Blog`,
+      description: post.meta_description || post.excerpt || post.title,
+      url: canonicalUrl,
+      siteName: 'Touchless Car Wash Finder',
+      type: 'article',
+      ...(post.featured_image_url ? { images: [{ url: post.featured_image_url }] } : {}),
+    },
   };
 }
 
@@ -171,6 +179,10 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
       '@type': 'Organization',
       name: 'Touchless Car Wash Finder',
       url: 'https://touchlesscarwashfinder.com',
+      logo: {
+        '@type': 'ImageObject',
+        url: 'https://touchlesscarwashfinder.com/logo.png',
+      },
     },
     datePublished: post.published_at,
     dateModified: post.updated_at,
@@ -181,8 +193,22 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
   const renderedContent = renderMarkdown(post.content);
 
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://touchlesscarwashfinder.com' },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://touchlesscarwashfinder.com/blog' },
+      { '@type': 'ListItem', position: 3, name: post.title, item: `https://touchlesscarwashfinder.com/blog/${post.slug}` },
+    ],
+  };
+
   return (
     <div className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}

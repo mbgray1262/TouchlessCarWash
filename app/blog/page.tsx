@@ -1,12 +1,24 @@
 import Link from 'next/link';
-import { ChevronRight, Calendar, User, Tag } from 'lucide-react';
+import { ChevronRight, Calendar, User } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase, type BlogPost } from '@/lib/supabase';
 import type { Metadata } from 'next';
 
+export const revalidate = 60; // Refresh data every 60 seconds
+
 export const metadata: Metadata = {
   title: 'Touchless Car Wash Guides & Tips | Touchless Car Wash Finder Blog',
   description: 'Expert guides, comparisons, and tips about touchless, touch-free, and laser car washes. Learn how to protect your paint and find the best no-touch wash near you.',
+  alternates: {
+    canonical: 'https://touchlesscarwashfinder.com/blog',
+  },
+  openGraph: {
+    title: 'Touchless Car Wash Guides & Tips | Touchless Car Wash Finder Blog',
+    description: 'Expert guides, comparisons, and tips about touchless, touch-free, and laser car washes. Learn how to protect your paint and find the best no-touch wash near you.',
+    url: 'https://touchlesscarwashfinder.com/blog',
+    siteName: 'Touchless Car Wash Finder',
+    type: 'website',
+  },
 };
 
 async function getBlogPosts(): Promise<BlogPost[]> {
@@ -36,8 +48,21 @@ function formatDate(dateStr: string | null): string {
 export default async function BlogPage() {
   const posts = await getBlogPosts();
 
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://touchlesscarwashfinder.com' },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://touchlesscarwashfinder.com/blog' },
+    ],
+  };
+
   return (
     <div className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <div className="bg-[#0F2744] py-14">
         <div className="container mx-auto px-4 max-w-5xl">
           <nav className="flex items-center gap-1.5 text-sm text-white/50 mb-5">
@@ -60,16 +85,16 @@ export default async function BlogPage() {
             <p className="text-gray-500 text-lg">No posts yet. Check back soon!</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {posts.map((post, index) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {posts.map((post) => (
               <Link
                 key={post.id}
                 href={`/blog/${post.slug}`}
-                className={`group block ${index === 0 ? 'md:col-span-2' : ''}`}
+                className="group block h-full"
               >
-                <article className="h-full bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-xl hover:border-blue-200 transition-all duration-300">
+                <article className="h-full bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-xl hover:border-blue-200 transition-all duration-300 flex flex-col">
                   {post.featured_image_url ? (
-                    <div className={`overflow-hidden bg-gray-100 ${index === 0 ? 'h-64 md:h-80' : 'h-48'}`}>
+                    <div className="h-44 overflow-hidden bg-gray-100 shrink-0">
                       <img
                         src={post.featured_image_url}
                         alt={post.title}
@@ -77,16 +102,16 @@ export default async function BlogPage() {
                       />
                     </div>
                   ) : (
-                    <div className={`bg-gradient-to-br from-[#0F2744] to-[#1a3a6b] flex items-center justify-center ${index === 0 ? 'h-48 md:h-56' : 'h-36'}`}>
+                    <div className="h-44 bg-gradient-to-br from-[#0F2744] to-[#1a3a6b] flex items-center justify-center shrink-0">
                       <span className="text-white/20 text-6xl font-bold select-none">
                         {post.title.charAt(0)}
                       </span>
                     </div>
                   )}
 
-                  <div className="p-6">
+                  <div className="p-5 flex flex-col flex-1">
                     {post.tags && post.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-3">
+                      <div className="flex flex-wrap gap-1.5 mb-2.5">
                         {post.tags.slice(0, 3).map((tag) => (
                           <Badge key={tag} variant="secondary" className="text-xs bg-blue-50 text-blue-700 border-blue-100">
                             {tag}
@@ -95,17 +120,17 @@ export default async function BlogPage() {
                       </div>
                     )}
 
-                    <h2 className={`font-bold text-[#0F2744] mb-2 group-hover:text-blue-700 transition-colors leading-snug ${index === 0 ? 'text-2xl md:text-3xl' : 'text-xl'}`}>
+                    <h2 className="text-lg font-bold text-[#0F2744] mb-2 group-hover:text-blue-700 transition-colors leading-snug line-clamp-2">
                       {post.title}
                     </h2>
 
                     {post.excerpt && (
-                      <p className="text-gray-600 text-sm leading-relaxed mb-4 line-clamp-3">
+                      <p className="text-gray-600 text-sm leading-relaxed mb-4 line-clamp-2 flex-1">
                         {post.excerpt}
                       </p>
                     )}
 
-                    <div className="flex items-center gap-4 text-xs text-gray-400">
+                    <div className="flex items-center gap-3 text-xs text-gray-400 mt-auto pt-3 border-t border-gray-100">
                       {post.published_at && (
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3.5 h-3.5" />
@@ -116,10 +141,6 @@ export default async function BlogPage() {
                         <User className="w-3.5 h-3.5" />
                         {post.author}
                       </span>
-                    </div>
-
-                    <div className="mt-4 text-sm font-medium text-blue-600 group-hover:text-blue-800 transition-colors">
-                      Read more &rarr;
                     </div>
                   </div>
                 </article>

@@ -102,6 +102,7 @@ export async function generateMetadata({ searchParams }: SearchPageProps): Promi
     return {
       title: 'Search Touchless Car Washes',
       description: 'Search for touchless, touch-free, and brushless car washes by city, zip code, or filter. Find verified no-scratch car wash locations near you.',
+      robots: { index: false, follow: true },
     };
   }
 
@@ -126,6 +127,7 @@ export async function generateMetadata({ searchParams }: SearchPageProps): Promi
   return {
     title,
     description: `Find touchless car washes${query ? ` in ${query}` : ''}${filterSlugs.length > 0 ? ' matching your filters' : ''}. Browse verified no-scratch car wash locations with ratings and reviews.`,
+    robots: { index: false, follow: true },
   };
 }
 

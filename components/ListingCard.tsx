@@ -72,7 +72,7 @@ export function ListingCard({ listing, href, showVerifiedBadge = false }: Listin
                 <div className="flex items-center gap-1 bg-black/60 rounded-full px-2.5 py-1 ml-auto">
                   <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
                   <span className="text-white font-semibold text-sm">{Number(listing.rating).toFixed(1)}</span>
-                  <span className="text-white/70 text-xs">({listing.review_count})</span>
+                  {listing.review_count > 0 && <span className="text-white/70 text-xs">({listing.review_count})</span>}
                 </div>
               )}
             </div>
@@ -100,7 +100,7 @@ export function ListingCard({ listing, href, showVerifiedBadge = false }: Listin
               <div className="flex items-center gap-1 shrink-0">
                 <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
                 <span className="font-semibold text-sm">{Number(listing.rating).toFixed(1)}</span>
-                <span className="text-xs text-gray-400">({listing.review_count})</span>
+                {listing.review_count > 0 && <span className="text-xs text-gray-400">({listing.review_count})</span>}
               </div>
             )}
           </div>
