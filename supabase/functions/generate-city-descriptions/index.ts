@@ -204,23 +204,38 @@ ${context}
 
 Write the description now:`;
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 300,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  });
+  const maxRetries = 4;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 300,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
 
-  if (!res.ok) throw new Error(`Claude error ${res.status}: ${await res.text()}`);
-  const data = await res.json() as { content: Array<{ text: string }> };
-  return (data.content?.[0]?.text ?? '').trim();
+    if (res.ok) {
+      const data = await res.json() as { content: Array<{ text: string }> };
+      return (data.content?.[0]?.text ?? '').trim();
+    }
+
+    if (res.status === 529 || res.status === 429) {
+      if (attempt < maxRetries) {
+        const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+    }
+
+    throw new Error(`Claude error ${res.status}: ${await res.text()}`);
+  }
+  throw new Error('Max retries exceeded');
 }
 
 Deno.serve(async (req: Request) => {
