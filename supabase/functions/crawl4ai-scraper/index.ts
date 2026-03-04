@@ -139,11 +139,24 @@ Deno.serve(async (req: Request) => {
         query = query.is('crawl_snapshot', null);
       }
 
-      const { data: listings, error: listErr } = await query;
-      if (listErr) return Response.json({ error: listErr.message }, { status: 500, headers: corsHeaders });
-      if (!listings || listings.length === 0) {
+      // Paginate to get ALL results (Supabase default limit is 1000)
+      const allListings: Array<{ id: string; name: string; website: string }> = [];
+      const PAGE_SIZE = 1000;
+      let page = 0;
+      while (true) {
+        const { data: batch, error: batchErr } = await query.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+        if (batchErr) return Response.json({ error: batchErr.message }, { status: 500, headers: corsHeaders });
+        if (!batch || batch.length === 0) break;
+        allListings.push(...(batch as Array<{ id: string; name: string; website: string }>));
+        if (batch.length < PAGE_SIZE) break;
+        page++;
+      }
+
+      if (allListings.length === 0) {
         return Response.json({ error: 'No listings need scraping' }, { status: 404, headers: corsHeaders });
       }
+
+      const listings = allListings;
 
       // Filter out social/directory URLs
       const eligible = (listings as Array<{ id: string; name: string; website: string }>)
