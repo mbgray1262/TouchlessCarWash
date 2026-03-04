@@ -4,3 +4,14 @@ publish = ".next"
 
 [[plugins]]
 package = "@netlify/plugin-nextjs"
+
+# Blog slug redirects (old generic posts rewritten for touchless focus)
+[[redirects]]
+  from = "/blog/top-5-benefits-of-regular-car-washing"
+  to = "/blog/benefits-of-touchless-car-washes"
+  status = 301
+
+[[redirects]]
+  from = "/blog/how-often-should-you-wash-your-car"
+  to = "/blog/touchless-vs-automatic-car-wash"
+  status = 301
