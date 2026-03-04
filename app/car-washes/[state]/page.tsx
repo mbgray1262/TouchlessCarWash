@@ -135,7 +135,7 @@ export default async function StatePage({ params }: StatePageProps) {
       '@type': 'ListItem',
       position: index + 1,
       name: `Touchless Car Washes in ${city}, ${stateCode}`,
-      url: `https://touchlesswash.com/car-washes/${params.state}/${city.toLowerCase().replace(/\s+/g, '-')}`,
+      url: `https://touchlesscarwashfinder.com/state/${params.state}/${city.toLowerCase().replace(/\s+/g, '-')}`,
     })),
   };
 

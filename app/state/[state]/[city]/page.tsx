@@ -5,12 +5,16 @@ import { Button } from '@/components/ui/button';
 import { supabase, type Listing } from '@/lib/supabase';
 import { US_STATES, getStateName, slugify } from '@/lib/constants';
 import { ListingCard } from '@/components/ListingCard';
+import { Pagination, PAGE_SIZE } from '@/components/Pagination';
 import type { Metadata } from 'next';
 
 interface CityPageProps {
   params: {
     state: string;
     city: string;
+  };
+  searchParams: {
+    page?: string;
   };
 }
 
@@ -26,19 +30,17 @@ function unslugCity(citySlug: string): string {
     .join(' ');
 }
 
-async function getCityListings(stateCode: string, citySlug: string): Promise<Listing[]> {
+async function getCityListings(stateCode: string, cityName: string): Promise<Listing[]> {
   const { data, error } = await supabase
     .from('listings')
     .select('*')
     .eq('is_touchless', true)
     .eq('state', stateCode)
+    .ilike('city', cityName)
     .order('rating', { ascending: false });
 
   if (error || !data) return [];
-
-  return data.filter(
-    (l: Listing) => l.city.toLowerCase().replace(/\s+/g, '-') === citySlug
-  );
+  return data;
 }
 
 async function getCitiesInState(stateCode: string, excludeCitySlug: string): Promise<{ city: string; count: number; slug: string }[]> {
@@ -60,7 +62,7 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
   const cityName = unslugCity(params.city);
   const stateName = getStateName(stateCode);
 
-  const listings = await getCityListings(stateCode, params.city);
+  const listings = await getCityListings(stateCode, cityName);
 
   return {
     title: `Touchless Car Washes in ${cityName}, ${stateCode} | ${cityName} Car Wash Directory`,
@@ -68,16 +70,21 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
   };
 }
 
-export default async function CityPage({ params }: CityPageProps) {
+export default async function CityPage({ params, searchParams }: CityPageProps) {
   const stateCode = getStateCode(params.state);
   if (!stateCode) notFound();
 
   const stateName = getStateName(stateCode!);
   const cityName = unslugCity(params.city);
   const [listings, nearbyCities] = await Promise.all([
-    getCityListings(stateCode!, params.city),
+    getCityListings(stateCode!, cityName),
     getCitiesInState(stateCode!, params.city),
   ]);
+
+  const currentPage = Math.max(1, parseInt(searchParams.page ?? '1', 10) || 1);
+  const totalPages = Math.ceil(listings.length / PAGE_SIZE);
+  const page = Math.min(currentPage, Math.max(totalPages, 1));
+  const paginatedListings = listings.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   if (listings.length === 0) {
     return (
@@ -303,7 +310,7 @@ export default async function CityPage({ params }: CityPageProps) {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {listings.map((listing) => (
+          {paginatedListings.map((listing) => (
             <ListingCard
               key={listing.id}
               listing={listing}
@@ -311,6 +318,12 @@ export default async function CityPage({ params }: CityPageProps) {
             />
           ))}
         </div>
+
+        <Pagination
+          currentPage={page}
+          totalItems={listings.length}
+          baseHref={`/state/${params.state}/${params.city}`}
+        />
 
         <div className="mt-10 text-center">
           <Button asChild variant="outline">

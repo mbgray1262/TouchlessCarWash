@@ -170,13 +170,13 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     publisher: {
       '@type': 'Organization',
       name: 'Touchless Car Wash Finder',
-      url: 'https://touchlesswash.com',
+      url: 'https://touchlesscarwashfinder.com',
     },
     datePublished: post.published_at,
     dateModified: post.updated_at,
     ...(post.featured_image_url ? { image: post.featured_image_url } : {}),
     keywords: post.tags?.join(', ') ?? '',
-    url: `https://touchlesswash.com/blog/${post.slug}`,
+    url: `https://touchlesscarwashfinder.com/blog/${post.slug}`,
   };
 
   const renderedContent = renderMarkdown(post.content);

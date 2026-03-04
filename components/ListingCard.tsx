@@ -5,6 +5,7 @@ import { type Listing } from '@/lib/supabase';
 import { getStateSlug } from '@/lib/constants';
 import LogoImage from '@/components/LogoImage';
 import HeroImageFallback from '@/components/HeroImageFallback';
+import { OpenStatusBadge } from '@/components/OpenStatusBadge';
 
 interface ListingCardProps {
   listing: Listing;
@@ -85,6 +86,11 @@ export function ListingCard({ listing, href, showVerifiedBadge = false }: Listin
               <CheckCircle className="w-3 h-3 mr-1" />Touchless Verified
             </Badge>
           )}
+          {!cardImage && !showVerifiedBadge && washType && (
+            <Badge className="bg-[#0F2744]/10 text-[#0F2744] border-0 text-xs mb-2 self-start">
+              {washType}
+            </Badge>
+          )}
           <div className="flex items-start justify-between gap-2 mb-2">
             <h2 className="text-base font-bold text-[#0F2744] group-hover:text-[#22C55E] transition-colors leading-tight">
               {listing.name}
@@ -104,11 +110,13 @@ export function ListingCard({ listing, href, showVerifiedBadge = false }: Listin
           </div>
 
           {listing.phone && (
-            <div className="flex items-center gap-1.5 text-sm text-gray-500 mb-3">
+            <div className="flex items-center gap-1.5 text-sm text-gray-500">
               <Phone className="w-3.5 h-3.5 shrink-0" />
               <span>{listing.phone}</span>
             </div>
           )}
+
+          <OpenStatusBadge hours={listing.hours} className="mb-3" />
 
           {(() => {
             // Build feature badges from extracted_data highlights + amenities

@@ -5,11 +5,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { supabase, type Listing } from '@/lib/supabase';
 import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants';
 import { ListingCard } from '@/components/ListingCard';
+import { Pagination, PAGE_SIZE } from '@/components/Pagination';
 import type { Metadata } from 'next';
 
 interface StatePageProps {
   params: {
     state: string;
+  };
+  searchParams: {
+    page?: string;
   };
 }
 
@@ -83,7 +87,7 @@ async function getStatesWithListings(): Promise<string[]> {
   return data as string[];
 }
 
-export default async function StatePage({ params }: StatePageProps) {
+export default async function StatePage({ params, searchParams }: StatePageProps) {
   const stateCode = getStateCode(params.state);
 
   if (!stateCode) {
@@ -119,6 +123,11 @@ export default async function StatePage({ params }: StatePageProps) {
   const cities = Array.from(new Set(listings.map(l => l.city))).sort();
   const nickname = STATE_NICKNAMES[stateCode] ?? stateName;
 
+  const currentPage = Math.max(1, parseInt(searchParams.page ?? '1', 10) || 1);
+  const totalPages = Math.ceil(listings.length / PAGE_SIZE);
+  const page = Math.min(currentPage, totalPages);
+  const paginatedListings = listings.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   const nearbyStates = statesWithListings
     .filter(s => s !== stateCode)
     .map(s => ({ code: s, name: getStateName(s), slug: getStateSlug(s) }));
@@ -137,7 +146,7 @@ export default async function StatePage({ params }: StatePageProps) {
       '@type': 'ListItem',
       position: index + 1,
       name: `Touchless Car Washes in ${city}, ${stateCode}`,
-      url: `https://touchlesswash.com/state/${params.state}/${city.toLowerCase().replace(/\s+/g, '-')}`,
+      url: `https://touchlesscarwashfinder.com/state/${params.state}/${city.toLowerCase().replace(/\s+/g, '-')}`,
     })),
   };
 
@@ -203,9 +212,12 @@ export default async function StatePage({ params }: StatePageProps) {
           </div>
 
           <div className="mt-12">
-            <h2 className="text-2xl font-bold text-foreground mb-6">All Locations</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-6">
+              All Locations
+              {totalPages > 1 && <span className="text-base font-normal text-gray-400 ml-2">Page {page} of {totalPages}</span>}
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {listings.map((listing) => (
+              {paginatedListings.map((listing) => (
                 <ListingCard
                   key={listing.id}
                   listing={listing}
@@ -213,6 +225,11 @@ export default async function StatePage({ params }: StatePageProps) {
                 />
               ))}
             </div>
+            <Pagination
+              currentPage={page}
+              totalItems={listings.length}
+              baseHref={`/state/${params.state}`}
+            />
           </div>
 
           {nearbyStates.length > 0 && (
