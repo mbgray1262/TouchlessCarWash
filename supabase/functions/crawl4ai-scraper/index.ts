@@ -301,7 +301,7 @@ Deno.serve(async (req: Request) => {
 
           await supabase.from('listings').update({
             crawl_snapshot: snapshot,
-            crawl_status: 'success',
+            crawl_status: 'crawled',
             last_crawled_at: new Date().toISOString(),
           }).eq('id', task.listing_id);
 

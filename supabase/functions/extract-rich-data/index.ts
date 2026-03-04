@@ -271,6 +271,45 @@ Deno.serve(async (req: Request) => {
               }
             }
 
+            // Extract equipment brand/model from equipment_technology array
+            const equipTech = extracted.equipment_technology as string[] | undefined;
+            if (Array.isArray(equipTech) && equipTech.length > 0) {
+              const { data: currentListing } = await supabase
+                .from('listings')
+                .select('equipment_brand, equipment_model')
+                .eq('id', task.listing_id)
+                .maybeSingle();
+
+              if (!currentListing?.equipment_brand) {
+                const knownBrands: Record<string, string> = {
+                  'laserwash': 'laserwash',
+                  'laser wash': 'laserwash',
+                  'pdq': 'pdq',
+                  'washworld': 'washworld',
+                  'wash world': 'washworld',
+                  'razor': 'washworld',
+                  'petit': 'petit',
+                  'belanger': 'belanger',
+                  'kondor': 'belanger',
+                  'istobal': 'istobal',
+                  'ryko': 'ryko',
+                  'd&s': 'ds',
+                };
+
+                for (const tech of equipTech) {
+                  const techLower = tech.toLowerCase();
+                  for (const [keyword, brand] of Object.entries(knownBrands)) {
+                    if (techLower.includes(keyword)) {
+                      updatePayload.equipment_brand = brand;
+                      updatePayload.equipment_model = tech.trim();
+                      break;
+                    }
+                  }
+                  if (updatePayload.equipment_brand) break;
+                }
+              }
+            }
+
             await supabase.from('listings').update(updatePayload).eq('id', task.listing_id);
             success = true;
           }
