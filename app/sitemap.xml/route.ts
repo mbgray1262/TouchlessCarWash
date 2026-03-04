@@ -34,10 +34,22 @@ export async function GET() {
     citySet.add(`${l.state}||${l.city}`);
   }
 
+  // Calculate most recent listing date per state and per city
+  const stateLastmod = new Map<string, string>();
+  const cityLastmod = new Map<string, string>();
+  for (const l of listings) {
+    const existing = stateLastmod.get(l.state);
+    if (!existing || l.created_at > existing) stateLastmod.set(l.state, l.created_at);
+    const cityKey = `${l.state}||${l.city}`;
+    const existingCity = cityLastmod.get(cityKey);
+    if (!existingCity || l.created_at > existingCity) cityLastmod.set(cityKey, l.created_at);
+  }
+
   const stateUrls = Array.from(stateSet).map((code) => {
+    const lastmod = stateLastmod.get(code) ?? now;
     return `  <url>
     <loc>${baseUrl}/state/${getStateSlug(code)}</loc>
-    <lastmod>${now}</lastmod>
+    <lastmod>${lastmod}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>`;
@@ -45,9 +57,10 @@ export async function GET() {
 
   const cityUrls = Array.from(citySet).map((key) => {
     const [stateCode, city] = key.split('||');
+    const lastmod = cityLastmod.get(key) ?? now;
     return `  <url>
     <loc>${baseUrl}/state/${getStateSlug(stateCode)}/${slugify(city)}</loc>
-    <lastmod>${now}</lastmod>
+    <lastmod>${lastmod}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>`;

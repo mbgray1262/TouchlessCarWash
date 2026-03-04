@@ -206,6 +206,13 @@ export default function ImportPage() {
               <Clock className="w-4 h-4" />
               Import Working Hours
             </Link>
+            <Link
+              href="/admin/import/discover"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-green-600 hover:text-green-800 border border-green-200 hover:border-green-400 rounded-lg px-3 py-2 bg-green-50 hover:bg-green-100 transition-colors"
+            >
+              <MapPin className="w-4 h-4" />
+              Discover New Listings
+            </Link>
           </div>
         </div>
 

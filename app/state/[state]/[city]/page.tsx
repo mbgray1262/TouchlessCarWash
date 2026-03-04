@@ -83,9 +83,21 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
     ? cityDesc.substring(0, 155) + (cityDesc.length > 155 ? '...' : '')
     : `Find ${listings.length} touchless & touch-free car washes in ${cityName}, ${stateName}. Browse verified no-touch, scratch-free laser car wash locations with ratings and reviews.`;
 
+  const canonicalUrl = `https://touchlesscarwashfinder.com/state/${params.state}/${params.city}`;
+
   return {
     title: `Touchless Car Washes in ${cityName}, ${stateCode} | ${cityName} Car Wash Directory`,
     description: metaDescription,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    openGraph: {
+      title: `Touchless Car Washes in ${cityName}, ${stateCode} | ${cityName} Car Wash Directory`,
+      description: metaDescription,
+      url: canonicalUrl,
+      siteName: 'Touchless Car Wash Finder',
+      type: 'website',
+    },
   };
 }
 
@@ -192,6 +204,17 @@ export default async function CityPage({ params, searchParams }: CityPageProps) 
     `touchless, no-touch, and laser car wash`,
   ][cityVariant];
 
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://touchlesscarwashfinder.com' },
+      { '@type': 'ListItem', position: 2, name: 'States', item: 'https://touchlesscarwashfinder.com/states' },
+      { '@type': 'ListItem', position: 3, name: stateName, item: `https://touchlesscarwashfinder.com/state/${params.state}` },
+      { '@type': 'ListItem', position: 4, name: cityName, item: `https://touchlesscarwashfinder.com/state/${params.state}/${params.city}` },
+    ],
+  };
+
   const localBusinessJsonLd = listings.map((listing) => ({
     '@context': 'https://schema.org',
     '@type': 'AutoWash',
@@ -207,7 +230,7 @@ export default async function CityPage({ params, searchParams }: CityPageProps) 
       postalCode: listing.zip ?? undefined,
       addressCountry: 'US',
     },
-    ...(listing.rating != null ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: listing.rating, bestRating: 5 } } : {}),
+    ...(listing.rating != null && listing.rating > 0 && listing.review_count != null && listing.review_count > 0 ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: listing.rating, reviewCount: listing.review_count, bestRating: 5 } } : {}),
   }));
 
   const faqJsonLd = {
@@ -287,6 +310,10 @@ export default async function CityPage({ params, searchParams }: CityPageProps) 
 
   return (
     <div className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}

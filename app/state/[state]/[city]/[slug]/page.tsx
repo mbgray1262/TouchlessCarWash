@@ -80,12 +80,12 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   const topAmenities = (listing.amenities || []).slice(0, 3).join(', ');
   const ratingPart = listing.rating > 0 ? `Rated ${Number(listing.rating).toFixed(1)}` : '';
   const reviewPart = listing.review_count > 0 ? ` (${listing.review_count} reviews)` : '';
-  const amenityPart = topAmenities ? `. Touchless automatic car wash offering ${topAmenities}` : '';
+  const amenityPart = topAmenities ? `. Touch-free, brushless car wash offering ${topAmenities}` : '';
   const canonicalUrl = `${SITE_URL}/state/${params.state}/${params.city}/${params.slug}`;
   const heroImage = listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
 
   const title = `${listing.name} - Touchless Car Wash in ${listing.city}, ${stateName} | Touchless Car Wash Finder`;
-  const description = `${listing.name} at ${listing.address}, ${listing.city}, ${stateName}. ${ratingPart}${reviewPart}${amenityPart}. Hours, directions, photos & more.`;
+  const description = `${listing.name} — verified touch-free car wash at ${listing.address}, ${listing.city}, ${stateName}. ${ratingPart}${reviewPart}${amenityPart}. Hours, directions, photos & more.`;
 
   return {
     title,
@@ -162,7 +162,7 @@ function getOpenStatus(hours: Record<string, string> | null): 'open' | 'closed' 
 function buildDescription(listing: Listing): string {
   if (listing.description) return listing.description;
   if (listing.google_description) return listing.google_description;
-  const parts: string[] = [`Touchless automatic car wash in ${listing.city}, ${listing.state}`];
+  const parts: string[] = [`Touchless, touch-free car wash in ${listing.city}, ${listing.state}`];
   const highlights = (listing.amenities || []).slice(0, 4);
   if (highlights.length > 0) {
     parts.push(`offering ${highlights.map((a) => a.toLowerCase()).join(', ')}, and more`);
@@ -258,51 +258,136 @@ function buildBreadcrumbSchema(items: { name: string; url: string }[]): object {
   };
 }
 
-function buildFAQSchema(listing: Listing, hours: Record<string, string> | null): object {
-  const faqs: { question: string; answer: string }[] = [];
+function buildFAQs(listing: Listing, hours: Record<string, string> | null): { q: string; a: string }[] {
+  const faqs: { q: string; a: string }[] = [];
 
-  faqs.push({
-    question: `Is ${listing.name} a touchless car wash?`,
-    answer: `Yes, ${listing.name} in ${listing.city}, ${listing.state} is a verified touchless (brushless) car wash that cleans your vehicle using high-pressure water and detergents without physical contact.`,
-  });
+  // 1. Is this a touchless car wash? (always shown) — enriched with wash types & equipment
+  let touchlessAnswer = `Yes, ${listing.name} in ${listing.city}, ${listing.state} is a verified touchless (brushless) car wash — also known as a touch-free or no-touch wash — that cleans your vehicle using high-pressure water and detergents without physical contact.`;
+  if (listing.touchless_wash_types && listing.touchless_wash_types.length > 0) {
+    const typeLabels = listing.touchless_wash_types.map((wt) => WASH_TYPE_LABELS[wt]?.label || wt);
+    touchlessAnswer += ` Wash types available: ${typeLabels.join(' and ')}.`;
+  }
+  if (listing.equipment_brand) {
+    const brandLabel = listing.equipment_model || BRAND_LABELS[listing.equipment_brand] || listing.equipment_brand;
+    touchlessAnswer += ` They use ${brandLabel} touchless wash equipment.`;
+  }
+  faqs.push({ q: `Is ${listing.name} a touchless car wash?`, a: touchlessAnswer });
 
+  // 2. Hours (conditional)
   if (hours && Object.keys(hours).length > 0) {
     const todayKey = getTodayKey();
     const todayLabel = DAY_LABELS[todayKey];
     const todayHours = hours[todayKey];
-    const hoursSummary = DAY_ORDER.filter((d) => hours[d]).map((d) => `${DAY_LABELS[d]}: ${hours[d]}`).join(', ');
+    const hoursSummary = DAY_ORDER.filter((d) => hours[d]).map((d) => `${DAY_LABELS[d]}: ${hours[d]}`).join(' | ');
+    let hoursNote = '';
+    if (listing.extracted_data?.hours_notes && listing.extracted_data.hours_notes.length > 0) {
+      hoursNote = ` Note: ${listing.extracted_data.hours_notes.join(' ')}`;
+    }
     faqs.push({
-      question: `What are the hours for ${listing.name}?`,
-      answer: `${listing.name} is open: ${hoursSummary}.${todayHours ? ` Today (${todayLabel}): ${todayHours}.` : ''}`,
+      q: `What are the hours for ${listing.name}?`,
+      a: `${listing.name} hours: ${hoursSummary}.${todayHours ? ` Today (${todayLabel}): ${todayHours}.` : ''}${hoursNote}`,
     });
   }
 
+  // 3. Pricing (always shown) — enriched with membership plans
+  let pricingAnswer = '';
+  if (listing.wash_packages && listing.wash_packages.length > 0) {
+    pricingAnswer = `Available wash packages: ${listing.wash_packages.map((p) => p.name + (p.price ? ` (${p.price})` : '')).join(', ')}.`;
+  } else {
+    pricingAnswer = `Pricing varies by wash package. ${listing.phone ? `Contact them at ${listing.phone} or visit` : 'Visit'} their website for current prices.`;
+  }
+  if (listing.extracted_data?.membership_plans && listing.extracted_data.membership_plans.length > 0) {
+    const planNames = listing.extracted_data.membership_plans.map((p) => p.name + (p.price ? ` (${p.price})` : '')).join(', ');
+    pricingAnswer += ` Unlimited wash memberships are also available: ${planNames}.`;
+  }
+  faqs.push({ q: `How much does ${listing.name} cost?`, a: pricingAnswer });
+
+  // 4. Membership plans (conditional — only if extracted)
+  if (listing.extracted_data?.membership_plans && listing.extracted_data.membership_plans.length > 0) {
+    const planDetails = listing.extracted_data.membership_plans.map((p) => {
+      let detail = p.name;
+      if (p.price) detail += ` at ${p.price}/month`;
+      if (p.features && p.features.length > 0) detail += ` — includes ${p.features.slice(0, 3).join(', ')}`;
+      return detail;
+    }).join('; ');
+    faqs.push({
+      q: `Does ${listing.name} offer unlimited wash memberships?`,
+      a: `Yes, ${listing.name} offers unlimited wash membership plans: ${planDetails}. Memberships provide great value for frequent washers.`,
+    });
+  }
+
+  // 5. Amenities (conditional)
   if (listing.amenities && listing.amenities.length > 0) {
     faqs.push({
-      question: `What amenities does ${listing.name} offer?`,
-      answer: `${listing.name} offers the following amenities: ${listing.amenities.join(', ')}.`,
+      q: `What amenities does ${listing.name} offer?`,
+      a: `${listing.name} offers the following amenities: ${listing.amenities.join(', ')}.`,
     });
   }
 
+  // 6. Equipment & technology (conditional)
+  if (listing.equipment_brand || (listing.extracted_data?.equipment_technology && listing.extracted_data.equipment_technology.length > 0)) {
+    const brandLabel = listing.equipment_brand ? (BRAND_LABELS[listing.equipment_brand] || listing.equipment_brand) : null;
+    const model = listing.equipment_model;
+    const tech = listing.extracted_data?.equipment_technology || [];
+    let equipAnswer = `${listing.name} uses `;
+    if (model) {
+      equipAnswer += model;
+    } else if (brandLabel) {
+      equipAnswer += `${brandLabel} touchless wash equipment`;
+    } else {
+      equipAnswer += 'professional touchless wash equipment';
+    }
+    if (tech.length > 0) {
+      equipAnswer += `, featuring ${tech.join(', ')}`;
+    }
+    equipAnswer += '. This touch-free technology ensures a scratch-free, brushless wash every time.';
+    faqs.push({ q: `What equipment does ${listing.name} use?`, a: equipAnswer });
+  }
+
+  // 7. Service types (conditional — only if extracted)
+  if (listing.extracted_data?.service_types && listing.extracted_data.service_types.length > 0) {
+    faqs.push({
+      q: `What types of car wash services does ${listing.name} offer?`,
+      a: `${listing.name} offers the following services: ${listing.extracted_data.service_types.join(', ')}. All washes are touchless and touch-free — no brushes or cloth touch your vehicle.`,
+    });
+  }
+
+  // 8. Payment methods (conditional — only if extracted)
+  if (listing.extracted_data?.payment_methods && listing.extracted_data.payment_methods.length > 0) {
+    faqs.push({
+      q: `What payment methods does ${listing.name} accept?`,
+      a: `${listing.name} accepts the following payment methods: ${listing.extracted_data.payment_methods.join(', ')}.`,
+    });
+  }
+
+  // 9. Special features (conditional — only if extracted)
+  if (listing.extracted_data?.special_features && listing.extracted_data.special_features.length > 0) {
+    faqs.push({
+      q: `What special features does ${listing.name} have?`,
+      a: `${listing.name} offers these special features: ${listing.extracted_data.special_features.join(', ')}. These extras make it a standout among touchless car washes in ${listing.city}.`,
+    });
+  }
+
+  // 10. Location (always shown)
   faqs.push({
-    question: `Where is ${listing.name} located?`,
-    answer: `${listing.name} is located at ${listing.address}, ${listing.city}, ${listing.state} ${listing.zip}. Get directions via Google Maps.`,
+    q: `Where is ${listing.name} located?`,
+    a: `${listing.name} is located at ${listing.address}, ${listing.city}, ${listing.state} ${listing.zip}.${listing.phone ? ` Call them at ${listing.phone}.` : ''} Get directions via Google Maps.`,
   });
 
-  faqs.push({
-    question: `How much does ${listing.name} cost?`,
-    answer: `Pricing varies by wash package${listing.wash_packages && listing.wash_packages.length > 0 ? `. Available packages include: ${listing.wash_packages.map((p) => p.name + (p.price ? ` (${p.price})` : '')).join(', ')}` : ''}. ${listing.phone ? `Contact them at ${listing.phone} or visit` : 'Visit'} their website for current prices.`,
-  });
+  return faqs;
+}
 
+function buildFAQSchema(listing: Listing, hours: Record<string, string> | null): object {
+  const faqs = buildFAQs(listing, hours);
   return {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
     mainEntity: faqs.map((faq) => ({
       '@type': 'Question',
-      name: faq.question,
+      name: faq.q,
       acceptedAnswer: {
         '@type': 'Answer',
-        text: faq.answer,
+        text: faq.a,
       },
     })),
   };
@@ -422,32 +507,8 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     { name: listing.name, url: canonicalUrl },
   ];
   const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbItems);
+  const faqs = buildFAQs(listing, hours);
   const faqSchema = buildFAQSchema(listing, hours);
-
-  const faqs = [
-    {
-      q: `Is ${listing.name} a touchless car wash?`,
-      a: `Yes, ${listing.name} in ${listing.city}, ${listing.state} is a verified touchless (brushless) car wash that cleans your vehicle using high-pressure water and detergents without physical contact.`,
-    },
-    ...(hours && Object.keys(hours).length > 0 ? [{
-      q: `What are the hours for ${listing.name}?`,
-      a: DAY_ORDER.filter((d) => hours[d]).map((d) => `${DAY_LABELS[d]}: ${hours[d]}`).join(' | '),
-    }] : []),
-    ...(listing.amenities && listing.amenities.length > 0 ? [{
-      q: `What amenities does ${listing.name} offer?`,
-      a: listing.amenities.join(', '),
-    }] : []),
-    {
-      q: `Where is ${listing.name} located?`,
-      a: `${listing.address}, ${listing.city}, ${listing.state} ${listing.zip}`,
-    },
-    {
-      q: `How much does ${listing.name} cost?`,
-      a: listing.wash_packages && listing.wash_packages.length > 0
-        ? listing.wash_packages.map((p) => p.name + (p.price ? ` — ${p.price}` : '')).join(', ')
-        : `Pricing varies by wash package. ${listing.phone ? `Contact them at ${listing.phone}` : 'Visit their website'} for current prices.`,
-    },
-  ];
 
   const lastVerified = listing.created_at
     ? new Date(listing.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
@@ -464,12 +525,12 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
           className="flex items-center gap-1 hover:underline underline-offset-2 decoration-white/40 transition-all"
         >
           <span className="font-semibold text-white">{Number(listing.rating).toFixed(1)}</span>
-          <span className="text-white/60">({listing.review_count} reviews)</span>
+          {listing.review_count > 0 && <span className="text-white/60">({listing.review_count} reviews)</span>}
         </a>
       ) : (
         <>
           <span className="font-semibold text-white">{Number(listing.rating).toFixed(1)}</span>
-          <span className="text-white/60">({listing.review_count} reviews)</span>
+          {listing.review_count > 0 && <span className="text-white/60">({listing.review_count} reviews)</span>}
         </>
       )}
     </span>
@@ -520,12 +581,12 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                     <span className="text-white/80 truncate">{listing.name}</span>
                   </nav>
 
-                  <div className="flex items-end gap-4">
+                  <div className="flex items-start gap-4">
                     {logoImage && (
                       <LogoImage
                         src={logoImage}
                         alt={`${listing.name} logo`}
-                        wrapperClassName="shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-white p-1.5 shadow-lg mb-0.5"
+                        wrapperClassName="shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-white p-1.5 shadow-lg mt-1"
                         className="w-full h-full object-contain"
                       />
                     )}
@@ -546,7 +607,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                         </span>
                         {ratingStars}
                       </div>
-                      <p className="mt-2.5 text-sm text-white/65 max-w-2xl leading-relaxed line-clamp-2">{description}</p>
+                      <p className="mt-2.5 text-sm text-white/80 max-w-2xl leading-relaxed line-clamp-2">{description}</p>
                     </div>
                   </div>
                 </div>
@@ -572,12 +633,12 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                   <span className="text-white/80 truncate">{listing.name}</span>
                 </nav>
 
-                <div className="flex items-end gap-4">
+                <div className="flex items-start gap-4">
                   {logoImage && (
                     <LogoImage
                       src={logoImage}
                       alt={`${listing.name} logo`}
-                      wrapperClassName="shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-white p-1.5 shadow-lg mb-0.5"
+                      wrapperClassName="shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-white p-1.5 shadow-lg mt-1"
                       className="w-full h-full object-contain"
                     />
                   )}
@@ -598,7 +659,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                       </span>
                       {ratingStars}
                     </div>
-                    <p className="mt-2.5 text-sm text-white/60 max-w-2xl leading-relaxed line-clamp-2">{description}</p>
+                    <p className="mt-2.5 text-sm text-white/80 max-w-2xl leading-relaxed line-clamp-2">{description}</p>
                   </div>
                 </div>
               </div>
@@ -900,7 +961,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
               </div>
               <div className="mt-6 pt-5 border-t border-gray-200 flex items-center justify-between flex-wrap gap-3">
                 <p className="text-sm text-gray-500">
-                  Explore all touchless car washes in {stateName}
+                  Explore all touchless and touch-free car washes in {stateName}
                 </p>
                 <Link
                   href={`/state/${params.state}`}

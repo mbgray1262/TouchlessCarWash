@@ -22,8 +22,8 @@ export function Footer() {
           <div>
             <h3 className="font-semibold text-white mb-4">About</h3>
             <p className="text-sm text-white/70 leading-relaxed">
-              The most comprehensive directory of touchless car washes across the United States.
-              Find, compare, and review the best touchless locations near you.
+              The most comprehensive directory of touchless, touch-free, and brushless car washes across the United States.
+              Find, compare, and review the best no-touch wash locations near you.
             </p>
           </div>
 
@@ -54,28 +54,14 @@ export function Footer() {
           </div>
 
           <div>
-            <h3 className="font-semibold text-white mb-4">For Businesses</h3>
+            <h3 className="font-semibold text-white mb-4">Top States</h3>
             <ul className="space-y-2 text-sm">
-              <li>
-                <Link href="/add-listing" className="text-white/70 hover:text-[#22C55E] transition-colors">
-                  Add Your Listing
-                </Link>
-              </li>
-              <li>
-                <Link href="#" className="text-white/70 hover:text-[#22C55E] transition-colors">
-                  Pricing
-                </Link>
-              </li>
-              <li>
-                <Link href="#" className="text-white/70 hover:text-[#22C55E] transition-colors">
-                  Business Resources
-                </Link>
-              </li>
-              <li>
-                <Link href="#" className="text-white/70 hover:text-[#22C55E] transition-colors">
-                  Contact Sales
-                </Link>
-              </li>
+              <li><Link href="/state/california" className="text-white/70 hover:text-[#22C55E] transition-colors">California</Link></li>
+              <li><Link href="/state/texas" className="text-white/70 hover:text-[#22C55E] transition-colors">Texas</Link></li>
+              <li><Link href="/state/florida" className="text-white/70 hover:text-[#22C55E] transition-colors">Florida</Link></li>
+              <li><Link href="/state/new-york" className="text-white/70 hover:text-[#22C55E] transition-colors">New York</Link></li>
+              <li><Link href="/state/ohio" className="text-white/70 hover:text-[#22C55E] transition-colors">Ohio</Link></li>
+              <li><Link href="/states" className="text-white/70 hover:text-[#22C55E] transition-colors">All States &rarr;</Link></li>
             </ul>
           </div>
 

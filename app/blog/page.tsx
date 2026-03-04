@@ -7,6 +7,16 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Touchless Car Wash Guides & Tips | Touchless Car Wash Finder Blog',
   description: 'Expert guides, comparisons, and tips about touchless, touch-free, and laser car washes. Learn how to protect your paint and find the best no-touch wash near you.',
+  alternates: {
+    canonical: 'https://touchlesscarwashfinder.com/blog',
+  },
+  openGraph: {
+    title: 'Touchless Car Wash Guides & Tips | Touchless Car Wash Finder Blog',
+    description: 'Expert guides, comparisons, and tips about touchless, touch-free, and laser car washes. Learn how to protect your paint and find the best no-touch wash near you.',
+    url: 'https://touchlesscarwashfinder.com/blog',
+    siteName: 'Touchless Car Wash Finder',
+    type: 'website',
+  },
 };
 
 async function getBlogPosts(): Promise<BlogPost[]> {
@@ -36,8 +46,21 @@ function formatDate(dateStr: string | null): string {
 export default async function BlogPage() {
   const posts = await getBlogPosts();
 
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://touchlesscarwashfinder.com' },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://touchlesscarwashfinder.com/blog' },
+    ],
+  };
+
   return (
     <div className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <div className="bg-[#0F2744] py-14">
         <div className="container mx-auto px-4 max-w-5xl">
           <nav className="flex items-center gap-1.5 text-sm text-white/50 mb-5">

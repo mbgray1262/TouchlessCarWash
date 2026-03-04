@@ -234,7 +234,7 @@ export default function HeroSection() {
       id="search"
       className="relative min-h-[70vh] md:min-h-[80vh] flex items-center"
       style={{
-        backgroundImage: 'url(https://res.cloudinary.com/dret3qhyu/image/upload/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png)',
+        backgroundImage: 'url(https://res.cloudinary.com/dret3qhyu/image/upload/f_auto,q_auto,w_1920/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
@@ -257,7 +257,7 @@ export default function HeroSection() {
           </h1>
 
           <p className="text-lg md:text-xl text-white/90 mb-8 leading-relaxed">
-            The only directory dedicated exclusively to touchless car washes. No brushes, no scratches — just clean.
+            The only directory dedicated exclusively to touchless, touch-free, and brushless car washes. No brushes, no scratches — just clean.
           </p>
 
           <div className="mb-6" ref={containerRef}>
