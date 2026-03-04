@@ -124,7 +124,7 @@ export default function DiscoverPage() {
       const data = await callEdgeFunction('search', { query });
       setSearchResults(data);
       // Auto-select all new places
-      const newIds = new Set(
+      const newIds = new Set<string>(
         data.results
           .filter((r: DiscoveredPlace) => !r.is_existing && r.business_status === 'OPERATIONAL')
           .map((r: DiscoveredPlace) => r.google_id),
