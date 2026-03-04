@@ -5,10 +5,21 @@ export async function GET() {
   const baseUrl = 'https://touchlesscarwashfinder.com';
   const now = new Date().toISOString();
 
-  const { data: listings } = await supabase
-    .from('listings')
-    .select('slug, city, state, created_at')
-    .eq('is_touchless', true);
+  // Paginate past Supabase's default 1000-row limit
+  const listings: Array<{ slug: string; city: string; state: string; created_at: string }> = [];
+  const PAGE_SIZE = 1000;
+  let offset = 0;
+  while (true) {
+    const { data: page } = await supabase
+      .from('listings')
+      .select('slug, city, state, created_at')
+      .eq('is_touchless', true)
+      .range(offset, offset + PAGE_SIZE - 1);
+    if (!page || page.length === 0) break;
+    listings.push(...page);
+    if (page.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
+  }
 
   const { data: blogPosts } = await supabase
     .from('blog_posts')
