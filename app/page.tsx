@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ListingCard } from '@/components/ListingCard';
-import { supabase, type Listing } from '@/lib/supabase';
+import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { US_STATES, getStateSlug } from '@/lib/constants';
 import type { Metadata } from 'next';
 
@@ -71,7 +71,7 @@ const faqItems = [
 async function getFeaturedListings(): Promise<Listing[]> {
   const { data, error } = await supabase
     .from('listings')
-    .select('*')
+    .select(LISTING_CARD_COLUMNS)
     .eq('is_touchless', true)
     .eq('is_featured', true)
     .order('rating', { ascending: false })
@@ -82,7 +82,7 @@ async function getFeaturedListings(): Promise<Listing[]> {
     return [];
   }
 
-  return data || [];
+  return (data as Listing[]) || [];
 }
 
 async function getStateListingCounts(): Promise<Record<string, number>> {

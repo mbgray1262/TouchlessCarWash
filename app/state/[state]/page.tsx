@@ -1,8 +1,9 @@
+import { cache } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { supabase, type Listing } from '@/lib/supabase';
+import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants';
 import { ListingCard } from '@/components/ListingCard';
 import { Pagination, PAGE_SIZE } from '@/components/Pagination';
@@ -42,6 +43,59 @@ function getStateCode(stateSlug: string): string | null {
   return state ? state.code : null;
 }
 
+// Cached so generateMetadata and component share the same result per request
+const getStateListingCount = cache(async (stateCode: string): Promise<number> => {
+  const { count } = await supabase
+    .from('listings')
+    .select('*', { count: 'exact', head: true })
+    .eq('is_touchless', true)
+    .eq('state', stateCode);
+  return count ?? 0;
+});
+
+const getStateDescription = cache(async (stateCode: string): Promise<string | null> => {
+  const { data } = await supabase
+    .from('state_descriptions')
+    .select('description')
+    .eq('state', stateCode)
+    .maybeSingle();
+  return data?.description ?? null;
+});
+
+// Server-side paginated query — only fetches 12 rows with card columns
+async function getStateListingsPaginated(stateCode: string, page: number): Promise<Listing[]> {
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
+  const { data, error } = await supabase
+    .from('listings')
+    .select(LISTING_CARD_COLUMNS)
+    .eq('is_touchless', true)
+    .eq('state', stateCode)
+    .order('rating', { ascending: false })
+    .range(from, to);
+
+  if (error) {
+    console.error('Error fetching state listings:', error);
+    return [];
+  }
+
+  return (data as Listing[]) || [];
+}
+
+// Uses existing RPC — returns {city, count}[] sorted by count desc
+async function getCitiesInState(stateCode: string): Promise<{ city: string; count: number }[]> {
+  const { data, error } = await supabase.rpc('cities_in_state_with_counts', { p_state: stateCode });
+  if (error || !data) return [];
+  return data as { city: string; count: number }[];
+}
+
+async function getStatesWithListings(): Promise<string[]> {
+  const { data, error } = await supabase.rpc('states_with_touchless_listings');
+  if (error || !data) return [];
+  return data as string[];
+}
+
 export async function generateMetadata({ params }: StatePageProps): Promise<Metadata> {
   const stateCode = getStateCode(params.state);
   if (!stateCode) {
@@ -53,54 +107,19 @@ export async function generateMetadata({ params }: StatePageProps): Promise<Meta
   const month = now.toLocaleString('default', { month: 'long' });
   const year = now.getFullYear();
 
-  const [{ count }, stateDesc] = await Promise.all([
-    supabase
-      .from('listings')
-      .select('*', { count: 'exact', head: true })
-      .eq('is_touchless', true)
-      .eq('state', stateCode),
+  const [totalCount, stateDesc] = await Promise.all([
+    getStateListingCount(stateCode),
     getStateDescription(stateCode),
   ]);
 
   const metaDescription = stateDesc
     ? stateDesc.substring(0, 155) + (stateDesc.length > 155 ? '...' : '')
-    : `Find ${count ?? 0} verified touchless & touch-free car washes in ${stateName}. Browse laser car wash and no-touch locations by city with ratings, hours, and contact info. Updated ${month} ${year}.`;
+    : `Find ${totalCount} verified touchless & touch-free car washes in ${stateName}. Browse laser car wash and no-touch locations by city with ratings, hours, and contact info. Updated ${month} ${year}.`;
 
   return {
     title: `Touchless Car Washes in ${stateName} | ${stateName} Car Wash Directory`,
     description: metaDescription,
   };
-}
-
-async function getStateListings(stateCode: string): Promise<Listing[]> {
-  const { data, error } = await supabase
-    .from('listings')
-    .select('*')
-    .eq('is_touchless', true)
-    .eq('state', stateCode)
-    .order('rating', { ascending: false });
-
-  if (error) {
-    console.error('Error fetching state listings:', error);
-    return [];
-  }
-
-  return data || [];
-}
-
-async function getStatesWithListings(): Promise<string[]> {
-  const { data, error } = await supabase.rpc('states_with_touchless_listings');
-  if (error || !data) return [];
-  return data as string[];
-}
-
-async function getStateDescription(stateCode: string): Promise<string | null> {
-  const { data } = await supabase
-    .from('state_descriptions')
-    .select('description')
-    .eq('state', stateCode)
-    .maybeSingle();
-  return data?.description ?? null;
 }
 
 export default async function StatePage({ params, searchParams }: StatePageProps) {
@@ -111,13 +130,17 @@ export default async function StatePage({ params, searchParams }: StatePageProps
   }
 
   const stateName = getStateName(stateCode);
-  const [listings, statesWithListings, stateDescription] = await Promise.all([
-    getStateListings(stateCode),
+  const currentPage = Math.max(1, parseInt(searchParams.page ?? '1', 10) || 1);
+
+  const [totalCount, citiesData, statesWithListings, stateDescription, paginatedListings] = await Promise.all([
+    getStateListingCount(stateCode),
+    getCitiesInState(stateCode),
     getStatesWithListings(),
     getStateDescription(stateCode),
+    getStateListingsPaginated(stateCode, currentPage),
   ]);
 
-  if (listings.length === 0) {
+  if (totalCount === 0) {
     return (
       <div className="min-h-screen">
         <div className="bg-[#0F2744] py-10">
@@ -137,13 +160,12 @@ export default async function StatePage({ params, searchParams }: StatePageProps
     );
   }
 
-  const cities = Array.from(new Set(listings.map(l => l.city))).sort();
+  // Sort cities alphabetically for display
+  const cities = [...citiesData].sort((a, b) => a.city.localeCompare(b.city));
   const nickname = STATE_NICKNAMES[stateCode] ?? stateName;
 
-  const currentPage = Math.max(1, parseInt(searchParams.page ?? '1', 10) || 1);
-  const totalPages = Math.ceil(listings.length / PAGE_SIZE);
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
   const page = Math.min(currentPage, totalPages);
-  const paginatedListings = listings.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const nearbyStates = statesWithListings
     .filter(s => s !== stateCode)
@@ -159,11 +181,11 @@ export default async function StatePage({ params, searchParams }: StatePageProps
     name: `Touchless Car Washes in ${stateName} by City`,
     description: `Cities in ${stateName} with verified touchless, touch-free, and no-touch car wash locations`,
     numberOfItems: cities.length,
-    itemListElement: cities.map((city, index) => ({
+    itemListElement: cities.map((c, index) => ({
       '@type': 'ListItem',
       position: index + 1,
-      name: `Touchless Car Washes in ${city}, ${stateCode}`,
-      url: `https://touchlesscarwashfinder.com/state/${params.state}/${city.toLowerCase().replace(/\s+/g, '-')}`,
+      name: `Touchless Car Washes in ${c.city}, ${stateCode}`,
+      url: `https://touchlesscarwashfinder.com/state/${params.state}/${c.city.toLowerCase().replace(/\s+/g, '-')}`,
     })),
   };
 
@@ -187,7 +209,7 @@ export default async function StatePage({ params, searchParams }: StatePageProps
             Touchless Car Washes in {stateName}
           </h1>
           <p className="text-white/70 text-lg">
-            {listings.length} verified touchless car wash{listings.length !== 1 ? 'es' : ''} across {cities.length} {cities.length === 1 ? 'city' : 'cities'}
+            {totalCount} verified touchless car wash{totalCount !== 1 ? 'es' : ''} across {cities.length} {cities.length === 1 ? 'city' : 'cities'}
           </p>
         </div>
       </div>
@@ -199,7 +221,7 @@ export default async function StatePage({ params, searchParams }: StatePageProps
             <p className="text-gray-700 text-base leading-relaxed">
               {stateDescription ? stateDescription : (
                 <>
-                  Browse <strong>{listings.length} verified touchless, touch-free, and laser car wash{listings.length !== 1 ? ' locations' : ' location'}</strong>{' '}
+                  Browse <strong>{totalCount} verified touchless, touch-free, and laser car wash{totalCount !== 1 ? ' locations' : ' location'}</strong>{' '}
                   across <strong>{cities.length} {cities.length === 1 ? 'city' : 'cities'}</strong> in {nickname}.
                   Every listing is confirmed to offer brushless, no-touch washing that&apos;s safe for all paint
                   types and finishes — no bristles, no scratches, no swirl marks. Last updated {month} {year}.
@@ -211,24 +233,21 @@ export default async function StatePage({ params, searchParams }: StatePageProps
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-foreground mb-4">Browse by City</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {cities.map((city) => {
-                const cityListings = listings.filter(l => l.city === city);
-                return (
-                  <Link
-                    key={city}
-                    href={`/state/${params.state}/${city.toLowerCase().replace(/\s+/g, '-')}`}
-                  >
-                    <Card className="hover:shadow-lg hover:border-primary transition-all cursor-pointer">
-                      <CardContent className="p-4">
-                        <div className="font-semibold text-foreground">{city}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {cityListings.length} location{cityListings.length !== 1 ? 's' : ''}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                );
-              })}
+              {cities.map((c) => (
+                <Link
+                  key={c.city}
+                  href={`/state/${params.state}/${c.city.toLowerCase().replace(/\s+/g, '-')}`}
+                >
+                  <Card className="hover:shadow-lg hover:border-primary transition-all cursor-pointer">
+                    <CardContent className="p-4">
+                      <div className="font-semibold text-foreground">{c.city}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {c.count} location{c.count !== 1 ? 's' : ''}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
             </div>
           </div>
 
@@ -248,7 +267,7 @@ export default async function StatePage({ params, searchParams }: StatePageProps
             </div>
             <Pagination
               currentPage={page}
-              totalItems={listings.length}
+              totalItems={totalCount}
               baseHref={`/state/${params.state}`}
             />
           </div>

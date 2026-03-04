@@ -1,8 +1,9 @@
+import { cache } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { supabase, type Listing } from '@/lib/supabase';
+import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { US_STATES, getStateName, slugify } from '@/lib/constants';
 import { ListingCard } from '@/components/ListingCard';
 import { Pagination, PAGE_SIZE } from '@/components/Pagination';
@@ -30,20 +31,21 @@ function unslugCity(citySlug: string): string {
     .join(' ');
 }
 
-async function getCityListings(stateCode: string, cityName: string): Promise<Listing[]> {
+// Cached so generateMetadata and component share the same result per request
+const getCityListings = cache(async (stateCode: string, cityName: string): Promise<Listing[]> => {
   const { data, error } = await supabase
     .from('listings')
-    .select('*')
+    .select(LISTING_CARD_COLUMNS)
     .eq('is_touchless', true)
     .eq('state', stateCode)
     .ilike('city', cityName)
     .order('rating', { ascending: false });
 
   if (error || !data) return [];
-  return data;
-}
+  return data as Listing[];
+});
 
-async function getCityDescription(stateCode: string, cityName: string): Promise<string | null> {
+const getCityDescription = cache(async (stateCode: string, cityName: string): Promise<string | null> => {
   const { data } = await supabase
     .from('city_descriptions')
     .select('description')
@@ -51,7 +53,7 @@ async function getCityDescription(stateCode: string, cityName: string): Promise<
     .ilike('city', cityName)
     .maybeSingle();
   return data?.description ?? null;
-}
+});
 
 async function getCitiesInState(stateCode: string, excludeCitySlug: string): Promise<{ city: string; count: number; slug: string }[]> {
   const { data, error } = await supabase.rpc('cities_in_state_with_counts', { p_state: stateCode });
