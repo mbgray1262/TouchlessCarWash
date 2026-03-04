@@ -269,11 +269,15 @@ Deno.serve(async (req: Request) => {
         hero_image: string | null;
       }>).filter(l => {
         const count = Array.isArray(l.photos) ? l.photos.length : 0;
-        return count < MIN_GALLERY_TARGET;
+        const needsGallery = count < MIN_GALLERY_TARGET;
+        const needsHero = !l.hero_image
+          || l.hero_image.includes('streetviewpixels')
+          || l.hero_image.includes('street_view');
+        return needsGallery || needsHero;
       });
 
       if (eligible.length === 0) {
-        return Response.json({ error: `No listings found with fewer than ${MIN_GALLERY_TARGET} gallery photos` }, { status: 404, headers: corsHeaders });
+        return Response.json({ error: 'No listings need gallery photos or hero image fixes' }, { status: 404, headers: corsHeaders });
       }
 
       const toProcess = limit > 0 ? eligible.slice(0, limit) : eligible;
@@ -385,11 +389,15 @@ Deno.serve(async (req: Request) => {
           const heroImage: string | null = (listingData?.hero_image as string | null) ?? null;
           const blockedPhotos: string[] = (listingData?.blocked_photos as string[]) ?? [];
 
+          const heroNeedsUpgrade = !heroImage
+            || heroImage.includes('streetviewpixels')
+            || heroImage.includes('street_view');
+
           const existingUrls = [...currentPhotos, ...(heroImage ? [heroImage] : []), ...blockedPhotos];
 
           const needed = MAX_GALLERY_PHOTOS - currentPhotos.length;
-          if (needed <= 0) {
-            fallbackReason = 'Already has enough gallery photos';
+          if (needed <= 0 && !heroNeedsUpgrade) {
+            fallbackReason = 'Already has enough gallery photos and a good hero';
           } else {
             const fetchCount = Math.min(15, needed + 2);
             const placePhotoUrls = await fetchGooglePlacePhotoUrls(
@@ -422,10 +430,21 @@ Deno.serve(async (req: Request) => {
 
               if (newApproved.length > 0) {
                 const updatedPhotos = [...currentPhotos, ...newApproved];
-                await supabase.from('listings').update({
-                  photos: updatedPhotos,
-                }).eq('id', task.listing_id);
+                const updatePayload: Record<string, unknown> = { photos: updatedPhotos };
+
+                // Also upgrade hero image if it's missing or Street View
+                if (heroNeedsUpgrade) {
+                  updatePayload.hero_image = newApproved[0];
+                }
+
+                await supabase.from('listings').update(updatePayload).eq('id', task.listing_id);
                 photosAfter = updatedPhotos.length;
+              } else if (heroNeedsUpgrade && currentPhotos.length > 0) {
+                // No new photos found, but listing has existing gallery photos — promote first one to hero
+                await supabase.from('listings').update({
+                  hero_image: currentPhotos[0],
+                }).eq('id', task.listing_id);
+                fallbackReason = `${placePhotosScreened} photos screened — none new, but promoted existing gallery photo to hero`;
               } else {
                 fallbackReason = `${placePhotosScreened} photos screened by Claude — none passed GOOD verdict`;
               }
