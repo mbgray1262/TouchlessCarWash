@@ -89,6 +89,10 @@ export type Submission = {
   hours: string | null;
   wash_packages: string | null;
   amenities: string | null;
+  submitter_email: string | null;
+  ip_address: string | null;
+  notes: string | null;
+  photos: string[] | null;
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
 };
