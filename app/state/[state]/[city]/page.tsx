@@ -43,6 +43,16 @@ async function getCityListings(stateCode: string, cityName: string): Promise<Lis
   return data;
 }
 
+async function getCityDescription(stateCode: string, cityName: string): Promise<string | null> {
+  const { data } = await supabase
+    .from('city_descriptions')
+    .select('description')
+    .eq('state', stateCode)
+    .ilike('city', cityName)
+    .maybeSingle();
+  return data?.description ?? null;
+}
+
 async function getCitiesInState(stateCode: string, excludeCitySlug: string): Promise<{ city: string; count: number; slug: string }[]> {
   const { data, error } = await supabase.rpc('cities_in_state_with_counts', { p_state: stateCode });
   if (error || !data) return [];
@@ -62,11 +72,18 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
   const cityName = unslugCity(params.city);
   const stateName = getStateName(stateCode);
 
-  const listings = await getCityListings(stateCode, cityName);
+  const [listings, cityDesc] = await Promise.all([
+    getCityListings(stateCode, cityName),
+    getCityDescription(stateCode, cityName),
+  ]);
+
+  const metaDescription = cityDesc
+    ? cityDesc.substring(0, 155) + (cityDesc.length > 155 ? '...' : '')
+    : `Find ${listings.length} touchless & touch-free car washes in ${cityName}, ${stateName}. Browse verified no-touch, scratch-free laser car wash locations with ratings and reviews.`;
 
   return {
     title: `Touchless Car Washes in ${cityName}, ${stateCode} | ${cityName} Car Wash Directory`,
-    description: `Find ${listings.length} touchless & touch-free car washes in ${cityName}, ${stateName}. Browse verified no-touch, scratch-free laser car wash locations with ratings and reviews.`,
+    description: metaDescription,
   };
 }
 
@@ -76,9 +93,10 @@ export default async function CityPage({ params, searchParams }: CityPageProps) 
 
   const stateName = getStateName(stateCode!);
   const cityName = unslugCity(params.city);
-  const [listings, nearbyCities] = await Promise.all([
+  const [listings, nearbyCities, cityDescription] = await Promise.all([
     getCityListings(stateCode!, cityName),
     getCitiesInState(stateCode!, params.city),
+    getCityDescription(stateCode!, cityName),
   ]);
 
   const currentPage = Math.max(1, parseInt(searchParams.page ?? '1', 10) || 1);
@@ -300,11 +318,15 @@ export default async function CityPage({ params, searchParams }: CityPageProps) 
 
         <div className="mb-8 p-5 bg-blue-50 border border-blue-100 rounded-xl">
           <p className="text-gray-700 text-base leading-relaxed">
-            Find the best {introSynonyms} car washes in {cityName}, {stateName}. We&apos;ve verified{' '}
-            <strong>{listings.length} location{listings.length !== 1 ? 's' : ''}</strong> that offer brushless,
-            contactless washing to keep your car&apos;s paint and finish scratch-free.
-            {topRated.rating && (
-              <> Top-rated option: <strong>{topRated.name}</strong> ({topRated.rating} stars).</>
+            {cityDescription ? cityDescription : (
+              <>
+                Find the best {introSynonyms} car washes in {cityName}, {stateName}. We&apos;ve verified{' '}
+                <strong>{listings.length} location{listings.length !== 1 ? 's' : ''}</strong> that offer brushless,
+                contactless washing to keep your car&apos;s paint and finish scratch-free.
+                {topRated.rating && (
+                  <> Top-rated option: <strong>{topRated.name}</strong> ({topRated.rating} stars).</>
+                )}
+              </>
             )}
           </p>
         </div>
