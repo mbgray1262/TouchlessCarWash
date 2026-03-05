@@ -614,8 +614,7 @@ Deno.serve(async (req: Request) => {
           .eq('is_touchless', true)
           .not('hero_image', 'is', null)
           .not('photos', 'is', null)
-          .neq('hero_image_source', 'manual')
-          .neq('hero_image_source', 'manual_upload')
+          .or('hero_image_source.is.null,and(hero_image_source.neq.manual,hero_image_source.neq.manual_upload)')
           .order('review_count', { ascending: false })
           .range(pageOffset, pageOffset + PAGE_SIZE - 1);
 
