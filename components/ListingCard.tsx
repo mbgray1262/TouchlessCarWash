@@ -1,3 +1,6 @@
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Star, MapPin, Phone, CheckCircle } from 'lucide-react';
@@ -7,6 +10,24 @@ import { getStateSlug } from '@/lib/constants';
 import LogoImage from '@/components/LogoImage';
 import HeroImageFallback from '@/components/HeroImageFallback';
 import { OpenStatusBadge } from '@/components/OpenStatusBadge';
+
+/** Hostnames configured in next.config.js remotePatterns — safe for next/image optimization. */
+const OPTIMIZED_HOSTS = new Set([
+  'gteqijdpqjmgxfnyuhvy.supabase.co',
+  'res.cloudinary.com',
+  'lh3.googleusercontent.com',
+  'streetviewpixels-pa.googleapis.com',
+  'places.googleapis.com',
+  'maps.googleapis.com',
+]);
+
+function isOptimizedImageHost(url: string): boolean {
+  try {
+    return OPTIMIZED_HOSTS.has(new URL(url).hostname);
+  } catch {
+    return false;
+  }
+}
 
 interface ListingCardProps {
   listing: Listing;
@@ -37,11 +58,12 @@ export function ListingCard({ listing, href, showVerifiedBadge = false }: Listin
   // Don't use street_view_url as card image — often returns 403 and looks broken
   const cardImage = listing.hero_image ?? listing.google_photo_url ?? null;
   const cardLogo = listing.logo_photo ?? listing.google_logo_url ?? null;
+  const [imgError, setImgError] = useState(false);
 
   return (
     <Link href={linkHref} className="group block h-full">
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-xl hover:border-[#22C55E] transition-all duration-200 h-full flex flex-col">
-        {cardImage ? (
+        {cardImage && !imgError ? (
           <div className="relative h-48 overflow-hidden shrink-0">
             <Image
               src={cardImage}
@@ -49,6 +71,8 @@ export function ListingCard({ listing, href, showVerifiedBadge = false }: Listin
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
               className="object-cover group-hover:scale-105 transition-transform duration-300"
+              unoptimized={!isOptimizedImageHost(cardImage)}
+              onError={() => setImgError(true)}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
             {cardLogo && (

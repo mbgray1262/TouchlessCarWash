@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation';
 import {
   Star, MapPin, Phone, Globe, Clock, CheckCircle, ArrowLeft,
   Sparkles, ExternalLink, ChevronRight, Navigation, HelpCircle,
-  CalendarCheck, ChevronDown, Droplet, CreditCard, Zap
+  CalendarCheck, ChevronDown, Droplet, CreditCard, Zap, MessageSquareQuote, Quote
 } from 'lucide-react';
 import LogoImage from '@/components/LogoImage';
 import HeroImageFallback from '@/components/HeroImageFallback';
@@ -13,7 +13,7 @@ import PhotoGalleryGrid from '@/components/PhotoGalleryGrid';
 import SuggestEditModal from '@/components/SuggestEditModal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { supabase, type Listing } from '@/lib/supabase';
+import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
 import { US_STATES, getStateName, slugify } from '@/lib/constants';
 import type { Metadata } from 'next';
 
@@ -69,6 +69,18 @@ async function getNearbyListings(listing: Listing, limit = 6): Promise<Listing[]
   const otherCity = data.filter((l) => l.city !== listing.city);
   const combined = [...cityMatches, ...otherCity].slice(0, limit);
   return combined as Listing[];
+}
+
+async function getReviewSnippets(listingId: string): Promise<ReviewSnippet[]> {
+  const { data } = await supabase
+    .from('review_snippets')
+    .select('*')
+    .eq('listing_id', listingId)
+    .eq('is_touchless_evidence', true)
+    .order('rating', { ascending: false, nullsFirst: false })
+    .limit(10);
+
+  return (data || []) as ReviewSnippet[];
 }
 
 export async function generateMetadata({ params }: ListingPageProps): Promise<Metadata> {
@@ -217,7 +229,7 @@ const BRAND_LABELS: Record<string, string> = {
   ds: 'D&S',
 };
 
-function buildLocalBusinessSchema(listing: Listing, canonicalUrl: string, hours: Record<string, string> | null): object {
+function buildLocalBusinessSchema(listing: Listing, canonicalUrl: string, hours: Record<string, string> | null, reviewSnippets: ReviewSnippet[] = []): object {
   const hoursSpec = hours
     ? DAY_ORDER.filter((d) => hours[d]).map((day) => {
         const val = hours[day];
@@ -272,6 +284,17 @@ function buildLocalBusinessSchema(listing: Listing, canonicalUrl: string, hours:
   if (heroImage) schema.image = heroImage;
   if (listing.price_range) schema.priceRange = listing.price_range;
   if (listing.website) schema.sameAs = listing.website;
+
+  // Add individual reviews from snippets for rich results
+  if (reviewSnippets.length > 0) {
+    schema.review = reviewSnippets.slice(0, 5).map((snippet) => ({
+      '@type': 'Review',
+      author: { '@type': 'Person', name: snippet.reviewer_name || 'Anonymous' },
+      reviewBody: snippet.review_text,
+      ...(snippet.rating ? { reviewRating: { '@type': 'Rating', ratingValue: snippet.rating, bestRating: 5 } } : {}),
+      ...(snippet.iso_date ? { datePublished: snippet.iso_date } : {}),
+    }));
+  }
 
   return schema;
 }
@@ -475,6 +498,61 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
+/** Highlight touchless keywords in review text with green accent. */
+function HighlightedReviewText({ text, keywords }: { text: string; keywords: string[] }) {
+  if (!keywords || keywords.length === 0) return <>{text}</>;
+
+  // Build a regex that matches any keyword (case-insensitive)
+  const escaped = keywords.map((kw) => kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const pattern = new RegExp(`(${escaped.join('|')})`, 'gi');
+
+  const parts = text.split(pattern);
+  return (
+    <>
+      {parts.map((part, i) => {
+        const isMatch = keywords.some((kw) => kw.toLowerCase() === part.toLowerCase());
+        return isMatch ? (
+          <mark key={i} className="bg-green-100 text-green-800 rounded px-0.5 font-medium">
+            {part}
+          </mark>
+        ) : (
+          <span key={i}>{part}</span>
+        );
+      })}
+    </>
+  );
+}
+
+function ReviewSnippetCard({ snippet }: { snippet: ReviewSnippet }) {
+  return (
+    <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
+      <div className="flex items-start gap-3">
+        <Quote className="w-5 h-5 text-[#22C55E]/40 shrink-0 mt-0.5" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm text-gray-700 leading-relaxed line-clamp-4">
+            <HighlightedReviewText text={snippet.review_text} keywords={snippet.touchless_keywords} />
+          </p>
+          <div className="flex items-center gap-3 mt-2.5">
+            {snippet.rating && snippet.rating > 0 && (
+              <span className="flex items-center gap-0.5">
+                {Array.from({ length: snippet.rating }, (_, i) => (
+                  <Star key={i} className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                ))}
+              </span>
+            )}
+            <span className="text-xs text-gray-500 font-medium">
+              {snippet.reviewer_name || 'Anonymous'}
+            </span>
+            {snippet.review_date && (
+              <span className="text-xs text-gray-400">{snippet.review_date}</span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function NearbyListingCard({ nearby, stateSlug }: { nearby: Listing; stateSlug: string }) {
   const citySlug = slugify(nearby.city);
   const thumb = nearby.hero_image ?? nearby.google_photo_url ?? nearby.street_view_url ?? null;
@@ -505,11 +583,14 @@ function NearbyListingCard({ nearby, stateSlug }: { nearby: Listing; stateSlug: 
 }
 
 export default async function ListingDetailPage({ params }: ListingPageProps) {
-  const [listing, ] = await Promise.all([getListing(params.slug)]);
+  const [listing] = await Promise.all([getListing(params.slug)]);
 
   if (!listing) notFound();
 
-  const nearbyListings = await getNearbyListings(listing);
+  const [nearbyListings, reviewSnippets] = await Promise.all([
+    getNearbyListings(listing),
+    getReviewSnippets(listing.id),
+  ]);
 
   const stateCode = getStateCode(params.state);
   const stateName = stateCode ? getStateName(stateCode) : '';
@@ -541,7 +622,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
 
   const canonicalUrl = `${SITE_URL}/state/${params.state}/${params.city}/${params.slug}`;
 
-  const localBusinessSchema = buildLocalBusinessSchema(listing, canonicalUrl, hours);
+  const localBusinessSchema = buildLocalBusinessSchema(listing, canonicalUrl, hours, reviewSnippets);
   const breadcrumbItems = [
     { name: 'Home', url: SITE_URL },
     { name: 'States', url: `${SITE_URL}/states` },
@@ -859,6 +940,37 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                 <div className="bg-white rounded-2xl border border-gray-200 p-6">
                   <h2 className="text-lg font-bold text-[#0F2744] mb-4">Photos</h2>
                   <PhotoGalleryGrid photos={galleryPhotos} listingName={listing.name} />
+                </div>
+              )}
+
+              {/* Customer Review Snippets — touchless evidence from Google Reviews */}
+              {reviewSnippets.length > 0 && (
+                <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                  <h2 className="text-lg font-bold text-[#0F2744] mb-1 flex items-center gap-2">
+                    <MessageSquareQuote className="w-5 h-5 text-[#22C55E]" />
+                    What Customers Say About the Touchless Wash
+                  </h2>
+                  <p className="text-xs text-gray-400 mb-4">
+                    Real reviews from Google mentioning the touchless experience
+                  </p>
+                  <div className="space-y-3">
+                    {reviewSnippets.slice(0, 5).map((snippet) => (
+                      <ReviewSnippetCard key={snippet.id} snippet={snippet} />
+                    ))}
+                  </div>
+                  {listing.google_place_id && (
+                    <div className="mt-4 pt-3 border-t border-gray-100">
+                      <a
+                        href={`https://search.google.com/local/reviews?placeid=${listing.google_place_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-[#22C55E] hover:underline font-medium flex items-center gap-1.5"
+                      >
+                        Read all reviews on Google
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  )}
                 </div>
               )}
 
