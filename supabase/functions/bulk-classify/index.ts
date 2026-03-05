@@ -194,7 +194,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: listings, error: fetchError } = await supabase
       .from("listings")
-      .select("id, name, website, parent_chain, crawl_snapshot")
+      .select("id, name, website, parent_chain, crawl_snapshot, photos, hero_image, google_photo_url")
       .in("id", listingIds);
 
     if (fetchError || !listings) {
@@ -248,7 +248,8 @@ Deno.serve(async (req: Request) => {
           classification_source: "direct",
           verification_status: "auto_classified",
           amenities: classification.amenities,
-          hero_image: classification.hero_image_url,
+          // Prefer Google Places photo for hero (real user photos > website graphics)
+          hero_image: listing.google_photo_url || listing.hero_image || classification.hero_image_url,
           logo_url: classification.logo_url,
           blocked_photos: classification.blocked_images,
           touchless_evidence: classification.evidence.map(e => ({ keyword: e, snippet: e, type: "touchless" })),
@@ -257,12 +258,16 @@ Deno.serve(async (req: Request) => {
         };
 
         if (classification.image_scores.length > 0) {
-          const sortedPhotos = [...imageUrls].sort((a, b) => {
+          const sortedWebPhotos = [...imageUrls].sort((a, b) => {
             const sa = classification.image_scores.find(s => s.url === a)?.score ?? 0;
             const sb = classification.image_scores.find(s => s.url === b)?.score ?? 0;
             return sb - sa;
           });
-          updatePayload.photos = sortedPhotos;
+          // Merge: keep existing Google Places photos first, then add website photos
+          const existingPhotos: string[] = (listing.photos as string[]) || [];
+          const existingSet = new Set(existingPhotos);
+          const newPhotos = sortedWebPhotos.filter(p => !existingSet.has(p));
+          updatePayload.photos = [...existingPhotos, ...newPhotos];
         }
 
         await supabase.from("listings").update(updatePayload).eq("id", listing.id);
