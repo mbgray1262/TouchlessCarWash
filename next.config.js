@@ -45,6 +45,14 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'streetviewpixels-pa.googleapis.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'places.googleapis.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'maps.googleapis.com',
+      },
     ],
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
