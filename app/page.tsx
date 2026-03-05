@@ -234,11 +234,11 @@ export default async function Home() {
                 <div className="w-16 h-16 rounded-full bg-orange-500 flex items-center justify-center mx-auto mb-4">
                   <Sparkles className="w-8 h-8 text-white" />
                 </div>
-                <CardTitle className="text-xl">3. Visit & Review</CardTitle>
+                <CardTitle className="text-xl">3. Visit & Enjoy</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription className="text-base">
-                  Get directions and visit your chosen car wash, then leave a review
+                  Get directions and visit your chosen touchless car wash for a scratch-free clean
                 </CardDescription>
               </CardContent>
             </Card>
