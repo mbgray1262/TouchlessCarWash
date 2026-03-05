@@ -147,6 +147,7 @@ Deno.serve(async (req: Request) => {
 
       const limit: number = body.limit ?? 0;
       const regenerate: boolean = body.regenerate ?? false;
+      const listingIds: string[] | undefined = body.listing_ids;
 
       let query = supabase
         .from('listings')
@@ -155,7 +156,10 @@ Deno.serve(async (req: Request) => {
         .not('crawl_snapshot', 'is', null)
         .order('review_count', { ascending: false });
 
-      if (!regenerate) {
+      // If specific listing IDs provided, only process those
+      if (listingIds && listingIds.length > 0) {
+        query = query.in('id', listingIds);
+      } else if (!regenerate) {
         query = query.is('extracted_data', null);
       }
 

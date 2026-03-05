@@ -117,6 +117,24 @@ function getTodayKey(): string {
   return DAY_ORDER[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
 }
 
+/** Hostnames configured in next.config.js remotePatterns — safe for next/image optimization. */
+const OPTIMIZED_HOSTS = new Set([
+  'gteqijdpqjmgxfnyuhvy.supabase.co',
+  'res.cloudinary.com',
+  'lh3.googleusercontent.com',
+  'streetviewpixels-pa.googleapis.com',
+  'places.googleapis.com',
+  'maps.googleapis.com',
+]);
+
+function isOptimizedImageHost(url: string): boolean {
+  try {
+    return OPTIMIZED_HOSTS.has(new URL(url).hostname);
+  } catch {
+    return false;
+  }
+}
+
 function isImageUrl(url: string): boolean {
   if (!url) return false;
   const lower = url.toLowerCase();
@@ -467,7 +485,7 @@ function NearbyListingCard({ nearby, stateSlug }: { nearby: Listing; stateSlug: 
     >
       {thumb && (
         <div className="relative shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
-          <Image src={thumb} alt={nearby.name} fill sizes="64px" className="object-cover group-hover:scale-105 transition-transform duration-300" />
+          <Image src={thumb} alt={nearby.name} fill sizes="64px" className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized={!isOptimizedImageHost(thumb)} />
         </div>
       )}
       <div className="flex-1 min-w-0">
@@ -588,6 +606,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                   priority
                   sizes="100vw"
                   className="object-cover"
+                  unoptimized={!isOptimizedImageHost(heroImage)}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0F2744] via-[#0F2744]/50 to-[#0F2744]/10" />
               </div>

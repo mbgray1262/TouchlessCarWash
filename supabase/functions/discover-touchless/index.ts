@@ -805,6 +805,26 @@ Deno.serve(async (req: Request) => {
         }
       }
 
+      // Kick off background enrichment for imported listings that have websites
+      if (imported.length > 0) {
+        const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY')!;
+        const { data: newListings } = await supabase
+          .from('listings')
+          .select('id, website')
+          .in('google_id', newIds)
+          .not('website', 'is', null);
+
+        if (newListings && newListings.length > 0) {
+          const listingIds = newListings.map((l: { id: string }) => l.id);
+          // Fire-and-forget: trigger enrichment pipeline
+          fetch(`${supabaseUrl}/functions/v1/discover-touchless`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${supabaseAnon}` },
+            body: JSON.stringify({ action: 'enrich', listing_ids: listingIds }),
+          }).catch(() => {});
+        }
+      }
+
       return new Response(
         JSON.stringify({
           success: true,
@@ -814,6 +834,168 @@ Deno.serve(async (req: Request) => {
           imported,
           errors,
         }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // -----------------------------------------------------------------------
+    // ACTION: refresh_photos — re-fetch Google Places photos for listings
+    // -----------------------------------------------------------------------
+    if (action === 'refresh_photos') {
+      const listingIds = body.listing_ids as string[];
+      if (!listingIds?.length) {
+        return new Response(
+          JSON.stringify({ error: 'Missing listing_ids array' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      const { data: listings } = await supabase
+        .from('listings')
+        .select('id, google_id, photos')
+        .in('id', listingIds)
+        .not('google_id', 'is', null);
+
+      if (!listings?.length) {
+        return new Response(
+          JSON.stringify({ error: 'No listings found with google_id' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      const results: Array<{ id: string; name?: string; photos_restored: number }> = [];
+
+      for (const listing of listings) {
+        const details = await getPlaceDetails(googleApiKey, listing.google_id);
+        if (!details?.photos?.length) {
+          results.push({ id: listing.id, photos_restored: 0 });
+          continue;
+        }
+
+        const googlePhotos = getPhotoUrls(details.photos, googleApiKey);
+        // Merge: Google photos first, then keep any existing non-Google photos
+        const existingPhotos: string[] = (listing.photos as string[]) || [];
+        const googleSet = new Set(googlePhotos);
+        const nonGooglePhotos = existingPhotos.filter((p: string) => !googleSet.has(p));
+        const mergedPhotos = [...googlePhotos, ...nonGooglePhotos];
+
+        await supabase.from('listings').update({
+          photos: mergedPhotos,
+          hero_image: googlePhotos[0],
+          google_photo_url: googlePhotos[0],
+          google_photos_count: googlePhotos.length,
+        }).eq('id', listing.id);
+
+        results.push({
+          id: listing.id,
+          name: details.displayName?.text,
+          photos_restored: googlePhotos.length,
+        });
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, results }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // -----------------------------------------------------------------------
+    // ACTION: enrich — run full pipeline: crawl website → extract data → generate description
+    // -----------------------------------------------------------------------
+    if (action === 'enrich') {
+      const listingIds = body.listing_ids as string[];
+      if (!listingIds?.length) {
+        return new Response(
+          JSON.stringify({ error: 'Missing listing_ids array' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY')!;
+      const enrichResults: Array<{ step: string; result: unknown }> = [];
+
+      // Step 1: Crawl websites (Firecrawl)
+      try {
+        const crawlRes = await fetch(`${supabaseUrl}/functions/v1/bulk-crawl`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${supabaseAnon}` },
+          body: JSON.stringify({ listingIds, delayMs: 2000 }),
+        });
+        const crawlData = await crawlRes.json();
+        enrichResults.push({ step: 'bulk-crawl', result: crawlData });
+      } catch (e) {
+        enrichResults.push({ step: 'bulk-crawl', result: { error: (e as Error).message } });
+      }
+
+      // Step 2: Classify from snapshot (AI photo quality scoring + image selection)
+      try {
+        const classifyRes = await fetch(`${supabaseUrl}/functions/v1/bulk-classify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${supabaseAnon}` },
+          body: JSON.stringify({ listingIds }),
+        });
+        const classifyData = await classifyRes.json();
+        enrichResults.push({ step: 'bulk-classify', result: classifyData });
+      } catch (e) {
+        enrichResults.push({ step: 'bulk-classify', result: { error: (e as Error).message } });
+      }
+
+      // Step 3: Extract rich data (packages, pricing, equipment)
+      try {
+        const extractRes = await fetch(`${supabaseUrl}/functions/v1/extract-rich-data`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${supabaseAnon}` },
+          body: JSON.stringify({ action: 'start', listing_ids: listingIds }),
+        });
+        const extractData = await extractRes.json();
+        enrichResults.push({ step: 'extract-rich-data-start', result: extractData });
+
+        // Process each extraction task
+        if (extractData.job_id) {
+          for (let i = 0; i < listingIds.length; i++) {
+            try {
+              const batchRes = await fetch(`${supabaseUrl}/functions/v1/extract-rich-data`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${supabaseAnon}` },
+                body: JSON.stringify({ action: 'process_batch', job_id: extractData.job_id }),
+              });
+              await batchRes.json();
+            } catch { /* continue processing */ }
+          }
+        }
+      } catch (e) {
+        enrichResults.push({ step: 'extract-rich-data', result: { error: (e as Error).message } });
+      }
+
+      // Step 4: Generate AI descriptions using all enriched data
+      try {
+        const descRes = await fetch(`${supabaseUrl}/functions/v1/generate-descriptions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${supabaseAnon}` },
+          body: JSON.stringify({ action: 'start', listing_ids: listingIds }),
+        });
+        const descData = await descRes.json();
+        enrichResults.push({ step: 'generate-descriptions-start', result: descData });
+
+        // Process each description task
+        if (descData.job_id) {
+          for (let i = 0; i < listingIds.length; i++) {
+            try {
+              const batchRes = await fetch(`${supabaseUrl}/functions/v1/generate-descriptions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${supabaseAnon}` },
+                body: JSON.stringify({ action: 'process_batch', job_id: descData.job_id }),
+              });
+              await batchRes.json();
+            } catch { /* continue processing */ }
+          }
+        }
+      } catch (e) {
+        enrichResults.push({ step: 'generate-descriptions', result: { error: (e as Error).message } });
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, enrichment: enrichResults }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
