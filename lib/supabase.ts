@@ -81,6 +81,21 @@ export type Review = {
   created_at: string;
 };
 
+export type ReviewSnippet = {
+  id: string;
+  listing_id: string;
+  reviewer_name: string | null;
+  rating: number | null;
+  review_text: string;
+  review_date: string | null;
+  iso_date: string | null;
+  review_id: string | null;
+  touchless_keywords: string[];
+  is_touchless_evidence: boolean;
+  source: string;
+  created_at: string;
+};
+
 export type Submission = {
   id: string;
   business_name: string;

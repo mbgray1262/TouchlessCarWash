@@ -31,6 +31,9 @@ export function Header() {
             <Link href="/#browse-states" className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors">
               Browse States
             </Link>
+            <Link href="/best" className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors">
+              Best Of
+            </Link>
             <Link href="/blog" className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors">
               Blog
             </Link>
@@ -76,6 +79,13 @@ export function Header() {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Browse States
+              </Link>
+              <Link
+                href="/best"
+                className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Best Of
               </Link>
               <Link
                 href="/blog"
