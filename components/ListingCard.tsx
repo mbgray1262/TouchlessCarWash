@@ -34,7 +34,8 @@ export function ListingCard({ listing, href, showVerifiedBadge = false }: Listin
     /automatic|tunnel|self.serve|express/i.test(a)
   );
 
-  const cardImage = listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
+  // Don't use street_view_url as card image — often returns 403 and looks broken
+  const cardImage = listing.hero_image ?? listing.google_photo_url ?? null;
   const cardLogo = listing.logo_photo ?? listing.google_logo_url ?? null;
 
   return (

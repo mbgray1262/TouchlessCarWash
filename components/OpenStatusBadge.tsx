@@ -22,8 +22,9 @@ function parseTimeToMinutes(timeStr: string): number | null {
 
 function getOpenStatus(hours: Record<string, string> | null): 'open' | 'closed' | null {
   if (!hours) return null;
-  const todayKey = getTodayKey();
-  const todayHours = hours[todayKey];
+  const todayKey = getTodayKey().toLowerCase();
+  // Try lowercase first (DB stores lowercase keys), fallback to other cases
+  const todayHours = hours[todayKey] ?? hours[todayKey.charAt(0).toUpperCase() + todayKey.slice(1)] ?? Object.entries(hours).find(([k]) => k.toLowerCase() === todayKey)?.[1];
   if (!todayHours) return 'closed';
   if (typeof todayHours !== 'string') return null;
   if (todayHours.toLowerCase().includes('24') || todayHours.toLowerCase().includes('open 24')) return 'open';
@@ -44,9 +45,10 @@ function getOpenStatus(hours: Record<string, string> | null): 'open' | 'closed' 
 interface OpenStatusBadgeProps {
   hours: Record<string, string> | null;
   className?: string;
+  showClosed?: boolean;
 }
 
-export function OpenStatusBadge({ hours, className = '' }: OpenStatusBadgeProps) {
+export function OpenStatusBadge({ hours, className = '', showClosed = false }: OpenStatusBadgeProps) {
   const [status, setStatus] = useState<'open' | 'closed' | null>(null);
 
   useEffect(() => {
@@ -54,6 +56,8 @@ export function OpenStatusBadge({ hours, className = '' }: OpenStatusBadgeProps)
   }, [hours]);
 
   if (!status) return null;
+  // On listing cards, only show "Open Now" (positive signal) — hide "Closed"
+  if (status === 'closed' && !showClosed) return null;
 
   return (
     <span
