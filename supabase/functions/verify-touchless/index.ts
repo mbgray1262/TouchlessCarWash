@@ -47,6 +47,27 @@ const TOUCHLESS_KEYWORDS = [
   'frictionless', 'friction-free',
 ];
 
+// These phrases contain touchless-related words but do NOT indicate touchless washing:
+// - "contactless" almost always means contactless PAYMENT (tap-to-pay, NFC)
+// - "touchless drying/dry/dryer/blower" refers to air-drying equipment, not wash type
+const FALSE_POSITIVE_KEYWORDS = ['contactless'];
+
+// Phrases where "touchless/touch-free" refers to DRYING, not washing
+const DRYING_FALSE_POSITIVE_PHRASES = [
+  'touchless dry', 'touchless drying', 'touchless dryer', 'touchless blower',
+  'touchless air dry', 'touch-free dry', 'touch-free drying', 'touch-free dryer',
+  'touch free dry', 'touch free drying', 'touch free dryer',
+];
+
+// Phrases that confirm actual touchless WASH services (not just drying)
+const TOUCHLESS_WASH_CONFIRMATION = [
+  'touchless wash', 'touchless car wash', 'touch-free wash', 'touch free wash',
+  'touchless bay', 'touchless option', 'touchless tunnel', 'touchless automatic',
+  'touchless service', 'touchless menu', 'brushless wash', 'brushless car wash',
+  'brush-free wash', 'brush free wash', 'laser wash', 'laserwash',
+  'no-touch wash', 'no touch wash', 'frictionless wash',
+];
+
 const NOT_TOUCHLESS_KEYWORDS = [
   'hand wash only', 'hand car wash', 'handwash only',
   'detail only', 'detailing only', 'auto detail',
@@ -59,13 +80,26 @@ const NOT_TOUCHLESS_KEYWORDS = [
 function scanForKeywords(text: string): {
   touchlessHits: string[];
   notTouchlessHits: string[];
+  falsePositiveHits: string[];
+  dryingOnlyFalsePositive: boolean;
 } {
   const lower = text.toLowerCase();
   const touchlessHits = TOUCHLESS_KEYWORDS.filter((kw) => lower.includes(kw));
   const notTouchlessHits = NOT_TOUCHLESS_KEYWORDS.filter((kw) =>
     lower.includes(kw),
   );
-  return { touchlessHits, notTouchlessHits };
+  const falsePositiveHits = FALSE_POSITIVE_KEYWORDS.filter((kw) =>
+    lower.includes(kw),
+  );
+
+  // Detect "touchless drying" false positive:
+  // If the text mentions touchless/touch-free drying but NOT touchless washing,
+  // the word "touchless" likely refers to the drying system, not the wash itself.
+  const hasDryingPhrase = DRYING_FALSE_POSITIVE_PHRASES.some((p) => lower.includes(p));
+  const hasWashConfirmation = TOUCHLESS_WASH_CONFIRMATION.some((p) => lower.includes(p));
+  const dryingOnlyFalsePositive = hasDryingPhrase && !hasWashConfirmation;
+
+  return { touchlessHits, notTouchlessHits, falsePositiveHits, dryingOnlyFalsePositive };
 }
 
 // ── Gather all evidence for a listing ─────────────────────────────────────
@@ -147,7 +181,7 @@ function gatherEvidence(listing: ListingRow): {
   }
 
   // Quick keyword scan across ALL text
-  const { touchlessHits, notTouchlessHits } = scanForKeywords(allText);
+  const { touchlessHits, notTouchlessHits, falsePositiveHits, dryingOnlyFalsePositive } = scanForKeywords(allText);
 
   if (touchlessHits.length > 0) {
     evidence.push(`Touchless keywords found: ${touchlessHits.join(', ')}`);
@@ -155,10 +189,17 @@ function gatherEvidence(listing: ListingRow): {
   if (notTouchlessHits.length > 0) {
     evidence.push(`Non-touchless keywords found: ${notTouchlessHits.join(', ')}`);
   }
+  if (falsePositiveHits.length > 0) {
+    evidence.push(`WARNING — false positive keywords found: ${falsePositiveHits.join(', ')} (e.g. "contactless" usually means contactless payment, NOT touchless washing)`);
+  }
+  if (dryingOnlyFalsePositive) {
+    evidence.push(`CRITICAL WARNING — "touchless/touch-free" appears ONLY in the context of DRYING (e.g. "touchless drying system", "touch-free dry"). This does NOT indicate touchless washing — many soft-cloth/brush washes use touchless air dryers. Do NOT classify as touchless unless there is separate evidence of touchless WASHING.`);
+  }
 
   // Quick verdict for obvious cases (skip AI)
   let quickVerdict: 'touchless' | 'not_touchless' | null = null;
-  if (touchlessHits.length >= 2 && notTouchlessHits.length === 0) {
+  // If touchless only refers to drying, do NOT quick-approve — send to AI for careful analysis
+  if (touchlessHits.length >= 2 && notTouchlessHits.length === 0 && !dryingOnlyFalsePositive) {
     quickVerdict = 'touchless';
   } else if (
     notTouchlessHits.length >= 2 &&
@@ -178,6 +219,11 @@ async function verifyWithAI(
   apiKey: string,
 ): Promise<{ verdict: string; confidence: number; reasoning: string }> {
   const prompt = `You are verifying whether a car wash business offers TOUCHLESS (also called brushless, no-touch, laser wash, or friction-free) car wash services.
+
+IMPORTANT FALSE POSITIVES TO WATCH FOR:
+1. The word "contactless" almost always refers to CONTACTLESS PAYMENT (tap-to-pay, NFC), NOT touchless car washing.
+2. "Touchless drying", "touch-free dry", "touchless blower", "touchless air dry" refer to the DRYING system, NOT the wash itself. Many soft-cloth/brush car washes use touchless air dryers. If "touchless" ONLY appears in the context of drying equipment, this is NOT a touchless car wash.
+Do NOT treat either of these as evidence of touchless wash services.
 
 IMPORTANT CONTEXT: This business appeared in Google Places search results when someone searched for "touchless car wash" in ${listing.city}, ${listing.state}. This is a meaningful signal — Google returns relevant results, and many car washes offer touchless wash as one of several options even if "touchless" isn't in their name.
 

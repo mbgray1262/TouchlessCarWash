@@ -51,13 +51,13 @@ async function fetchWebsite(url: string): Promise<{ text: string; ok: boolean; e
 const SYSTEM_PROMPT = `You are classifying car wash businesses for a touchless car wash directory. Your job is to determine whether this business offers any form of touchless washing — including automated touchless bays AND self-service wand/spray bays.
 
 DEFINITION OF TOUCHLESS: No automated friction contact with the vehicle. This includes:
-- AUTOMATED TOUCHLESS: Drive-through tunnel or bay using only high-pressure water jets, foam, and chemicals with NO brushes, cloth, or friction. Keywords: "touchless", "touch-free", "touch free", "contactless", "no-touch", "brushless", "laser wash", "automatic touchless".
+- AUTOMATED TOUCHLESS: Drive-through tunnel or bay using only high-pressure water jets, foam, and chemicals with NO brushes, cloth, or friction. Keywords: "touchless", "touch-free", "touch free", "no-touch", "brushless", "laser wash", "automatic touchless". NOTE: "contactless" usually refers to contactless PAYMENT (tap to pay), NOT touchless washing — do NOT treat it as a touchless indicator. NOTE: "touchless drying", "touch-free dry", "touchless blower", "touchless air dry" refer to DRYING equipment, NOT the wash itself. Many soft-cloth/brush car washes use touchless air dryers — do NOT treat these as evidence of touchless washing.
 - SELF-SERVICE WAND/SPRAY BAYS: Coin-operated or pay-per-use open bays where the customer operates a handheld wand or pressure washer. These ARE touchless because no automated friction materials contact the vehicle — the customer controls a high-pressure spray only.
 
 IMPORTANT: Self-service wand/spray bays are TOUCHLESS. However, self-service bays that include foam brushes, hog's-hair brushes, or any hand-held brush that contacts the vehicle are NOT touchless.
 
 CLASSIFY is_touchless = true when:
-- The business offers automated touchless/touch-free/contactless/brushless/laser wash services
+- The business offers automated touchless/touch-free/brushless/laser wash services
 - The business offers self-service wand/spray bays WITHOUT brushes (pressure wand only)
 - Hybrid facilities that offer touchless AND other wash types (even if they also have soft-touch tunnels — the touchless option qualifies them)
 
@@ -82,6 +82,8 @@ CRITICAL RULES — these are the most common classification errors:
 3. GENERIC MENTIONS DO NOT COUNT: Phrases like "we use state-of-the-art equipment such as touchless wash systems" appearing in generic/template copy do not count. Look for specific first-person service claims: "our touchless wash", "we offer touch-free", "2 touchless automatic bays", specific brand names (LaserWash, Razor®, Petit, etc.).
 
 4. WATERLESS / MOBILE / HAND WASH IS NOT TOUCHLESS: "Waterless car wash", "no-water wash", "waterless carwash", or mobile detailing services where a person hand-wipes with spray products are NOT touchless. Similarly, mobile car washes where someone hand-washes your car are NOT touchless. The business must operate a fixed facility.
+
+5. TOUCHLESS DRYING IS NOT TOUCHLESS WASHING: Phrases like "touchless drying", "touch-free dryer", "touchless blower", "touchless air dry", "no-touch drying system" describe the DRYING step only. Many soft-cloth and brush car washes advertise touchless drying as a feature. The word "touchless" appearing ONLY in the context of drying/blowers/air dryers is NOT evidence that the wash itself is touchless. Only classify as touchless if the WASHING process (water jets, chemicals, cleaning) is described as touchless.
 
 TOUCHLESS WASH TYPES — when is_touchless = true, also classify the type(s) offered:
 - "touchless_automatic": Automated in-bay or tunnel wash using high-pressure jets, chemicals, and no friction. Includes LaserWash, PDQ, Washworld, Petit, Razor, and similar systems. The machine does the work — the customer stays in or out of the car.

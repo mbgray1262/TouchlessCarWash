@@ -97,7 +97,9 @@ ${imageList || "None found"}
 
 1. TOUCHLESS CLASSIFICATION
 Determine if this car wash uses touchless/brush-free technology.
-- Look for: touchless, touch-free, brushless, laser wash, no-touch, contactless, scratch-free, friction-free, soft-cloth alternatives
+- Look for: touchless, touch-free, brushless, laser wash, no-touch, scratch-free, friction-free, soft-cloth alternatives
+- NOTE: "contactless" usually refers to contactless PAYMENT (tap to pay), NOT touchless washing — do NOT use it as a touchless indicator
+- NOTE: "touchless drying", "touch-free dry", "touchless blower", "touchless air dry" refer to DRYING equipment, NOT the wash itself. Many soft-cloth/brush car washes use touchless air dryers — do NOT treat these as evidence of touchless washing.
 - "confirmed_touchless": multiple strong keywords, clear primary service
 - "likely_touchless": one or two keywords, or implied but not explicit
 - "not_touchless": brush wash, hand wash, friction wash, foam brush explicitly mentioned as primary
