@@ -290,7 +290,8 @@ Deno.serve(async (req: Request) => {
           const { count } = await supabase
             .from('listings')
             .select('id', { count: 'exact', head: true })
-            .eq('state', state);
+            .eq('state', state)
+            .eq('is_touchless', true);
           return { state, count: count || 0 };
         });
         stateData = (await Promise.all(stateCountPromises)).filter((s) => s.count > 0);
@@ -319,7 +320,8 @@ Deno.serve(async (req: Request) => {
         const { count } = await supabase
           .from('listings')
           .select('id', { count: 'exact', head: true })
-          .eq('city', city);
+          .eq('city', city)
+          .eq('is_touchless', true);
         return { city, count: count || 0 };
       });
       const cityCountResults = await Promise.all(cityCountPromises);
