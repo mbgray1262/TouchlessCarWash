@@ -258,6 +258,13 @@ function buildBreadcrumbSchema(items: { name: string; url: string }[]): object {
   };
 }
 
+// Safely coerce extracted_data fields that may be a string instead of an array
+function asArray(val: unknown): string[] {
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string' && val.trim()) return [val];
+  return [];
+}
+
 function buildFAQs(listing: Listing, hours: Record<string, string> | null): { q: string; a: string }[] {
   const faqs: { q: string; a: string }[] = [];
 
@@ -280,8 +287,9 @@ function buildFAQs(listing: Listing, hours: Record<string, string> | null): { q:
     const todayHours = hours[todayKey];
     const hoursSummary = DAY_ORDER.filter((d) => hours[d]).map((d) => `${DAY_LABELS[d]}: ${hours[d]}`).join(' | ');
     let hoursNote = '';
-    if (listing.extracted_data?.hours_notes && listing.extracted_data.hours_notes.length > 0) {
-      hoursNote = ` Note: ${listing.extracted_data.hours_notes.join(' ')}`;
+    const hoursNotes = asArray(listing.extracted_data?.hours_notes);
+    if (hoursNotes.length > 0) {
+      hoursNote = ` Note: ${hoursNotes.join(' ')}`;
     }
     faqs.push({
       q: `What are the hours for ${listing.name}?`,
@@ -296,15 +304,16 @@ function buildFAQs(listing: Listing, hours: Record<string, string> | null): { q:
   } else {
     pricingAnswer = `Pricing varies by wash package. ${listing.phone ? `Contact them at ${listing.phone} or visit` : 'Visit'} their website for current prices.`;
   }
-  if (listing.extracted_data?.membership_plans && listing.extracted_data.membership_plans.length > 0) {
-    const planNames = listing.extracted_data.membership_plans.map((p) => p.name + (p.price ? ` (${p.price})` : '')).join(', ');
+  const membershipPlans = Array.isArray(listing.extracted_data?.membership_plans) ? listing.extracted_data!.membership_plans : [];
+  if (membershipPlans.length > 0) {
+    const planNames = membershipPlans.map((p) => p.name + (p.price ? ` (${p.price})` : '')).join(', ');
     pricingAnswer += ` Unlimited wash memberships are also available: ${planNames}.`;
   }
   faqs.push({ q: `How much does ${listing.name} cost?`, a: pricingAnswer });
 
   // 4. Membership plans (conditional — only if extracted)
-  if (listing.extracted_data?.membership_plans && listing.extracted_data.membership_plans.length > 0) {
-    const planDetails = listing.extracted_data.membership_plans.map((p) => {
+  if (membershipPlans.length > 0) {
+    const planDetails = membershipPlans.map((p) => {
       let detail = p.name;
       if (p.price) detail += ` at ${p.price}/month`;
       if (p.features && p.features.length > 0) detail += ` — includes ${p.features.slice(0, 3).join(', ')}`;
@@ -325,10 +334,10 @@ function buildFAQs(listing: Listing, hours: Record<string, string> | null): { q:
   }
 
   // 6. Equipment & technology (conditional)
-  if (listing.equipment_brand || (listing.extracted_data?.equipment_technology && listing.extracted_data.equipment_technology.length > 0)) {
+  const tech = asArray(listing.extracted_data?.equipment_technology);
+  if (listing.equipment_brand || tech.length > 0) {
     const brandLabel = listing.equipment_brand ? (BRAND_LABELS[listing.equipment_brand] || listing.equipment_brand) : null;
     const model = listing.equipment_model;
-    const tech = listing.extracted_data?.equipment_technology || [];
     let equipAnswer = `${listing.name} uses `;
     if (model) {
       equipAnswer += model;
@@ -345,26 +354,29 @@ function buildFAQs(listing: Listing, hours: Record<string, string> | null): { q:
   }
 
   // 7. Service types (conditional — only if extracted)
-  if (listing.extracted_data?.service_types && listing.extracted_data.service_types.length > 0) {
+  const serviceTypes = asArray(listing.extracted_data?.service_types);
+  if (serviceTypes.length > 0) {
     faqs.push({
       q: `What types of car wash services does ${listing.name} offer?`,
-      a: `${listing.name} offers the following services: ${listing.extracted_data.service_types.join(', ')}. All washes are touchless and touch-free — no brushes or cloth touch your vehicle.`,
+      a: `${listing.name} offers the following services: ${serviceTypes.join(', ')}. All washes are touchless and touch-free — no brushes or cloth touch your vehicle.`,
     });
   }
 
   // 8. Payment methods (conditional — only if extracted)
-  if (listing.extracted_data?.payment_methods && listing.extracted_data.payment_methods.length > 0) {
+  const paymentMethods = asArray(listing.extracted_data?.payment_methods);
+  if (paymentMethods.length > 0) {
     faqs.push({
       q: `What payment methods does ${listing.name} accept?`,
-      a: `${listing.name} accepts the following payment methods: ${listing.extracted_data.payment_methods.join(', ')}.`,
+      a: `${listing.name} accepts the following payment methods: ${paymentMethods.join(', ')}.`,
     });
   }
 
   // 9. Special features (conditional — only if extracted)
-  if (listing.extracted_data?.special_features && listing.extracted_data.special_features.length > 0) {
+  const specialFeatures = asArray(listing.extracted_data?.special_features);
+  if (specialFeatures.length > 0) {
     faqs.push({
       q: `What special features does ${listing.name} have?`,
-      a: `${listing.name} offers these special features: ${listing.extracted_data.special_features.join(', ')}. These extras make it a standout among touchless car washes in ${listing.city}.`,
+      a: `${listing.name} offers these special features: ${specialFeatures.join(', ')}. These extras make it a standout among touchless car washes in ${listing.city}.`,
     });
   }
 
@@ -744,14 +756,14 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
               )}
 
               {/* Membership Plans from extracted_data */}
-              {listing.extracted_data?.membership_plans && listing.extracted_data.membership_plans.length > 0 && (
+              {Array.isArray(listing.extracted_data?.membership_plans) && listing.extracted_data!.membership_plans.length > 0 && (
                 <div className="bg-white rounded-2xl border border-gray-200 p-6">
                   <h2 className="text-lg font-bold text-[#0F2744] mb-4 flex items-center gap-2">
                     <CreditCard className="w-5 h-5 text-[#22C55E]" />
                     Membership Plans
                   </h2>
                   <div className="space-y-3">
-                    {listing.extracted_data.membership_plans.map((plan, i) => (
+                    {listing.extracted_data!.membership_plans.map((plan, i) => (
                       <div key={i} className="p-3 rounded-lg bg-green-50 border border-green-100">
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1">
@@ -778,17 +790,17 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
               )}
 
               {/* Special Features & Payment Methods from extracted_data */}
-              {listing.extracted_data && (listing.extracted_data.special_features?.length || listing.extracted_data.payment_methods?.length) && (
+              {listing.extracted_data && (asArray(listing.extracted_data.special_features).length > 0 || asArray(listing.extracted_data.payment_methods).length > 0) && (
                 <div className="bg-white rounded-2xl border border-gray-200 p-6">
                   <h2 className="text-lg font-bold text-[#0F2744] mb-4 flex items-center gap-2">
                     <Zap className="w-5 h-5 text-amber-500" />
                     Additional Details
                   </h2>
-                  {listing.extracted_data.special_features && listing.extracted_data.special_features.length > 0 && (
+                  {asArray(listing.extracted_data.special_features).length > 0 && (
                     <div className="mb-4">
                       <h3 className="text-sm font-semibold text-gray-600 mb-2">Special Features</h3>
                       <div className="flex flex-wrap gap-2">
-                        {listing.extracted_data.special_features.map((f, i) => (
+                        {asArray(listing.extracted_data.special_features).map((f, i) => (
                           <Badge key={i} variant="outline" className="text-sm py-1 px-3 border-amber-200 bg-amber-50 text-amber-800">
                             {f}
                           </Badge>
@@ -796,11 +808,11 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                       </div>
                     </div>
                   )}
-                  {listing.extracted_data.payment_methods && listing.extracted_data.payment_methods.length > 0 && (
+                  {asArray(listing.extracted_data.payment_methods).length > 0 && (
                     <div>
                       <h3 className="text-sm font-semibold text-gray-600 mb-2">Payment Methods</h3>
                       <div className="flex flex-wrap gap-2">
-                        {listing.extracted_data.payment_methods.map((pm, i) => (
+                        {asArray(listing.extracted_data.payment_methods).map((pm, i) => (
                           <Badge key={i} variant="outline" className="text-sm py-1 px-3 border-gray-200 text-gray-700">
                             {pm}
                           </Badge>
