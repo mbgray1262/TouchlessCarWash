@@ -147,6 +147,63 @@ VERDICT: reason`;
   return { verdict: 'fetch_failed', reason: 'Max retries exceeded' };
 }
 
+/**
+ * Given an array of photo URLs (hero + gallery), pick the best one for a hero image.
+ * Returns the 0-based index of the best photo, or 0 if ranking fails.
+ */
+async function pickBestFromAll(urls: string[], apiKey: string): Promise<number> {
+  if (urls.length <= 1) return 0;
+
+  const images = await Promise.all(urls.map(u => fetchImageAsBase64(u)));
+  const valid = images.map((img, i) => ({ img, i })).filter(({ img }) => img !== null);
+  if (valid.length === 0) return 0;
+  if (valid.length === 1) return valid[0].i;
+
+  const imageBlocks = valid.flatMap(({ img, i }) => [
+    { type: 'text' as const, text: `Photo ${i + 1}:` },
+    { type: 'image' as const, source: { type: 'base64' as const, media_type: img!.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp', data: img!.base64 } },
+  ]);
+
+  const prompt = `You are selecting the single best hero image for a TOUCHLESS car wash directory listing on TouchlessCarWash.com. Review the ${valid.length} photos above and pick the one that makes the best first impression.
+
+RANKING PRIORITIES (most important first):
+1. BEST: Clear, well-lit EXTERIOR shot showing the car wash building, entrance, canopy, or facade — the whole facility should be visible
+2. GOOD: A car going through an automated touchless wash tunnel (spray arches, water jets, no brushes)
+3. GOOD: Drive-through tunnel entrance/exit view
+4. ACCEPTABLE: Interior tunnel shot showing touchless equipment in action
+5. AVOID: Close-up of a single car with no facility context (hood, bumper, wet surface)
+6. AVOID: Photos prominently showing soft cloth, brushes, or mop curtains — this is a TOUCHLESS listing
+7. AVOID: Signage-only photos, dark/blurry images, equipment close-ups without facility context
+
+Pick the photo that would make a first-time visitor think "that's a great-looking car wash I want to visit."
+
+Reply with only the photo number (e.g. "2") and nothing else.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5',
+        max_tokens: 10,
+        messages: [{ role: 'user', content: [...imageBlocks, { type: 'text', text: prompt }] }],
+      }),
+    });
+    if (!res.ok) return 0;
+    const data = await res.json() as { content: Array<{ text: string }> };
+    const text = (data.content?.[0]?.text ?? '').trim();
+    const num = parseInt(text, 10);
+    if (!isNaN(num) && num >= 1 && num <= urls.length) return num - 1;
+  } catch {
+    // fall through
+  }
+  return 0;
+}
+
 async function findReplacementHero(
   supabase: ReturnType<typeof createClient>,
   listingId: string,
@@ -531,6 +588,270 @@ Deno.serve(async (req: Request) => {
         .neq('id', 0); // match all rows
 
       return Response.json({ deleted_tasks: taskCount ?? 0 }, { headers: corsHeaders });
+    }
+
+    // ── RERANK ─────────────────────────────────────────────────────────────────
+    // Re-ranks hero images for touchless listings that have gallery alternatives.
+    // Sends hero + gallery photos to Claude to pick the best hero.
+    if (action === 'rerank') {
+      if (!anthropicKey) {
+        return Response.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500, headers: corsHeaders });
+      }
+
+      const limit: number = body.limit ?? 0;
+
+      // Find touchless listings with hero_image AND at least 1 gallery photo.
+      // Fetch in pages since many have empty photos arrays — we need to skip those.
+      const targetCount = limit > 0 ? limit : 999999;
+      const eligible: Record<string, unknown>[] = [];
+      let pageOffset = 0;
+      const PAGE_SIZE = 500;
+
+      while (eligible.length < targetCount) {
+        const { data: page, error: pageErr } = await supabase
+          .from('listings')
+          .select('id, name, hero_image, photos, hero_image_source')
+          .eq('is_touchless', true)
+          .not('hero_image', 'is', null)
+          .not('photos', 'is', null)
+          .neq('hero_image_source', 'manual')
+          .neq('hero_image_source', 'manual_upload')
+          .order('review_count', { ascending: false })
+          .range(pageOffset, pageOffset + PAGE_SIZE - 1);
+
+        if (pageErr) return Response.json({ error: pageErr.message }, { status: 500, headers: corsHeaders });
+        if (!page || page.length === 0) break;
+
+        for (const l of page) {
+          const photos = l.photos as string[] | null;
+          if (photos && photos.length > 0) {
+            eligible.push(l);
+            if (eligible.length >= targetCount) break;
+          }
+        }
+        pageOffset += PAGE_SIZE;
+      }
+
+      if (eligible.length === 0) {
+        return Response.json({ error: 'No eligible listings for reranking' }, { status: 404, headers: corsHeaders });
+      }
+
+      const { data: job, error: jobErr } = await supabase
+        .from('hero_audit_jobs')
+        .insert({
+          total: eligible.length,
+          processed: 0,
+          succeeded: 0,
+          cleared: 0,
+          status: 'running',
+          started_at: new Date().toISOString(),
+        })
+        .select('id')
+        .single();
+
+      if (jobErr || !job) {
+        return Response.json({ error: jobErr?.message ?? 'Failed to create job' }, { status: 500, headers: corsHeaders });
+      }
+
+      const tasks = eligible.map((l: Record<string, unknown>) => ({
+        job_id: job.id,
+        listing_id: l.id,
+        listing_name: l.name,
+        hero_image_url: l.hero_image,
+        task_status: 'pending',
+      }));
+
+      const CHUNK_SIZE = 500;
+      for (let i = 0; i < tasks.length; i += CHUNK_SIZE) {
+        const { error: taskErr } = await supabase.from('hero_audit_tasks').insert(tasks.slice(i, i + CHUNK_SIZE));
+        if (taskErr) return Response.json({ error: taskErr.message }, { status: 500, headers: corsHeaders });
+      }
+
+      // Kick off workers
+      const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY')!;
+      const workerPromises = Array.from({ length: NUM_PARALLEL_WORKERS }, () =>
+        fetch(`${supabaseUrl}/functions/v1/hero-audit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseAnon}` },
+          body: JSON.stringify({ action: 'process_rerank_batch', job_id: job.id }),
+        }).catch(() => {})
+      );
+      await Promise.all(workerPromises);
+
+      return Response.json({ job_id: job.id, total: eligible.length, action: 'rerank' }, { headers: corsHeaders });
+    }
+
+    // ── PROCESS RERANK BATCH ──────────────────────────────────────────────────
+    if (action === 'process_rerank_batch') {
+      if (!anthropicKey) {
+        return Response.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500, headers: corsHeaders });
+      }
+
+      const jobId = body.job_id;
+      if (!jobId) return Response.json({ error: 'job_id required' }, { status: 400, headers: corsHeaders });
+
+      const { data: job } = await supabase
+        .from('hero_audit_jobs')
+        .select('id, status')
+        .eq('id', jobId)
+        .maybeSingle();
+
+      if (!job) return Response.json({ error: 'Job not found' }, { status: 404, headers: corsHeaders });
+      if (job.status === 'cancelled' || job.status === 'done') {
+        return Response.json({ done: true, status: job.status }, { headers: corsHeaders });
+      }
+
+      // Unstick tasks
+      const stuckCutoff = new Date(Date.now() - STUCK_TASK_TIMEOUT_MS).toISOString();
+      await supabase
+        .from('hero_audit_tasks')
+        .update({ task_status: 'pending' })
+        .eq('job_id', jobId)
+        .eq('task_status', 'in_progress')
+        .lt('updated_at', stuckCutoff);
+
+      const { data: batchTasks, error: claimErr } = await supabase.rpc('claim_hero_audit_tasks', {
+        p_job_id: jobId,
+        p_batch_size: PARALLEL_BATCH_SIZE,
+      });
+
+      if (claimErr) {
+        return Response.json({ error: claimErr.message }, { status: 500, headers: corsHeaders });
+      }
+
+      if (!batchTasks || batchTasks.length === 0) {
+        const { count: pendingCount } = await supabase
+          .from('hero_audit_tasks')
+          .select('id', { count: 'exact', head: true })
+          .eq('job_id', jobId)
+          .in('task_status', ['pending', 'in_progress']);
+
+        if (!pendingCount || pendingCount === 0) {
+          await supabase.from('hero_audit_jobs').update({
+            status: 'done',
+            finished_at: new Date().toISOString(),
+          }).eq('id', jobId);
+          return Response.json({ done: true }, { headers: corsHeaders });
+        }
+
+        return Response.json({ done: false, waiting: true }, { headers: corsHeaders });
+      }
+
+      // Chain next batch
+      const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY')!;
+      EdgeRuntime.waitUntil(
+        fetch(`${supabaseUrl}/functions/v1/hero-audit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseAnon}` },
+          body: JSON.stringify({ action: 'process_rerank_batch', job_id: jobId }),
+        }).catch(() => {})
+      );
+
+      // Check for cancellation
+      const { data: jobCheck } = await supabase
+        .from('hero_audit_jobs')
+        .select('status')
+        .eq('id', jobId)
+        .maybeSingle();
+
+      if (jobCheck?.status === 'cancelled') {
+        await supabase.from('hero_audit_tasks')
+          .update({ task_status: 'cancelled', updated_at: new Date().toISOString() })
+          .eq('job_id', jobId)
+          .in('task_status', ['pending', 'in_progress']);
+        return Response.json({ done: true, status: 'cancelled' }, { headers: corsHeaders });
+      }
+
+      let batchSucceeded = 0;
+      let batchCleared = 0;
+
+      for (const task of batchTasks as Array<{ id: number; listing_id: string; listing_name: string; hero_image_url: string }>) {
+        try {
+          // Fetch listing's current hero + gallery photos
+          const { data: listing } = await supabase
+            .from('listings')
+            .select('hero_image, photos, hero_image_source')
+            .eq('id', task.listing_id)
+            .maybeSingle();
+
+          if (!listing || !listing.hero_image) {
+            await supabase.from('hero_audit_tasks').update({
+              task_status: 'done', verdict: 'GOOD', reason: 'No hero or listing not found',
+              action_taken: 'kept', finished_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+            }).eq('id', task.id);
+            batchSucceeded++;
+            continue;
+          }
+
+          const galleryPhotos = (listing.photos as string[]) ?? [];
+          if (galleryPhotos.length === 0) {
+            // No alternatives to rank against
+            await supabase.from('hero_audit_tasks').update({
+              task_status: 'done', verdict: 'GOOD', reason: 'No gallery alternatives — hero kept',
+              action_taken: 'kept', finished_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+            }).eq('id', task.id);
+            batchSucceeded++;
+            continue;
+          }
+
+          // Combine hero (index 0) + gallery photos for ranking
+          const allPhotos = [listing.hero_image as string, ...galleryPhotos];
+          const bestIdx = await pickBestFromAll(allPhotos, anthropicKey);
+
+          await new Promise(r => setTimeout(r, HAIKU_INTER_CALL_DELAY_MS));
+
+          if (bestIdx === 0) {
+            // Current hero is already the best
+            await supabase.from('hero_audit_tasks').update({
+              task_status: 'done', verdict: 'GOOD', reason: `Current hero ranked #1 out of ${allPhotos.length} photos`,
+              action_taken: 'kept', finished_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+            }).eq('id', task.id);
+            batchSucceeded++;
+          } else {
+            // A gallery photo is better — swap hero and gallery photo
+            const newHeroUrl = allPhotos[bestIdx];
+            const oldHeroUrl = listing.hero_image as string;
+            const newGallery = allPhotos.filter((_, i) => i !== bestIdx && i !== 0);
+            // Put old hero into gallery
+            newGallery.unshift(oldHeroUrl);
+
+            await supabase
+              .from('listings')
+              .update({
+                hero_image: newHeroUrl,
+                hero_image_source: listing.hero_image_source, // keep same source type
+                photos: newGallery.slice(0, 10), // safety cap
+              })
+              .eq('id', task.listing_id);
+
+            await supabase.from('hero_audit_tasks').update({
+              task_status: 'done', verdict: 'GOOD',
+              reason: `Swapped hero: photo ${bestIdx + 1} of ${allPhotos.length} ranked higher`,
+              action_taken: 'reranked', finished_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+            }).eq('id', task.id);
+            batchCleared++;
+          }
+        } catch (err) {
+          await supabase.from('hero_audit_tasks').update({
+            task_status: 'done', verdict: 'fetch_failed',
+            reason: `Rerank error: ${(err as Error)?.message ?? 'unknown'}`,
+            action_taken: 'kept', finished_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+          }).eq('id', task.id);
+        }
+      }
+
+      await supabase.rpc('increment_hero_audit_job_counts', {
+        p_job_id: jobId,
+        p_processed: batchTasks.length,
+        p_succeeded: batchSucceeded,
+        p_cleared: batchCleared,
+      });
+
+      return Response.json({
+        processed: batchTasks.length,
+        succeeded: batchSucceeded,
+        reranked: batchCleared,
+      }, { headers: corsHeaders });
     }
 
     // ── CANCEL ────────────────────────────────────────────────────────────────

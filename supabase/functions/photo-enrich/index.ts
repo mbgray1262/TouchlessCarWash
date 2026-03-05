@@ -406,7 +406,18 @@ async function pickBestHeroFromGallery(urls: string[], apiKey: string): Promise<
     { type: 'image' as const, source: { type: 'base64' as const, media_type: img!.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp', data: img!.base64 } },
   ]);
 
-  const prompt = `You are selecting the single best hero image for a touchless car wash directory listing. Review the ${valid.length} photos above and pick the one that would make the best first impression: ideally a clear, well-lit exterior shot of the facility or wash tunnel entrance. Avoid interior-only shots, close-ups of equipment, or blurry images if better options exist.
+  const prompt = `You are selecting the single best hero image for a TOUCHLESS car wash directory listing on TouchlessCarWash.com. Review the ${valid.length} photos above and pick the one that makes the best first impression.
+
+RANKING PRIORITIES (most important first):
+1. BEST: Clear, well-lit EXTERIOR shot showing the car wash building, entrance, canopy, or facade — the whole facility should be visible
+2. GOOD: A car going through an automated touchless wash tunnel (spray arches, water jets, no brushes)
+3. GOOD: Drive-through tunnel entrance/exit view
+4. ACCEPTABLE: Interior tunnel shot showing touchless equipment in action
+5. AVOID: Close-up of a single car with no facility context (hood, bumper, wet surface)
+6. AVOID: Photos prominently showing soft cloth, brushes, or mop curtains — this is a TOUCHLESS listing
+7. AVOID: Signage-only photos, dark/blurry images, equipment close-ups without facility context
+
+Pick the photo that would make a first-time visitor think "that's a great-looking car wash I want to visit."
 
 Reply with only the photo number (e.g. "2") and nothing else.`;
 
@@ -973,6 +984,22 @@ Deno.serve(async (req: Request) => {
           trace.fallback_reason = (trace.fallback_reason as string | null)
             ? `${trace.fallback_reason}; no website photos found — original hero kept`
             : 'No website photos found — original hero kept unchanged';
+        }
+
+        // If we have multiple approved photos and the hero wasn't manually set,
+        // use AI ranking to pick the best hero instead of defaulting to the first one.
+        if (!heroIsManual && approved.length >= 2 && heroPhoto && approved.includes(heroPhoto)) {
+          try {
+            const bestIdx = await pickBestHeroFromGallery(approved, anthropicKey);
+            if (bestIdx >= 0 && bestIdx < approved.length) {
+              heroPhoto = approved[bestIdx];
+              trace.hero_reranked = true;
+              trace.hero_rerank_idx = bestIdx;
+            }
+          } catch {
+            // Ranking failed — keep the original heroPhoto selection
+            trace.hero_reranked = false;
+          }
         }
 
         const galleryPhotos = heroPhoto && approved.includes(heroPhoto)
