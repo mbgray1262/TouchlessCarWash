@@ -298,7 +298,7 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
                 const snippet = reviewSnippets.get(listing.id);
                 const cardImage = listing.hero_image ?? listing.google_photo_url ?? null;
                 const cardLogo = listing.logo_photo ?? listing.google_logo_url ?? null;
-                const listingHref = `/state/${getStateSlug(listing.state)}/${listing.city.toLowerCase().replace(/\s+/g, '-')}/${listing.slug}`;
+                const listingHref = `/state/${getStateSlug(listing.state)}/${listing.city.toLowerCase().replace(/\s+/g, '-')}/${listing.slug}?from=best-${metro.slug}`;
 
                 return (
                   <Link key={listing.id} href={listingHref} className="group block">
