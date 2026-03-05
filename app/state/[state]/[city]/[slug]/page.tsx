@@ -11,6 +11,7 @@ import LogoImage from '@/components/LogoImage';
 import HeroImageFallback from '@/components/HeroImageFallback';
 import PhotoGalleryGrid from '@/components/PhotoGalleryGrid';
 import SuggestEditModal from '@/components/SuggestEditModal';
+import { ListingBreadcrumb } from '@/components/ListingBreadcrumb';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
@@ -694,17 +695,14 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
 
               <div className="absolute inset-0 flex flex-col justify-end">
                 <div className="container mx-auto px-4 max-w-5xl pb-8 pt-4">
-                  <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-white/50 mb-5 flex-wrap">
-                    <Link href="/" className="hover:text-white transition-colors">Home</Link>
-                    <ChevronRight className="w-3.5 h-3.5 shrink-0" />
-                    <Link href="/states" className="hover:text-white transition-colors">States</Link>
-                    <ChevronRight className="w-3.5 h-3.5 shrink-0" />
-                    <Link href={`/state/${params.state}`} className="hover:text-white transition-colors">{stateName}</Link>
-                    <ChevronRight className="w-3.5 h-3.5 shrink-0" />
-                    <Link href={`/state/${params.state}/${params.city}`} className="hover:text-white transition-colors">{cityName}</Link>
-                    <ChevronRight className="w-3.5 h-3.5 shrink-0" />
-                    <span className="text-white/80 truncate">{listing.name}</span>
-                  </nav>
+                  <ListingBreadcrumb
+                    listingName={listing.name}
+                    stateSlug={params.state}
+                    stateName={stateName}
+                    citySlug={params.city}
+                    cityName={cityName}
+                    variant="hero"
+                  />
 
                   <div className="flex items-start gap-4">
                     {logoImage && (
@@ -746,17 +744,14 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
           {!heroImage && (
             <div className="relative">
               <div className="container mx-auto px-4 max-w-5xl py-8">
-                <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-white/50 mb-5 flex-wrap">
-                  <Link href="/" className="hover:text-white transition-colors">Home</Link>
-                  <ChevronRight className="w-3.5 h-3.5 shrink-0" />
-                  <Link href="/states" className="hover:text-white transition-colors">States</Link>
-                  <ChevronRight className="w-3.5 h-3.5 shrink-0" />
-                  <Link href={`/state/${params.state}`} className="hover:text-white transition-colors">{stateName}</Link>
-                  <ChevronRight className="w-3.5 h-3.5 shrink-0" />
-                  <Link href={`/state/${params.state}/${params.city}`} className="hover:text-white transition-colors">{cityName}</Link>
-                  <ChevronRight className="w-3.5 h-3.5 shrink-0" />
-                  <span className="text-white/80 truncate">{listing.name}</span>
-                </nav>
+                <ListingBreadcrumb
+                  listingName={listing.name}
+                  stateSlug={params.state}
+                  stateName={stateName}
+                  citySlug={params.city}
+                  cityName={cityName}
+                  variant="hero"
+                />
 
                 <div className="flex items-start gap-4">
                   {logoImage && (
