@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   ArrowLeft, Search, MapPin, Loader2, CheckCircle2, XCircle,
   ChevronRight, Globe, Star, ExternalLink, Download, Map,
-  AlertTriangle,
+  AlertTriangle, ShieldCheck, ShieldQuestion, ShieldX,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,6 +42,7 @@ interface DiscoveredPlace {
   types: string[];
   is_existing: boolean;
   existing_listing: { name: string; city: string; state: string; slug: string } | null;
+  touchless_confidence: 'high' | 'medium' | 'low';
 }
 
 interface SearchResult {
@@ -123,10 +124,10 @@ export default function DiscoverPage() {
     try {
       const data = await callEdgeFunction('search', { query });
       setSearchResults(data);
-      // Auto-select all new places
+      // Auto-select new places that are likely touchless (high or medium confidence)
       const newIds = new Set<string>(
         data.results
-          .filter((r: DiscoveredPlace) => !r.is_existing && r.business_status === 'OPERATIONAL')
+          .filter((r: DiscoveredPlace) => !r.is_existing && r.business_status === 'OPERATIONAL' && r.touchless_confidence !== 'low')
           .map((r: DiscoveredPlace) => r.google_id),
       );
       setSelectedPlaces(newIds);
@@ -149,7 +150,7 @@ export default function DiscoverPage() {
   function selectAllNew() {
     if (!searchResults) return;
     const newIds = searchResults.results
-      .filter((r) => !r.is_existing && r.business_status === 'OPERATIONAL')
+      .filter((r) => !r.is_existing && r.business_status === 'OPERATIONAL' && r.touchless_confidence !== 'low')
       .map((r) => r.google_id);
     setSelectedPlaces(new Set(newIds));
   }
@@ -369,9 +370,11 @@ export default function DiscoverPage() {
                   className={`flex items-center gap-4 p-4 rounded-xl border transition-colors ${
                     place.is_existing
                       ? 'bg-gray-50 border-gray-200 opacity-60'
-                      : selectedPlaces.has(place.google_id)
-                        ? 'bg-green-50 border-green-300'
-                        : 'bg-white border-gray-200 hover:border-gray-300'
+                      : place.touchless_confidence === 'low'
+                        ? 'bg-red-50/30 border-gray-200 opacity-50'
+                        : selectedPlaces.has(place.google_id)
+                          ? 'bg-green-50 border-green-300'
+                          : 'bg-white border-gray-200 hover:border-gray-300'
                   }`}
                 >
                   {/* Checkbox */}
@@ -403,6 +406,18 @@ export default function DiscoverPage() {
                       {place.is_existing && (
                         <Badge className="bg-gray-100 text-gray-500 border-gray-300 text-xs">
                           Already in directory
+                        </Badge>
+                      )}
+                      {place.touchless_confidence === 'high' && (
+                        <Badge className="bg-green-100 text-green-700 border-green-300 text-xs">
+                          <ShieldCheck className="w-3 h-3 mr-1" />
+                          Likely touchless
+                        </Badge>
+                      )}
+                      {place.touchless_confidence === 'low' && (
+                        <Badge className="bg-red-100 text-red-600 border-red-300 text-xs">
+                          <ShieldX className="w-3 h-3 mr-1" />
+                          Probably not touchless
                         </Badge>
                       )}
                     </div>

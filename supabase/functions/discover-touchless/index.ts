@@ -159,6 +159,37 @@ interface PlaceResult {
   photos?: Array<{ name: string; widthPx: number; heightPx: number }>;
 }
 
+/** Keywords that indicate a car wash is likely touchless. */
+const TOUCHLESS_KEYWORDS = [
+  'touchless', 'touch-free', 'touchfree', 'touch free',
+  'brushless', 'brush-free', 'brushfree', 'brush free',
+  'laser wash', 'laserwash',
+  'no-touch', 'no touch', 'notouch',
+  'frictionless', 'friction-free',
+  'soft-touch', 'soft touch', // technically uses brushes, but foam/cloth
+];
+
+/** Keywords that strongly suggest a car wash is NOT touchless. */
+const NON_TOUCHLESS_KEYWORDS = [
+  'hand wash', 'hand car wash', 'handwash',
+  'detail', 'detailing', 'auto detail',
+  'body shop', 'auto body', 'collision',
+  'oil change', 'lube', 'tire',
+  'self serve', 'self-serve', 'coin op',
+  'dog wash', 'pet wash', 'laundromat',
+];
+
+/** Check how likely a place is to be a touchless car wash. */
+function touchlessConfidence(name: string): 'high' | 'medium' | 'low' {
+  const lower = name.toLowerCase();
+  // Check for explicit touchless keywords in the name
+  if (TOUCHLESS_KEYWORDS.some((kw) => lower.includes(kw))) return 'high';
+  // Check for keywords that indicate it's NOT touchless
+  if (NON_TOUCHLESS_KEYWORDS.some((kw) => lower.includes(kw))) return 'low';
+  // Generic car wash — unknown
+  return 'medium';
+}
+
 async function searchPlaces(
   googleApiKey: string,
   query: string,
@@ -166,10 +197,12 @@ async function searchPlaces(
   const allResults: PlaceResult[] = [];
   const seenIds = new Set<string>();
 
-  // Search with multiple queries for better coverage
+  // Search with multiple touchless-specific queries for better coverage
   const queries = [
     `touchless car wash ${query}`,
     `brushless car wash ${query}`,
+    `touch free car wash ${query}`,
+    `laser wash ${query}`,
   ];
 
   for (const q of queries) {
@@ -369,12 +402,15 @@ Deno.serve(async (req: Request) => {
         if (row.google_id) existingMap.set(row.google_id, row);
       }
 
-      // Also check by name + address for places that might exist without google_id
+      // Build results with touchless confidence scoring
+      const confidenceOrder = { high: 0, medium: 1, low: 2 };
       const results = places.map((place) => {
         const existing = existingMap.get(place.id);
+        const name = place.displayName?.text || 'Unknown';
+        const confidence = touchlessConfidence(name);
         return {
           google_id: place.id,
-          name: place.displayName?.text || 'Unknown',
+          name,
           address: place.formattedAddress || '',
           location: place.location || null,
           rating: place.rating || 0,
@@ -384,14 +420,18 @@ Deno.serve(async (req: Request) => {
           types: place.types || [],
           is_existing: !!existing,
           existing_listing: existing || null,
+          touchless_confidence: confidence,
         };
       });
+
+      // Sort: high confidence first, then medium, then low
+      results.sort((a, b) => confidenceOrder[a.touchless_confidence] - confidenceOrder[b.touchless_confidence]);
 
       return new Response(
         JSON.stringify({
           query,
           total: results.length,
-          new_count: results.filter((r) => !r.is_existing).length,
+          new_count: results.filter((r) => !r.is_existing && r.touchless_confidence !== 'low').length,
           existing_count: results.filter((r) => r.is_existing).length,
           results,
         }),
