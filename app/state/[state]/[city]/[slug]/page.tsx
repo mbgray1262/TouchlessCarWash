@@ -120,6 +120,9 @@ function getTodayKey(): string {
 function isImageUrl(url: string): boolean {
   if (!url) return false;
   const lower = url.toLowerCase();
+  // Google Places photo URLs don't have file extensions — allow them explicitly
+  if (lower.includes('places.googleapis.com') && lower.includes('/photos/')) return true;
+  if (lower.includes('maps.googleapis.com')) return true;
   return (
     lower.match(/\.(jpg|jpeg|png|gif|webp|avif|svg)(\?.*)?$/) !== null &&
     !lower.includes('icon') &&
@@ -159,9 +162,19 @@ function getOpenStatus(hours: Record<string, string> | null): 'open' | 'closed' 
   return currentMins >= openMins && currentMins < closeMins ? 'open' : 'closed';
 }
 
-function buildDescription(listing: Listing): string {
-  if (listing.description) return listing.description;
+/** Short 1-2 sentence description for the hero banner (line-clamped to 2 lines). */
+function buildHeroDescription(listing: Listing): string {
+  // Prefer google_description — it's naturally short (1-2 sentences from Google editorial summary)
   if (listing.google_description) return listing.google_description;
+
+  // If we have a full description, extract just the first sentence for the hero
+  if (listing.description) {
+    const firstSentence = listing.description.split(/(?<=[.!?])\s+/)[0];
+    if (firstSentence && firstSentence.length <= 200) return firstSentence;
+    return listing.description.substring(0, 180).replace(/\s+\S*$/, '') + '…';
+  }
+
+  // Fallback: build from city/state and amenities
   const parts: string[] = [`Touchless, touch-free car wash in ${listing.city}, ${listing.state}`];
   const highlights = (listing.amenities || []).slice(0, 4);
   if (highlights.length > 0) {
@@ -506,7 +519,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
   const galleryPhotos = allGalleryPhotos.slice(0, 8);
   const hours = listing.hours as Record<string, string> | null;
   const openStatus = getOpenStatus(hours);
-  const description = buildDescription(listing);
+  const heroDescription = buildHeroDescription(listing);
 
   const canonicalUrl = `${SITE_URL}/state/${params.state}/${params.city}/${params.slug}`;
 
@@ -619,7 +632,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                         </span>
                         {ratingStars}
                       </div>
-                      <p className="mt-2.5 text-sm text-white/80 max-w-2xl leading-relaxed line-clamp-2">{description}</p>
+                      <p className="mt-2.5 text-sm text-white/80 max-w-2xl leading-relaxed line-clamp-2">{heroDescription}</p>
                     </div>
                   </div>
                 </div>
@@ -671,7 +684,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                       </span>
                       {ratingStars}
                     </div>
-                    <p className="mt-2.5 text-sm text-white/80 max-w-2xl leading-relaxed line-clamp-2">{description}</p>
+                    <p className="mt-2.5 text-sm text-white/80 max-w-2xl leading-relaxed line-clamp-2">{heroDescription}</p>
                   </div>
                 </div>
               </div>
