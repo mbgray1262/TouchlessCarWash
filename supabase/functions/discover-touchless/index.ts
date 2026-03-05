@@ -274,27 +274,30 @@ Deno.serve(async (req: Request) => {
     // ACTION: coverage — return listing counts per state and per city
     // -----------------------------------------------------------------------
     if (action === 'coverage') {
-      // State counts
+      // State counts — try RPC first, then fall back to per-state count queries
       const { data: stateCounts } = await supabase.rpc('get_state_counts');
-      // If RPC doesn't exist, fall back to raw query
       let stateData = stateCounts;
       if (!stateData) {
-        const { data } = await supabase
-          .from('listings')
-          .select('state');
-        if (data) {
-          const counts: Record<string, number> = {};
-          for (const row of data) {
-            counts[row.state] = (counts[row.state] || 0) + 1;
-          }
-          stateData = Object.entries(counts).map(([state, count]) => ({
-            state,
-            count,
-          }));
-        }
+        // Count each US state individually to avoid Supabase's default row limit
+        const allStates = [
+          'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA',
+          'HI','ID','IL','IN','IA','KS','KY','LA','ME','MD',
+          'MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
+          'NM','NY','NC','ND','OH','OK','OR','PA','RI','SC',
+          'SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC',
+        ];
+        const stateCountPromises = allStates.map(async (state) => {
+          const { count } = await supabase
+            .from('listings')
+            .select('id', { count: 'exact', head: true })
+            .eq('state', state);
+          return { state, count: count || 0 };
+        });
+        stateData = (await Promise.all(stateCountPromises)).filter((s) => s.count > 0);
       }
 
-      // Major city counts
+      // Major city counts — use individual count queries to avoid
+      // Supabase's default 1000-row limit on regular select queries.
       const majorCities = [
         'New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix',
         'Philadelphia', 'San Antonio', 'San Diego', 'Dallas', 'Austin',
@@ -312,27 +315,17 @@ Deno.serve(async (req: Request) => {
         'Manhattan', 'Brooklyn', 'Queens', 'Bronx',
       ];
 
-      const { data: cityRows } = await supabase
-        .from('listings')
-        .select('city, state')
-        .in('city', majorCities);
-
-      const cityCounts: Record<string, number> = {};
-      for (const row of cityRows || []) {
-        const key = `${row.city}, ${row.state}`;
-        cityCounts[key] = (cityCounts[key] || 0) + 1;
-      }
+      const cityCountPromises = majorCities.map(async (city) => {
+        const { count } = await supabase
+          .from('listings')
+          .select('id', { count: 'exact', head: true })
+          .eq('city', city);
+        return { city, count: count || 0 };
+      });
+      const cityCountResults = await Promise.all(cityCountPromises);
 
       // Build list of underserved cities (fewer than 5 listings)
-      const underservedCities = majorCities
-        .map((city) => {
-          // Find all state matches for this city
-          const matching = Object.entries(cityCounts).filter(([k]) =>
-            k.startsWith(`${city},`),
-          );
-          const totalCount = matching.reduce((sum, [, c]) => sum + c, 0);
-          return { city, count: totalCount };
-        })
+      const underservedCities = cityCountResults
         .filter((c) => c.count < 5)
         .sort((a, b) => a.count - b.count);
 
