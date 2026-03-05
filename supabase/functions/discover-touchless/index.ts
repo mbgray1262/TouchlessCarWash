@@ -401,12 +401,19 @@ function generateDescription(
   return desc;
 }
 
-/** Build a complete listing data object from Google Place details. */
+/** Build a complete listing data object from Google Place details.
+ *  Returns null if the business is closed (permanently or temporarily). */
 async function buildListingData(
   details: PlaceResult,
   googleApiKey: string,
   supabase: ReturnType<typeof createClient>,
-): Promise<Record<string, unknown>> {
+): Promise<Record<string, unknown> | null> {
+  // Skip closed businesses — they should not be imported
+  const status = details.businessStatus;
+  if (status === 'CLOSED_PERMANENTLY' || status === 'CLOSED_TEMPORARILY') {
+    return null;
+  }
+
   const name = details.displayName?.text || 'Unknown Car Wash';
 
   // Parse address
@@ -675,12 +682,23 @@ Deno.serve(async (req: Request) => {
       // Sort: high confidence first, then medium, then low
       results.sort((a, b) => confidenceOrder[a.touchless_confidence] - confidenceOrder[b.touchless_confidence]);
 
+      // Mark closed businesses so they're clearly identified
+      const closedCount = results.filter((r) =>
+        r.business_status === 'CLOSED_PERMANENTLY' || r.business_status === 'CLOSED_TEMPORARILY'
+      ).length;
+
       return new Response(
         JSON.stringify({
           query,
           total: results.length,
-          new_count: results.filter((r) => !r.is_existing && r.touchless_confidence !== 'low').length,
+          new_count: results.filter((r) =>
+            !r.is_existing &&
+            r.touchless_confidence !== 'low' &&
+            r.business_status !== 'CLOSED_PERMANENTLY' &&
+            r.business_status !== 'CLOSED_TEMPORARILY'
+          ).length,
           existing_count: results.filter((r) => r.is_existing).length,
+          closed_count: closedCount,
           results,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -699,7 +717,7 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      // Check if already exists
+      // Check if already exists by google_id
       const { data: existingCheck } = await supabase
         .from('listings')
         .select('id, name, slug')
@@ -710,7 +728,7 @@ Deno.serve(async (req: Request) => {
         return new Response(
           JSON.stringify({
             success: false,
-            error: 'Listing already exists',
+            error: 'Listing already exists (google_id match)',
             existing: existingCheck,
           }),
           { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -727,6 +745,36 @@ Deno.serve(async (req: Request) => {
       }
 
       const listingData = await buildListingData(details, googleApiKey, supabase);
+
+      if (!listingData) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Business is closed (${details.businessStatus}) — skipping import`,
+          }),
+          { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      // Check for duplicate by name + city + state (catches different google_id formats)
+      const { data: nameMatch } = await supabase
+        .from('listings')
+        .select('id, name, slug')
+        .ilike('name', listingData.name as string)
+        .ilike('city', listingData.city as string)
+        .eq('state', listingData.state as string)
+        .maybeSingle();
+
+      if (nameMatch) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'Listing already exists (name+city+state match)',
+            existing: nameMatch,
+          }),
+          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
 
       const { data: inserted, error: insertError } = await supabase
         .from('listings')
@@ -773,6 +821,7 @@ Deno.serve(async (req: Request) => {
       const imported: Array<{ name: string; city: string; state: string }> = [];
       const errors: string[] = [];
 
+      const skippedClosed: string[] = [];
       for (const googleId of newIds) {
         const details = await getPlaceDetails(googleApiKey, googleId);
         if (!details) {
@@ -782,8 +831,33 @@ Deno.serve(async (req: Request) => {
 
         const name = details.displayName?.text || 'Unknown Car Wash';
 
+        // Skip closed businesses
+        if (details.businessStatus === 'CLOSED_PERMANENTLY' || details.businessStatus === 'CLOSED_TEMPORARILY') {
+          skippedClosed.push(`${name} (${details.businessStatus})`);
+          continue;
+        }
+
         try {
           const listingData = await buildListingData(details, googleApiKey, supabase);
+
+          if (!listingData) {
+            skippedClosed.push(`${name} (closed)`);
+            continue;
+          }
+
+          // Check for duplicate by name + city + state
+          const { data: nameMatch } = await supabase
+            .from('listings')
+            .select('id')
+            .ilike('name', listingData.name as string)
+            .ilike('city', listingData.city as string)
+            .eq('state', listingData.state as string)
+            .maybeSingle();
+
+          if (nameMatch) {
+            // Already exists under a different google_id — skip
+            continue;
+          }
 
           const { error: insertError } = await supabase
             .from('listings')
@@ -830,6 +904,8 @@ Deno.serve(async (req: Request) => {
           success: true,
           imported_count: imported.length,
           skipped_count: existingSet.size,
+          skipped_closed_count: skippedClosed.length,
+          skipped_closed: skippedClosed,
           error_count: errors.length,
           imported,
           errors,
