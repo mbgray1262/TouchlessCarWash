@@ -134,6 +134,10 @@ const DETAIL_FIELDS = [
   'types',
   'primaryType',
   'photos',
+  'editorialSummary',
+  'priceLevel',
+  'paymentOptions',
+  'reviews',
 ].join(',');
 
 interface PlaceResult {
@@ -157,6 +161,20 @@ interface PlaceResult {
     types: string[];
   }>;
   photos?: Array<{ name: string; widthPx: number; heightPx: number }>;
+  editorialSummary?: { text: string; languageCode?: string };
+  priceLevel?: string;
+  paymentOptions?: {
+    acceptsCreditCards?: boolean;
+    acceptsDebitCards?: boolean;
+    acceptsCashOnly?: boolean;
+    acceptsNfc?: boolean;
+  };
+  reviews?: Array<{
+    text?: { text: string };
+    rating?: number;
+    originalText?: { text: string };
+    authorAttribution?: { displayName: string };
+  }>;
 }
 
 /** Keywords that indicate a car wash is likely touchless. */
@@ -273,6 +291,236 @@ function getPhotoUrls(
     (p) =>
       `https://places.googleapis.com/v1/${p.name}/media?maxHeightPx=800&maxWidthPx=1200&key=${googleApiKey}`,
   );
+}
+
+/** Map Google priceLevel to a human-readable string. */
+function mapPriceLevel(level?: string): string | null {
+  if (!level) return null;
+  const map: Record<string, string> = {
+    PRICE_LEVEL_FREE: 'Free',
+    PRICE_LEVEL_INEXPENSIVE: '$',
+    PRICE_LEVEL_MODERATE: '$$',
+    PRICE_LEVEL_EXPENSIVE: '$$$',
+    PRICE_LEVEL_VERY_EXPENSIVE: '$$$$',
+  };
+  return map[level] || null;
+}
+
+/** Infer amenities from Google Places types and business name. */
+function inferAmenities(name: string, types: string[]): string[] {
+  const amenities: string[] = [];
+  const lower = name.toLowerCase();
+  const typeSet = new Set(types);
+
+  if (typeSet.has('gas_station')) amenities.push('Gas Station');
+  if (typeSet.has('convenience_store')) amenities.push('Convenience Store');
+  if (typeSet.has('atm')) amenities.push('ATM');
+  if (lower.includes('vacuum') || lower.includes('vac')) amenities.push('Free Vacuum');
+  if (lower.includes('detail')) amenities.push('Detailing Services');
+  if (lower.includes('self') && lower.includes('serv')) amenities.push('Self-Service Bays');
+  if (lower.includes('express')) amenities.push('Express Wash');
+  if (lower.includes('unlimited') || lower.includes('membership')) amenities.push('Unlimited Wash Plans');
+
+  return amenities;
+}
+
+/** Infer touchless wash types from the business name.
+ *  Valid values: 'touchless_automatic', 'self_serve_spray' */
+function inferWashTypes(name: string): string[] {
+  const types: string[] = [];
+  const lower = name.toLowerCase();
+
+  // Most touchless car washes are automatic (in-bay or tunnel)
+  if (
+    lower.includes('touchless') || lower.includes('touch-free') || lower.includes('touch free') ||
+    lower.includes('brushless') || lower.includes('brush-free') || lower.includes('brush free') ||
+    lower.includes('laser') || lower.includes('frictionless') || lower.includes('no-touch') ||
+    lower.includes('no touch')
+  ) {
+    types.push('touchless_automatic');
+  }
+
+  // Self-serve spray bays
+  if (lower.includes('self') && (lower.includes('serv') || lower.includes('wash'))) {
+    types.push('self_serve_spray');
+  }
+
+  return types;
+}
+
+/** Extract payment methods from Google paymentOptions. */
+function extractPaymentMethods(
+  opts?: PlaceResult['paymentOptions'],
+): string[] {
+  if (!opts) return [];
+  const methods: string[] = [];
+  if (opts.acceptsCreditCards) methods.push('Credit Cards');
+  if (opts.acceptsDebitCards) methods.push('Debit Cards');
+  if (opts.acceptsCashOnly) methods.push('Cash Only');
+  if (opts.acceptsNfc) methods.push('Contactless / NFC');
+  return methods;
+}
+
+/** Extract review highlights from Google reviews. */
+function extractReviewHighlights(
+  reviews?: PlaceResult['reviews'],
+): string[] {
+  if (!reviews?.length) return [];
+  return reviews
+    .filter((r) => r.text?.text && (r.rating ?? 0) >= 4)
+    .slice(0, 5)
+    .map((r) => r.text!.text.slice(0, 200));
+}
+
+/** Generate a description for the listing. */
+function generateDescription(
+  name: string,
+  city: string,
+  state: string,
+  confidence: 'high' | 'medium' | 'low',
+  amenities: string[],
+  editorialSummary?: string,
+): string {
+  if (editorialSummary) return editorialSummary;
+
+  const touchlessPhrase =
+    confidence === 'high'
+      ? 'a touchless car wash'
+      : confidence === 'medium'
+        ? 'a car wash offering touchless wash options'
+        : 'a car wash';
+
+  let desc = `${name} is ${touchlessPhrase} located in ${city}, ${state}.`;
+
+  if (amenities.length > 0) {
+    desc += ` Amenities include ${amenities.join(', ').toLowerCase()}.`;
+  }
+
+  desc += ' Visit for a scratch-free, no-contact clean that protects your vehicle\'s finish.';
+
+  return desc;
+}
+
+/** Build a complete listing data object from Google Place details. */
+async function buildListingData(
+  details: PlaceResult,
+  googleApiKey: string,
+  supabase: ReturnType<typeof createClient>,
+): Promise<Record<string, unknown>> {
+  const name = details.displayName?.text || 'Unknown Car Wash';
+
+  // Parse address
+  let address = '';
+  let city = '';
+  let state = '';
+  let zip = '';
+
+  if (details.addressComponents?.length) {
+    const comps = details.addressComponents;
+    const streetNumber = comps.find((c) => c.types.includes('street_number'))?.longText || '';
+    const route = comps.find((c) => c.types.includes('route'))?.longText || '';
+    address = [streetNumber, route].filter(Boolean).join(' ');
+    city =
+      comps.find((c) => c.types.includes('locality'))?.longText ||
+      comps.find((c) => c.types.includes('sublocality'))?.longText ||
+      '';
+    state =
+      comps.find((c) => c.types.includes('administrative_area_level_1'))?.shortText || '';
+    zip = comps.find((c) => c.types.includes('postal_code'))?.longText || '';
+  } else if (details.formattedAddress) {
+    const parsed = parseAddress(details.formattedAddress);
+    address = parsed.address;
+    city = parsed.city;
+    state = parsed.state;
+    zip = parsed.zip;
+  }
+
+  const hours = parseHours(details.regularOpeningHours);
+  const slug = await makeUniqueSlug(supabase, name);
+
+  // Photos from Google Places
+  const photoUrls = getPhotoUrls(details.photos, googleApiKey);
+  const heroImage = photoUrls[0] || null;
+
+  // Street View as fallback
+  const lat = details.location?.latitude;
+  const lng = details.location?.longitude;
+  const streetViewUrl =
+    lat && lng
+      ? `https://maps.googleapis.com/maps/api/streetview?size=800x400&location=${lat},${lng}&key=${googleApiKey}`
+      : null;
+
+  // Touchless analysis
+  const confidence = touchlessConfidence(name);
+  const isTouchless = confidence === 'high' ? true : confidence === 'low' ? false : null;
+
+  // Amenities & wash types
+  const amenities = inferAmenities(name, details.types || []);
+  const washTypes = inferWashTypes(name);
+
+  // Payment methods
+  const paymentMethods = extractPaymentMethods(details.paymentOptions);
+
+  // Review highlights
+  const reviewHighlights = extractReviewHighlights(details.reviews);
+
+  // Description
+  const description = generateDescription(
+    name, city, state, confidence, amenities,
+    details.editorialSummary?.text,
+  );
+
+  // Price range
+  const priceRange = mapPriceLevel(details.priceLevel);
+
+  // Build extracted_data with everything we can infer
+  const extractedData: Record<string, unknown> = {};
+  if (paymentMethods.length) extractedData.payment_methods = paymentMethods;
+  if (reviewHighlights.length) extractedData.review_highlights = reviewHighlights;
+  if (amenities.length) extractedData.amenities_detailed = amenities;
+
+  return {
+    slug,
+    name,
+    address,
+    city,
+    state,
+    zip,
+    phone: details.nationalPhoneNumber || details.internationalPhoneNumber || null,
+    website: details.websiteUri || null,
+    hours: hours || {},
+    wash_packages: [],
+    amenities,
+    photos: photoUrls,
+    hero_image: heroImage,
+    google_photo_url: heroImage,
+    google_photos_count: details.photos?.length || 0,
+    street_view_url: streetViewUrl,
+    rating: details.rating || 0,
+    review_count: details.userRatingCount || 0,
+    latitude: lat || null,
+    longitude: lng || null,
+    is_touchless: isTouchless,
+    is_approved: true,
+    is_featured: false,
+    google_id: details.id,
+    google_maps_url: details.googleMapsUri || null,
+    google_category: details.primaryType || null,
+    google_subtypes: details.types?.join(', ') || null,
+    business_status: details.businessStatus || null,
+    google_description: details.editorialSummary?.text || null,
+    description,
+    description_generated_at: new Date().toISOString(),
+    touchless_wash_types: washTypes,
+    price_range: priceRange,
+    extracted_data: Object.keys(extractedData).length > 0 ? extractedData : null,
+    crawl_status: 'classified',
+    crawl_notes: isTouchless === true
+      ? 'Imported from Google Places. Touchless confirmed by business name.'
+      : isTouchless === null
+        ? 'Imported from Google Places. Touchless status needs verification.'
+        : 'Imported from Google Places. May not be touchless — needs review.',
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -478,73 +726,7 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const name = details.displayName?.text || 'Unknown Car Wash';
-
-      // Parse address from addressComponents if available, fallback to formatted
-      let address = '';
-      let city = '';
-      let state = '';
-      let zip = '';
-
-      if (details.addressComponents?.length) {
-        const comps = details.addressComponents;
-        const streetNumber = comps.find((c) => c.types.includes('street_number'))?.longText || '';
-        const route = comps.find((c) => c.types.includes('route'))?.longText || '';
-        address = [streetNumber, route].filter(Boolean).join(' ');
-        city =
-          comps.find((c) => c.types.includes('locality'))?.longText ||
-          comps.find((c) => c.types.includes('sublocality'))?.longText ||
-          '';
-        state =
-          comps.find((c) => c.types.includes('administrative_area_level_1'))?.shortText || '';
-        zip = comps.find((c) => c.types.includes('postal_code'))?.longText || '';
-      } else if (details.formattedAddress) {
-        const parsed = parseAddress(details.formattedAddress);
-        address = parsed.address;
-        city = parsed.city;
-        state = parsed.state;
-        zip = parsed.zip;
-      }
-
-      const hours = parseHours(details.regularOpeningHours);
-      const slug = await makeUniqueSlug(supabase, name);
-
-      // Get Street View URL
-      const lat = details.location?.latitude;
-      const lng = details.location?.longitude;
-      const streetViewUrl =
-        lat && lng
-          ? `https://maps.googleapis.com/maps/api/streetview?size=800x400&location=${lat},${lng}&key=${googleApiKey}`
-          : null;
-
-      const listingData: Record<string, unknown> = {
-        slug,
-        name,
-        address,
-        city,
-        state,
-        zip,
-        phone: details.nationalPhoneNumber || details.internationalPhoneNumber || null,
-        website: details.websiteUri || null,
-        hours: hours || {},
-        wash_packages: [],
-        amenities: [],
-        rating: details.rating || 0,
-        review_count: details.userRatingCount || 0,
-        latitude: details.location?.latitude || null,
-        longitude: details.location?.longitude || null,
-        is_touchless: null, // Needs verification
-        is_approved: true,
-        is_featured: false,
-        google_id: details.id,
-        google_maps_url: details.googleMapsUri || null,
-        google_category: details.primaryType || null,
-        google_subtypes: details.types?.join(', ') || null,
-        business_status: details.businessStatus || null,
-        street_view_url: streetViewUrl,
-        crawl_status: 'pending',
-        crawl_notes: 'Imported from Google Places discovery. Needs touchless verification and data enrichment.',
-      };
+      const listingData = await buildListingData(details, googleApiKey, supabase);
 
       const { data: inserted, error: insertError } = await supabase
         .from('listings')
@@ -599,82 +781,27 @@ Deno.serve(async (req: Request) => {
         }
 
         const name = details.displayName?.text || 'Unknown Car Wash';
-        let address = '';
-        let city = '';
-        let state = '';
-        let zip = '';
 
-        if (details.addressComponents?.length) {
-          const comps = details.addressComponents;
-          const streetNumber =
-            comps.find((c) => c.types.includes('street_number'))?.longText || '';
-          const route = comps.find((c) => c.types.includes('route'))?.longText || '';
-          address = [streetNumber, route].filter(Boolean).join(' ');
-          city =
-            comps.find((c) => c.types.includes('locality'))?.longText ||
-            comps.find((c) => c.types.includes('sublocality'))?.longText ||
-            '';
-          state =
-            comps.find((c) => c.types.includes('administrative_area_level_1'))?.shortText || '';
-          zip = comps.find((c) => c.types.includes('postal_code'))?.longText || '';
-        } else if (details.formattedAddress) {
-          const parsed = parseAddress(details.formattedAddress);
-          address = parsed.address;
-          city = parsed.city;
-          state = parsed.state;
-          zip = parsed.zip;
-        }
+        try {
+          const listingData = await buildListingData(details, googleApiKey, supabase);
 
-        const hours = parseHours(details.regularOpeningHours);
-        const slug = await makeUniqueSlug(supabase, name);
+          const { error: insertError } = await supabase
+            .from('listings')
+            .insert(listingData)
+            .select('id')
+            .single();
 
-        const lat = details.location?.latitude;
-        const lng = details.location?.longitude;
-        const streetViewUrl =
-          lat && lng
-            ? `https://maps.googleapis.com/maps/api/streetview?size=800x400&location=${lat},${lng}&key=${googleApiKey}`
-            : null;
-
-        const listingData: Record<string, unknown> = {
-          slug,
-          name,
-          address,
-          city,
-          state,
-          zip,
-          phone: details.nationalPhoneNumber || details.internationalPhoneNumber || null,
-          website: details.websiteUri || null,
-          hours: hours || {},
-          wash_packages: [],
-          amenities: [],
-          rating: details.rating || 0,
-          review_count: details.userRatingCount || 0,
-          latitude: details.location?.latitude || null,
-          longitude: details.location?.longitude || null,
-          is_touchless: null,
-          is_approved: true,
-          is_featured: false,
-          google_id: details.id,
-          google_maps_url: details.googleMapsUri || null,
-          google_category: details.primaryType || null,
-          google_subtypes: details.types?.join(', ') || null,
-          business_status: details.businessStatus || null,
-          street_view_url: streetViewUrl,
-          crawl_status: 'pending',
-          crawl_notes:
-            'Imported from Google Places discovery. Needs touchless verification and data enrichment.',
-        };
-
-        const { error: insertError } = await supabase
-          .from('listings')
-          .insert(listingData)
-          .select('id')
-          .single();
-
-        if (insertError) {
-          errors.push(`${name}: ${insertError.message}`);
-        } else {
-          imported.push({ name, city, state });
+          if (insertError) {
+            errors.push(`${name}: ${insertError.message}`);
+          } else {
+            imported.push({
+              name,
+              city: listingData.city as string,
+              state: listingData.state as string,
+            });
+          }
+        } catch (err) {
+          errors.push(`${name}: ${err instanceof Error ? err.message : 'Unknown error'}`);
         }
       }
 
