@@ -79,31 +79,35 @@ export function ListingCard({ listing, href, showVerifiedBadge = false }: Listin
             </div>
           </div>
         ) : (
-          <HeroImageFallback variant="card" className="h-48 shrink-0" />
+          <div className="relative h-48 shrink-0">
+            <HeroImageFallback variant="card" className="h-48" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+            <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between">
+              {showVerifiedBadge ? (
+                <Badge className="bg-[#22C55E] text-white border-0 text-xs">
+                  <CheckCircle className="w-3 h-3 mr-1" />Touchless Verified
+                </Badge>
+              ) : washType ? (
+                <Badge className="bg-[#0F2744]/80 text-white border-0 text-xs backdrop-blur-sm">
+                  {washType}
+                </Badge>
+              ) : <span />}
+              {listing.rating > 0 && (
+                <div className="flex items-center gap-1 bg-black/60 rounded-full px-2.5 py-1 ml-auto">
+                  <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+                  <span className="text-white font-semibold text-sm">{Number(listing.rating).toFixed(1)}</span>
+                  {listing.review_count > 0 && <span className="text-white/70 text-xs">({listing.review_count})</span>}
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
         <div className="p-5 flex flex-col flex-1">
-          {showVerifiedBadge && !cardImage && (
-            <Badge className="bg-[#22C55E] text-white border-0 text-xs mb-2 self-start">
-              <CheckCircle className="w-3 h-3 mr-1" />Touchless Verified
-            </Badge>
-          )}
-          {!cardImage && !showVerifiedBadge && washType && (
-            <Badge className="bg-[#0F2744]/10 text-[#0F2744] border-0 text-xs mb-2 self-start">
-              {washType}
-            </Badge>
-          )}
           <div className="flex items-start justify-between gap-2 mb-2">
             <h2 className="text-base font-bold text-[#0F2744] group-hover:text-[#22C55E] transition-colors leading-tight">
               {listing.name}
             </h2>
-            {!cardImage && listing.rating > 0 && (
-              <div className="flex items-center gap-1 shrink-0">
-                <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                <span className="font-semibold text-sm">{Number(listing.rating).toFixed(1)}</span>
-                {listing.review_count > 0 && <span className="text-xs text-gray-400">({listing.review_count})</span>}
-              </div>
-            )}
           </div>
 
           <div className="flex items-start gap-1.5 text-sm text-gray-500 mb-1">
