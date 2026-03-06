@@ -92,6 +92,32 @@ async function searchListings(
   }
 }
 
+// ── Server-side forward geocode (Nominatim) ──────────────────────────
+
+async function serverForwardGeocode(query: string): Promise<{ lat: number; lng: number; displayName: string } | null> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=us&limit=1`,
+      {
+        headers: { 'Accept-Language': 'en-US,en', 'User-Agent': 'TouchlessCarWashFinder/1.0' },
+        next: { revalidate: 86400 }, // cache for 24h
+      }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.length > 0) {
+      return {
+        lat: parseFloat(data[0].lat),
+        lng: parseFloat(data[0].lon),
+        displayName: data[0].display_name,
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 // ── Proximity-based search ─────────────────────────────────────────────
 
 const PROXIMITY_COLUMNS = LISTING_CARD_COLUMNS + ', latitude, longitude';
@@ -387,25 +413,40 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const hasSearch = query.length > 0 || activeFilterSlugs.length > 0;
 
   let listings: (Listing & { distanceMiles?: number })[] = [];
+  let resolvedProximity = isProximitySearch;
+  let resolvedLat = lat;
+  let resolvedLng = lng;
+
   if (isProximitySearch) {
     listings = await searchByProximity(lat, lng, activeFilterSlugs, allFilters);
   } else if (hasSearch) {
     listings = await searchListings(query, activeFilterSlugs, allFilters);
+
+    // Fallback: if text search found nothing and no lat/lng, try geocoding the query
+    if (listings.length === 0 && query.length > 0) {
+      const geo = await serverForwardGeocode(query);
+      if (geo) {
+        listings = await searchByProximity(geo.lat, geo.lng, activeFilterSlugs, allFilters);
+        resolvedProximity = true;
+        resolvedLat = geo.lat;
+        resolvedLng = geo.lng;
+      }
+    }
   }
 
   const totalPages = Math.ceil(listings.length / PAGE_SIZE);
   const page = Math.min(currentPage, Math.max(1, totalPages));
   const paginatedListings = listings.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const resultLabel = (hasSearch || isProximitySearch)
+  const resultLabel = (hasSearch || resolvedProximity)
     ? listings.length > 0
-      ? isProximitySearch
+      ? resolvedProximity
         ? `${listings.length} touchless car wash${listings.length !== 1 ? 'es' : ''} near ${query || 'this location'}`
         : `Found ${listings.length} car wash${listings.length !== 1 ? 'es' : ''}`
       : 'No results found'
     : null;
 
-  const baseHref = buildBaseHref(query, activeFilterSlugs, lat, lng);
+  const baseHref = buildBaseHref(query, activeFilterSlugs, resolvedLat, resolvedLng);
 
   const jsonLd = hasSearch && listings.length > 0
     ? {
@@ -434,7 +475,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       <div className="bg-[#0F2744] py-10">
         <div className="container mx-auto px-4 max-w-6xl">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
-            {isProximitySearch && query
+            {resolvedProximity && query
               ? <>Touchless Car Washes Near {query}</>
               : query
                 ? <>Results for &ldquo;{query}&rdquo;</>
@@ -451,11 +492,11 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           filters={allFilters}
           activeFilterSlugs={activeFilterSlugs}
           currentQuery={query}
-          lat={lat}
-          lng={lng}
+          lat={resolvedLat}
+          lng={resolvedLng}
         />
 
-        {!hasSearch && !isProximitySearch ? (
+        {!hasSearch && !resolvedProximity ? (
           <Card>
             <CardContent className="p-12 text-center">
               <p className="text-lg text-muted-foreground mb-4">Enter a city name or zip code to search, or select filters above</p>
@@ -465,7 +506,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             </CardContent>
           </Card>
         ) : listings.length === 0 ? (
-          <NoResultsSection query={query} activeFilterSlugs={activeFilterSlugs} isProximitySearch={isProximitySearch} lat={lat} lng={lng} />
+          <NoResultsSection query={query} activeFilterSlugs={activeFilterSlugs} isProximitySearch={resolvedProximity} lat={resolvedLat} lng={resolvedLng} />
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
