@@ -13,6 +13,9 @@ import LogoImage from '@/components/LogoImage';
 import HeroImageFallback from '@/components/HeroImageFallback';
 import type { Metadata } from 'next';
 
+// Revalidate every 24 hours — pages are pre-rendered (SSG) but refresh daily for updated rankings
+export const revalidate = 86400;
+
 interface BestOfPageProps {
   params: { slug: string };
 }
@@ -34,7 +37,8 @@ const getMetroListings = cache(async (metro: MetroArea): Promise<Listing[]> => {
     .lte('latitude', box.maxLat)
     .gte('longitude', box.minLng)
     .lte('longitude', box.maxLng)
-    .order('rating', { ascending: false });
+    .order('rating', { ascending: false })
+    .limit(1000);
 
   if (error || !data) return [];
 
@@ -220,7 +224,7 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
   const year = new Date().getFullYear();
   const count = topListings.length;
 
-  // Structured data
+  // Structured data — ItemList for rankings
   const itemListSchema = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
@@ -245,11 +249,47 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
     })),
   };
 
+  // Structured data — FAQ for rich snippets
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: `How many touchless car washes are in the ${metro.name} area?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `We currently have ${allListings.length} verified touchless car washes within ${metro.radiusMiles} miles of ${metro.name}. This page highlights the top ${count} based on our ranking algorithm.`,
+        },
+      },
+      ...(topListings[0] ? [{
+        '@type': 'Question',
+        name: `What is the highest-rated touchless car wash in ${metro.name}?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `${topListings[0].name} in ${topListings[0].city} is our #1 ranked touchless car wash in the ${metro.name} area${topListings[0].rating > 0 ? ` with a ${Number(topListings[0].rating).toFixed(1)}-star rating` : ''}${topListings[0].review_count > 0 ? ` based on ${topListings[0].review_count} Google reviews` : ''}.`,
+        },
+      }] : []),
+      {
+        '@type': 'Question',
+        name: 'Are all these car washes truly touchless?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Yes. Every listing in our directory has been verified as genuinely touchless — no brushes, no cloth, no friction equipment. We cross-reference Google data, business websites, and customer reviews to confirm.',
+        },
+      },
+    ],
+  };
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
 
       <main>

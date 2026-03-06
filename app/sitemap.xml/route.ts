@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { getStateSlug, slugify } from '@/lib/constants';
+import { METRO_AREAS } from '@/lib/metro-areas';
 
 export async function GET() {
   const baseUrl = 'https://touchlesscarwashfinder.com';
@@ -86,6 +87,16 @@ export async function GET() {
   </url>`;
   });
 
+  // Best Of metro area pages
+  const bestOfUrls = METRO_AREAS.map((metro) => {
+    return `  <url>
+    <loc>${baseUrl}/best/${metro.slug}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>`;
+  });
+
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
@@ -112,6 +123,13 @@ export async function GET() {
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
+  <url>
+    <loc>${baseUrl}/best</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+${bestOfUrls.join('\n')}
 ${stateUrls.join('\n')}
 ${cityUrls.join('\n')}
 ${listingUrls.join('\n')}

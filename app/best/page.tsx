@@ -4,6 +4,9 @@ import { supabase } from '@/lib/supabase';
 import { METRO_AREAS, boundingBox, haversineDistance, getMetrosByRegion, type MetroArea, type MetroRegion } from '@/lib/metro-areas';
 import type { Metadata } from 'next';
 
+// Revalidate every 24 hours — pre-rendered but refreshes daily for new metros/counts
+export const revalidate = 86400;
+
 export const metadata: Metadata = {
   title: 'Best Touchless Car Washes by Metro Area | Touchless Car Wash Finder',
   description:
@@ -23,17 +26,26 @@ export const metadata: Metadata = {
 type MetroWithCount = MetroArea & { listingCount: number };
 
 async function getQualifyingMetros(): Promise<MetroWithCount[]> {
-  // Fetch all touchless listings with coordinates in one query
-  const { data, error } = await supabase
-    .from('listings')
-    .select('latitude, longitude')
-    .eq('is_touchless', true)
-    .not('latitude', 'is', null)
-    .not('longitude', 'is', null);
+  // Fetch ALL touchless listings with coordinates — must paginate since Supabase caps at 1000 rows per request
+  const PAGE_SIZE = 1000;
+  const allListings: { latitude: number; longitude: number }[] = [];
+  let offset = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from('listings')
+      .select('latitude, longitude')
+      .eq('is_touchless', true)
+      .not('latitude', 'is', null)
+      .not('longitude', 'is', null)
+      .range(offset, offset + PAGE_SIZE - 1);
 
-  if (error || !data) return [];
+    if (error || !data || data.length === 0) break;
+    allListings.push(...(data as { latitude: number; longitude: number }[]));
+    if (data.length < PAGE_SIZE) break; // Last page
+    offset += PAGE_SIZE;
+  }
 
-  const listings = data as { latitude: number; longitude: number }[];
+  const listings = allListings;
 
   // For each metro, count listings within radius
   const results: MetroWithCount[] = [];
