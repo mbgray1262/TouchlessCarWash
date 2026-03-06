@@ -20,8 +20,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const count = await getTotalCount();
   const countStr = count > 0 ? count.toLocaleString() + '+' : '3,000+';
   return {
-    title: `Touchless Car Wash Near Me — Find ${countStr} Verified Locations | Touchless Car Wash Finder`,
-    description: `Find the nearest touchless (touch-free) car wash in your area. Browse ${countStr} verified brushless, no-touch car wash locations across all 50 states + DC. No scratches, no brushes — just clean.`,
+    title: { absolute: `Touchless Car Wash Near Me — Find ${countStr} Verified Locations | Touchless Car Wash Finder` },
+    description: `Find the nearest touchless (touch-free) car wash in your area. Browse ${countStr} verified brushless, no-touch car wash locations across all 50 states + DC.`,
     alternates: {
       canonical: SITE_URL + '/',
     },

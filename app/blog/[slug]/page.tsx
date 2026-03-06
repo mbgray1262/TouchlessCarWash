@@ -56,11 +56,11 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
   const canonicalUrl = `https://touchlesscarwashfinder.com/blog/${params.slug}`;
 
   return {
-    title: post.meta_title || `${post.title} | Touchless Car Wash Finder Blog`,
+    title: post.meta_title ? { absolute: post.meta_title } : post.title,
     description: post.meta_description || post.excerpt || post.title,
     alternates: { canonical: canonicalUrl },
     openGraph: {
-      title: post.meta_title || `${post.title} | Touchless Car Wash Finder Blog`,
+      title: post.meta_title || `${post.title} | Touchless Car Wash Finder`,
       description: post.meta_description || post.excerpt || post.title,
       url: canonicalUrl,
       siteName: 'Touchless Car Wash Finder',

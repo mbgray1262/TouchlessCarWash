@@ -119,13 +119,13 @@ export async function generateMetadata({ params }: StatePageProps): Promise<Meta
   const canonicalUrl = `https://touchlesscarwashfinder.com/state/${params.state}`;
 
   return {
-    title: `Touchless Car Washes in ${stateName} | ${stateName} Car Wash Directory`,
+    title: `Touchless Car Washes in ${stateName}`,
     description: metaDescription,
     alternates: {
       canonical: canonicalUrl,
     },
     openGraph: {
-      title: `Touchless Car Washes in ${stateName} | ${stateName} Car Wash Directory`,
+      title: `Touchless Car Washes in ${stateName} | Touchless Car Wash Finder`,
       description: metaDescription,
       url: canonicalUrl,
       siteName: 'Touchless Car Wash Finder',

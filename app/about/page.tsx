@@ -4,14 +4,14 @@ import { CheckCircle, MapPin, Star, Clock, Shield, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export const metadata: Metadata = {
-  title: 'About Us — Touchless Car Wash Finder',
+  title: 'About Us',
   description:
     'Learn about Touchless Car Wash Finder — the only directory dedicated exclusively to verified touchless (brushless) car washes across all 50 states + DC.',
   alternates: {
     canonical: 'https://touchlesscarwashfinder.com/about',
   },
   openGraph: {
-    title: 'About Us — Touchless Car Wash Finder',
+    title: 'About Us | Touchless Car Wash Finder',
     description:
       'The only directory dedicated exclusively to verified touchless car washes. 3,465+ locations across all 50 states + DC.',
     url: 'https://touchlesscarwashfinder.com/about',

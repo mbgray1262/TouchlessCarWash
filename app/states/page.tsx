@@ -9,13 +9,13 @@ import type { Metadata } from 'next';
 const SITE_URL = 'https://touchlesscarwashfinder.com';
 
 export const metadata: Metadata = {
-  title: 'Browse Touchless Car Washes by State — All 50 States + DC | Touchless Car Wash Finder',
+  title: 'Touchless Car Washes by State',
   description: 'Browse touchless car wash locations in every US state. Find verified brushless car washes near you with ratings, photos, hours, and directions.',
   alternates: {
     canonical: SITE_URL + '/states',
   },
   openGraph: {
-    title: 'Browse Touchless Car Washes by State — All 50 States + DC',
+    title: 'Touchless Car Washes by State | Touchless Car Wash Finder',
     description: 'Browse touchless car wash locations in every US state. Find verified brushless car washes near you with ratings, photos, hours, and directions.',
     url: SITE_URL + '/states',
     siteName: 'Touchless Car Wash Finder',

@@ -6,14 +6,14 @@ import type { Metadata } from 'next';
 export const revalidate = 60; // Refresh data every 60 seconds
 
 export const metadata: Metadata = {
-  title: 'Touchless Car Wash Guides & Tips | Touchless Car Wash Finder Blog',
-  description: 'Expert guides, comparisons, and tips about touchless, touch-free, and laser car washes. Learn how to protect your paint and find the best no-touch wash near you.',
+  title: 'Touchless Car Wash Guides & Tips',
+  description: 'Expert guides and tips about touchless, touch-free, and laser car washes. Learn how to protect your paint and find the best wash near you.',
   alternates: {
     canonical: 'https://touchlesscarwashfinder.com/blog',
   },
   openGraph: {
-    title: 'Touchless Car Wash Guides & Tips | Touchless Car Wash Finder Blog',
-    description: 'Expert guides, comparisons, and tips about touchless, touch-free, and laser car washes. Learn how to protect your paint and find the best no-touch wash near you.',
+    title: 'Touchless Car Wash Guides & Tips | Touchless Car Wash Finder',
+    description: 'Expert guides and tips about touchless, touch-free, and laser car washes. Learn how to protect your paint and find the best wash near you.',
     url: 'https://touchlesscarwashfinder.com/blog',
     siteName: 'Touchless Car Wash Finder',
     type: 'website',

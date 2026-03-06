@@ -86,13 +86,13 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
   const canonicalUrl = `https://touchlesscarwashfinder.com/state/${params.state}/${params.city}`;
 
   return {
-    title: `Touchless Car Washes in ${cityName}, ${stateCode} | ${cityName} Car Wash Directory`,
+    title: `Touchless Car Washes in ${cityName}, ${stateCode}`,
     description: metaDescription,
     alternates: {
       canonical: canonicalUrl,
     },
     openGraph: {
-      title: `Touchless Car Washes in ${cityName}, ${stateCode} | ${cityName} Car Wash Directory`,
+      title: `Touchless Car Washes in ${cityName}, ${stateCode} | Touchless Car Wash Finder`,
       description: metaDescription,
       url: canonicalUrl,
       siteName: 'Touchless Car Wash Finder',

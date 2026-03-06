@@ -132,13 +132,13 @@ export async function generateMetadata({ params }: BestOfPageProps): Promise<Met
   const description = `Discover the ${count} best-rated touchless car washes in the ${metro.name} metro area. Ranked by Google ratings, customer reviews, and verified touchless confirmation.`;
 
   return {
-    title: `${title} | Touchless Car Wash Finder`,
+    title,
     description,
     alternates: {
       canonical: `https://touchlesscarwashfinder.com/best/${metro.slug}`,
     },
     openGraph: {
-      title,
+      title: `${title} | Touchless Car Wash Finder`,
       description,
       url: `https://touchlesscarwashfinder.com/best/${metro.slug}`,
       type: 'website',

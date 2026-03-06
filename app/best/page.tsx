@@ -8,14 +8,14 @@ import type { Metadata } from 'next';
 export const revalidate = 86400;
 
 export const metadata: Metadata = {
-  title: 'Best Touchless Car Washes by Metro Area | Touchless Car Wash Finder',
+  title: 'Best Touchless Car Washes by Metro Area',
   description:
     'Find the best-rated touchless car washes in major US metro areas. Rankings based on Google ratings, customer reviews, and verified touchless confirmation.',
   alternates: {
     canonical: 'https://touchlesscarwashfinder.com/best',
   },
   openGraph: {
-    title: 'Best Touchless Car Washes by Metro Area',
+    title: 'Best Touchless Car Washes by Metro Area | Touchless Car Wash Finder',
     description:
       'Find the best-rated touchless car washes in major US metro areas. Ranked by ratings, reviews, and touchless verification.',
     url: 'https://touchlesscarwashfinder.com/best',
