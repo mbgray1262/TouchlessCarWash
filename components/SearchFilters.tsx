@@ -15,6 +15,8 @@ interface SearchFiltersProps {
   filters: Filter[];
   activeFilterSlugs: string[];
   currentQuery: string;
+  lat?: number | null;
+  lng?: number | null;
 }
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -28,15 +30,19 @@ const ICON_MAP: Record<string, React.ElementType> = {
   car: Car,
 };
 
-function buildSearchUrl(query: string, filterSlugs: string[]): string {
+function buildSearchUrl(query: string, filterSlugs: string[], lat?: number | null, lng?: number | null): string {
   const params = new URLSearchParams();
   if (query) params.set('q', query);
+  if (lat != null && lng != null) {
+    params.set('lat', String(lat));
+    params.set('lng', String(lng));
+  }
   if (filterSlugs.length > 0) params.set('filters', filterSlugs.join(','));
   const qs = params.toString();
   return `/search${qs ? `?${qs}` : ''}`;
 }
 
-export function SearchFilters({ filters, activeFilterSlugs, currentQuery }: SearchFiltersProps) {
+export function SearchFilters({ filters, activeFilterSlugs, currentQuery, lat, lng }: SearchFiltersProps) {
   const router = useRouter();
   const activeSet = new Set(activeFilterSlugs);
 
@@ -47,11 +53,11 @@ export function SearchFilters({ filters, activeFilterSlugs, currentQuery }: Sear
     } else {
       next.add(slug);
     }
-    router.push(buildSearchUrl(currentQuery, Array.from(next)), { scroll: false });
+    router.push(buildSearchUrl(currentQuery, Array.from(next), lat, lng), { scroll: false });
   }
 
   function clearFilters() {
-    router.push(buildSearchUrl(currentQuery, []), { scroll: false });
+    router.push(buildSearchUrl(currentQuery, [], lat, lng), { scroll: false });
   }
 
   if (filters.length === 0) return null;
