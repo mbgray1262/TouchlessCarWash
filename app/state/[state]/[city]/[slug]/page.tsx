@@ -97,15 +97,16 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   const canonicalUrl = `${SITE_URL}/state/${params.state}/${params.city}/${params.slug}`;
   const heroImage = listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
 
-  const title = `${listing.name} - Touchless Car Wash in ${listing.city}, ${stateName} | Touchless Car Wash Finder`;
-  const description = `${listing.name} — verified touch-free car wash at ${listing.address}, ${listing.city}, ${stateName}. ${ratingPart}${reviewPart}${amenityPart}. Hours, directions, photos & more.`;
+  const title = `${listing.name} – Touchless Car Wash in ${listing.city}, ${listing.state}`;
+  const ogTitle = `${listing.name} – Touchless Car Wash in ${listing.city}, ${stateName}`;
+  const description = `${listing.name} — verified touch-free car wash at ${listing.address}, ${listing.city}, ${listing.state}. ${ratingPart}${reviewPart}${amenityPart}. Hours, directions, photos & more.`;
 
   return {
-    title,
+    title: { absolute: title },
     description,
     alternates: { canonical: canonicalUrl },
     openGraph: {
-      title,
+      title: ogTitle,
       description,
       url: canonicalUrl,
       type: 'website',
@@ -113,7 +114,7 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
     },
     twitter: {
       card: 'summary_large_image',
-      title,
+      title: ogTitle,
       description,
       ...(heroImage ? { images: [heroImage] } : {}),
     },

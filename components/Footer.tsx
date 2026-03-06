@@ -46,7 +46,7 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-white/70 hover:text-[#22C55E] transition-colors">
+                <Link href="/about" className="text-white/70 hover:text-[#22C55E] transition-colors">
                   About Us
                 </Link>
               </li>
@@ -94,13 +94,13 @@ export function Footer() {
           </Link>
 
           <div className="flex gap-6 text-sm">
-            <Link href="#" className="text-white/70 hover:text-[#22C55E] transition-colors">
+            <Link href="/privacy-policy" className="text-white/70 hover:text-[#22C55E] transition-colors">
               Privacy Policy
             </Link>
-            <Link href="#" className="text-white/70 hover:text-[#22C55E] transition-colors">
+            <Link href="/terms-of-service" className="text-white/70 hover:text-[#22C55E] transition-colors">
               Terms of Service
             </Link>
-            <Link href="#" className="text-white/70 hover:text-[#22C55E] transition-colors">
+            <Link href="mailto:hello@touchlesscarwashfinder.com" className="text-white/70 hover:text-[#22C55E] transition-colors">
               Contact
             </Link>
           </div>
