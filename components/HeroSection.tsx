@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { getStateSlug, slugify } from '@/lib/constants';
-import { METRO_AREAS, type MetroArea } from '@/lib/metro-areas';
+import { METRO_AREAS } from '@/lib/metro-areas';
 
 const DEFAULT_PLACEHOLDER = 'Search by city, ZIP, or car wash name';
 
@@ -15,12 +15,6 @@ interface GeoLocation {
   city: string;
   state: string;
   zip?: string;
-}
-
-interface CityResult {
-  city: string;
-  state: string;
-  count: number;
 }
 
 interface ListingResult {
@@ -37,9 +31,16 @@ interface MetroResult {
   slug: string;
 }
 
+interface GooglePlaceResult {
+  placeId: string;
+  description: string;
+  mainText: string;
+  secondaryText: string;
+}
+
 interface AutocompleteResults {
   metros: MetroResult[];
-  cities: CityResult[];
+  locations: GooglePlaceResult[];
   listings: ListingResult[];
 }
 
@@ -62,71 +63,42 @@ async function reverseGeocode(lat: number, lon: number): Promise<GeoLocation | n
   }
 }
 
-async function fetchAutocomplete(q: string): Promise<AutocompleteResults> {
-  const term = q.trim();
-  if (term.length < 2) return { metros: [], cities: [], listings: [] };
-
-  // Detect if query looks like a ZIP code (3-5 digits)
-  const isZipLike = /^\d{3,5}$/.test(term);
-
-  // Match metro areas locally (instant, no DB call) — skip for ZIP codes
-  const termLower = term.toLowerCase();
-  const matchedMetros = isZipLike
-    ? []
-    : METRO_AREAS
-        .filter((m) => m.name.toLowerCase().includes(termLower) || m.displayName.toLowerCase().includes(termLower))
-        .slice(0, 3)
-        .map((m) => ({ name: m.name, displayName: m.displayName, slug: m.slug }));
-
-  // For ZIP codes: search by zip, skip city name and listing name searches (won't match digits)
-  // For text: search by city name and listing name as before
-  const [cityRows, listingRows, zipRows] = await Promise.all([
-    isZipLike
-      ? Promise.resolve({ data: [] as { city: string; state: string }[] })
-      : supabase
-          .from('listings')
-          .select('city, state')
-          .ilike('city', `%${term}%`)
-          .eq('is_touchless', true)
-          .limit(100),
-    isZipLike
-      ? Promise.resolve({ data: [] as ListingResult[] })
-      : supabase
-          .from('listings')
-          .select('id, name, slug, city, state')
-          .ilike('name', `%${term}%`)
-          .eq('is_touchless', true)
-          .order('rating', { ascending: false })
-          .limit(5),
-    isZipLike
-      ? supabase
-          .from('listings')
-          .select('city, state')
-          .ilike('zip', `${term}%`)
-          .eq('is_touchless', true)
-          .limit(100)
-      : Promise.resolve({ data: [] as { city: string; state: string }[] }),
-  ]);
-
-  // Merge city results from both name search and ZIP search
-  const cityMap = new Map<string, CityResult>();
-  for (const row of [...(cityRows.data ?? []), ...(zipRows.data ?? [])]) {
-    const key = `${row.city}||${row.state}`;
-    if (cityMap.has(key)) {
-      cityMap.get(key)!.count += 1;
-    } else {
-      cityMap.set(key, { city: row.city, state: row.state, count: 1 });
+async function forwardGeocode(query: string): Promise<{ lat: number; lng: number } | null> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=us&limit=1`,
+      { headers: { 'Accept-Language': 'en-US,en' } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.length > 0) {
+      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
     }
+    return null;
+  } catch {
+    return null;
   }
-  const cities = Array.from(cityMap.values())
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
+}
 
-  return {
-    metros: matchedMetros,
-    cities,
-    listings: (listingRows.data ?? []) as ListingResult[],
-  };
+/** Fetch listing name matches from Supabase (for non-ZIP queries only). */
+async function fetchListingMatches(term: string): Promise<ListingResult[]> {
+  const { data } = await supabase
+    .from('listings')
+    .select('id, name, slug, city, state')
+    .ilike('name', `%${term}%`)
+    .eq('is_touchless', true)
+    .order('rating', { ascending: false })
+    .limit(5);
+  return (data ?? []) as ListingResult[];
+}
+
+/** Match metro areas from the local METRO_AREAS array. */
+function matchMetros(term: string): MetroResult[] {
+  const termLower = term.toLowerCase();
+  return METRO_AREAS
+    .filter((m) => m.name.toLowerCase().includes(termLower) || m.displayName.toLowerCase().includes(termLower))
+    .slice(0, 3)
+    .map((m) => ({ name: m.name, displayName: m.displayName, slug: m.slug }));
 }
 
 export default function HeroSection() {
@@ -134,13 +106,41 @@ export default function HeroSection() {
   const [query, setQuery] = useState('');
   const [geoLocation, setGeoLocation] = useState<GeoLocation | null>(null);
   const [geoResolved, setGeoResolved] = useState(false);
-  const [results, setResults] = useState<AutocompleteResults>({ metros: [], cities: [], listings: [] });
+  const [results, setResults] = useState<AutocompleteResults>({ metros: [], locations: [], listings: [] });
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Google Places refs
+  const placesService = useRef<google.maps.places.AutocompleteService | null>(null);
+  const sessionToken = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
+  const geocoder = useRef<google.maps.Geocoder | null>(null);
+
+  // ── Init Google Places ──────────────────────────────────────────────
+  useEffect(() => {
+    function initPlaces() {
+      if (typeof window !== 'undefined' && window.google?.maps?.places) {
+        if (!placesService.current) {
+          placesService.current = new google.maps.places.AutocompleteService();
+          sessionToken.current = new google.maps.places.AutocompleteSessionToken();
+          geocoder.current = new google.maps.Geocoder();
+        }
+        return true;
+      }
+      return false;
+    }
+    if (initPlaces()) return;
+    // Poll for API to load (it's loaded with strategy="lazyOnload")
+    const interval = setInterval(() => {
+      if (initPlaces()) clearInterval(interval);
+    }, 500);
+    return () => clearInterval(interval);
+  }, []);
+
+  // ── Geolocation for placeholder ─────────────────────────────────────
   useEffect(() => {
     if (!navigator.geolocation) {
       setGeoResolved(true);
@@ -159,6 +159,7 @@ export default function HeroSection() {
     );
   }, []);
 
+  // ── Click outside to close ──────────────────────────────────────────
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -169,6 +170,57 @@ export default function HeroSection() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // ── Fetch Google Places predictions ─────────────────────────────────
+  function fetchGooglePlaces(term: string): Promise<GooglePlaceResult[]> {
+    return new Promise((resolve) => {
+      if (!placesService.current) {
+        resolve([]);
+        return;
+      }
+      placesService.current.getPlacePredictions(
+        {
+          input: term,
+          componentRestrictions: { country: 'us' },
+          types: ['(regions)'],
+          sessionToken: sessionToken.current ?? undefined,
+        },
+        (predictions, status) => {
+          if (status !== google.maps.places.PlacesServiceStatus.OK || !predictions) {
+            resolve([]);
+            return;
+          }
+          resolve(
+            predictions.slice(0, 5).map((p) => ({
+              placeId: p.place_id,
+              description: p.description,
+              mainText: p.structured_formatting.main_text,
+              secondaryText: p.structured_formatting.secondary_text,
+            }))
+          );
+        }
+      );
+    });
+  }
+
+  // ── Geocode a Google Place ID to lat/lng ─────────────────────────────
+  function geocodePlaceId(placeId: string): Promise<{ lat: number; lng: number } | null> {
+    return new Promise((resolve) => {
+      if (!geocoder.current) {
+        resolve(null);
+        return;
+      }
+      geocoder.current.geocode({ placeId }, (results, status) => {
+        if (status === google.maps.GeocoderStatus.OK && results?.[0]) {
+          const loc = results[0].geometry.location;
+          resolve({ lat: loc.lat(), lng: loc.lng() });
+        } else {
+          resolve(null);
+        }
+      });
+    });
+  }
+
+  // ── Handle query change with debounced autocomplete ─────────────────
   const handleQueryChange = useCallback((value: string) => {
     setQuery(value);
     setActiveIndex(-1);
@@ -176,39 +228,69 @@ export default function HeroSection() {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
 
     if (value.trim().length < 2) {
-      setResults({ metros: [], cities: [], listings: [] });
+      setResults({ metros: [], locations: [], listings: [] });
       setOpen(false);
       return;
     }
 
     debounceTimer.current = setTimeout(async () => {
-      const data = await fetchAutocomplete(value);
-      setResults(data);
-      setOpen(data.metros.length > 0 || data.cities.length > 0 || data.listings.length > 0);
+      const term = value.trim();
+      const isZipLike = /^\d{3,5}$/.test(term);
+
+      // Run queries in parallel
+      const [googlePlaces, listings] = await Promise.all([
+        fetchGooglePlaces(term),
+        isZipLike ? Promise.resolve([] as ListingResult[]) : fetchListingMatches(term),
+      ]);
+
+      // Match metros locally (skip for ZIP-like queries)
+      const metros = isZipLike ? [] : matchMetros(term);
+
+      setResults({ metros, locations: googlePlaces, listings });
+      setOpen(metros.length > 0 || googlePlaces.length > 0 || listings.length > 0);
     }, 200);
   }, []);
 
+  // ── Build flat list of all items for keyboard nav ───────────────────
   const allItems = [
     ...results.metros.map((m) => ({ type: 'metro' as const, data: m })),
-    ...results.cities.map((c) => ({ type: 'city' as const, data: c })),
+    ...results.locations.map((l) => ({ type: 'location' as const, data: l })),
     ...results.listings.map((l) => ({ type: 'listing' as const, data: l })),
   ];
 
-  const navigateToItem = useCallback((item: typeof allItems[number]) => {
+  // ── Navigate to selected item ───────────────────────────────────────
+  const navigateToItem = useCallback(async (item: typeof allItems[number]) => {
     setOpen(false);
     setQuery('');
+
     if (item.type === 'metro') {
       const m = item.data as MetroResult;
       router.push(`/best/${m.slug}`);
-    } else if (item.type === 'city') {
-      const c = item.data as CityResult;
-      router.push(`/state/${getStateSlug(c.state)}/${slugify(c.city)}`);
+    } else if (item.type === 'location') {
+      const loc = item.data as GooglePlaceResult;
+      setIsSubmitting(true);
+      try {
+        const coords = await geocodePlaceId(loc.placeId);
+        // Rotate session token after completed session
+        if (sessionToken.current) {
+          sessionToken.current = new google.maps.places.AutocompleteSessionToken();
+        }
+        if (coords) {
+          router.push(`/search?q=${encodeURIComponent(loc.description)}&lat=${coords.lat}&lng=${coords.lng}`);
+        } else {
+          // Fallback: text search
+          router.push(`/search?q=${encodeURIComponent(loc.description)}`);
+        }
+      } finally {
+        setIsSubmitting(false);
+      }
     } else {
       const l = item.data as ListingResult;
       router.push(`/state/${getStateSlug(l.state)}/${slugify(l.city)}/${l.slug}`);
     }
   }, [router]);
 
+  // ── Keyboard navigation ─────────────────────────────────────────────
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!open) return;
 
@@ -228,6 +310,7 @@ export default function HeroSection() {
     }
   }, [open, allItems, activeIndex, navigateToItem]);
 
+  // ── Form submit (Enter without selecting autocomplete) ──────────────
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     if (activeIndex >= 0 && open) {
@@ -239,22 +322,36 @@ export default function HeroSection() {
     if (!q) return;
 
     setOpen(false);
+    setIsSubmitting(true);
 
-    const { data: nameMatch } = await supabase
-      .from('listings')
-      .select('id, name, slug, city, state')
-      .ilike('name', `%${q}%`)
-      .eq('is_touchless', true)
-      .order('rating', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    try {
+      // Check for direct listing name match first
+      const { data: nameMatch } = await supabase
+        .from('listings')
+        .select('id, name, slug, city, state')
+        .ilike('name', `%${q}%`)
+        .eq('is_touchless', true)
+        .order('rating', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-    if (nameMatch) {
-      router.push(`/state/${getStateSlug(nameMatch.state)}/${slugify(nameMatch.city)}/${nameMatch.slug}`);
-      return;
+      if (nameMatch) {
+        router.push(`/state/${getStateSlug(nameMatch.state)}/${slugify(nameMatch.city)}/${nameMatch.slug}`);
+        return;
+      }
+
+      // Try to geocode the query for proximity search
+      const coords = await forwardGeocode(q);
+      if (coords) {
+        router.push(`/search?q=${encodeURIComponent(q)}&lat=${coords.lat}&lng=${coords.lng}`);
+        return;
+      }
+
+      // Fallback: text-only search
+      router.push(`/search?q=${encodeURIComponent(q)}`);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    router.push(`/search?q=${encodeURIComponent(q)}`);
   }
 
   const placeholder = geoResolved && geoLocation
@@ -265,7 +362,7 @@ export default function HeroSection() {
     ? `Near\u00a0${geoLocation.city},\u00a0${geoLocation.state}`
     : 'Near\u00a0You';
 
-  const noResults = open && results.metros.length === 0 && results.cities.length === 0 && results.listings.length === 0 && query.trim().length >= 2;
+  const noResults = open && results.metros.length === 0 && results.locations.length === 0 && results.listings.length === 0 && query.trim().length >= 2;
 
   let itemIndex = -1;
 
@@ -312,7 +409,7 @@ export default function HeroSection() {
                   onChange={(e) => handleQueryChange(e.target.value)}
                   onKeyDown={handleKeyDown}
                   onFocus={() => {
-                    if (results.metros.length > 0 || results.cities.length > 0 || results.listings.length > 0) setOpen(true);
+                    if (results.metros.length > 0 || results.locations.length > 0 || results.listings.length > 0) setOpen(true);
                   }}
                   autoComplete="off"
                   className="pl-12 h-14 text-base bg-white text-gray-900 rounded-l-lg border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -358,29 +455,27 @@ export default function HeroSection() {
                           </div>
                         )}
 
-                        {results.cities.length > 0 && (
+                        {results.locations.length > 0 && (
                           <div className={results.metros.length > 0 ? 'border-t border-gray-100' : ''}>
                             <div className="flex items-center gap-1.5 px-4 pt-3 pb-1.5">
                               <MapPin className="w-3.5 h-3.5 text-gray-400" />
-                              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Cities</span>
+                              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Locations</span>
                             </div>
-                            {results.cities.map((city) => {
+                            {results.locations.map((loc) => {
                               itemIndex += 1;
                               const idx = itemIndex;
                               return (
                                 <button
-                                  key={`${city.city}-${city.state}`}
+                                  key={loc.placeId}
                                   type="button"
                                   onMouseDown={(e) => e.preventDefault()}
-                                  onClick={() => navigateToItem({ type: 'city', data: city })}
+                                  onClick={() => navigateToItem({ type: 'location', data: loc })}
                                   onMouseEnter={() => setActiveIndex(idx)}
                                   className={`w-full flex items-center justify-between px-4 py-2.5 text-left transition-colors ${activeIndex === idx ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
                                 >
                                   <span className="text-sm font-medium text-gray-900">
-                                    {city.city}, <span className="text-gray-500">{city.state}</span>
-                                  </span>
-                                  <span className="text-xs text-gray-400 ml-4 shrink-0">
-                                    {city.count} location{city.count !== 1 ? 's' : ''}
+                                    {loc.mainText}{' '}
+                                    <span className="text-gray-500">{loc.secondaryText}</span>
                                   </span>
                                 </button>
                               );
@@ -389,7 +484,7 @@ export default function HeroSection() {
                         )}
 
                         {results.listings.length > 0 && (
-                          <div className={(results.metros.length > 0 || results.cities.length > 0) ? 'border-t border-gray-100' : ''}>
+                          <div className={(results.metros.length > 0 || results.locations.length > 0) ? 'border-t border-gray-100' : ''}>
                             <div className="flex items-center gap-1.5 px-4 pt-3 pb-1.5">
                               <Building2 className="w-3.5 h-3.5 text-gray-400" />
                               <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Car Washes</span>
@@ -423,9 +518,10 @@ export default function HeroSection() {
               <Button
                 type="submit"
                 size="lg"
-                className="h-14 px-10 bg-[#22c55e] hover:bg-[#16a34a] text-white font-semibold text-base rounded-r-lg"
+                disabled={isSubmitting}
+                className="h-14 px-10 bg-[#22c55e] hover:bg-[#16a34a] text-white font-semibold text-base rounded-r-lg disabled:opacity-70"
               >
-                Search
+                {isSubmitting ? 'Searching...' : 'Search'}
               </Button>
             </form>
           </div>

@@ -6,7 +6,7 @@ import { getStateSlug, slugify, US_STATES } from '@/lib/constants';
 import { ListingCard } from '@/components/ListingCard';
 import { Pagination, PAGE_SIZE } from '@/components/Pagination';
 import { SearchFilters } from '@/components/SearchFilters';
-import { METRO_AREAS } from '@/lib/metro-areas';
+import { METRO_AREAS, haversineDistance, boundingBox } from '@/lib/metro-areas';
 import { MapPin, Map, Trophy, Search } from 'lucide-react';
 import type { Metadata } from 'next';
 
@@ -21,6 +21,8 @@ interface Filter {
 interface SearchPageProps {
   searchParams: {
     q?: string;
+    lat?: string;
+    lng?: string;
     filters?: string;
     page?: string;
   };
@@ -88,6 +90,83 @@ async function searchListings(
     const { data } = await q;
     return (data as Listing[]) ?? [];
   }
+}
+
+// ── Proximity-based search ─────────────────────────────────────────────
+
+const PROXIMITY_COLUMNS = LISTING_CARD_COLUMNS + ', latitude, longitude';
+
+async function searchByProximity(
+  lat: number,
+  lng: number,
+  activeFilterSlugs: string[],
+  allFilters: Filter[]
+): Promise<(Listing & { distanceMiles: number })[]> {
+  const radii = [25, 50, 100];
+
+  // Pre-compute qualified listing IDs if filters are active
+  let qualifiedIds: string[] | null = null;
+  if (activeFilterSlugs.length > 0) {
+    const filterIds = activeFilterSlugs
+      .map(slug => allFilters.find(f => f.slug === slug)?.id)
+      .filter((id): id is number => id != null);
+
+    if (filterIds.length > 0) {
+      const { data: matchedRows } = await supabase
+        .from('listing_filters')
+        .select('listing_id')
+        .in('filter_id', filterIds);
+
+      if (!matchedRows || matchedRows.length === 0) return [];
+
+      const idCounts: Record<string, number> = {};
+      for (const row of matchedRows) {
+        idCounts[row.listing_id] = (idCounts[row.listing_id] ?? 0) + 1;
+      }
+      qualifiedIds = Object.entries(idCounts)
+        .filter(([, count]) => count === filterIds.length)
+        .map(([id]) => id);
+
+      if (qualifiedIds.length === 0) return [];
+    }
+  }
+
+  for (const radius of radii) {
+    const box = boundingBox(lat, lng, radius);
+
+    let query = supabase
+      .from('listings')
+      .select(PROXIMITY_COLUMNS)
+      .eq('is_touchless', true)
+      .not('latitude', 'is', null)
+      .not('longitude', 'is', null)
+      .gte('latitude', box.minLat)
+      .lte('latitude', box.maxLat)
+      .gte('longitude', box.minLng)
+      .lte('longitude', box.maxLng)
+      .limit(500);
+
+    if (qualifiedIds) {
+      query = query.in('id', qualifiedIds);
+    }
+
+    const { data } = await query;
+    if (!data) continue;
+
+    const withDistance = (data as unknown as (Listing & { latitude: number; longitude: number })[])
+      .map(l => ({
+        ...l,
+        distanceMiles: Math.round(haversineDistance(lat, lng, l.latitude, l.longitude) * 10) / 10,
+      }))
+      .filter(l => l.distanceMiles <= radius)
+      .sort((a, b) => a.distanceMiles - b.distanceMiles);
+
+    // Return if we found enough results, or on the last radius
+    if (withDistance.length >= 3 || radius === radii[radii.length - 1]) {
+      return withDistance;
+    }
+  }
+  return [];
 }
 
 // Look up state from query for better no-results suggestions
@@ -245,9 +324,13 @@ function getSuggestedMetros(stateCode: string | null): { name: string; displayNa
   return [...combined, ...extras].slice(0, 6).map(pick);
 }
 
-function buildBaseHref(query: string, activeFilterSlugs: string[]): string {
+function buildBaseHref(query: string, activeFilterSlugs: string[], lat?: number | null, lng?: number | null): string {
   const params = new URLSearchParams();
   if (query) params.set('q', query);
+  if (lat != null && lng != null) {
+    params.set('lat', String(lat));
+    params.set('lng', String(lng));
+  }
   if (activeFilterSlugs.length > 0) params.set('filters', activeFilterSlugs.join(','));
   const qs = params.toString();
   return `/search${qs ? `?${qs}` : ''}`;
@@ -256,6 +339,7 @@ function buildBaseHref(query: string, activeFilterSlugs: string[]): string {
 export async function generateMetadata({ searchParams }: SearchPageProps): Promise<Metadata> {
   const query = searchParams.q || '';
   const filterSlugs = searchParams.filters?.split(',').filter(Boolean) ?? [];
+  const hasCoords = searchParams.lat && searchParams.lng;
 
   if (!query && filterSlugs.length === 0) {
     return {
@@ -268,7 +352,7 @@ export async function generateMetadata({ searchParams }: SearchPageProps): Promi
   let title = '';
   if (query) {
     const displayQuery = query.replace(/\b\w/g, c => c.toUpperCase());
-    title = `Touchless Car Washes in ${displayQuery}`;
+    title = hasCoords ? `Touchless Car Washes Near ${displayQuery}` : `Touchless Car Washes in ${displayQuery}`;
   } else {
     title = 'Touchless Car Washes';
   }
@@ -294,25 +378,34 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const query = searchParams.q || '';
   const activeFilterSlugs = searchParams.filters?.split(',').filter(Boolean) ?? [];
   const currentPage = Math.max(1, parseInt(searchParams.page || '1', 10) || 1);
+  const lat = searchParams.lat ? parseFloat(searchParams.lat) : null;
+  const lng = searchParams.lng ? parseFloat(searchParams.lng) : null;
+  const isProximitySearch = lat != null && lng != null && !isNaN(lat) && !isNaN(lng);
 
   const allFilters = await getFilters();
 
   const hasSearch = query.length > 0 || activeFilterSlugs.length > 0;
-  const listings = hasSearch
-    ? await searchListings(query, activeFilterSlugs, allFilters)
-    : [];
+
+  let listings: (Listing & { distanceMiles?: number })[] = [];
+  if (isProximitySearch) {
+    listings = await searchByProximity(lat, lng, activeFilterSlugs, allFilters);
+  } else if (hasSearch) {
+    listings = await searchListings(query, activeFilterSlugs, allFilters);
+  }
 
   const totalPages = Math.ceil(listings.length / PAGE_SIZE);
   const page = Math.min(currentPage, Math.max(1, totalPages));
   const paginatedListings = listings.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const resultLabel = hasSearch
+  const resultLabel = (hasSearch || isProximitySearch)
     ? listings.length > 0
-      ? `Found ${listings.length} car wash${listings.length !== 1 ? 'es' : ''}`
+      ? isProximitySearch
+        ? `${listings.length} touchless car wash${listings.length !== 1 ? 'es' : ''} near ${query || 'this location'}`
+        : `Found ${listings.length} car wash${listings.length !== 1 ? 'es' : ''}`
       : 'No results found'
     : null;
 
-  const baseHref = buildBaseHref(query, activeFilterSlugs);
+  const baseHref = buildBaseHref(query, activeFilterSlugs, lat, lng);
 
   const jsonLd = hasSearch && listings.length > 0
     ? {
@@ -341,7 +434,11 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       <div className="bg-[#0F2744] py-10">
         <div className="container mx-auto px-4 max-w-6xl">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
-            {query ? <>Results for &ldquo;{query}&rdquo;</> : 'Find a Car Wash'}
+            {isProximitySearch && query
+              ? <>Touchless Car Washes Near {query}</>
+              : query
+                ? <>Results for &ldquo;{query}&rdquo;</>
+                : 'Find a Car Wash'}
           </h1>
           {resultLabel && (
             <p className="text-white/70 text-lg">{resultLabel}</p>
@@ -354,9 +451,11 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           filters={allFilters}
           activeFilterSlugs={activeFilterSlugs}
           currentQuery={query}
+          lat={lat}
+          lng={lng}
         />
 
-        {!hasSearch ? (
+        {!hasSearch && !isProximitySearch ? (
           <Card>
             <CardContent className="p-12 text-center">
               <p className="text-lg text-muted-foreground mb-4">Enter a city name or zip code to search, or select filters above</p>
@@ -366,12 +465,12 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             </CardContent>
           </Card>
         ) : listings.length === 0 ? (
-          <NoResultsSection query={query} activeFilterSlugs={activeFilterSlugs} />
+          <NoResultsSection query={query} activeFilterSlugs={activeFilterSlugs} isProximitySearch={isProximitySearch} lat={lat} lng={lng} />
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {paginatedListings.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} />
+                <ListingCard key={listing.id} listing={listing} distance={listing.distanceMiles} />
               ))}
             </div>
             <Pagination
@@ -391,9 +490,13 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 function NoResultsSection({
   query,
   activeFilterSlugs,
+  isProximitySearch,
 }: {
   query: string;
   activeFilterSlugs: string[];
+  isProximitySearch?: boolean;
+  lat?: number | null;
+  lng?: number | null;
 }) {
   const isZip = /^\d{5}$/.test(query.trim());
   const stateFromZip = isZip ? getStateFromZip(query.trim()) : null;
@@ -411,12 +514,16 @@ function NoResultsSection({
             <Search className="w-8 h-8 text-gray-400" />
           </div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            No touchless car washes found{query ? ` for \u201c${query}\u201d` : ''}
+            {isProximitySearch
+              ? `No touchless car washes found near ${query || 'this location'}`
+              : `No touchless car washes found${query ? ` for \u201c${query}\u201d` : ''}`}
           </h2>
           <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-            {isZip
-              ? `We don\u2019t have any verified touchless car washes at that ZIP code yet${stateInfo ? `, but we have listings throughout ${stateInfo.name}` : ''}.`
-              : 'Try searching for a nearby city, a different ZIP code, or browse by state below.'}
+            {isProximitySearch
+              ? `We searched within 100 miles but didn\u2019t find any verified touchless car washes${stateInfo ? `. Try browsing ${stateInfo.name} or a nearby metro area` : '. Try browsing by state or checking a nearby metro area'}.`
+              : isZip
+                ? `We don\u2019t have any verified touchless car washes at that ZIP code yet${stateInfo ? `, but we have listings throughout ${stateInfo.name}` : ''}.`
+                : 'Try searching for a nearby city, a different ZIP code, or browse by state below.'}
           </p>
           <div className="flex flex-wrap gap-3 justify-center">
             {activeFilterSlugs.length > 0 && (

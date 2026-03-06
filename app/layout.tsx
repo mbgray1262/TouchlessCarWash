@@ -59,6 +59,12 @@ export default function RootLayout({
             gtag('config', 'G-55HHXHEVFP');
           `}
         </Script>
+        {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
+          <Script
+            src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
+            strategy="lazyOnload"
+          />
+        )}
       </head>
       <body className={inter.className}>
         <PublicShell>

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Star, MapPin, Phone, CheckCircle } from 'lucide-react';
+import { Star, MapPin, Phone, CheckCircle, Navigation } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { type Listing } from '@/lib/supabase';
 import { getStateSlug } from '@/lib/constants';
@@ -33,6 +33,7 @@ interface ListingCardProps {
   listing: Listing;
   href?: string;
   showVerifiedBadge?: boolean;
+  distance?: number; // miles, e.g. 4.2
 }
 
 const WASH_TYPE_LABELS: Record<string, string> = {
@@ -40,7 +41,7 @@ const WASH_TYPE_LABELS: Record<string, string> = {
   self_serve_spray: 'Self-Serve Spray',
 };
 
-export function ListingCard({ listing, href, showVerifiedBadge = false }: ListingCardProps) {
+export function ListingCard({ listing, href, showVerifiedBadge = false, distance }: ListingCardProps) {
   const defaultHref = `/state/${getStateSlug(listing.state)}/${listing.city.toLowerCase().replace(/\s+/g, '-')}/${listing.slug}`;
   const linkHref = href ?? defaultHref;
 
@@ -138,6 +139,13 @@ export function ListingCard({ listing, href, showVerifiedBadge = false }: Listin
             <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5" />
             <span>{listing.address}</span>
           </div>
+
+          {distance != null && (
+            <div className="flex items-center gap-1.5 text-sm text-blue-600 font-medium mb-1">
+              <Navigation className="w-3.5 h-3.5 shrink-0" />
+              <span>{distance} mi away</span>
+            </div>
+          )}
 
           {listing.phone && (
             <div className="flex items-center gap-1.5 text-sm text-gray-500">
