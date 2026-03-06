@@ -66,31 +66,51 @@ async function fetchAutocomplete(q: string): Promise<AutocompleteResults> {
   const term = q.trim();
   if (term.length < 2) return { metros: [], cities: [], listings: [] };
 
-  // Match metro areas locally (instant, no DB call)
-  const termLower = term.toLowerCase();
-  const matchedMetros = METRO_AREAS
-    .filter((m) => m.name.toLowerCase().includes(termLower) || m.displayName.toLowerCase().includes(termLower))
-    .slice(0, 3)
-    .map((m) => ({ name: m.name, displayName: m.displayName, slug: m.slug }));
+  // Detect if query looks like a ZIP code (3-5 digits)
+  const isZipLike = /^\d{3,5}$/.test(term);
 
-  const [cityRows, listingRows] = await Promise.all([
-    supabase
-      .from('listings')
-      .select('city, state')
-      .ilike('city', `%${term}%`)
-      .eq('is_touchless', true)
-      .limit(100),
-    supabase
-      .from('listings')
-      .select('id, name, slug, city, state')
-      .ilike('name', `%${term}%`)
-      .eq('is_touchless', true)
-      .order('rating', { ascending: false })
-      .limit(5),
+  // Match metro areas locally (instant, no DB call) — skip for ZIP codes
+  const termLower = term.toLowerCase();
+  const matchedMetros = isZipLike
+    ? []
+    : METRO_AREAS
+        .filter((m) => m.name.toLowerCase().includes(termLower) || m.displayName.toLowerCase().includes(termLower))
+        .slice(0, 3)
+        .map((m) => ({ name: m.name, displayName: m.displayName, slug: m.slug }));
+
+  // For ZIP codes: search by zip, skip city name and listing name searches (won't match digits)
+  // For text: search by city name and listing name as before
+  const [cityRows, listingRows, zipRows] = await Promise.all([
+    isZipLike
+      ? Promise.resolve({ data: [] as { city: string; state: string }[] })
+      : supabase
+          .from('listings')
+          .select('city, state')
+          .ilike('city', `%${term}%`)
+          .eq('is_touchless', true)
+          .limit(100),
+    isZipLike
+      ? Promise.resolve({ data: [] as ListingResult[] })
+      : supabase
+          .from('listings')
+          .select('id, name, slug, city, state')
+          .ilike('name', `%${term}%`)
+          .eq('is_touchless', true)
+          .order('rating', { ascending: false })
+          .limit(5),
+    isZipLike
+      ? supabase
+          .from('listings')
+          .select('city, state')
+          .ilike('zip', `${term}%`)
+          .eq('is_touchless', true)
+          .limit(100)
+      : Promise.resolve({ data: [] as { city: string; state: string }[] }),
   ]);
 
+  // Merge city results from both name search and ZIP search
   const cityMap = new Map<string, CityResult>();
-  for (const row of cityRows.data ?? []) {
+  for (const row of [...(cityRows.data ?? []), ...(zipRows.data ?? [])]) {
     const key = `${row.city}||${row.state}`;
     if (cityMap.has(key)) {
       cityMap.get(key)!.count += 1;
@@ -105,7 +125,7 @@ async function fetchAutocomplete(q: string): Promise<AutocompleteResults> {
   return {
     metros: matchedMetros,
     cities,
-    listings: listingRows.data ?? [],
+    listings: (listingRows.data ?? []) as ListingResult[],
   };
 }
 
@@ -302,7 +322,9 @@ export default function HeroSection() {
                   <div className="absolute left-0 right-0 top-[calc(100%+4px)] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50">
                     {noResults ? (
                       <div className="px-4 py-5 text-sm text-gray-500 text-center">
-                        No results — try a different search
+                        {/^\d{3,5}$/.test(query.trim())
+                          ? 'No touchless car washes at that ZIP — try a nearby city'
+                          : 'No results — try a different search'}
                       </div>
                     ) : (
                       <>
