@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, MapPin, Building2 } from 'lucide-react';
+import { Search, MapPin, Building2, Trophy } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { getStateSlug, slugify } from '@/lib/constants';
+import { METRO_AREAS, type MetroArea } from '@/lib/metro-areas';
 
 const DEFAULT_PLACEHOLDER = 'Search by city, ZIP, or car wash name';
 
@@ -30,7 +31,14 @@ interface ListingResult {
   state: string;
 }
 
+interface MetroResult {
+  name: string;
+  displayName: string;
+  slug: string;
+}
+
 interface AutocompleteResults {
+  metros: MetroResult[];
   cities: CityResult[];
   listings: ListingResult[];
 }
@@ -56,15 +64,22 @@ async function reverseGeocode(lat: number, lon: number): Promise<GeoLocation | n
 
 async function fetchAutocomplete(q: string): Promise<AutocompleteResults> {
   const term = q.trim();
-  if (term.length < 2) return { cities: [], listings: [] };
+  if (term.length < 2) return { metros: [], cities: [], listings: [] };
+
+  // Match metro areas locally (instant, no DB call)
+  const termLower = term.toLowerCase();
+  const matchedMetros = METRO_AREAS
+    .filter((m) => m.name.toLowerCase().includes(termLower) || m.displayName.toLowerCase().includes(termLower))
+    .slice(0, 3)
+    .map((m) => ({ name: m.name, displayName: m.displayName, slug: m.slug }));
 
   const [cityRows, listingRows] = await Promise.all([
     supabase
       .from('listings')
       .select('city, state')
-      .ilike('city', `${term}%`)
+      .ilike('city', `%${term}%`)
       .eq('is_touchless', true)
-      .limit(50),
+      .limit(100),
     supabase
       .from('listings')
       .select('id, name, slug, city, state')
@@ -88,6 +103,7 @@ async function fetchAutocomplete(q: string): Promise<AutocompleteResults> {
     .slice(0, 5);
 
   return {
+    metros: matchedMetros,
     cities,
     listings: listingRows.data ?? [],
   };
@@ -98,7 +114,7 @@ export default function HeroSection() {
   const [query, setQuery] = useState('');
   const [geoLocation, setGeoLocation] = useState<GeoLocation | null>(null);
   const [geoResolved, setGeoResolved] = useState(false);
-  const [results, setResults] = useState<AutocompleteResults>({ cities: [], listings: [] });
+  const [results, setResults] = useState<AutocompleteResults>({ metros: [], cities: [], listings: [] });
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -140,7 +156,7 @@ export default function HeroSection() {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
 
     if (value.trim().length < 2) {
-      setResults({ cities: [], listings: [] });
+      setResults({ metros: [], cities: [], listings: [] });
       setOpen(false);
       return;
     }
@@ -148,11 +164,12 @@ export default function HeroSection() {
     debounceTimer.current = setTimeout(async () => {
       const data = await fetchAutocomplete(value);
       setResults(data);
-      setOpen(data.cities.length > 0 || data.listings.length > 0);
+      setOpen(data.metros.length > 0 || data.cities.length > 0 || data.listings.length > 0);
     }, 200);
   }, []);
 
   const allItems = [
+    ...results.metros.map((m) => ({ type: 'metro' as const, data: m })),
     ...results.cities.map((c) => ({ type: 'city' as const, data: c })),
     ...results.listings.map((l) => ({ type: 'listing' as const, data: l })),
   ];
@@ -160,7 +177,10 @@ export default function HeroSection() {
   const navigateToItem = useCallback((item: typeof allItems[number]) => {
     setOpen(false);
     setQuery('');
-    if (item.type === 'city') {
+    if (item.type === 'metro') {
+      const m = item.data as MetroResult;
+      router.push(`/best/${m.slug}`);
+    } else if (item.type === 'city') {
       const c = item.data as CityResult;
       router.push(`/state/${getStateSlug(c.state)}/${slugify(c.city)}`);
     } else {
@@ -225,7 +245,7 @@ export default function HeroSection() {
     ? `Near\u00a0${geoLocation.city},\u00a0${geoLocation.state}`
     : 'Near\u00a0You';
 
-  const noResults = open && results.cities.length === 0 && results.listings.length === 0 && query.trim().length >= 2;
+  const noResults = open && results.metros.length === 0 && results.cities.length === 0 && results.listings.length === 0 && query.trim().length >= 2;
 
   let itemIndex = -1;
 
@@ -272,7 +292,7 @@ export default function HeroSection() {
                   onChange={(e) => handleQueryChange(e.target.value)}
                   onKeyDown={handleKeyDown}
                   onFocus={() => {
-                    if (results.cities.length > 0 || results.listings.length > 0) setOpen(true);
+                    if (results.metros.length > 0 || results.cities.length > 0 || results.listings.length > 0) setOpen(true);
                   }}
                   autoComplete="off"
                   className="pl-12 h-14 text-base bg-white text-gray-900 rounded-l-lg border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -286,8 +306,38 @@ export default function HeroSection() {
                       </div>
                     ) : (
                       <>
-                        {results.cities.length > 0 && (
+                        {results.metros.length > 0 && (
                           <div>
+                            <div className="flex items-center gap-1.5 px-4 pt-3 pb-1.5">
+                              <Trophy className="w-3.5 h-3.5 text-amber-500" />
+                              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Best Of</span>
+                            </div>
+                            {results.metros.map((metro) => {
+                              itemIndex += 1;
+                              const idx = itemIndex;
+                              return (
+                                <button
+                                  key={metro.slug}
+                                  type="button"
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => navigateToItem({ type: 'metro', data: metro })}
+                                  onMouseEnter={() => setActiveIndex(idx)}
+                                  className={`w-full flex items-center justify-between px-4 py-2.5 text-left transition-colors ${activeIndex === idx ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                                >
+                                  <span className="text-sm font-medium text-gray-900">
+                                    Best in {metro.displayName}
+                                  </span>
+                                  <span className="text-xs text-amber-600 ml-4 shrink-0 font-medium">
+                                    Top rated
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {results.cities.length > 0 && (
+                          <div className={results.metros.length > 0 ? 'border-t border-gray-100' : ''}>
                             <div className="flex items-center gap-1.5 px-4 pt-3 pb-1.5">
                               <MapPin className="w-3.5 h-3.5 text-gray-400" />
                               <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Cities</span>
@@ -317,7 +367,7 @@ export default function HeroSection() {
                         )}
 
                         {results.listings.length > 0 && (
-                          <div className={results.cities.length > 0 ? 'border-t border-gray-100' : ''}>
+                          <div className={(results.metros.length > 0 || results.cities.length > 0) ? 'border-t border-gray-100' : ''}>
                             <div className="flex items-center gap-1.5 px-4 pt-3 pb-1.5">
                               <Building2 className="w-3.5 h-3.5 text-gray-400" />
                               <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Car Washes</span>

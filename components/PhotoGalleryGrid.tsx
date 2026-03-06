@@ -1,7 +1,25 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import PhotoLightbox from './PhotoLightbox';
+
+const OPTIMIZED_HOSTS = new Set([
+  'gteqijdpqjmgxfnyuhvy.supabase.co',
+  'res.cloudinary.com',
+  'lh3.googleusercontent.com',
+  'streetviewpixels-pa.googleapis.com',
+  'places.googleapis.com',
+  'maps.googleapis.com',
+]);
+
+function isOptimizedHost(url: string): boolean {
+  try {
+    return OPTIMIZED_HOSTS.has(new URL(url).hostname);
+  } catch {
+    return false;
+  }
+}
 
 interface PhotoGalleryGridProps {
   photos: string[];
@@ -25,6 +43,14 @@ export default function PhotoGalleryGrid({ photos, listingName }: PhotoGalleryGr
       ? 'aspect-video'
       : 'aspect-video';
 
+  // Tell the browser how wide each image will render so it picks the right srcset size
+  const imageSizes =
+    photos.length === 1
+      ? '100vw'
+      : photos.length === 2
+      ? '50vw'
+      : '(max-width: 640px) 50vw, 33vw';
+
   return (
     <>
       <div className={`${gridClass} gap-3`}>
@@ -32,14 +58,17 @@ export default function PhotoGalleryGrid({ photos, listingName }: PhotoGalleryGr
           <button
             key={i}
             onClick={() => setLightboxIndex(i)}
-            className={`${aspectClass} rounded-xl overflow-hidden bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#22C55E] focus:ring-offset-2`}
+            className={`${aspectClass} relative rounded-xl overflow-hidden bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#22C55E] focus:ring-offset-2`}
             aria-label={`View photo ${i + 1}`}
           >
-            <img
+            <Image
               src={photo}
               alt={`${listingName} photo ${i + 1}`}
-              className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+              fill
+              sizes={imageSizes}
+              className="object-cover hover:scale-105 transition-transform duration-300"
               loading="lazy"
+              unoptimized={!isOptimizedHost(photo)}
             />
           </button>
         ))}
