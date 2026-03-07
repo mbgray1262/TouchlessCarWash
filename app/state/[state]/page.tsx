@@ -31,7 +31,7 @@ interface StatePageProps {
 const STATE_NICKNAMES: Record<string, string> = {
   AL: 'the Heart of Dixie', AK: 'the Last Frontier', AZ: 'the Grand Canyon State',
   AR: 'the Natural State', CA: 'the Golden State', CO: 'the Centennial State',
-  CT: 'the Constitution State', DE: 'the First State', FL: 'the Sunshine State',
+  CT: 'the Constitution State', DE: 'the First State', DC: 'the Nation\'s Capital', FL: 'the Sunshine State',
   GA: 'the Peach State', HI: 'the Aloha State', ID: 'the Gem State',
   IL: 'the Prairie State', IN: 'the Hoosier State', IA: 'the Hawkeye State',
   KS: 'the Sunflower State', KY: 'the Bluegrass State', LA: 'the Pelican State',
