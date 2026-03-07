@@ -183,9 +183,13 @@ export default function DiscoverPage() {
       }
       setImportResults(results);
 
+      const parts: string[] = [`Imported ${data.imported_count} listing${data.imported_count !== 1 ? 's' : ''}.`];
+      if (data.skipped_count > 0) parts.push(`${data.skipped_count} already in directory.`);
+      if (data.skipped_closed_count > 0) parts.push(`${data.skipped_closed_count} closed.`);
+      if (data.error_count > 0) parts.push(`${data.error_count} error${data.error_count !== 1 ? 's' : ''}.`);
       showToast(
-        'success',
-        `Imported ${data.imported_count} listings. ${data.skipped_count} already existed. ${data.error_count} errors.`,
+        data.imported_count > 0 ? 'success' : 'error',
+        parts.join(' '),
       );
 
       // Mark imported places as existing in results
