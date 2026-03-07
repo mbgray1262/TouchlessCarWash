@@ -369,7 +369,7 @@ export default function DiscoverPage() {
 
             {/* Results List */}
             <div className="space-y-2">
-              {searchResults.results.map((place) => (
+              {searchResults.results.filter((place) => !place.is_existing).map((place) => (
                 <div
                   key={place.google_id}
                   className={`flex items-center gap-4 p-4 rounded-xl border transition-colors ${
