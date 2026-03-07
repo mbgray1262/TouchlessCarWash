@@ -7,7 +7,16 @@ import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { US_STATES, getStateName, slugify } from '@/lib/constants';
 import { ListingCard } from '@/components/ListingCard';
 import { Pagination, PAGE_SIZE } from '@/components/Pagination';
+import { SearchFilters } from '@/components/SearchFilters';
 import type { Metadata } from 'next';
+
+interface Filter {
+  id: number;
+  name: string;
+  slug: string;
+  category: string;
+  icon: string | null;
+}
 
 interface CityPageProps {
   params: {
@@ -16,6 +25,7 @@ interface CityPageProps {
   };
   searchParams: {
     page?: string;
+    filters?: string;
   };
 }
 
@@ -54,6 +64,50 @@ const getCityDescription = cache(async (stateCode: string, cityName: string): Pr
     .maybeSingle();
   return data?.description ?? null;
 });
+
+const getFilters = cache(async (): Promise<Filter[]> => {
+  const { data } = await supabase
+    .from('filters')
+    .select('id, name, slug, category, icon')
+    .order('sort_order');
+  return (data as Filter[]) ?? [];
+});
+
+/** Get listing IDs that match ALL of the given filter slugs */
+async function getFilteredListingIds(filterSlugs: string[], allFilters: Filter[]): Promise<Set<string> | null> {
+  if (filterSlugs.length === 0) return null;
+
+  const filterIds = filterSlugs
+    .map(slug => allFilters.find(f => f.slug === slug)?.id)
+    .filter((id): id is number => id != null);
+
+  if (filterIds.length === 0) return null;
+
+  const allRows: { listing_id: string }[] = [];
+  let offset = 0;
+  const BATCH = 1000;
+  while (true) {
+    const { data } = await supabase
+      .from('listing_filters')
+      .select('listing_id')
+      .in('filter_id', filterIds)
+      .range(offset, offset + BATCH - 1);
+    if (!data || data.length === 0) break;
+    allRows.push(...(data as { listing_id: string }[]));
+    if (data.length < BATCH) break;
+    offset += BATCH;
+  }
+
+  const idCounts: Record<string, number> = {};
+  for (const row of allRows) {
+    idCounts[row.listing_id] = (idCounts[row.listing_id] ?? 0) + 1;
+  }
+  return new Set(
+    Object.entries(idCounts)
+      .filter(([, count]) => count === filterIds.length)
+      .map(([id]) => id)
+  );
+}
 
 async function getCitiesInState(stateCode: string, excludeCitySlug: string): Promise<{ city: string; count: number; slug: string }[]> {
   const { data, error } = await supabase.rpc('cities_in_state_with_counts', { p_state: stateCode });
@@ -107,18 +161,30 @@ export default async function CityPage({ params, searchParams }: CityPageProps) 
 
   const stateName = getStateName(stateCode!);
   const cityName = unslugCity(params.city);
-  const [listings, nearbyCities, cityDescription] = await Promise.all([
+  const activeFilterSlugs = searchParams.filters
+    ? searchParams.filters.split(',').filter(Boolean)
+    : [];
+
+  const [allListings, nearbyCities, cityDescription, allFilters] = await Promise.all([
     getCityListings(stateCode!, cityName),
     getCitiesInState(stateCode!, params.city),
     getCityDescription(stateCode!, cityName),
+    getFilters(),
   ]);
+
+  // Apply filters client-side (city pages fetch all listings)
+  const qualifiedIds = await getFilteredListingIds(activeFilterSlugs, allFilters);
+  const hasActiveFilters = activeFilterSlugs.length > 0;
+  const listings = qualifiedIds !== null
+    ? allListings.filter(l => qualifiedIds.has(l.id))
+    : allListings;
 
   const currentPage = Math.max(1, parseInt(searchParams.page ?? '1', 10) || 1);
   const totalPages = Math.ceil(listings.length / PAGE_SIZE);
   const page = Math.min(currentPage, Math.max(totalPages, 1));
   const paginatedListings = listings.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  if (listings.length === 0) {
+  if (allListings.length === 0) {
     return (
       <div className="min-h-screen py-12">
         <div className="container mx-auto px-4 max-w-6xl">
@@ -141,30 +207,31 @@ export default async function CityPage({ params, searchParams }: CityPageProps) 
     );
   }
 
-  const listingsWithRating = listings.filter(l => l.rating != null && l.rating > 0);
+  // FAQ data always uses the full unfiltered listings
+  const listingsWithRating = allListings.filter(l => l.rating != null && l.rating > 0);
   const topRatingValue = listingsWithRating.length > 0 ? Math.max(...listingsWithRating.map(l => l.rating)) : null;
   const topRatedListings = topRatingValue != null
     ? listingsWithRating.filter(l => l.rating === topRatingValue)
     : [];
 
-  const listingsWithReviews = listings.filter(l => l.review_count != null && l.review_count > 0);
+  const listingsWithReviews = allListings.filter(l => l.review_count != null && l.review_count > 0);
   const topReviewCount = listingsWithReviews.length > 0 ? Math.max(...listingsWithReviews.map(l => l.review_count)) : null;
   const mostReviewedListings = topReviewCount != null
     ? listingsWithReviews.filter(l => l.review_count === topReviewCount)
     : [];
 
-  const topRated = listingsWithRating.length > 0 ? listingsWithRating[0] : listings[0];
+  const topRated = listingsWithRating.length > 0 ? listingsWithRating[0] : allListings[0];
 
   function buildHighestRatedAnswer(): string {
-    if (listings.length === 1) {
-      const l = listings[0];
+    if (allListings.length === 1) {
+      const l = allListings[0];
       if (l.rating != null && l.rating > 0) {
         return `${l.name} is the touchless car wash in ${cityName} with a ${l.rating}-star rating.`;
       }
       return `${l.name} is the touchless car wash in ${cityName}.`;
     }
     if (topRatedListings.length === 0) {
-      return `None of the ${listings.length} touchless car washes in ${cityName} currently have ratings. Check each listing for the most up-to-date information.`;
+      return `None of the ${allListings.length} touchless car washes in ${cityName} currently have ratings. Check each listing for the most up-to-date information.`;
     }
     if (topRatedListings.length === 1) {
       return `${topRatedListings[0].name} is the top-rated touchless car wash in ${cityName} with a ${topRatingValue}-star rating.`;
@@ -175,15 +242,15 @@ export default async function CityPage({ params, searchParams }: CityPageProps) 
   }
 
   function buildMostReviewedAnswer(): string {
-    if (listings.length === 1) {
-      const l = listings[0];
+    if (allListings.length === 1) {
+      const l = allListings[0];
       if (l.review_count != null && l.review_count > 0) {
         return `${l.name} is the only touchless car wash in ${cityName} and has ${l.review_count} review${l.review_count !== 1 ? 's' : ''}.`;
       }
       return `${l.name} is the only touchless car wash listed in ${cityName}. It does not yet have any reviews.`;
     }
     if (mostReviewedListings.length === 0) {
-      return `None of the ${listings.length} touchless car washes in ${cityName} currently have reviews. Check each listing for the most up-to-date information.`;
+      return `None of the ${allListings.length} touchless car washes in ${cityName} currently have reviews. Check each listing for the most up-to-date information.`;
     }
     if (mostReviewedListings.length === 1) {
       return `${mostReviewedListings[0].name} has the most reviews of any touchless car wash in ${cityName} with ${topReviewCount} review${topReviewCount !== 1 ? 's' : ''}.`;
@@ -215,7 +282,7 @@ export default async function CityPage({ params, searchParams }: CityPageProps) 
     ],
   };
 
-  const localBusinessJsonLd = listings.map((listing) => ({
+  const localBusinessJsonLd = allListings.map((listing) => ({
     '@context': 'https://schema.org',
     '@type': 'AutoWash',
     name: listing.name,
@@ -242,12 +309,12 @@ export default async function CityPage({ params, searchParams }: CityPageProps) 
         name: `How many touchless car washes are in ${cityName}?`,
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `There are ${listings.length} verified touchless car wash${listings.length !== 1 ? 'es' : ''} in ${cityName}, ${stateName}.`,
+          text: `There are ${allListings.length} verified touchless car wash${allListings.length !== 1 ? 'es' : ''} in ${cityName}, ${stateName}.`,
         },
       },
       {
         '@type': 'Question',
-        name: listings.length === 1
+        name: allListings.length === 1
           ? `What is the touchless car wash in ${cityName}?`
           : `What is the highest rated touchless car wash in ${cityName}?`,
         acceptedAnswer: {
@@ -257,7 +324,7 @@ export default async function CityPage({ params, searchParams }: CityPageProps) 
       },
       {
         '@type': 'Question',
-        name: listings.length === 1
+        name: allListings.length === 1
           ? `How many reviews does the touchless car wash in ${cityName} have?`
           : `Which touchless car wash in ${cityName} has the most reviews?`,
         acceptedAnswer: {
@@ -338,7 +405,7 @@ export default async function CityPage({ params, searchParams }: CityPageProps) 
             Touchless Car Washes in {cityName}, {stateCode}
           </h1>
           <p className="text-white/80 text-lg">
-            {listings.length} verified touchless car wash{listings.length !== 1 ? 'es' : ''} in {cityName}
+            {allListings.length} verified touchless car wash{allListings.length !== 1 ? 'es' : ''} in {cityName}
           </p>
         </div>
       </div>
@@ -350,7 +417,7 @@ export default async function CityPage({ params, searchParams }: CityPageProps) 
             {cityDescription ? cityDescription : (
               <>
                 Find the best {introSynonyms} car washes in {cityName}, {stateName}. We&apos;ve verified{' '}
-                <strong>{listings.length} location{listings.length !== 1 ? 's' : ''}</strong> that offer brushless,
+                <strong>{allListings.length} location{allListings.length !== 1 ? 's' : ''}</strong> that offer brushless,
                 contactless washing to keep your car&apos;s paint and finish scratch-free.
                 {topRated.rating && (
                   <> Top-rated option: <strong>{topRated.name}</strong> ({topRated.rating} stars).</>
@@ -360,20 +427,42 @@ export default async function CityPage({ params, searchParams }: CityPageProps) 
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {paginatedListings.map((listing) => (
-            <ListingCard
-              key={listing.id}
-              listing={listing}
-              href={`/state/${params.state}/${params.city}/${listing.slug}`}
-            />
-          ))}
-        </div>
+        {allListings.length > 1 && (
+          <SearchFilters
+            filters={allFilters}
+            activeFilterSlugs={activeFilterSlugs}
+            currentQuery=""
+            baseHref={`/state/${params.state}/${params.city}`}
+          />
+        )}
+
+        {hasActiveFilters && (
+          <p className="text-sm text-gray-500 mb-4">
+            Showing {listings.length} of {allListings.length} listing{allListings.length !== 1 ? 's' : ''}
+          </p>
+        )}
+
+        {paginatedListings.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {paginatedListings.map((listing) => (
+              <ListingCard
+                key={listing.id}
+                listing={listing}
+                href={`/state/${params.state}/${params.city}/${listing.slug}`}
+              />
+            ))}
+          </div>
+        ) : hasActiveFilters ? (
+          <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-200">
+            <p className="text-gray-500 text-lg mb-2">No listings match the selected filters in {cityName}.</p>
+            <p className="text-gray-400 text-sm">Try removing some filters to see more results.</p>
+          </div>
+        ) : null}
 
         <Pagination
           currentPage={page}
           totalItems={listings.length}
-          baseHref={`/state/${params.state}/${params.city}`}
+          baseHref={hasActiveFilters ? `/state/${params.state}/${params.city}?filters=${activeFilterSlugs.join(',')}` : `/state/${params.state}/${params.city}`}
         />
 
         <div className="mt-10 text-center">
@@ -410,13 +499,13 @@ export default async function CityPage({ params, searchParams }: CityPageProps) 
                 How many touchless car washes are in {cityName}?
               </h3>
               <p className="text-gray-600 text-sm leading-relaxed">
-                There are <strong>{listings.length}</strong> verified touchless car wash{listings.length !== 1 ? 'es' : ''} in {cityName}, {stateName}.
+                There are <strong>{allListings.length}</strong> verified touchless car wash{allListings.length !== 1 ? 'es' : ''} in {cityName}, {stateName}.
               </p>
             </div>
 
             <div className="p-5 bg-gray-50 rounded-xl border border-gray-200">
               <h3 className="font-semibold text-[#0F2744] mb-2">
-                {listings.length === 1
+                {allListings.length === 1
                   ? `What is the touchless car wash in ${cityName}?`
                   : `What is the highest rated touchless car wash in ${cityName}?`}
               </h3>
@@ -425,7 +514,7 @@ export default async function CityPage({ params, searchParams }: CityPageProps) 
 
             <div className="p-5 bg-gray-50 rounded-xl border border-gray-200">
               <h3 className="font-semibold text-[#0F2744] mb-2">
-                {listings.length === 1
+                {allListings.length === 1
                   ? `How many reviews does the touchless car wash in ${cityName} have?`
                   : `Which touchless car wash in ${cityName} has the most reviews?`}
               </h3>
