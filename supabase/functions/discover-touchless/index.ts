@@ -499,7 +499,8 @@ interface PlaceResult {
 const TOUCHLESS_KEYWORDS = [
   'touchless', 'touch-free', 'touchfree', 'touch free',
   'brushless', 'brush-free', 'brushfree', 'brush free',
-  'laser wash', 'laserwash',
+  'laser wash', 'laserwash', 'laser car wash',
+  'laser',  // LaserWash is a well-known touchless brand
   'no-touch', 'no touch', 'notouch',
   'frictionless', 'friction-free',
   'soft-touch', 'soft touch', // technically uses brushes, but foam/cloth
