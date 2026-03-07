@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   ArrowLeft, Search, MapPin, Loader2, CheckCircle2, XCircle,
   ChevronRight, Globe, Star, ExternalLink, Download, Map,
-  AlertTriangle, ShieldCheck, ShieldQuestion, ShieldX,
+  AlertTriangle, ShieldCheck, ShieldQuestion, ShieldX, X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -210,6 +210,28 @@ export default function DiscoverPage() {
       showToast('error', err instanceof Error ? err.message : 'Import failed');
     } finally {
       setImporting(false);
+    }
+  }
+
+  async function rejectPlace(googleId: string, name: string) {
+    // Optimistic UI: immediately remove from results
+    if (searchResults) {
+      setSearchResults({
+        ...searchResults,
+        results: searchResults.results.filter((r) => r.google_id !== googleId),
+      });
+    }
+    // Also deselect if selected
+    setSelectedPlaces((prev) => {
+      const next = new Set(prev);
+      next.delete(googleId);
+      return next;
+    });
+    try {
+      await callEdgeFunction('reject', { google_id: googleId, name });
+    } catch (err) {
+      console.error('Failed to reject place:', err);
+      showToast('error', 'Failed to dismiss place');
     }
   }
 
@@ -452,6 +474,15 @@ export default function DiscoverPage() {
                       <ExternalLink className="w-4 h-4" />
                     </a>
                   )}
+
+                  {/* Reject / Not touchless */}
+                  <button
+                    onClick={() => rejectPlace(place.google_id, place.name)}
+                    className="text-gray-300 hover:text-red-500 transition-colors shrink-0"
+                    title="Not touchless — dismiss"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               ))}
             </div>
