@@ -861,9 +861,10 @@ async function buildListingData(
       ? `https://maps.googleapis.com/maps/api/streetview?size=800x400&location=${lat},${lng}&key=${googleApiKey}`
       : null;
 
-  // Touchless analysis
+  // Touchless analysis — admin has manually verified before importing,
+  // so always mark as touchless. Confidence is still useful for description text.
   const confidence = touchlessConfidence(name);
-  const isTouchless = confidence === 'high' ? true : confidence === 'low' ? false : null;
+  const isTouchless = true;
 
   // Amenities & wash types
   const amenities = inferAmenities(name, details.types || []);
@@ -926,11 +927,7 @@ async function buildListingData(
     price_range: priceRange,
     extracted_data: Object.keys(extractedData).length > 0 ? extractedData : null,
     crawl_status: 'classified',
-    crawl_notes: isTouchless === true
-      ? 'Imported from Google Places. Touchless confirmed by business name.'
-      : isTouchless === null
-        ? 'Imported from Google Places. Touchless status needs verification.'
-        : 'Imported from Google Places. May not be touchless — needs review.',
+    crawl_notes: 'Imported from Google Places. Touchless verified by admin.',
   };
 }
 
