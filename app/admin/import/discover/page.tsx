@@ -462,18 +462,29 @@ export default function DiscoverPage() {
                     </div>
                   )}
 
-                  {/* Website link (prefer website, fall back to Google Maps) */}
-                  {(place.website || place.google_maps_url) && (
+                  {/* Website link */}
+                  {place.website ? (
                     <a
-                      href={place.website || place.google_maps_url!}
+                      href={place.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 text-xs truncate max-w-[180px] shrink-0 flex items-center gap-1"
+                      title={place.website}
+                    >
+                      <Globe className="w-3.5 h-3.5 shrink-0" />
+                      {new URL(place.website).hostname.replace(/^www\./, '')}
+                    </a>
+                  ) : place.google_maps_url ? (
+                    <a
+                      href={place.google_maps_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-gray-400 hover:text-blue-600 transition-colors shrink-0"
-                      title={place.website ? 'Visit website' : 'View on Google Maps'}
+                      title="View on Google Maps"
                     >
                       <ExternalLink className="w-4 h-4" />
                     </a>
-                  )}
+                  ) : null}
 
                   {/* Reject / Not touchless */}
                   <button

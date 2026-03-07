@@ -668,6 +668,29 @@ async function searchPlaces(
   return filtered;
 }
 
+/** Lightweight fetch: only grabs websiteUri for a place (cheaper than full details). */
+async function fetchWebsiteUri(
+  googleApiKey: string,
+  placeId: string,
+): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://places.googleapis.com/v1/${placeId}`,
+      {
+        headers: {
+          'X-Goog-Api-Key': googleApiKey,
+          'X-Goog-FieldMask': 'websiteUri',
+        },
+      },
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.websiteUri || null;
+  } catch {
+    return null;
+  }
+}
+
 async function getPlaceDetails(
   googleApiKey: string,
   placeId: string,
@@ -1194,6 +1217,20 @@ Deno.serve(async (req: Request) => {
           touchless_confidence: confidence,
         };
       });
+
+      // Fetch websites for non-existing results that are missing one
+      // (Text Search often omits websiteUri; Place Details reliably returns it)
+      const needWebsite = results.filter((r) => !r.website && !r.is_existing);
+      if (needWebsite.length > 0) {
+        const websiteResults = await Promise.all(
+          needWebsite.map((r) => fetchWebsiteUri(googleApiKey, r.google_id)),
+        );
+        for (let i = 0; i < needWebsite.length; i++) {
+          if (websiteResults[i]) {
+            needWebsite[i].website = websiteResults[i];
+          }
+        }
+      }
 
       // Sort: high confidence first, then medium, then low
       results.sort((a, b) => confidenceOrder[a.touchless_confidence] - confidenceOrder[b.touchless_confidence]);
