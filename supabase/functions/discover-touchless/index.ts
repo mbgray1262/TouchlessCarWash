@@ -915,16 +915,17 @@ async function buildListingData(
 
   if (details.addressComponents?.length) {
     const comps = details.addressComponents;
-    const streetNumber = comps.find((c) => c.types.includes('street_number'))?.longText || '';
-    const route = comps.find((c) => c.types.includes('route'))?.longText || '';
+    const findComp = (type: string) => comps.find((c) => c.types?.includes(type));
+    const streetNumber = findComp('street_number')?.longText || '';
+    const route = findComp('route')?.longText || '';
     address = [streetNumber, route].filter(Boolean).join(' ');
     city =
-      comps.find((c) => c.types.includes('locality'))?.longText ||
-      comps.find((c) => c.types.includes('sublocality'))?.longText ||
+      findComp('locality')?.longText ||
+      findComp('sublocality')?.longText ||
       '';
     state =
-      comps.find((c) => c.types.includes('administrative_area_level_1'))?.shortText || '';
-    zip = comps.find((c) => c.types.includes('postal_code'))?.longText || '';
+      findComp('administrative_area_level_1')?.shortText || '';
+    zip = findComp('postal_code')?.longText || '';
   } else if (details.formattedAddress) {
     const parsed = parseAddress(details.formattedAddress);
     address = parsed.address;
