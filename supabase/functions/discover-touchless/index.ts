@@ -1145,11 +1145,11 @@ Deno.serve(async (req: Request) => {
       const [{ data: existingByGoogleId }, { data: existingByPlaceId }, { data: rejectedRows }] = await Promise.all([
         supabase
           .from('listings')
-          .select('google_id, name, city, state, slug')
+          .select('google_id, name, city, state, slug, is_touchless')
           .in('google_id', googleIds.length > 0 ? googleIds : ['__none__']),
         supabase
           .from('listings')
-          .select('google_place_id, name, city, state, slug')
+          .select('google_place_id, name, city, state, slug, is_touchless')
           .in('google_place_id', placeIds.length > 0 ? placeIds : ['__none__']),
         supabase
           .from('discovery_rejections')
@@ -1157,7 +1157,9 @@ Deno.serve(async (req: Request) => {
       ]);
       const rejectedSet = new Set((rejectedRows || []).map((r: { google_id: string }) => r.google_id));
 
-      const existingMap = new Map<string, { name: string; city: string; state: string; slug: string }>();
+      // Track existing listings + whether they're touchless
+      // Non-touchless existing listings will be hidden from results entirely
+      const existingMap = new Map<string, { name: string; city: string; state: string; slug: string; is_touchless: boolean | null }>();
       for (const row of existingByGoogleId || []) {
         if (row.google_id) existingMap.set(row.google_id, row);
       }
@@ -1181,7 +1183,7 @@ Deno.serve(async (req: Request) => {
           if (!name || !parsed?.city || !parsed?.state) return null;
           const { data } = await supabase
             .from('listings')
-            .select('name, city, state, slug')
+            .select('name, city, state, slug, is_touchless')
             .ilike('name', name)
             .ilike('city', parsed.city)
             .eq('state', parsed.state)
@@ -1189,34 +1191,42 @@ Deno.serve(async (req: Request) => {
           return data ? { google_id: place.id, listing: data } : null;
         }),
       );
-      const nameMatchMap = new Map<string, { name: string; city: string; state: string; slug: string }>();
+      const nameMatchMap = new Map<string, { name: string; city: string; state: string; slug: string; is_touchless: boolean | null }>();
       for (const match of nameChecks) {
         if (match) nameMatchMap.set(match.google_id, match.listing);
       }
 
       // Build results with touchless confidence scoring
+      // Hide non-touchless existing listings — they clutter the discover page
       const confidenceOrder = { high: 0, medium: 1, low: 2 };
-      const results = places.map((place) => {
-        const existing = existingMap.get(place.id) || nameMatchMap.get(place.id) || null;
-        const isRejected = rejectedSet.has(place.id);
-        const name = place.displayName?.text || 'Unknown';
-        const confidence = touchlessConfidence(name);
-        return {
-          google_id: place.id,
-          name,
-          address: place.formattedAddress || '',
-          location: place.location || null,
-          rating: place.rating || 0,
-          review_count: place.userRatingCount || 0,
-          business_status: place.businessStatus || 'OPERATIONAL',
-          google_maps_url: place.googleMapsUri || null,
-          website: place.websiteUri || null,
-          types: place.types || [],
-          is_existing: !!existing || isRejected,
-          existing_listing: existing || null,
-          touchless_confidence: confidence,
-        };
-      });
+      const results = places
+        .filter((place) => {
+          const existing = existingMap.get(place.id) || nameMatchMap.get(place.id) || null;
+          // If it exists in DB but is NOT touchless, hide it from discover results
+          if (existing && existing.is_touchless !== true) return false;
+          return true;
+        })
+        .map((place) => {
+          const existing = existingMap.get(place.id) || nameMatchMap.get(place.id) || null;
+          const isRejected = rejectedSet.has(place.id);
+          const name = place.displayName?.text || 'Unknown';
+          const confidence = touchlessConfidence(name);
+          return {
+            google_id: place.id,
+            name,
+            address: place.formattedAddress || '',
+            location: place.location || null,
+            rating: place.rating || 0,
+            review_count: place.userRatingCount || 0,
+            business_status: place.businessStatus || 'OPERATIONAL',
+            google_maps_url: place.googleMapsUri || null,
+            website: place.websiteUri || null,
+            types: place.types || [],
+            is_existing: !!existing || isRejected,
+            existing_listing: existing || null,
+            touchless_confidence: confidence,
+          };
+        });
 
       // Fetch websites for non-existing results that are missing one
       // (Text Search often omits websiteUri; Place Details reliably returns it)
