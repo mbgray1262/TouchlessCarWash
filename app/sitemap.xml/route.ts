@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { getStateSlug, slugify } from '@/lib/constants';
 import { METRO_AREAS } from '@/lib/metro-areas';
+import { FEATURES } from '@/lib/features';
 
 export async function GET() {
   const baseUrl = 'https://touchlesscarwashfinder.com';
@@ -97,6 +98,36 @@ export async function GET() {
   </url>`;
   });
 
+  // Feature pages
+  const featureIndexUrl = `  <url>
+    <loc>${baseUrl}/features</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`;
+
+  const featureHubUrls = FEATURES.map((f) => `  <url>
+    <loc>${baseUrl}/features/${f.slug}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`);
+
+  const featureStateUrls: string[] = [];
+  for (const feature of FEATURES) {
+    const { data } = await supabase.rpc('feature_state_counts', { p_filter_slug: feature.slug });
+    if (data) {
+      for (const row of data as { state: string; count: number }[]) {
+        featureStateUrls.push(`  <url>
+    <loc>${baseUrl}/features/${feature.slug}/${getStateSlug(row.state)}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`);
+      }
+    }
+  }
+
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
@@ -130,6 +161,9 @@ export async function GET() {
     <priority>0.9</priority>
   </url>
 ${bestOfUrls.join('\n')}
+${featureIndexUrl}
+${featureHubUrls.join('\n')}
+${featureStateUrls.join('\n')}
 ${stateUrls.join('\n')}
 ${cityUrls.join('\n')}
 ${listingUrls.join('\n')}
