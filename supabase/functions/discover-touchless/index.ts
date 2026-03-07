@@ -614,12 +614,16 @@ async function searchPlaces(
   const allResults: PlaceResult[] = [];
   const seenIds = new Set<string>();
 
-  // Search with multiple touchless-specific queries for better coverage
+  // Search with multiple queries for better coverage
+  // Touchless-specific queries first, then a broad "car wash" query
+  // to catch businesses that are touchless but don't use that keyword
   const queries = [
     `touchless car wash ${query}`,
     `brushless car wash ${query}`,
     `touch free car wash ${query}`,
     `laser wash ${query}`,
+    `no touch car wash ${query}`,
+    `car wash ${query}`,
   ];
 
   for (const q of queries) {
