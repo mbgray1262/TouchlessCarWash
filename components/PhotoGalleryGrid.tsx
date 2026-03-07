@@ -28,47 +28,59 @@ interface PhotoGalleryGridProps {
 
 export default function PhotoGalleryGrid({ photos, listingName }: PhotoGalleryGridProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [failedPhotos, setFailedPhotos] = useState<Set<number>>(new Set());
+
+  const visiblePhotos = photos.filter((_, i) => !failedPhotos.has(i));
+  // Map from visible index back to original index (for lightbox)
+  const visibleToOriginal = photos
+    .map((_, i) => i)
+    .filter((i) => !failedPhotos.has(i));
 
   const gridClass =
-    photos.length === 1
+    visiblePhotos.length === 1
       ? 'grid grid-cols-1'
-      : photos.length === 2
+      : visiblePhotos.length === 2
       ? 'grid grid-cols-2'
       : 'grid grid-cols-2 sm:grid-cols-3';
 
   const aspectClass =
-    photos.length === 1
+    visiblePhotos.length === 1
       ? 'aspect-video sm:aspect-[21/9]'
-      : photos.length === 2
+      : visiblePhotos.length === 2
       ? 'aspect-video'
       : 'aspect-video';
 
   // Tell the browser how wide each image will render so it picks the right srcset size
   const imageSizes =
-    photos.length === 1
+    visiblePhotos.length === 1
       ? '100vw'
-      : photos.length === 2
+      : visiblePhotos.length === 2
       ? '50vw'
       : '(max-width: 640px) 50vw, 33vw';
+
+  if (visiblePhotos.length === 0) return null;
 
   return (
     <>
       <div className={`${gridClass} gap-3`}>
-        {photos.map((photo, i) => (
+        {visiblePhotos.map((photo, vi) => (
           <button
-            key={i}
-            onClick={() => setLightboxIndex(i)}
+            key={visibleToOriginal[vi]}
+            onClick={() => setLightboxIndex(visibleToOriginal[vi])}
             className={`${aspectClass} relative rounded-xl overflow-hidden bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#22C55E] focus:ring-offset-2`}
-            aria-label={`View photo ${i + 1}`}
+            aria-label={`View photo ${vi + 1}`}
           >
             <Image
               src={photo}
-              alt={`${listingName} photo ${i + 1}`}
+              alt={`${listingName} photo ${vi + 1}`}
               fill
               sizes={imageSizes}
               className="object-cover hover:scale-105 transition-transform duration-300"
               loading="lazy"
               unoptimized={!isOptimizedHost(photo)}
+              onError={() => {
+                setFailedPhotos((prev) => new Set(prev).add(visibleToOriginal[vi]));
+              }}
             />
           </button>
         ))}
@@ -76,11 +88,11 @@ export default function PhotoGalleryGrid({ photos, listingName }: PhotoGalleryGr
 
       {lightboxIndex !== null && (
         <PhotoLightbox
-          photos={photos}
-          index={lightboxIndex}
+          photos={visiblePhotos}
+          index={visibleToOriginal.indexOf(lightboxIndex)}
           listingName={listingName}
           onClose={() => setLightboxIndex(null)}
-          onNavigate={setLightboxIndex}
+          onNavigate={(vi) => setLightboxIndex(visibleToOriginal[vi])}
         />
       )}
     </>

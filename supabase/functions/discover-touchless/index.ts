@@ -776,6 +776,66 @@ function extractReviewHighlights(
     .map((r) => r.text!.text.slice(0, 200));
 }
 
+/** Review keywords used for touchless evidence matching in review_snippets. */
+const REVIEW_TOUCHLESS_KEYWORDS = [
+  'touchless', 'touch-free', 'touchfree', 'touch free',
+  'brushless', 'brush-free', 'brushfree', 'brush free',
+  'no brush', 'no-brush', 'no brushes',
+  'laser wash', 'laserwash',
+  'no-touch', 'no touch', 'notouch',
+  'frictionless', 'friction-free',
+  'soft-touch', 'soft touch',
+];
+
+/** Extract touchless review snippets from Google reviews and insert into review_snippets table. */
+async function insertReviewSnippets(
+  supabase: ReturnType<typeof createClient>,
+  listingId: string,
+  reviews: PlaceResult['reviews'],
+): Promise<number> {
+  if (!reviews?.length) return 0;
+
+  const snippets: Array<Record<string, unknown>> = [];
+
+  for (const review of reviews) {
+    const text = review.text?.text || review.originalText?.text;
+    if (!text) continue;
+
+    const lower = text.toLowerCase();
+    const matchedKeywords = REVIEW_TOUCHLESS_KEYWORDS.filter((kw) => lower.includes(kw));
+    if (matchedKeywords.length === 0) continue;
+
+    snippets.push({
+      listing_id: listingId,
+      reviewer_name: review.authorAttribution?.displayName || null,
+      rating: review.rating || null,
+      review_text: text.slice(0, 500),
+      touchless_keywords: matchedKeywords,
+      is_touchless_evidence: true,
+      source: 'google_places',
+    });
+  }
+
+  if (snippets.length === 0) return 0;
+
+  const { error } = await supabase.from('review_snippets').insert(snippets);
+  if (error) {
+    console.error('Failed to insert review snippets:', error.message);
+    return 0;
+  }
+
+  // Update listing with review count and status
+  await supabase
+    .from('listings')
+    .update({
+      review_extract_status: 'extracted',
+      touchless_review_count: snippets.length,
+    })
+    .eq('id', listingId);
+
+  return snippets.length;
+}
+
 /** Generate a description for the listing. */
 function generateDescription(
   name: string,
@@ -916,6 +976,7 @@ async function buildListingData(
     is_approved: true,
     is_featured: false,
     google_id: details.id,
+    google_place_id: details.id?.replace(/^places\//, '') || null,
     google_maps_url: details.googleMapsUri || null,
     google_category: details.primaryType || null,
     google_subtypes: details.types?.join(', ') || null,
@@ -1236,6 +1297,16 @@ Deno.serve(async (req: Request) => {
         }
       }
 
+      // ── Extract review snippets with touchless evidence ──
+      let reviewSnippetsInserted = 0;
+      try {
+        reviewSnippetsInserted = await insertReviewSnippets(
+          supabase, inserted.id, details.reviews,
+        );
+      } catch {
+        // Review snippet extraction is non-fatal
+      }
+
       // ── Sync filter chips (touchless, amenities → listing_filters) ──
       let filtersSynced = false;
       try {
@@ -1257,6 +1328,7 @@ Deno.serve(async (req: Request) => {
           listing: inserted,
           photos_rehosted: photoResult.photosRehosted,
           hero_set: photoResult.heroSet,
+          review_snippets_inserted: reviewSnippetsInserted,
           filters_synced: filtersSynced,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -1360,6 +1432,13 @@ Deno.serve(async (req: Request) => {
               heroSet = photoResult.heroSet;
             } catch (e) {
               errors.push(`${name}: photo processing failed: ${(e as Error).message}`);
+            }
+
+            // ── Extract review snippets with touchless evidence ──
+            try {
+              await insertReviewSnippets(supabase, inserted.id, details.reviews);
+            } catch {
+              // Review snippet extraction is non-fatal
             }
 
             // ── Sync filter chips (touchless, amenities → listing_filters) ──

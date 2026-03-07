@@ -20,6 +20,8 @@ import type { Metadata } from 'next';
 
 const ListingMap = dynamic(() => import('@/components/ListingMap'), { ssr: false });
 
+export const revalidate = 86400; // Re-fetch listing data every 24 hours
+
 const SITE_URL = 'https://touchlesscarwashfinder.com';
 
 interface ListingPageProps {
