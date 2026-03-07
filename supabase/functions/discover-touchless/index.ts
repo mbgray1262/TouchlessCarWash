@@ -526,6 +526,86 @@ function touchlessConfidence(name: string): 'high' | 'medium' | 'low' {
   return 'medium';
 }
 
+// ---------------------------------------------------------------------------
+// Non-car-wash filtering — catches dermatology clinics, restaurants, etc.
+// that slip through because of search terms like "laser wash"
+// ---------------------------------------------------------------------------
+
+/** Google Places types that definitively mark a business as NOT a car wash. */
+const EXCLUDE_PLACE_TYPES = new Set([
+  // Medical / health
+  'doctor', 'dentist', 'hospital', 'health', 'physiotherapist', 'dermatologist',
+  'pharmacy', 'drugstore',
+  // Beauty / personal care
+  'spa', 'beauty_salon', 'hair_care', 'hair_salon',
+  // Animal
+  'veterinary_care',
+  // Professional services
+  'lawyer', 'accounting', 'insurance_agency', 'real_estate_agency',
+  // Food / drink
+  'restaurant', 'cafe', 'bar', 'bakery', 'meal_delivery', 'meal_takeaway', 'food',
+  // Education / worship
+  'school', 'university', 'primary_school', 'secondary_school',
+  'church', 'mosque', 'synagogue',
+  // Finance
+  'bank', 'finance',
+  // Retail (without car_wash)
+  'clothing_store', 'shoe_store', 'jewelry_store',
+  'electronics_store', 'furniture_store', 'home_goods_store',
+  // Entertainment / lodging
+  'gym', 'movie_theater', 'night_club',
+  'lodging', 'hotel', 'motel',
+  // Other services
+  'laundry', 'dry_cleaning',
+  'plumber', 'electrician', 'roofing_contractor', 'painter',
+]);
+
+/** Name keywords that indicate a business is definitely NOT a car wash. */
+const EXCLUDE_NAME_KEYWORDS = [
+  'dermatology', 'derma', 'dental', 'dentist', 'medical', 'clinic', 'hospital',
+  'surgery', 'surgeon', 'orthodont', 'chiropractic', 'physical therapy', 'optom',
+  'pharmacy', 'veterinar', 'animal hospital',
+  'salon', 'barbershop', 'barber', 'nail ', 'nails ', 'tattoo',
+  'restaurant', 'pizza', 'burger', 'cafe', 'coffee', 'bakery', 'grill', 'bistro', 'diner',
+  'church', 'school', 'university', 'academy',
+  'law firm', 'attorney', 'legal service',
+  'insurance', 'real estate', 'realty',
+  'hotel', 'motel',
+  'gym', 'fitness', 'crossfit', 'yoga',
+  'laundromat', 'dry clean',
+  'plumbing', 'electric', 'roofing', 'hvac',
+  'pet grooming', 'dog grooming',
+];
+
+/** Car-wash-related Google Places types. If present, always keep the result. */
+const CARWASH_TYPES = new Set(['car_wash', 'car_repair']);
+
+/** Determines whether a Google Places result is likely a car wash.
+ *  Returns false for clearly unrelated businesses (medical, food, etc.). */
+function isLikelyCarWash(place: PlaceResult): boolean {
+  const types = new Set(place.types || []);
+
+  // If explicitly tagged as a car wash, always keep
+  if (types.has('car_wash')) return true;
+  if (place.primaryType === 'car_wash') return true;
+
+  // If the primary type is a disqualifying category, exclude
+  if (place.primaryType && EXCLUDE_PLACE_TYPES.has(place.primaryType)) return false;
+
+  // If any type is disqualifying (and no car wash type present), exclude
+  for (const t of types) {
+    if (EXCLUDE_PLACE_TYPES.has(t)) return false;
+  }
+
+  // Check business name for disqualifying keywords
+  const lowerName = (place.displayName?.text || '').toLowerCase();
+  for (const kw of EXCLUDE_NAME_KEYWORDS) {
+    if (lowerName.includes(kw)) return false;
+  }
+
+  return true;
+}
+
 async function searchPlaces(
   googleApiKey: string,
   query: string,
@@ -575,7 +655,12 @@ async function searchPlaces(
     }
   }
 
-  return allResults;
+  // Filter out non-car-wash businesses (dermatology clinics, restaurants, etc.)
+  const filtered = allResults.filter(isLikelyCarWash);
+  if (filtered.length < allResults.length) {
+    console.log(`Filtered out ${allResults.length - filtered.length} non-car-wash results`);
+  }
+  return filtered;
 }
 
 async function getPlaceDetails(
