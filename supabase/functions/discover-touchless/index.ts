@@ -969,10 +969,16 @@ Deno.serve(async (req: Request) => {
 
       // Get all existing google_ids from our DB to mark duplicates
       const googleIds = places.map((p) => p.id).filter(Boolean);
-      const { data: existingRows } = await supabase
-        .from('listings')
-        .select('google_id, name, city, state, slug')
-        .in('google_id', googleIds.length > 0 ? googleIds : ['__none__']);
+      const [{ data: existingRows }, { data: rejectedRows }] = await Promise.all([
+        supabase
+          .from('listings')
+          .select('google_id, name, city, state, slug')
+          .in('google_id', googleIds.length > 0 ? googleIds : ['__none__']),
+        supabase
+          .from('discovery_rejections')
+          .select('google_id'),
+      ]);
+      const rejectedSet = new Set((rejectedRows || []).map((r: { google_id: string }) => r.google_id));
 
       const existingMap = new Map<string, { name: string; city: string; state: string; slug: string }>();
       for (const row of existingRows || []) {
@@ -1005,6 +1011,7 @@ Deno.serve(async (req: Request) => {
       const confidenceOrder = { high: 0, medium: 1, low: 2 };
       const results = places.map((place) => {
         const existing = existingMap.get(place.id) || nameMatchMap.get(place.id) || null;
+        const isRejected = rejectedSet.has(place.id);
         const name = place.displayName?.text || 'Unknown';
         const confidence = touchlessConfidence(name);
         return {
@@ -1018,7 +1025,7 @@ Deno.serve(async (req: Request) => {
           google_maps_url: place.googleMapsUri || null,
           website: place.websiteUri || null,
           types: place.types || [],
-          is_existing: !!existing,
+          is_existing: !!existing || isRejected,
           existing_listing: existing || null,
           touchless_confidence: confidence,
         };
@@ -1490,6 +1497,28 @@ Deno.serve(async (req: Request) => {
 
       return new Response(
         JSON.stringify({ success: true, enrichment: enrichResults }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // -----------------------------------------------------------------------
+    // ACTION: reject — mark a discovery as "not touchless" so it won't reappear
+    // -----------------------------------------------------------------------
+    if (action === 'reject') {
+      const googleId = body.google_id as string;
+      const name = body.name as string | undefined;
+      const reason = (body.reason as string) || 'not_touchless';
+      if (!googleId) {
+        return new Response(
+          JSON.stringify({ error: 'Missing google_id' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+      await supabase
+        .from('discovery_rejections')
+        .upsert({ google_id: googleId, name, reason }, { onConflict: 'google_id' });
+      return new Response(
+        JSON.stringify({ success: true }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
