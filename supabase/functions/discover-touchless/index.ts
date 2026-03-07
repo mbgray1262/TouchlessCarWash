@@ -1436,7 +1436,7 @@ Deno.serve(async (req: Request) => {
       const existingSet = new Set((existingRows || []).map((r) => r.google_id));
       const newIds = googleIds.filter((id) => !existingSet.has(id));
 
-      const imported: Array<{ name: string; city: string; state: string; photos_rehosted?: number; hero_set?: boolean; filters_synced?: boolean }> = [];
+      const imported: Array<{ name: string; city: string; state: string; slug: string; photos_rehosted?: number; hero_set?: boolean; filters_synced?: boolean }> = [];
       const errors: string[] = [];
       const skippedDuplicate: string[] = [];
 
@@ -1482,7 +1482,7 @@ Deno.serve(async (req: Request) => {
           const { data: inserted, error: insertError } = await supabase
             .from('listings')
             .insert(listingData)
-            .select('id')
+            .select('id, slug')
             .single();
 
           if (insertError) {
@@ -1524,6 +1524,7 @@ Deno.serve(async (req: Request) => {
               name,
               city: listingData.city as string,
               state: listingData.state as string,
+              slug: inserted.slug as string,
               photos_rehosted: photosRehosted,
               hero_set: heroSet,
               filters_synced: filtersSynced,

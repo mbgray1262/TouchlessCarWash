@@ -63,6 +63,7 @@ interface ImportResult {
   google_id: string;
   status: 'success' | 'error' | 'skipped';
   name?: string;
+  url?: string;
   error?: string;
 }
 
@@ -172,10 +173,13 @@ export default function DiscoverPage() {
 
       const results: ImportResult[] = [];
       for (const imp of data.imported || []) {
+        const stateLower = (imp.state || '').toLowerCase();
+        const citySlug = (imp.city || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
         results.push({
           google_id: '',
           status: 'success',
           name: `${imp.name} (${imp.city}, ${imp.state})`,
+          url: imp.slug ? `/state/${stateLower}/${citySlug}/${imp.slug}` : undefined,
         });
       }
       for (const err of data.errors || []) {
@@ -379,9 +383,21 @@ export default function DiscoverPage() {
                         ) : (
                           <XCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
                         )}
-                        <span className={r.status === 'success' ? 'text-green-700' : 'text-red-600'}>
-                          {r.name || r.error}
-                        </span>
+                        {r.status === 'success' && r.url ? (
+                          <a
+                            href={r.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-green-700 hover:text-green-900 underline underline-offset-2 flex items-center gap-1"
+                          >
+                            {r.name}
+                            <ExternalLink className="w-3 h-3 shrink-0" />
+                          </a>
+                        ) : (
+                          <span className={r.status === 'success' ? 'text-green-700' : 'text-red-600'}>
+                            {r.name || r.error}
+                          </span>
+                        )}
                       </div>
                     ))}
                   </div>
