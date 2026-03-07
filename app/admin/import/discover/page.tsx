@@ -39,6 +39,7 @@ interface DiscoveredPlace {
   review_count: number;
   business_status: string;
   google_maps_url: string | null;
+  website: string | null;
   types: string[];
   is_existing: boolean;
   existing_listing: { name: string; city: string; state: string; slug: string } | null;
@@ -435,14 +436,14 @@ export default function DiscoverPage() {
                     </div>
                   )}
 
-                  {/* Google Maps link */}
-                  {place.google_maps_url && (
+                  {/* Website link (prefer website, fall back to Google Maps) */}
+                  {(place.website || place.google_maps_url) && (
                     <a
-                      href={place.google_maps_url}
+                      href={place.website || place.google_maps_url!}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-gray-400 hover:text-blue-600 transition-colors shrink-0"
-                      title="View on Google Maps"
+                      title={place.website ? 'Visit website' : 'View on Google Maps'}
                     >
                       <ExternalLink className="w-4 h-4" />
                     </a>

@@ -25,6 +25,323 @@ async function getSecret(supabaseUrl: string, serviceKey: string, name: string):
   return text.replace(/^"|"$/g, '');
 }
 
+// ---------------------------------------------------------------------------
+// Photo Processing Helpers (from photo-backfill)
+// ---------------------------------------------------------------------------
+
+const MAX_IMPORT_PHOTOS = 10;
+
+async function fetchImageAsBase64(url: string): Promise<{ base64: string; mediaType: string } | null> {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) return null;
+    const ct = res.headers.get('content-type') || 'image/jpeg';
+    const mediaType = ct.split(';')[0].trim();
+    if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(mediaType)) return null;
+    const buffer = await res.arrayBuffer();
+    if (buffer.byteLength < 5000) return null;
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+    return { base64: btoa(binary), mediaType };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchGooglePlacePhotoUrls(
+  placeId: string,
+  googleApiKey: string,
+  maxPhotos: number = MAX_IMPORT_PHOTOS,
+): Promise<string[]> {
+  const detailsUrl = `https://places.googleapis.com/v1/places/${placeId}?fields=photos&key=${googleApiKey}`;
+  const res = await fetch(detailsUrl, { signal: AbortSignal.timeout(10000) });
+  if (!res.ok) return [];
+
+  const data = await res.json() as {
+    photos?: Array<{ name: string; widthPx?: number; heightPx?: number }>;
+  };
+
+  const photos = data.photos ?? [];
+  if (photos.length === 0) return [];
+
+  const urls: string[] = [];
+  for (const photo of photos) {
+    if (urls.length >= maxPhotos) break;
+    const mediaUrl = `https://places.googleapis.com/v1/${photo.name}/media?maxHeightPx=1600&maxWidthPx=1600&key=${googleApiKey}`;
+    try {
+      const mediaRes = await fetch(mediaUrl, {
+        redirect: 'follow',
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!mediaRes.ok) continue;
+      const finalUrl = mediaRes.url;
+      if (!finalUrl) continue;
+      urls.push(finalUrl);
+    } catch {
+      continue;
+    }
+  }
+
+  return urls;
+}
+
+async function rehostToStorage(
+  supabase: ReturnType<typeof createClient>,
+  imageUrl: string,
+  listingId: string,
+  slot: string,
+): Promise<string | null> {
+  try {
+    const res = await fetch(imageUrl, { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) return null;
+    const ct = res.headers.get('content-type') || 'image/jpeg';
+    const mediaType = ct.split(';')[0].trim();
+    const ext = mediaType === 'image/png' ? 'png' : mediaType === 'image/webp' ? 'webp' : 'jpg';
+    const buffer = await res.arrayBuffer();
+    if (buffer.byteLength < 1000) return null;
+    const path = `listings/${listingId}/${slot}.${ext}`;
+    const { error } = await supabase.storage.from('listing-photos').upload(path, buffer, {
+      contentType: mediaType,
+      upsert: true,
+    });
+    if (error) return null;
+    const { data: { publicUrl } } = supabase.storage.from('listing-photos').getPublicUrl(path);
+    return publicUrl;
+  } catch {
+    return null;
+  }
+}
+
+async function classifyPhotoWithClaude(
+  imageUrl: string,
+  apiKey: string,
+): Promise<{ verdict: 'GOOD' | 'BAD_CONTACT' | 'BAD_OTHER'; reason: string }> {
+  const img = await fetchImageAsBase64(imageUrl);
+  if (!img) return { verdict: 'BAD_OTHER', reason: 'Could not fetch image' };
+
+  const prompt = `You are evaluating a photo for a touchless car wash directory listing. Classify this image as one of:
+
+GOOD — the image is a real photograph that clearly represents an automated car wash:
+  - Exterior of a car wash building, facility entrance, or facade
+  - Interior of an automated wash tunnel showing arches, nozzles, blowers, or a car moving through
+  - A car being washed by automated touchless equipment (high-pressure water jets, foam applicators)
+  - Drive-through tunnel view from the driver's perspective
+  - Clear signage or canopy of a car wash facility with the building visible
+
+BAD_CONTACT — the image clearly shows physical contact wash equipment: spinning brush rollers, cloth strips, mop curtains, or hanging fabric pads making contact with a vehicle.
+
+BAD_OTHER — reject for ANY of these reasons:
+  - NOT A REAL PHOTOGRAPH: illustration, logo, mascot, cartoon, brand graphic, marketing artwork
+  - SELF-SERVE WAND BAY: coin-operated bay with handheld wand/spray gun
+  - EQUIPMENT CLOSE-UP: single piece of equipment with no broader facility context
+  - WRONG BUSINESS: gas station with no car wash, restaurant, non-car-wash business
+  - PEOPLE ONLY: photo of people with no car wash visible
+  - BROKEN/UNUSABLE: solid color, blank, placeholder, severely blurry, nearly black
+  - SIGNAGE ONLY: sign/menu/price list with no car wash facility visible
+  - CAR INTERIOR: dashboard/steering wheel photographed from inside
+
+When genuinely uncertain between GOOD and BAD_OTHER for a real photograph, prefer GOOD.
+When uncertain whether image is a real photo or graphic/illustration, prefer BAD_OTHER.
+
+Reply with only the classification and a one-sentence reason: VERDICT: reason`;
+
+  const maxAttempts = 3;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5',
+          max_tokens: 100,
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'image', source: { type: 'base64', media_type: img.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp', data: img.base64 } },
+              { type: 'text', text: prompt },
+            ],
+          }],
+        }),
+      });
+
+      if (res.status === 429 || res.status === 503 || res.status === 529) {
+        if (attempt < maxAttempts) { await new Promise(r => setTimeout(r, 2000 * attempt)); continue; }
+        return { verdict: 'BAD_OTHER', reason: 'Rate limited' };
+      }
+      if (!res.ok) return { verdict: 'BAD_OTHER', reason: `API error ${res.status}` };
+
+      const data = await res.json() as { content: Array<{ text: string }> };
+      const text = (data.content?.[0]?.text ?? '').trim();
+      if (/\bGOOD\b/.test(text) && !/\bBAD\b/.test(text)) return { verdict: 'GOOD', reason: text };
+      if (/\bBAD_CONTACT\b/.test(text)) return { verdict: 'BAD_CONTACT', reason: text };
+      return { verdict: 'BAD_OTHER', reason: text };
+    } catch {
+      if (attempt < maxAttempts) { await new Promise(r => setTimeout(r, 2000)); continue; }
+      return { verdict: 'BAD_OTHER', reason: 'Exception' };
+    }
+  }
+  return { verdict: 'BAD_OTHER', reason: 'Max attempts' };
+}
+
+async function pickBestHero(urls: string[], anthropicKey: string): Promise<number> {
+  if (urls.length <= 1) return 0;
+
+  const images = await Promise.all(urls.map(u => fetchImageAsBase64(u)));
+  const valid = images.map((img, i) => ({ img, i })).filter(({ img }) => img !== null);
+  if (valid.length === 0) return 0;
+  if (valid.length === 1) return valid[0].i;
+
+  const imageBlocks = valid.flatMap(({ img, i }) => [
+    { type: 'text' as const, text: `Photo ${i + 1}:` },
+    { type: 'image' as const, source: { type: 'base64' as const, media_type: img!.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp', data: img!.base64 } },
+  ]);
+
+  const prompt = `You are selecting the single best hero image for a TOUCHLESS car wash directory listing. Review the ${valid.length} photos and pick the one that makes the best first impression.
+
+RANKING PRIORITIES (most important first):
+1. BEST: Clear, well-lit EXTERIOR shot showing the car wash building, entrance, canopy, or facade
+2. GOOD: A car going through an automated touchless wash tunnel (spray arches, water jets, no brushes)
+3. GOOD: Drive-through tunnel entrance/exit view
+4. ACCEPTABLE: Interior tunnel shot showing touchless equipment in action
+5. AVOID: Close-up of a single car with no facility context
+6. AVOID: Photos prominently showing soft cloth, brushes, or mop curtains
+7. AVOID: Signage-only photos, dark/blurry images, equipment close-ups without facility context
+
+Reply with only the photo number (e.g. "2") and nothing else.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5',
+        max_tokens: 10,
+        messages: [{ role: 'user', content: [...imageBlocks, { type: 'text', text: prompt }] }],
+      }),
+    });
+    if (!res.ok) return 0;
+    const data = await res.json() as { content: Array<{ text: string }> };
+    const text = (data.content?.[0]?.text ?? '').trim();
+    const num = parseInt(text, 10);
+    if (!isNaN(num) && num >= 1 && num <= urls.length) return num - 1;
+  } catch {
+    // fall through
+  }
+  return 0;
+}
+
+// ---------------------------------------------------------------------------
+// Filter Sync Helpers (from firecrawl-webhook)
+// ---------------------------------------------------------------------------
+
+const AMENITY_TO_FILTER_SLUG: Record<string, string> = {
+  'Free Vacuum': 'free-vacuum',
+  'Free Vacuums': 'free-vacuum',
+  'Vacuum': 'free-vacuum',
+  'Unlimited Wash Club': 'unlimited-wash-club',
+  'Membership': 'unlimited-wash-club',
+  'Monthly Plan': 'unlimited-wash-club',
+  'Unlimited': 'unlimited-wash-club',
+  'Unlimited Wash Plans': 'unlimited-wash-club',
+  'Self-Service Bays': 'self-serve-bays',
+  'Self-Serve Bays': 'self-serve-bays',
+  'Self Service': 'self-serve-bays',
+  'Self Serve': 'self-serve-bays',
+  'Wand Wash': 'self-serve-bays',
+  'Express Wash': 'touchless-automatic',
+  'RV Wash': 'rv-oversized',
+  'Truck Wash': 'rv-oversized',
+  'Oversized Vehicle': 'rv-oversized',
+  'RV/Truck Wash': 'rv-oversized',
+};
+
+type FilterMap = Record<string, number>;
+
+async function syncFiltersForListing(
+  supabase: ReturnType<typeof createClient>,
+  listingId: string,
+  isTouchless: boolean | null,
+  amenities: string[],
+  filterMap: FilterMap,
+): Promise<void> {
+  const inserts: { listing_id: string; filter_id: number }[] = [];
+
+  if (isTouchless === true && filterMap['touchless-automatic']) {
+    inserts.push({ listing_id: listingId, filter_id: filterMap['touchless-automatic'] });
+  }
+
+  for (const amenity of amenities) {
+    const slug = AMENITY_TO_FILTER_SLUG[amenity];
+    if (slug && filterMap[slug]) {
+      inserts.push({ listing_id: listingId, filter_id: filterMap[slug] });
+    }
+  }
+
+  if (inserts.length > 0) {
+    await supabase.from('listing_filters').upsert(inserts, { onConflict: 'listing_id,filter_id' });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Photo + Filter Orchestration for Import
+// ---------------------------------------------------------------------------
+
+async function processPhotosForListing(
+  supabase: ReturnType<typeof createClient>,
+  listingId: string,
+  googlePlaceId: string,
+  googleApiKey: string,
+  anthropicKey: string,
+): Promise<{ photosRehosted: number; heroSet: boolean }> {
+  // 1. Fetch resolved photo URLs from Google Places (follows redirects to actual CDN URLs)
+  const photoUrls = await fetchGooglePlacePhotoUrls(googlePlaceId, googleApiKey, MAX_IMPORT_PHOTOS);
+  if (photoUrls.length === 0) return { photosRehosted: 0, heroSet: false };
+
+  // 2. Classify each photo with Claude Haiku
+  const goodUrls: string[] = [];
+  for (const url of photoUrls) {
+    const result = await classifyPhotoWithClaude(url, anthropicKey);
+    if (result.verdict === 'GOOD') goodUrls.push(url);
+  }
+
+  // Fallback: if no photos pass classification, use first 5 unclassified
+  // (Google Places photos are usually decent quality)
+  const urlsToRehost = goodUrls.length > 0 ? goodUrls : photoUrls.slice(0, 5);
+
+  // 3. Rehost photos to Supabase Storage
+  const rehosted: string[] = [];
+  for (let i = 0; i < urlsToRehost.length; i++) {
+    const slot = `place_photo_${i}_${Date.now()}`;
+    const url = await rehostToStorage(supabase, urlsToRehost[i], listingId, slot);
+    if (url) rehosted.push(url);
+  }
+  if (rehosted.length === 0) return { photosRehosted: 0, heroSet: false };
+
+  // 4. Pick best hero with Claude Haiku
+  const heroIdx = await pickBestHero(rehosted, anthropicKey);
+  const heroUrl = rehosted[heroIdx];
+  const gallery = [heroUrl, ...rehosted.filter((_, i) => i !== heroIdx)];
+
+  // 5. Update listing with rehosted photos + hero
+  await supabase.from('listings').update({
+    photos: gallery,
+    hero_image: heroUrl,
+    hero_image_source: 'import',
+    google_photo_url: null,
+  }).eq('id', listingId);
+
+  return { photosRehosted: rehosted.length, heroSet: true };
+}
+
 function slugify(text: string): string {
   return text
     .toLowerCase()
@@ -113,6 +430,7 @@ const SEARCH_FIELDS = [
   'places.userRatingCount',
   'places.businessStatus',
   'places.googleMapsUri',
+  'places.websiteUri',
   'places.types',
   'places.primaryType',
 ].join(',');
@@ -555,6 +873,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const anthropicKey =
+      Deno.env.get('ANTHROPIC_API_KEY') ??
+      (await getSecret(supabaseUrl, serviceKey, 'ANTHROPIC_API_KEY'));
+
     const body = await req.json();
     const action = body.action as string;
 
@@ -672,6 +994,7 @@ Deno.serve(async (req: Request) => {
           review_count: place.userRatingCount || 0,
           business_status: place.businessStatus || 'OPERATIONAL',
           google_maps_url: place.googleMapsUri || null,
+          website: place.websiteUri || null,
           types: place.types || [],
           is_existing: !!existing,
           existing_listing: existing || null,
@@ -789,10 +1112,40 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      // ── Photo processing: download, classify, rehost, pick hero ──
+      let photoResult = { photosRehosted: 0, heroSet: false };
+      if (anthropicKey) {
+        try {
+          photoResult = await processPhotosForListing(
+            supabase, inserted.id, googleId, googleApiKey, anthropicKey,
+          );
+        } catch {
+          // Photo processing failure is non-fatal — listing is still created
+        }
+      }
+
+      // ── Sync filter chips (touchless, amenities → listing_filters) ──
+      let filtersSynced = false;
+      try {
+        const { data: filterRows } = await supabase.from('filters').select('id, slug');
+        const filterMap: FilterMap = {};
+        for (const f of filterRows || []) filterMap[f.slug] = f.id;
+
+        const isTouchless = listingData.is_touchless as boolean | null;
+        const amenities = (listingData.amenities as string[]) || [];
+        await syncFiltersForListing(supabase, inserted.id, isTouchless, amenities, filterMap);
+        filtersSynced = true;
+      } catch {
+        // Filter sync failure is non-fatal
+      }
+
       return new Response(
         JSON.stringify({
           success: true,
           listing: inserted,
+          photos_rehosted: photoResult.photosRehosted,
+          hero_set: photoResult.heroSet,
+          filters_synced: filtersSynced,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
@@ -810,6 +1163,18 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      if (!anthropicKey) {
+        return new Response(
+          JSON.stringify({ error: 'Anthropic API key not configured (needed for photo processing)' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      // Build filter map once for all listings
+      const { data: filterRows } = await supabase.from('filters').select('id, slug');
+      const filterMap: FilterMap = {};
+      for (const f of filterRows || []) filterMap[f.slug] = f.id;
+
       // Filter out already-existing places
       const { data: existingRows } = await supabase
         .from('listings')
@@ -818,7 +1183,7 @@ Deno.serve(async (req: Request) => {
       const existingSet = new Set((existingRows || []).map((r) => r.google_id));
       const newIds = googleIds.filter((id) => !existingSet.has(id));
 
-      const imported: Array<{ name: string; city: string; state: string }> = [];
+      const imported: Array<{ name: string; city: string; state: string; photos_rehosted?: number; hero_set?: boolean; filters_synced?: boolean }> = [];
       const errors: string[] = [];
 
       const skippedClosed: string[] = [];
@@ -859,7 +1224,7 @@ Deno.serve(async (req: Request) => {
             continue;
           }
 
-          const { error: insertError } = await supabase
+          const { data: inserted, error: insertError } = await supabase
             .from('listings')
             .insert(listingData)
             .select('id')
@@ -868,10 +1233,38 @@ Deno.serve(async (req: Request) => {
           if (insertError) {
             errors.push(`${name}: ${insertError.message}`);
           } else {
+            let photosRehosted = 0;
+            let heroSet = false;
+            let filtersSynced = false;
+
+            // ── Photo processing: download, classify, rehost, pick hero ──
+            try {
+              const photoResult = await processPhotosForListing(
+                supabase, inserted.id, googleId, googleApiKey, anthropicKey,
+              );
+              photosRehosted = photoResult.photosRehosted;
+              heroSet = photoResult.heroSet;
+            } catch (e) {
+              errors.push(`${name}: photo processing failed: ${(e as Error).message}`);
+            }
+
+            // ── Sync filter chips (touchless, amenities → listing_filters) ──
+            try {
+              const isTouchless = listingData.is_touchless as boolean | null;
+              const amenities = (listingData.amenities as string[]) || [];
+              await syncFiltersForListing(supabase, inserted.id, isTouchless, amenities, filterMap);
+              filtersSynced = true;
+            } catch (e) {
+              errors.push(`${name}: filter sync failed: ${(e as Error).message}`);
+            }
+
             imported.push({
               name,
               city: listingData.city as string,
               state: listingData.state as string,
+              photos_rehosted: photosRehosted,
+              hero_set: heroSet,
+              filters_synced: filtersSynced,
             });
           }
         } catch (err) {
