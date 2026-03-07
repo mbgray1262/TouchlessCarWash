@@ -17,6 +17,8 @@ interface SearchFiltersProps {
   currentQuery: string;
   lat?: number | null;
   lng?: number | null;
+  /** When provided, builds filter URLs relative to this path (e.g. /state/massachusetts) instead of /search */
+  baseHref?: string;
 }
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -30,7 +32,21 @@ const ICON_MAP: Record<string, React.ElementType> = {
   car: Car,
 };
 
-function buildSearchUrl(query: string, filterSlugs: string[], lat?: number | null, lng?: number | null): string {
+function buildFilterUrl(
+  filterSlugs: string[],
+  baseHref?: string,
+  query?: string,
+  lat?: number | null,
+  lng?: number | null,
+): string {
+  if (baseHref) {
+    // State/city page mode — just append filters param
+    if (filterSlugs.length > 0) {
+      return `${baseHref}?filters=${filterSlugs.join(',')}`;
+    }
+    return baseHref;
+  }
+  // Search page mode — include q, lat, lng
   const params = new URLSearchParams();
   if (query) params.set('q', query);
   if (lat != null && lng != null) {
@@ -42,7 +58,7 @@ function buildSearchUrl(query: string, filterSlugs: string[], lat?: number | nul
   return `/search${qs ? `?${qs}` : ''}`;
 }
 
-export function SearchFilters({ filters, activeFilterSlugs, currentQuery, lat, lng }: SearchFiltersProps) {
+export function SearchFilters({ filters, activeFilterSlugs, currentQuery, lat, lng, baseHref }: SearchFiltersProps) {
   const router = useRouter();
   const activeSet = new Set(activeFilterSlugs);
 
@@ -53,11 +69,11 @@ export function SearchFilters({ filters, activeFilterSlugs, currentQuery, lat, l
     } else {
       next.add(slug);
     }
-    router.push(buildSearchUrl(currentQuery, Array.from(next), lat, lng), { scroll: false });
+    router.push(buildFilterUrl(Array.from(next), baseHref, currentQuery, lat, lng), { scroll: false });
   }
 
   function clearFilters() {
-    router.push(buildSearchUrl(currentQuery, [], lat, lng), { scroll: false });
+    router.push(buildFilterUrl([], baseHref, currentQuery, lat, lng), { scroll: false });
   }
 
   if (filters.length === 0) return null;

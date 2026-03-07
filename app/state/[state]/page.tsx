@@ -7,7 +7,16 @@ import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants';
 import { ListingCard } from '@/components/ListingCard';
 import { Pagination, PAGE_SIZE } from '@/components/Pagination';
+import { SearchFilters } from '@/components/SearchFilters';
 import type { Metadata } from 'next';
+
+interface Filter {
+  id: number;
+  name: string;
+  slug: string;
+  category: string;
+  icon: string | null;
+}
 
 interface StatePageProps {
   params: {
@@ -15,6 +24,7 @@ interface StatePageProps {
   };
   searchParams: {
     page?: string;
+    filters?: string;
   };
 }
 
@@ -62,18 +72,93 @@ const getStateDescription = cache(async (stateCode: string): Promise<string | nu
   return data?.description ?? null;
 });
 
+const getFilters = cache(async (): Promise<Filter[]> => {
+  const { data } = await supabase
+    .from('filters')
+    .select('id, name, slug, category, icon')
+    .order('sort_order');
+  return (data as Filter[]) ?? [];
+});
+
+/** Get all listing IDs for a state (just IDs, for scoping filter queries) */
+async function getStateListingIds(stateCode: string): Promise<string[]> {
+  const ids: string[] = [];
+  let offset = 0;
+  const BATCH = 1000;
+  while (true) {
+    const { data } = await supabase
+      .from('listings')
+      .select('id')
+      .eq('is_touchless', true)
+      .eq('state', stateCode)
+      .range(offset, offset + BATCH - 1);
+    if (!data || data.length === 0) break;
+    ids.push(...data.map((d: { id: string }) => d.id));
+    if (data.length < BATCH) break;
+    offset += BATCH;
+  }
+  return ids;
+}
+
+/** From a scoped set of listing IDs, find those matching ALL given filter slugs */
+async function filterByFilters(
+  scopeIds: string[],
+  filterSlugs: string[],
+  allFilters: Filter[],
+): Promise<string[] | null> {
+  if (filterSlugs.length === 0) return null; // null = no filter applied
+
+  const filterIds = filterSlugs
+    .map(slug => allFilters.find(f => f.slug === slug)?.id)
+    .filter((id): id is number => id != null);
+
+  if (filterIds.length === 0) return null;
+
+  // Chunk the scope IDs to avoid 414 Request-URI Too Large
+  const allRows: { listing_id: string }[] = [];
+  const CHUNK = 200;
+  for (let i = 0; i < scopeIds.length; i += CHUNK) {
+    const chunk = scopeIds.slice(i, i + CHUNK);
+    const { data } = await supabase
+      .from('listing_filters')
+      .select('listing_id')
+      .in('listing_id', chunk)
+      .in('filter_id', filterIds);
+    if (data) allRows.push(...(data as { listing_id: string }[]));
+  }
+
+  // Count per listing — only keep those matching ALL filters
+  const idCounts: Record<string, number> = {};
+  for (const row of allRows) {
+    idCounts[row.listing_id] = (idCounts[row.listing_id] ?? 0) + 1;
+  }
+  return Object.entries(idCounts)
+    .filter(([, count]) => count === filterIds.length)
+    .map(([id]) => id);
+}
+
 // Server-side paginated query — only fetches 12 rows with card columns
-async function getStateListingsPaginated(stateCode: string, page: number): Promise<Listing[]> {
+async function getStateListingsPaginated(
+  stateCode: string,
+  page: number,
+  qualifiedIds: string[] | null,
+): Promise<Listing[]> {
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('listings')
     .select(LISTING_CARD_COLUMNS)
     .eq('is_touchless', true)
     .eq('state', stateCode)
-    .order('rating', { ascending: false })
-    .range(from, to);
+    .order('rating', { ascending: false });
+
+  if (qualifiedIds !== null) {
+    if (qualifiedIds.length === 0) return [];
+    query = query.in('id', qualifiedIds);
+  }
+
+  const { data, error } = await query.range(from, to);
 
   if (error) {
     console.error('Error fetching state listings:', error);
@@ -81,6 +166,23 @@ async function getStateListingsPaginated(stateCode: string, page: number): Promi
   }
 
   return (data as Listing[]) || [];
+}
+
+async function getStateListingCountFiltered(stateCode: string, qualifiedIds: string[] | null): Promise<number> {
+  if (qualifiedIds !== null && qualifiedIds.length === 0) return 0;
+
+  let query = supabase
+    .from('listings')
+    .select('*', { count: 'exact', head: true })
+    .eq('is_touchless', true)
+    .eq('state', stateCode);
+
+  if (qualifiedIds !== null) {
+    query = query.in('id', qualifiedIds);
+  }
+
+  const { count } = await query;
+  return count ?? 0;
 }
 
 // Uses existing RPC — returns {city, count}[] sorted by count desc
@@ -143,16 +245,30 @@ export default async function StatePage({ params, searchParams }: StatePageProps
 
   const stateName = getStateName(stateCode);
   const currentPage = Math.max(1, parseInt(searchParams.page ?? '1', 10) || 1);
+  const activeFilterSlugs = searchParams.filters
+    ? searchParams.filters.split(',').filter(Boolean)
+    : [];
 
-  const [totalCount, citiesData, statesWithListings, stateDescription, paginatedListings] = await Promise.all([
+  // Fetch filters + base data in parallel
+  const [allFilters, totalCountUnfiltered, citiesData, statesWithListings, stateDescription, stateListingIds] = await Promise.all([
+    getFilters(),
     getStateListingCount(stateCode),
     getCitiesInState(stateCode),
     getStatesWithListings(),
     getStateDescription(stateCode),
-    getStateListingsPaginated(stateCode, currentPage),
+    activeFilterSlugs.length > 0 ? getStateListingIds(stateCode) : Promise.resolve([]),
   ]);
 
-  if (totalCount === 0) {
+  // Scope filter matching to only this state's listings (avoids 414 Too Large)
+  const qualifiedIds = await filterByFilters(stateListingIds, activeFilterSlugs, allFilters);
+  const hasActiveFilters = activeFilterSlugs.length > 0;
+
+  const [totalCount, paginatedListings] = await Promise.all([
+    hasActiveFilters ? getStateListingCountFiltered(stateCode, qualifiedIds) : Promise.resolve(totalCountUnfiltered),
+    getStateListingsPaginated(stateCode, currentPage, qualifiedIds),
+  ]);
+
+  if (totalCountUnfiltered === 0) {
     return (
       <div className="min-h-screen">
         <div className="bg-[#0F2744] py-10">
@@ -235,7 +351,7 @@ export default async function StatePage({ params, searchParams }: StatePageProps
             Touchless Car Washes in {stateName}
           </h1>
           <p className="text-white/70 text-lg">
-            {totalCount} verified touchless car wash{totalCount !== 1 ? 'es' : ''} across {cities.length} {cities.length === 1 ? 'city' : 'cities'}
+            {totalCountUnfiltered} verified touchless car wash{totalCountUnfiltered !== 1 ? 'es' : ''} across {cities.length} {cities.length === 1 ? 'city' : 'cities'}
           </p>
         </div>
       </div>
@@ -279,22 +395,37 @@ export default async function StatePage({ params, searchParams }: StatePageProps
 
           <div className="mt-12">
             <h2 className="text-2xl font-bold text-foreground mb-6">
-              All Locations
+              {hasActiveFilters
+                ? `${totalCount} matching location${totalCount !== 1 ? 's' : ''}`
+                : 'All Locations'}
               {totalPages > 1 && <span className="text-base font-normal text-gray-400 ml-2">Page {page} of {totalPages}</span>}
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {paginatedListings.map((listing) => (
-                <ListingCard
-                  key={listing.id}
-                  listing={listing}
-                  href={`/state/${params.state}/${listing.city.toLowerCase().replace(/\s+/g, '-')}/${listing.slug}`}
-                />
-              ))}
-            </div>
+            <SearchFilters
+              filters={allFilters}
+              activeFilterSlugs={activeFilterSlugs}
+              currentQuery=""
+              baseHref={`/state/${params.state}`}
+            />
+            {paginatedListings.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {paginatedListings.map((listing) => (
+                  <ListingCard
+                    key={listing.id}
+                    listing={listing}
+                    href={`/state/${params.state}/${listing.city.toLowerCase().replace(/\s+/g, '-')}/${listing.slug}`}
+                  />
+                ))}
+              </div>
+            ) : hasActiveFilters ? (
+              <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-200">
+                <p className="text-gray-500 text-lg mb-2">No listings match the selected filters in {stateName}.</p>
+                <p className="text-gray-400 text-sm">Try removing some filters to see more results.</p>
+              </div>
+            ) : null}
             <Pagination
               currentPage={page}
               totalItems={totalCount}
-              baseHref={`/state/${params.state}`}
+              baseHref={hasActiveFilters ? `/state/${params.state}?filters=${activeFilterSlugs.join(',')}` : `/state/${params.state}`}
             />
           </div>
 
