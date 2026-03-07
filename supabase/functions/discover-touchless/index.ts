@@ -1113,11 +1113,17 @@ Deno.serve(async (req: Request) => {
 
       // Get all existing google_ids from our DB to mark duplicates
       const googleIds = places.map((p) => p.id).filter(Boolean);
-      const [{ data: existingRows }, { data: rejectedRows }] = await Promise.all([
+      // Strip 'places/' prefix to get google_place_id format for matching
+      const placeIds = googleIds.map((id) => id.replace(/^places\//, ''));
+      const [{ data: existingByGoogleId }, { data: existingByPlaceId }, { data: rejectedRows }] = await Promise.all([
         supabase
           .from('listings')
           .select('google_id, name, city, state, slug')
           .in('google_id', googleIds.length > 0 ? googleIds : ['__none__']),
+        supabase
+          .from('listings')
+          .select('google_place_id, name, city, state, slug')
+          .in('google_place_id', placeIds.length > 0 ? placeIds : ['__none__']),
         supabase
           .from('discovery_rejections')
           .select('google_id'),
@@ -1125,8 +1131,18 @@ Deno.serve(async (req: Request) => {
       const rejectedSet = new Set((rejectedRows || []).map((r: { google_id: string }) => r.google_id));
 
       const existingMap = new Map<string, { name: string; city: string; state: string; slug: string }>();
-      for (const row of existingRows || []) {
+      for (const row of existingByGoogleId || []) {
         if (row.google_id) existingMap.set(row.google_id, row);
+      }
+      // Also match by google_place_id (catches Outscraper imports with hex google_id)
+      for (const row of existingByPlaceId || []) {
+        if (row.google_place_id) {
+          // Map back to the full google_id format used by the Places API
+          const matchingId = googleIds.find((id) => id.replace(/^places\//, '') === row.google_place_id);
+          if (matchingId && !existingMap.has(matchingId)) {
+            existingMap.set(matchingId, row);
+          }
+        }
       }
 
       // Also check for name+city+state duplicates (catches listings with different google_id formats)
@@ -1213,18 +1229,19 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      // Check if already exists by google_id
-      const { data: existingCheck } = await supabase
-        .from('listings')
-        .select('id, name, slug')
-        .eq('google_id', googleId)
-        .maybeSingle();
+      // Check if already exists by google_id or google_place_id
+      const placeId = googleId.replace(/^places\//, '');
+      const [{ data: existingById }, { data: existingByPlaceId }] = await Promise.all([
+        supabase.from('listings').select('id, name, slug').eq('google_id', googleId).maybeSingle(),
+        supabase.from('listings').select('id, name, slug').eq('google_place_id', placeId).maybeSingle(),
+      ]);
+      const existingCheck = existingById || existingByPlaceId;
 
       if (existingCheck) {
         return new Response(
           JSON.stringify({
             success: false,
-            error: 'Listing already exists (google_id match)',
+            error: 'Listing already exists',
             existing: existingCheck,
           }),
           { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
