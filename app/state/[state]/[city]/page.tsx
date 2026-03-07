@@ -428,18 +428,20 @@ export default async function CityPage({ params, searchParams }: CityPageProps) 
         </div>
 
         {allListings.length > 1 && (
-          <SearchFilters
-            filters={allFilters}
-            activeFilterSlugs={activeFilterSlugs}
-            currentQuery=""
-            baseHref={`/state/${params.state}/${params.city}`}
-          />
-        )}
-
-        {hasActiveFilters && (
-          <p className="text-sm text-gray-500 mb-4">
-            Showing {listings.length} of {allListings.length} listing{allListings.length !== 1 ? 's' : ''}
-          </p>
+          <>
+            <h2 className="text-2xl font-bold text-foreground mb-4">
+              {hasActiveFilters
+                ? <>{listings.length} of {allListings.length} Location{allListings.length !== 1 ? 's' : ''}</>
+                : <>All Locations <span className="text-lg font-normal text-gray-400">({allListings.length})</span></>}
+              {totalPages > 1 && <span className="text-base font-normal text-gray-400 ml-2">· Page {page} of {totalPages}</span>}
+            </h2>
+            <SearchFilters
+              filters={allFilters}
+              activeFilterSlugs={activeFilterSlugs}
+              currentQuery=""
+              baseHref={`/state/${params.state}/${params.city}`}
+            />
+          </>
         )}
 
         {paginatedListings.length > 0 ? (

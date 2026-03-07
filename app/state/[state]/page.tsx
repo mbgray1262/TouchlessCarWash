@@ -396,9 +396,9 @@ export default async function StatePage({ params, searchParams }: StatePageProps
           <div className="mt-12">
             <h2 className="text-2xl font-bold text-foreground mb-6">
               {hasActiveFilters
-                ? `${totalCount} matching location${totalCount !== 1 ? 's' : ''}`
-                : 'All Locations'}
-              {totalPages > 1 && <span className="text-base font-normal text-gray-400 ml-2">Page {page} of {totalPages}</span>}
+                ? <>{totalCount} of {totalCountUnfiltered} Location{totalCountUnfiltered !== 1 ? 's' : ''}</>
+                : <>All Locations <span className="text-lg font-normal text-gray-400">({totalCountUnfiltered})</span></>}
+              {totalPages > 1 && <span className="text-base font-normal text-gray-400 ml-2">· Page {page} of {totalPages}</span>}
             </h2>
             <SearchFilters
               filters={allFilters}

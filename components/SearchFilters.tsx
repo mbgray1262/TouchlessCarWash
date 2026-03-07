@@ -32,6 +32,10 @@ const ICON_MAP: Record<string, React.ElementType> = {
   car: Car,
 };
 
+/** Wash-type filter slugs — rendered first, in this order */
+const WASH_TYPE_SLUGS = ['touchless-automatic', 'self-serve-bays'];
+const WASH_TYPE_SET = new Set(WASH_TYPE_SLUGS);
+
 function buildFilterUrl(
   filterSlugs: string[],
   baseHref?: string,
@@ -78,27 +82,42 @@ export function SearchFilters({ filters, activeFilterSlugs, currentQuery, lat, l
 
   if (filters.length === 0) return null;
 
+  // Split into wash types (ordered) and amenities (original order)
+  const washTypes = WASH_TYPE_SLUGS
+    .map(slug => filters.find(f => f.slug === slug))
+    .filter((f): f is Filter => f != null);
+  const amenities = filters.filter(f => !WASH_TYPE_SET.has(f.slug));
+
+  function renderChip(f: Filter) {
+    const Icon = ICON_MAP[f.icon ?? ''] ?? Sparkles;
+    const active = activeSet.has(f.slug);
+    const isWashType = WASH_TYPE_SET.has(f.slug);
+    return (
+      <button
+        key={f.id}
+        onClick={() => toggleFilter(f.slug)}
+        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
+          active
+            ? 'bg-[#0F2744] border-[#0F2744] text-white'
+            : isWashType
+              ? 'bg-blue-50 border-blue-200 text-[#0F2744] hover:border-[#0F2744] hover:bg-blue-100'
+              : 'bg-white border-gray-200 text-gray-700 hover:border-[#0F2744] hover:text-[#0F2744]'
+        }`}
+      >
+        <Icon className="w-3.5 h-3.5" />
+        {f.name}
+      </button>
+    );
+  }
+
   return (
-    <div className="mb-8">
-      <div className="flex flex-wrap gap-2">
-        {filters.map(f => {
-          const Icon = ICON_MAP[f.icon ?? ''] ?? Sparkles;
-          const active = activeSet.has(f.slug);
-          return (
-            <button
-              key={f.id}
-              onClick={() => toggleFilter(f.slug)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
-                active
-                  ? 'bg-[#0F2744] border-[#0F2744] text-white'
-                  : 'bg-white border-gray-200 text-gray-700 hover:border-[#0F2744] hover:text-[#0F2744]'
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {f.name}
-            </button>
-          );
-        })}
+    <div className="mb-6">
+      <div className="flex flex-wrap items-center gap-2">
+        {washTypes.map(renderChip)}
+        {washTypes.length > 0 && amenities.length > 0 && (
+          <div className="w-px h-6 bg-gray-200 mx-1" />
+        )}
+        {amenities.map(renderChip)}
       </div>
       {activeSet.size > 0 && (
         <button
