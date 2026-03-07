@@ -389,9 +389,9 @@ export default function DiscoverPage() {
               </Card>
             )}
 
-            {/* Results List */}
+            {/* Results List — new places first, then existing (greyed out) */}
             <div className="space-y-2">
-              {searchResults.results.filter((place) => !place.is_existing).map((place) => (
+              {[...searchResults.results].sort((a, b) => Number(a.is_existing) - Number(b.is_existing)).map((place) => (
                 <div
                   key={place.google_id}
                   className={`flex items-center gap-4 p-4 rounded-xl border transition-colors ${
