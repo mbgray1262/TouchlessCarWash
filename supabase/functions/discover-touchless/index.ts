@@ -979,10 +979,32 @@ Deno.serve(async (req: Request) => {
         if (row.google_id) existingMap.set(row.google_id, row);
       }
 
+      // Also check for name+city+state duplicates (catches listings with different google_id formats)
+      const nameChecks = await Promise.all(
+        places.map(async (place) => {
+          if (existingMap.has(place.id)) return null; // already matched by google_id
+          const parsed = place.formattedAddress ? parseAddress(place.formattedAddress) : null;
+          const name = place.displayName?.text;
+          if (!name || !parsed?.city || !parsed?.state) return null;
+          const { data } = await supabase
+            .from('listings')
+            .select('name, city, state, slug')
+            .ilike('name', name)
+            .ilike('city', parsed.city)
+            .eq('state', parsed.state)
+            .maybeSingle();
+          return data ? { google_id: place.id, listing: data } : null;
+        }),
+      );
+      const nameMatchMap = new Map<string, { name: string; city: string; state: string; slug: string }>();
+      for (const match of nameChecks) {
+        if (match) nameMatchMap.set(match.google_id, match.listing);
+      }
+
       // Build results with touchless confidence scoring
       const confidenceOrder = { high: 0, medium: 1, low: 2 };
       const results = places.map((place) => {
-        const existing = existingMap.get(place.id);
+        const existing = existingMap.get(place.id) || nameMatchMap.get(place.id) || null;
         const name = place.displayName?.text || 'Unknown';
         const confidence = touchlessConfidence(name);
         return {
@@ -1185,6 +1207,7 @@ Deno.serve(async (req: Request) => {
 
       const imported: Array<{ name: string; city: string; state: string; photos_rehosted?: number; hero_set?: boolean; filters_synced?: boolean }> = [];
       const errors: string[] = [];
+      const skippedDuplicate: string[] = [];
 
       const skippedClosed: string[] = [];
       for (const googleId of newIds) {
@@ -1220,7 +1243,8 @@ Deno.serve(async (req: Request) => {
             .maybeSingle();
 
           if (nameMatch) {
-            // Already exists under a different google_id — skip
+            // Already exists under a different google_id — track and skip
+            skippedDuplicate.push(`${name} (${listingData.city}, ${listingData.state})`);
             continue;
           }
 
@@ -1296,7 +1320,8 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({
           success: true,
           imported_count: imported.length,
-          skipped_count: existingSet.size,
+          skipped_count: existingSet.size + skippedDuplicate.length,
+          skipped_duplicate: skippedDuplicate,
           skipped_closed_count: skippedClosed.length,
           skipped_closed: skippedClosed,
           error_count: errors.length,
