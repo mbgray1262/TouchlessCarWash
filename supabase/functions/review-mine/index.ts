@@ -180,62 +180,51 @@ REASON: [one brief sentence]`;
 }
 
 /**
- * Get total scanned counts using only .eq() queries (proven reliable in
- * the edge function runtime) and pagination for the remaining count.
+ * Get total scanned counts via the review_mine_counts RPC.
+ *
+ * Uses a direct fetch with the ANON key (not service role key) because
+ * the Supabase JS client with the service role key inexplicably returns
+ * 0 for scanned_clean queries from within edge functions — even though
+ * the same queries work from curl. The anon-key RPC call is verified
+ * to return correct results both locally and from edge functions.
  */
 async function getTotalScannedCount(
-  supabase: ReturnType<typeof createClient>,
   supabaseUrl: string,
-  serviceKey: string,
 ): Promise<{ scannedClean: number; touchlessFound: number; totalScanned: number; totalRemaining: number }> {
+  const zeros = { scannedClean: 0, touchlessFound: 0, totalScanned: 0, totalRemaining: 0 };
   try {
-    // --- Scanned counts: two .eq() queries (proven to work) ---
-    const [cleanResult, foundResult] = await Promise.all([
-      supabase.from('listings').select('id').eq('review_mine_status', 'scanned_clean'),
-      supabase.from('listings').select('id').eq('review_mine_status', 'touchless_found'),
-    ]);
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const res = await fetch(`${supabaseUrl}/rest/v1/rpc/review_mine_counts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': anonKey,
+        'Authorization': `Bearer ${anonKey}`,
+      },
+      body: '{}',
+    });
 
-    if (cleanResult.error) console.error('[counts] scanned_clean query error:', cleanResult.error.message);
-    if (foundResult.error) console.error('[counts] touchless_found query error:', foundResult.error.message);
+    const responseText = await res.text();
+    console.log(`[counts] RPC status=${res.status} body=${responseText.slice(0, 500)}`);
 
-    const scannedClean = (cleanResult.data || []).length;
-    const touchlessFound = (foundResult.data || []).length;
-    const totalScanned = scannedClean + touchlessFound;
-
-    console.log(`[counts] clean=${scannedClean}, found=${touchlessFound}, total=${totalScanned}`);
-
-    // --- Remaining count: paginate through in batches of 1000 ---
-    // (Supabase caps single queries at 1000 rows)
-    let totalRemaining = 0;
-    let offset = 0;
-    const pageSize = 1000;
-    while (true) {
-      const { data: page, error: pageErr } = await supabase
-        .from('listings')
-        .select('id')
-        .eq('is_touchless', false)
-        .is('review_mine_status', null)
-        .not('google_place_id', 'is', null)
-        .or('google_category.eq.Car wash,google_category.eq.car_wash')
-        .range(offset, offset + pageSize - 1);
-
-      if (pageErr) {
-        console.error(`[counts] remaining page ${offset} error:`, pageErr.message);
-        break;
-      }
-
-      const batch = page || [];
-      totalRemaining += batch.length;
-      if (batch.length < pageSize) break;
-      offset += pageSize;
+    if (!res.ok) {
+      console.error('[counts] RPC failed:', res.status, responseText);
+      return zeros;
     }
 
-    console.log(`[counts] remaining=${totalRemaining}`);
+    const parsed = JSON.parse(responseText);
+    // Handle both object and array-wrapped responses from PostgREST
+    const counts = Array.isArray(parsed) ? parsed[0] : parsed;
 
-    return { scannedClean, touchlessFound, totalScanned, totalRemaining };
+    return {
+      scannedClean: counts?.scanned_clean ?? 0,
+      touchlessFound: counts?.touchless_found ?? 0,
+      totalScanned: counts?.total_scanned ?? 0,
+      totalRemaining: counts?.total_remaining ?? 0,
+    };
   } catch (err) {
-    console.error('getTotalScannedCount failed:', err);
-    return { scannedClean: 0, touchlessFound: 0, totalScanned: 0, totalRemaining: 0 };
+    console.error('[counts] getTotalScannedCount failed:', err);
+    return zeros;
   }
 }
 
@@ -894,7 +883,7 @@ Deno.serve(async (req: Request) => {
       }
 
       if (!listings?.length) {
-        const counts = await getTotalScannedCount(supabase, supabaseUrl, serviceKey);
+        const counts = await getTotalScannedCount(supabaseUrl);
 
         return new Response(
           JSON.stringify({
@@ -1064,7 +1053,7 @@ Deno.serve(async (req: Request) => {
       }
 
       // Get total progress
-      const counts = await getTotalScannedCount(supabase, supabaseUrl, serviceKey);
+      const counts = await getTotalScannedCount(supabaseUrl);
 
       // Trigger full enrichment pipeline for newly reclassified listings
       // (crawl website → extract amenities/packages → generate AI description)
@@ -1224,7 +1213,7 @@ Deno.serve(async (req: Request) => {
     // -----------------------------------------------------------------------
     if (action === 'progress') {
       // Get scan progress counts
-      const counts = await getTotalScannedCount(supabase, supabaseUrl, serviceKey);
+      const counts = await getTotalScannedCount(supabaseUrl);
 
       // Get recently found listings for display (with google_maps_url for verification)
       const { data: recentFinds } = await supabase
