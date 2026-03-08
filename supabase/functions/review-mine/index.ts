@@ -287,31 +287,20 @@ async function searchReviewsMultiKeyword(
   serpApiKey: string,
   placeId: string,
 ): Promise<{ reviews: SerpApiReview[]; apiCalls: number; error?: string }> {
-  // Primary query — "touch" matches touchless, no-touch, touch-free, soft-touch, etc.
-  const primary = await searchReviews(serpApiKey, placeId, 'touch');
+  // Single query using OR operator — searches for all touchless-related keywords
+  // in one API call instead of 3 separate calls.
+  // "touch" catches: touchless, no-touch, touch-free, soft-touch
+  // "brushless" catches: brushless, brush-free
+  // "laser" catches: laser wash, laserwash
+  const result = await searchReviews(serpApiKey, placeId, 'touch OR brushless OR laser');
 
-  if (primary.error) {
-    return { reviews: [], apiCalls: 1, error: primary.error };
+  if (result.error) {
+    return { reviews: [], apiCalls: 1, error: result.error };
   }
 
   // Filter to only reviews that genuinely contain our exact keywords
-  const verifiedPrimary = filterVerifiedReviews(primary.reviews);
-  if (verifiedPrimary.length > 0) {
-    return { reviews: verifiedPrimary, apiCalls: 1 };
-  }
-
-  // Second query — "brushless" and "brush free" won't match "touch"
-  const secondary = await searchReviews(serpApiKey, placeId, 'brushless');
-  const verifiedSecondary = filterVerifiedReviews(secondary.reviews);
-  if (verifiedSecondary.length > 0) {
-    return { reviews: verifiedSecondary, apiCalls: 2 };
-  }
-
-  // Third query — "laser wash" is a common term for touchless washes
-  const tertiary = await searchReviews(serpApiKey, placeId, 'laser');
-  const verifiedTertiary = filterVerifiedReviews(tertiary.reviews);
-
-  return { reviews: verifiedTertiary, apiCalls: 3 };
+  const verified = filterVerifiedReviews(result.reviews);
+  return { reviews: verified, apiCalls: 1 };
 }
 
 /**
