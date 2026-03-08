@@ -212,7 +212,7 @@ export default function ReviewMinePage() {
   const [scanning, setScanning] = useState(false);
   const [scanResults, setScanResults] = useState<ScanResult[]>([]);
   const [scanError, setScanError] = useState<string | null>(null);
-  const [batchSize, setBatchSize] = useState(50);
+  const [batchSize, setBatchSize] = useState(25);
   const [autoScan, setAutoScan] = useState(false);
 
   // Prospect state
@@ -255,7 +255,8 @@ export default function ReviewMinePage() {
         batch_size: batchSize,
       });
 
-      setScanResults((prev) => [...(data.results || []), ...prev]);
+      // Keep only the most recent 100 results to prevent page from slowing down
+      setScanResults((prev) => [...(data.results || []), ...prev].slice(0, 100));
       setSessionStats((prev) => ({
         batchesRun: prev.batchesRun + 1,
         totalScanned: prev.totalScanned + data.scanned_this_batch,
