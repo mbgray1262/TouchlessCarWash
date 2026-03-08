@@ -180,22 +180,26 @@ REASON: [one brief sentence]`;
 }
 
 /**
- * Get total scanned counts by fetching actual rows and counting in JS.
- * We avoid Supabase count queries and RPCs here because they return
- * incorrect results from within the edge function runtime.
+ * Get total scanned counts using the database RPC and row-fetching.
+ *
+ * For scanned listings (~100-200 rows): fetch actual rows so we can
+ * count by status in JS — avoids unreliable Supabase count queries.
+ *
+ * For remaining listings (~8000 rows): use the review_mine_counts RPC
+ * because the Supabase client caps results at 1000 rows.
  */
 async function getTotalScannedCount(
   supabase: ReturnType<typeof createClient>,
+  supabaseUrl: string,
+  serviceKey: string,
 ): Promise<{ scannedClean: number; touchlessFound: number; totalScanned: number; totalRemaining: number }> {
   try {
-    // Fetch all scanned listings (those with review_mine_status set).
-    // Only selecting the status column keeps the payload small.
-    // Current volume is ~100-200 rows — well within limits.
+    // --- Scanned counts: fetch actual rows and count in JS ---
+    // Use .in() with explicit values instead of .not('is', null) for reliability
     const { data: scannedRows, error: scannedErr } = await supabase
       .from('listings')
       .select('review_mine_status')
-      .not('review_mine_status', 'is', null)
-      .limit(50000);
+      .in('review_mine_status', ['scanned_clean', 'touchless_found']);
 
     if (scannedErr) {
       console.error('Failed to fetch scanned listings:', scannedErr.message);
@@ -210,22 +214,35 @@ async function getTotalScannedCount(
     ).length;
     const totalScanned = rows.length;
 
-    // Fetch remaining (unscanned, non-touchless, valid car washes).
-    // ~8000 rows — we only fetch the id column to keep it lightweight.
-    const { data: remainingRows, error: remainErr } = await supabase
-      .from('listings')
-      .select('id')
-      .eq('is_touchless', false)
-      .is('review_mine_status', null)
-      .not('google_place_id', 'is', null)
-      .in('google_category', ['Car wash', 'car_wash'])
-      .limit(50000);
+    console.log(`[counts] Scanned rows fetched: ${rows.length} (clean=${scannedClean}, found=${touchlessFound})`);
 
-    if (remainErr) {
-      console.error('Failed to fetch remaining listings:', remainErr.message);
+    // --- Remaining count: use RPC (avoids 1000-row cap) ---
+    let totalRemaining = 0;
+    try {
+      const res = await fetch(`${supabaseUrl}/rest/v1/rpc/review_mine_counts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': serviceKey,
+          'Authorization': `Bearer ${serviceKey}`,
+        },
+        body: '{}',
+      });
+
+      const responseText = await res.text();
+      console.log(`[counts] RPC response (${res.status}): ${responseText.slice(0, 500)}`);
+
+      if (res.ok && responseText) {
+        const parsed = JSON.parse(responseText);
+        // Handle both object and array-wrapped responses
+        const counts = Array.isArray(parsed) ? parsed[0] : parsed;
+        if (counts && typeof counts === 'object') {
+          totalRemaining = counts.total_remaining || 0;
+        }
+      }
+    } catch (rpcErr) {
+      console.error('RPC call failed, falling back to estimation:', rpcErr);
     }
-
-    const totalRemaining = (remainingRows || []).length;
 
     return { scannedClean, touchlessFound, totalScanned, totalRemaining };
   } catch (err) {
@@ -889,7 +906,7 @@ Deno.serve(async (req: Request) => {
       }
 
       if (!listings?.length) {
-        const counts = await getTotalScannedCount(supabase);
+        const counts = await getTotalScannedCount(supabase, supabaseUrl, serviceKey);
 
         return new Response(
           JSON.stringify({
@@ -1059,7 +1076,7 @@ Deno.serve(async (req: Request) => {
       }
 
       // Get total progress
-      const counts = await getTotalScannedCount(supabase);
+      const counts = await getTotalScannedCount(supabase, supabaseUrl, serviceKey);
 
       // Trigger full enrichment pipeline for newly reclassified listings
       // (crawl website → extract amenities/packages → generate AI description)
@@ -1219,7 +1236,7 @@ Deno.serve(async (req: Request) => {
     // -----------------------------------------------------------------------
     if (action === 'progress') {
       // Get scan progress counts
-      const counts = await getTotalScannedCount(supabase);
+      const counts = await getTotalScannedCount(supabase, supabaseUrl, serviceKey);
 
       // Get recently found listings for display (with google_maps_url for verification)
       const { data: recentFinds } = await supabase
