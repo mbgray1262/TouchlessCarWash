@@ -143,22 +143,26 @@ async function searchReviewsMultiKeyword(
     return { reviews: [], apiCalls: 1, error: primary.error };
   }
 
-  // If we already found evidence, no need for more API calls
-  if (primary.reviews.length > 0) {
-    return { reviews: primary.reviews, apiCalls: 1 };
+  // Filter to only reviews that genuinely contain our keywords
+  // (SerpAPI does fuzzy matching, so many results don't actually contain the keyword)
+  const verifiedPrimary = filterVerifiedReviews(primary.reviews);
+  if (verifiedPrimary.length > 0) {
+    return { reviews: verifiedPrimary, apiCalls: 1 };
   }
 
   // Secondary query — catches "no touch", "no-touch"
   const secondary = await searchReviews(serpApiKey, placeId, 'no touch');
+  const verifiedSecondary = filterVerifiedReviews(secondary.reviews);
 
-  if (secondary.reviews.length > 0) {
-    return { reviews: secondary.reviews, apiCalls: 2 };
+  if (verifiedSecondary.length > 0) {
+    return { reviews: verifiedSecondary, apiCalls: 2 };
   }
 
   // Tertiary query — catches "brushless", "brush free"
   const tertiary = await searchReviews(serpApiKey, placeId, 'brushless');
+  const verifiedTertiary = filterVerifiedReviews(tertiary.reviews);
 
-  return { reviews: tertiary.reviews, apiCalls: 3 };
+  return { reviews: verifiedTertiary, apiCalls: 3 };
 }
 
 /**
@@ -170,7 +174,21 @@ function extractKeywords(text: string): string[] {
 }
 
 /**
+ * Filter SerpAPI reviews to only those that genuinely contain touchless keywords.
+ * SerpAPI's query parameter does fuzzy matching, so many returned reviews
+ * don't actually contain our keywords.
+ */
+function filterVerifiedReviews(reviews: SerpApiReview[]): SerpApiReview[] {
+  return reviews.filter((r) => {
+    const text = r.snippet || r.extracted_snippet?.original;
+    if (!text) return false;
+    return extractKeywords(text).length > 0;
+  });
+}
+
+/**
  * Insert SerpAPI review evidence into the review_snippets table.
+ * ONLY inserts reviews that genuinely contain touchless keywords.
  */
 async function insertSerpApiReviewSnippets(
   supabase: ReturnType<typeof createClient>,
@@ -186,6 +204,8 @@ async function insertSerpApiReviewSnippets(
     if (!text) continue;
 
     const matchedKeywords = extractKeywords(text);
+    // ONLY insert reviews that actually contain touchless keywords
+    if (matchedKeywords.length === 0) continue;
 
     snippets.push({
       listing_id: listingId,
@@ -195,7 +215,7 @@ async function insertSerpApiReviewSnippets(
       review_date: review.date || null,
       iso_date: review.iso_date || null,
       review_id: review.review_id || null,
-      touchless_keywords: matchedKeywords.length > 0 ? matchedKeywords : ['touchless'],
+      touchless_keywords: matchedKeywords,
       is_touchless_evidence: true,
       source: 'serpapi',
     });
