@@ -183,20 +183,25 @@ REASON: [one brief sentence]`;
 async function getTotalScannedCount(
   supabase: ReturnType<typeof createClient>,
 ): Promise<{ scannedClean: number; touchlessFound: number; totalScanned: number }> {
-  const { count: scannedClean } = await supabase
+  // Count all listings with any review_mine_status set (single query, reliable count)
+  const { count: totalScanned } = await supabase
     .from('listings')
     .select('id', { count: 'exact', head: true })
-    .eq('review_mine_status', 'scanned_clean');
+    .not('review_mine_status', 'is', null);
 
+  // Count just touchless_found (small result set, always works)
   const { count: touchlessFound } = await supabase
     .from('listings')
     .select('id', { count: 'exact', head: true })
     .eq('review_mine_status', 'touchless_found');
 
+  const tf = touchlessFound || 0;
+  const ts = totalScanned || 0;
+
   return {
-    scannedClean: scannedClean || 0,
-    touchlessFound: touchlessFound || 0,
-    totalScanned: (scannedClean || 0) + (touchlessFound || 0),
+    scannedClean: ts - tf,
+    touchlessFound: tf,
+    totalScanned: ts,
   };
 }
 
