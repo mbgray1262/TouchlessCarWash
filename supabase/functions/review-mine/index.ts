@@ -183,7 +183,7 @@ REASON: [one brief sentence]`;
 async function getTotalScannedCount(
   supabase: ReturnType<typeof createClient>,
 ): Promise<{ scannedClean: number; touchlessFound: number; totalScanned: number; totalRemaining: number }> {
-  const { data, error } = await supabase.rpc('review_mine_counts').single();
+  const { data, error } = await supabase.rpc('review_mine_counts');
 
   if (error || !data) {
     console.error('review_mine_counts RPC failed:', error, 'data:', data);
