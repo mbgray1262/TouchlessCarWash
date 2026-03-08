@@ -132,7 +132,9 @@ Does the evidence indicate this car wash actually HAS or OFFERS a touchless, bru
 Rules:
 - Say YES only if reviewers describe THIS car wash AS being touchless/brushless/no-touch
 - Say NO if reviewers are comparing to touchless elsewhere, wishing it was touchless, or saying it's NOT touchless
-- Say NO if keywords appear in negative context ("go elsewhere for brushless", "even a touchless wash does better", "not touchless")
+- Say NO if keywords appear in negative context ("go elsewhere for brushless", "even a touchless wash does better", "not touchless", "not touch free", "isn't touchless")
+- CRITICAL: "Not touch free", "not touchless", "isn't brushless" etc. mean the car wash is NOT touchless — say NO
+- Say NO if the review is a negative/complaint review that mentions touch-free only to deny it
 - Say NO if the review describes the wash as having brushes or being a brush/friction wash
 - Say NO if the keyword is used to describe a different business or a general concept, not THIS car wash
 
@@ -311,7 +313,29 @@ function extractKeywords(text: string): string[] {
 }
 
 /**
- * Filter SerpAPI reviews to only those that genuinely contain touchless keywords.
+ * Negation patterns that indicate the review is saying the wash is NOT touchless.
+ * e.g. "Not touch free", "isn't touchless", "not a brushless wash"
+ */
+const NEGATION_PATTERNS = [
+  /\bnot\s+touch\s*-?\s*(?:less|free)\b/i,
+  /\bnot\s+brush\s*-?\s*(?:less|free)\b/i,
+  /\bnot\s+(?:a\s+)?(?:touchless|brushless|touch-free|brush-free)\b/i,
+  /\bisn'?t\s+(?:touchless|brushless|touch-free|brush-free|touch\s*free)\b/i,
+  /\bno(?:t|thing)\s+(?:touchless|touch-free|touch\s*free)\b/i,
+  /\bwasn'?t\s+(?:touchless|brushless|touch-free|touch\s*free)\b/i,
+];
+
+/**
+ * Check if a review text negates the touchless keywords
+ * (e.g., "Not touch free", "isn't touchless").
+ */
+function hasNegation(text: string): boolean {
+  return NEGATION_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+/**
+ * Filter SerpAPI reviews to only those that genuinely contain touchless keywords
+ * AND do not negate them (e.g., "not touch free" is rejected).
  * SerpAPI's query parameter does fuzzy matching, so many returned reviews
  * don't actually contain our keywords.
  */
@@ -319,7 +343,13 @@ function filterVerifiedReviews(reviews: SerpApiReview[]): SerpApiReview[] {
   return reviews.filter((r) => {
     const text = r.snippet || r.extracted_snippet?.original;
     if (!text) return false;
-    return extractKeywords(text).length > 0;
+    if (extractKeywords(text).length === 0) return false;
+    // Reject reviews that negate the keyword (e.g., "Not touch free")
+    if (hasNegation(text)) {
+      console.log(`[filter] Rejecting negated review: "${text.slice(0, 100)}"`);
+      return false;
+    }
+    return true;
   });
 }
 
@@ -1508,7 +1538,8 @@ Deno.serve(async (req: Request) => {
 
         // 3. Search Google Places specifically for "touchless car wash" in this city
         //    This returns places Google thinks are relevant to "touchless" — much better hit rate
-        const places = await searchPlaces(googleApiKey, `touchless ${nextItem.query}`);
+        //    Pass with "touchless " prefix so searchPlaces uses it as-is (not prepending "car wash")
+        const places = await searchPlaces(googleApiKey, `touchless car wash ${nextItem.query}`);
 
         // 4. Filter out existing listings and rejected places
         const existingIds = new Set<string>();
