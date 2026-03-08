@@ -1340,37 +1340,48 @@ Deno.serve(async (req: Request) => {
       for (const place of newPlaces) {
         // Extract place_id (remove "places/" prefix if present)
         const placeId = place.id.replace(/^places\//, '');
+        const placeName = place.displayName?.text || 'Unknown';
 
-        // Search reviews for touchless evidence
-        const { reviews, apiCalls: calls, error } = await searchReviewsMultiKeyword(
-          serpApiKey,
-          placeId,
-        );
-        apiCalls += calls;
+        // Check if name alone tells us it's touchless (saves SerpAPI credits)
+        const nameMatchesTouchless = /touch\s*-?\s*less|touch\s*-?\s*free|no\s*-?\s*touch|contactless\s+wash/i.test(placeName);
 
-        if (error) {
-          skipped.push({
-            name: place.displayName?.text || 'Unknown',
-            address: place.formattedAddress || '',
-            reason: `SerpAPI error: ${error}`,
-          });
-          continue;
+        let reviews: Array<{ reviewer_name: string; rating: number; review_text: string; touchless_keywords: string[] }> = [];
+
+        if (nameMatchesTouchless) {
+          console.log(`[prospect] Name match — skipping SerpAPI for: ${placeName}`);
+        } else {
+          // Search reviews for touchless evidence
+          const result = await searchReviewsMultiKeyword(
+            serpApiKey,
+            placeId,
+          );
+          apiCalls += result.apiCalls;
+          reviews = result.reviews;
+
+          if (result.error) {
+            skipped.push({
+              name: placeName,
+              address: place.formattedAddress || '',
+              reason: `SerpAPI error: ${result.error}`,
+            });
+            continue;
+          }
+
+          if (reviews.length === 0) {
+            skipped.push({
+              name: placeName,
+              address: place.formattedAddress || '',
+              reason: 'No touchless evidence in reviews',
+            });
+            continue;
+          }
         }
 
-        if (reviews.length === 0) {
-          skipped.push({
-            name: place.displayName?.text || 'Unknown',
-            address: place.formattedAddress || '',
-            reason: 'No touchless evidence in reviews',
-          });
-          continue;
-        }
-
-        // Found touchless evidence — get full details and import
+        // Found touchless evidence (name or reviews) — get full details and import
         const details = await getPlaceDetails(googleApiKey, place.id);
         if (!details) {
           skipped.push({
-            name: place.displayName?.text || 'Unknown',
+            name: placeName,
             address: place.formattedAddress || '',
             reason: 'Failed to fetch place details',
           });
@@ -1380,7 +1391,7 @@ Deno.serve(async (req: Request) => {
         const listingData = await buildListingData(details, googleApiKey, supabase);
         if (!listingData) {
           skipped.push({
-            name: place.displayName?.text || 'Unknown',
+            name: placeName,
             address: place.formattedAddress || '',
             reason: 'Business is closed',
           });
@@ -1396,19 +1407,22 @@ Deno.serve(async (req: Request) => {
 
         if (insertError) {
           skipped.push({
-            name: place.displayName?.text || 'Unknown',
+            name: placeName,
             address: place.formattedAddress || '',
             reason: `Insert failed: ${insertError.message}`,
           });
           continue;
         }
 
-        // Insert review snippets
-        const snippetCount = await insertSerpApiReviewSnippets(supabase, inserted.id, reviews);
+        // Insert review snippets (if we have any from SerpAPI)
+        let snippetCount = 0;
+        if (reviews.length > 0) {
+          snippetCount = await insertSerpApiReviewSnippets(supabase, inserted.id, reviews);
+        }
 
         // Update review count on listing
         await supabase.from('listings').update({
-          review_extract_status: 'extracted',
+          review_extract_status: nameMatchesTouchless ? 'name_match' : 'extracted',
           touchless_review_count: snippetCount,
         }).eq('id', inserted.id);
 
@@ -1534,16 +1548,27 @@ Deno.serve(async (req: Request) => {
 
         for (const place of newPlaces) {
           const placeId = place.id.replace(/^places\//, '');
+          const placeName = place.displayName?.text || 'Unknown';
 
-          const { reviews, apiCalls: calls, error: reviewErr } = await searchReviewsMultiKeyword(
-            serpApiKey,
-            placeId,
-          );
-          apiCalls += calls;
+          // Check if name alone tells us it's touchless (saves SerpAPI credits)
+          const nameMatchesTouchless = /touch\s*-?\s*less|touch\s*-?\s*free|no\s*-?\s*touch|contactless\s+wash/i.test(placeName);
 
-          if (reviewErr || reviews.length === 0) continue;
+          let reviews: Array<{ reviewer_name: string; rating: number; review_text: string; touchless_keywords: string[] }> = [];
 
-          // Found touchless evidence — get details and import
+          if (nameMatchesTouchless) {
+            console.log(`[prospect_next] Name match — skipping SerpAPI for: ${placeName}`);
+          } else {
+            const result = await searchReviewsMultiKeyword(
+              serpApiKey,
+              placeId,
+            );
+            apiCalls += result.apiCalls;
+            reviews = result.reviews;
+
+            if (result.error || reviews.length === 0) continue;
+          }
+
+          // Found touchless evidence (name or reviews) — get details and import
           const details = await getPlaceDetails(googleApiKey, place.id);
           if (!details) continue;
 
@@ -1558,10 +1583,13 @@ Deno.serve(async (req: Request) => {
 
           if (insertError) continue;
 
-          const snippetCount = await insertSerpApiReviewSnippets(supabase, inserted.id, reviews);
+          let snippetCount = 0;
+          if (reviews.length > 0) {
+            snippetCount = await insertSerpApiReviewSnippets(supabase, inserted.id, reviews);
+          }
 
           await supabase.from('listings').update({
-            review_extract_status: 'extracted',
+            review_extract_status: nameMatchesTouchless ? 'name_match' : 'extracted',
             touchless_review_count: snippetCount,
           }).eq('id', inserted.id);
 
