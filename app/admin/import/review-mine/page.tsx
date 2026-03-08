@@ -37,12 +37,14 @@ interface ScanResult {
   status: string;
   reviewCount: number;
   apiCalls: number;
+  aiVerdict?: string;
   reviews: ReviewSnippet[];
 }
 
 interface ScanBatchResponse {
   scanned_this_batch: number;
   found_touchless: number;
+  ai_rejected?: number;
   api_calls_used: number;
   total_scanned: number;
   total_remaining: number;
@@ -224,6 +226,7 @@ export default function ReviewMinePage() {
     batchesRun: 0,
     totalScanned: 0,
     totalFound: 0,
+    totalAiRejected: 0,
     totalApiCalls: 0,
   });
 
@@ -257,6 +260,7 @@ export default function ReviewMinePage() {
         batchesRun: prev.batchesRun + 1,
         totalScanned: prev.totalScanned + data.scanned_this_batch,
         totalFound: prev.totalFound + data.found_touchless,
+        totalAiRejected: prev.totalAiRejected + (data.ai_rejected || 0),
         totalApiCalls: prev.totalApiCalls + data.api_calls_used,
       }));
 
@@ -499,6 +503,9 @@ export default function ReviewMinePage() {
                         <div>Batches: {sessionStats.batchesRun}</div>
                         <div>Scanned: {sessionStats.totalScanned}</div>
                         <div className="text-green-700 font-medium">Found: {sessionStats.totalFound}</div>
+                        {sessionStats.totalAiRejected > 0 && (
+                          <div className="text-amber-700">AI Rejected: {sessionStats.totalAiRejected}</div>
+                        )}
                         <div>API Calls: {sessionStats.totalApiCalls}</div>
                       </div>
                     </div>
@@ -520,9 +527,11 @@ export default function ReviewMinePage() {
                           className={`p-3 rounded-lg text-sm ${
                             r.status === 'touchless_found'
                               ? 'bg-green-50 border border-green-200'
-                              : r.status === 'error'
-                                ? 'bg-red-50 border border-red-200'
-                                : 'bg-gray-50 border border-gray-200'
+                              : r.status === 'ai_rejected'
+                                ? 'bg-amber-50 border border-amber-200'
+                                : r.status === 'error'
+                                  ? 'bg-red-50 border border-red-200'
+                                  : 'bg-gray-50 border border-gray-200'
                           }`}
                         >
                           {/* Header row */}
@@ -530,6 +539,8 @@ export default function ReviewMinePage() {
                             <div className="flex items-center gap-2 min-w-0">
                               {r.status === 'touchless_found' ? (
                                 <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                              ) : r.status === 'ai_rejected' ? (
+                                <XCircle className="w-4 h-4 text-amber-500 shrink-0" />
                               ) : r.status === 'error' ? (
                                 <XCircle className="w-4 h-4 text-red-500 shrink-0" />
                               ) : (
@@ -543,7 +554,23 @@ export default function ReviewMinePage() {
                                 {r.reviewCount} review{r.reviewCount !== 1 ? 's' : ''}
                               </Badge>
                             )}
+                            {r.status === 'ai_rejected' && (
+                              <Badge className="bg-amber-100 text-amber-800 text-xs shrink-0">
+                                AI Rejected
+                              </Badge>
+                            )}
                           </div>
+
+                          {/* AI verdict */}
+                          {r.aiVerdict && (
+                            <div className={`ml-6 text-xs px-2 py-1 rounded mb-1 ${
+                              r.status === 'touchless_found'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-amber-100 text-amber-700'
+                            }`}>
+                              {r.aiVerdict}
+                            </div>
+                          )}
 
                           {/* Location + links */}
                           <div className="flex items-center gap-3 text-xs text-gray-500 ml-6">
