@@ -128,41 +128,36 @@ async function searchReviews(
 }
 
 /**
- * Search reviews for multiple touchless-related keywords.
- * Uses "touchless" as primary query, then "no touch" and "brushless" for broader coverage.
- * Deduplicates by review_id.
+ * Search reviews for touchless-related keywords.
+ *
+ * Strategy:
+ * 1. Query "touch" — one call catches touchless, no-touch, touch-free, soft-touch
+ * 2. Query "brushless" — fallback only if "touch" found nothing (catches brushless, brush-free)
+ *
+ * Locally verifies every result against REVIEW_TOUCHLESS_KEYWORDS before accepting.
  */
 async function searchReviewsMultiKeyword(
   serpApiKey: string,
   placeId: string,
 ): Promise<{ reviews: SerpApiReview[]; apiCalls: number; error?: string }> {
-  // Primary query — catches "touchless", "touch-free", etc.
-  const primary = await searchReviews(serpApiKey, placeId, 'touchless');
+  // Primary query — "touch" matches touchless, no-touch, touch-free, soft-touch, etc.
+  const primary = await searchReviews(serpApiKey, placeId, 'touch');
 
   if (primary.error) {
     return { reviews: [], apiCalls: 1, error: primary.error };
   }
 
-  // Filter to only reviews that genuinely contain our keywords
-  // (SerpAPI does fuzzy matching, so many results don't actually contain the keyword)
+  // Filter to only reviews that genuinely contain our exact keywords
   const verifiedPrimary = filterVerifiedReviews(primary.reviews);
   if (verifiedPrimary.length > 0) {
     return { reviews: verifiedPrimary, apiCalls: 1 };
   }
 
-  // Secondary query — catches "no touch", "no-touch"
-  const secondary = await searchReviews(serpApiKey, placeId, 'no touch');
+  // Fallback — "brushless" and "brush free" won't match "touch"
+  const secondary = await searchReviews(serpApiKey, placeId, 'brushless');
   const verifiedSecondary = filterVerifiedReviews(secondary.reviews);
 
-  if (verifiedSecondary.length > 0) {
-    return { reviews: verifiedSecondary, apiCalls: 2 };
-  }
-
-  // Tertiary query — catches "brushless", "brush free"
-  const tertiary = await searchReviews(serpApiKey, placeId, 'brushless');
-  const verifiedTertiary = filterVerifiedReviews(tertiary.reviews);
-
-  return { reviews: verifiedTertiary, apiCalls: 3 };
+  return { reviews: verifiedSecondary, apiCalls: 2 };
 }
 
 /**
@@ -738,7 +733,7 @@ Deno.serve(async (req: Request) => {
         .eq('is_touchless', false)
         .is('review_mine_status', null)
         .not('google_place_id', 'is', null)
-        .ilike('google_category', '%car wash%')
+        .in('google_category', ['Car wash', 'car_wash'])
         .order('review_count', { ascending: false }) // Prioritize listings with more reviews
         .limit(batchSize);
 
@@ -756,7 +751,7 @@ Deno.serve(async (req: Request) => {
           .select('id', { count: 'exact', head: true })
           .eq('is_touchless', false)
           .not('review_mine_status', 'is', null)
-          .ilike('google_category', '%car wash%');
+          .in('google_category', ['Car wash', 'car_wash']);
 
         const { count: totalFound } = await supabase
           .from('listings')
@@ -904,14 +899,14 @@ Deno.serve(async (req: Request) => {
         .eq('is_touchless', false)
         .is('review_mine_status', null)
         .not('google_place_id', 'is', null)
-        .ilike('google_category', '%car wash%');
+        .in('google_category', ['Car wash', 'car_wash']);
 
       const { count: totalScanned } = await supabase
         .from('listings')
         .select('id', { count: 'exact', head: true })
         .eq('is_touchless', false)
         .not('review_mine_status', 'is', null)
-        .ilike('google_category', '%car wash%');
+        .in('google_category', ['Car wash', 'car_wash']);
 
       const { count: totalFound } = await supabase
         .from('listings')
@@ -1030,14 +1025,14 @@ Deno.serve(async (req: Request) => {
         .select('id', { count: 'exact', head: true })
         .eq('is_touchless', false)
         .not('google_place_id', 'is', null)
-        .ilike('google_category', '%car wash%');
+        .in('google_category', ['Car wash', 'car_wash']);
 
       const { count: totalScanned } = await supabase
         .from('listings')
         .select('id', { count: 'exact', head: true })
         .eq('is_touchless', false)
         .not('review_mine_status', 'is', null)
-        .ilike('google_category', '%car wash%');
+        .in('google_category', ['Car wash', 'car_wash']);
 
       const { count: totalRemaining } = await supabase
         .from('listings')
@@ -1045,7 +1040,7 @@ Deno.serve(async (req: Request) => {
         .eq('is_touchless', false)
         .is('review_mine_status', null)
         .not('google_place_id', 'is', null)
-        .ilike('google_category', '%car wash%');
+        .in('google_category', ['Car wash', 'car_wash']);
 
       const { count: totalFound } = await supabase
         .from('listings')
