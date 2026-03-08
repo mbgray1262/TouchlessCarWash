@@ -714,7 +714,7 @@ Deno.serve(async (req: Request) => {
       // Fetch unscanned non-touchless car wash listings
       const { data: listings, error: fetchError } = await supabase
         .from('listings')
-        .select('id, name, google_place_id, city, state, rating, review_count')
+        .select('id, name, slug, google_place_id, google_maps_url, city, state, rating, review_count')
         .eq('is_touchless', false)
         .is('review_mine_status', null)
         .not('google_place_id', 'is', null)
@@ -770,9 +770,13 @@ Deno.serve(async (req: Request) => {
         name: string;
         city: string;
         state: string;
+        slug: string;
+        google_place_id: string;
+        google_maps_url: string | null;
         status: string;
         reviewCount: number;
         apiCalls: number;
+        reviews: Array<{ text: string; rating: number | null; reviewer: string | null; keywords: string[] }>;
       }> = [];
 
       let scanned = 0;
@@ -796,9 +800,13 @@ Deno.serve(async (req: Request) => {
             name: listing.name,
             city: listing.city,
             state: listing.state,
+            slug: listing.slug,
+            google_place_id: listing.google_place_id,
+            google_maps_url: listing.google_maps_url,
             status: 'error',
             reviewCount: 0,
             apiCalls,
+            reviews: [],
           });
           continue;
         }
@@ -834,9 +842,18 @@ Deno.serve(async (req: Request) => {
             name: listing.name,
             city: listing.city,
             state: listing.state,
+            slug: listing.slug,
+            google_place_id: listing.google_place_id,
+            google_maps_url: listing.google_maps_url,
             status: 'touchless_found',
             reviewCount: snippetCount,
             apiCalls,
+            reviews: reviews.map((r) => ({
+              text: r.snippet || r.extracted_snippet?.original || '',
+              rating: r.rating ?? null,
+              reviewer: r.user?.name ?? null,
+              keywords: extractKeywords(r.snippet || r.extracted_snippet?.original || ''),
+            })),
           });
         } else {
           // No evidence — mark as scanned
@@ -849,9 +866,13 @@ Deno.serve(async (req: Request) => {
             name: listing.name,
             city: listing.city,
             state: listing.state,
+            slug: listing.slug,
+            google_place_id: listing.google_place_id,
+            google_maps_url: listing.google_maps_url,
             status: 'scanned_clean',
             reviewCount: 0,
             apiCalls,
+            reviews: [],
           });
         }
       }
@@ -1011,13 +1032,37 @@ Deno.serve(async (req: Request) => {
         .select('id', { count: 'exact', head: true })
         .eq('review_mine_status', 'touchless_found');
 
-      // Get recently found listings for display
+      // Get recently found listings for display (with google_maps_url for verification)
       const { data: recentFinds } = await supabase
         .from('listings')
-        .select('id, name, city, state, slug, touchless_review_count')
+        .select('id, name, city, state, slug, google_place_id, google_maps_url, touchless_review_count')
         .eq('review_mine_status', 'touchless_found')
         .order('updated_at', { ascending: false })
-        .limit(20);
+        .limit(50);
+
+      // Fetch review snippets for recent finds
+      const findIds = (recentFinds || []).map((f: Record<string, unknown>) => f.id as string);
+      let reviewsByListing: Record<string, Array<Record<string, unknown>>> = {};
+      if (findIds.length > 0) {
+        const { data: snippets } = await supabase
+          .from('review_snippets')
+          .select('listing_id, reviewer_name, rating, review_text, touchless_keywords')
+          .in('listing_id', findIds)
+          .eq('source', 'serpapi')
+          .order('rating', { ascending: false });
+
+        for (const s of snippets || []) {
+          const lid = s.listing_id as string;
+          if (!reviewsByListing[lid]) reviewsByListing[lid] = [];
+          reviewsByListing[lid].push(s);
+        }
+      }
+
+      // Attach reviews to each find
+      const enrichedFinds = (recentFinds || []).map((f: Record<string, unknown>) => ({
+        ...f,
+        reviews: reviewsByListing[f.id as string] || [],
+      }));
 
       return new Response(
         JSON.stringify({
@@ -1026,7 +1071,7 @@ Deno.serve(async (req: Request) => {
           total_remaining: totalRemaining || 0,
           total_touchless_found: totalFound || 0,
           complete: (totalRemaining || 0) === 0,
-          recent_finds: recentFinds || [],
+          recent_finds: enrichedFinds,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
