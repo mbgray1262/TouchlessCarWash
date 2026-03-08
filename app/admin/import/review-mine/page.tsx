@@ -269,18 +269,10 @@ export default function ReviewMinePage() {
         totalApiCalls: prev.totalApiCalls + data.api_calls_used,
       }));
 
-      // Refresh progress
-      setProgress((prev) =>
-        prev
-          ? {
-              ...prev,
-              total_scanned: data.total_scanned,
-              total_remaining: data.total_remaining,
-              total_touchless_found: data.total_touchless_found,
-              complete: data.complete,
-            }
-          : prev,
-      );
+      // Refresh progress from the dedicated progress endpoint (reliable)
+      // Don't use inline counts from batch response — they return zeros
+      // due to known edge function service-role key bug
+      await fetchProgress();
 
       if (data.complete) {
         setAutoScan(false);
