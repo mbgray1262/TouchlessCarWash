@@ -33,7 +33,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
 };
 
 /** Wash-type filter slugs — rendered first, in this order */
-const WASH_TYPE_SLUGS = ['touchless-automatic', 'self-serve-bays'];
+const WASH_TYPE_SLUGS = ['touchless-automatic'];
 const WASH_TYPE_SET = new Set(WASH_TYPE_SLUGS);
 
 function buildFilterUrl(

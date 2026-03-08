@@ -93,42 +93,6 @@ export const FEATURES: Feature[] = [
     ],
   },
   {
-    name: 'Self-Serve Bays',
-    slug: 'self-serve-bays',
-    icon: 'hand',
-    shortDescription: 'Touchless self-serve spray bays with high-pressure wands.',
-    longDescription:
-      'Self-serve spray bays let you wash your vehicle at your own pace using a high-pressure wand \u2014 no brushes, no friction. Only locations offering brush-free wand washes are included in our directory. These bays are ideal if you prefer to control where the water goes or need to clean specific areas like wheels, undercarriage, or truck beds.',
-    seoTitle: 'Touchless Self-Serve Car Wash Bays \u2014 Brush-Free Spray Wands',
-    seoDescription:
-      'Find touchless self-serve car wash bays with brush-free high-pressure spray wands across all 50 states. Only verified wand-only locations \u2014 no brushes.',
-    stateTitle: (state, count) =>
-      `${count} Touchless Self-Serve Car Wash${count !== 1 ? 'es' : ''} in ${state}`,
-    stateDescription: (state, count) =>
-      `Browse ${count} verified self-serve touchless car wash${count !== 1 ? 'es' : ''} in ${state}. Brush-free spray bays with high-pressure wands \u2014 wash at your own pace.`,
-    stateSeoTitle: (state, count) =>
-      `Touchless Self-Serve Car Washes in ${state} \u2014 ${count} Locations`,
-    stateSeoDescription: (state, count) =>
-      `Find ${count} touchless self-serve car wash${count !== 1 ? 'es' : ''} with brush-free spray wands in ${state}. Verified wand-only locations.`,
-    faqItems: [
-      {
-        question: 'Are self-serve car wash bays really touchless?',
-        answer:
-          'The self-serve bays in our directory are \u2014 we only include locations that offer a wand-only high-pressure spray wash without brushes. Self-serve bays that provide brushes or foam pads are not listed.',
-      },
-      {
-        question: 'How much does a self-serve touchless wash cost?',
-        answer:
-          'Self-serve bays typically cost $3\u2013$8 for a timed wash session, paid by coin or credit card at the bay. Additional time can usually be added in small increments.',
-      },
-      {
-        question: 'Can I wash a truck or SUV in a self-serve bay?',
-        answer:
-          'Yes \u2014 self-serve bays generally have higher clearance than automatic tunnels, making them a great option for trucks, SUVs, and taller vehicles.',
-      },
-    ],
-  },
-  {
     name: 'Membership Plans',
     slug: 'membership',
     icon: 'id-card',

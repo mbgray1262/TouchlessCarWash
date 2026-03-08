@@ -38,7 +38,6 @@ interface ListingCardProps {
 
 const WASH_TYPE_LABELS: Record<string, string> = {
   touchless_automatic: 'Touchless Automatic',
-  self_serve_spray: 'Self-Serve Spray',
 };
 
 export function ListingCard({ listing, href, showVerifiedBadge = false, distance }: ListingCardProps) {

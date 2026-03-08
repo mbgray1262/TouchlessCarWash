@@ -227,7 +227,7 @@ Rules:
 - name is REQUIRED. If you can't find the name, derive it from the page title or URL.
 - address, city, state, zip: extract only if clearly shown on the page
 - For a chain with multiple locations, extract only THIS location's data
-- amenities: be specific and descriptive. Include wash type (e.g. "Touchless Automatic", "Self-Serve Bays"), payment options, equipment, services
+- amenities: be specific and descriptive. Include wash type (e.g. "Touchless Automatic"), payment options, equipment, services
 - wash_packages: extract service menu items with prices if available
 - If hours say "Open 24 hours" or "24/7", use "24 hours" for all days
 - Return null for any field you cannot find`;

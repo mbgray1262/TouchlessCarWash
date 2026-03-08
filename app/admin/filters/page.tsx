@@ -188,7 +188,7 @@ export default function FiltersPage() {
                   <span className="font-medium">Open 24 Hours</span> is derived from the hours JSON.{' '}
                   <span className="font-medium">Free Vacuum</span> and <span className="font-medium">Unlimited Wash Club</span> come from Google About data.{' '}
                   <span className="font-medium">Membership</span> and <span className="font-medium">Undercarriage Cleaning</span> are matched from the amenities array (case-insensitive).{' '}
-                  <span className="font-medium">Self-Serve Bays</span> and <span className="font-medium">RV / Oversized</span> will be populated as the Firecrawl pipeline runs.{' '}
+                  <span className="font-medium">RV / Oversized</span> will be populated as the Firecrawl pipeline runs.{' '}
                   All counts reflect touchless-only listings (<code className="bg-gray-100 px-1 rounded">is_touchless = true</code>).
                 </p>
               </CardContent>

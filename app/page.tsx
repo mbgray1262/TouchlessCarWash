@@ -52,7 +52,7 @@ export async function generateMetadata(): Promise<Metadata> {
 const faqItems = [
   {
     question: 'What is a touchless car wash?',
-    answer: 'A touchless car wash — also called a touch-free, no-touch, or laser car wash — uses high-pressure water jets and specialized detergents to clean your vehicle without any physical contact from brushes, cloth, or foam pads. This includes both drive-through touchless automatics and self-serve spray bays that use a high-pressure wand without brushes. Because nothing touches your car\'s surface, these brushless wash methods eliminate the risk of scratches, swirl marks, and paint damage.',
+    answer: 'A touchless car wash — also called a touch-free, no-touch, or laser car wash — is an automated drive-through or in-bay wash that uses high-pressure water jets and specialized detergents to clean your vehicle without any physical contact from brushes, cloth, or foam pads. Because nothing touches your car\'s surface, this brushless wash method eliminates the risk of scratches, swirl marks, and paint damage.',
   },
   {
     question: 'Are touchless car washes better for your car?',
@@ -69,10 +69,6 @@ const faqItems = [
   {
     question: 'Are touchless car washes safe for new cars?',
     answer: 'Touchless car washes are the safest type of car wash for new vehicles. New paint is especially vulnerable to micro-scratches caused by brushes and cloth friction. Touch-free, no-touch washes rely entirely on water pressure and chemistry, making them ideal for new cars, vehicles with ceramic coatings, paint protection film (PPF), or any paint-sensitive finish.',
-  },
-  {
-    question: 'Why are some self-service car washes included?',
-    answer: 'Our directory includes self-serve bay washes, but only those that offer a wand-only high-pressure spray wash without any brushes. These bays meet the same standard as drive-through touchless washes — nothing physical touches your paint. Self-serve bays that provide brushes or foam pads are not included. You can tell which type a listing is by checking the wash type badge on its detail page: "Touchless Automatic" for drive-through and "Self-Serve Spray" for brush-free spray bays.',
   },
 ];
 

@@ -63,7 +63,6 @@ export const AMENITIES = [
   'Wax Protection',
   'Rain Repellent',
   'Pet Wash Station',
-  'Self-Service Bays',
   'Loyalty Program',
 ];
 
