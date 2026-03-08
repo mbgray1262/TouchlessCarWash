@@ -718,7 +718,7 @@ Deno.serve(async (req: Request) => {
         .eq('is_touchless', false)
         .is('review_mine_status', null)
         .not('google_place_id', 'is', null)
-        .ilike('google_category', '%car_wash%')
+        .ilike('google_category', '%car wash%')
         .order('review_count', { ascending: false }) // Prioritize listings with more reviews
         .limit(batchSize);
 
@@ -736,7 +736,7 @@ Deno.serve(async (req: Request) => {
           .select('id', { count: 'exact', head: true })
           .eq('is_touchless', false)
           .not('review_mine_status', 'is', null)
-          .ilike('google_category', '%car_wash%');
+          .ilike('google_category', '%car wash%');
 
         const { count: totalFound } = await supabase
           .from('listings')
@@ -863,14 +863,14 @@ Deno.serve(async (req: Request) => {
         .eq('is_touchless', false)
         .is('review_mine_status', null)
         .not('google_place_id', 'is', null)
-        .ilike('google_category', '%car_wash%');
+        .ilike('google_category', '%car wash%');
 
       const { count: totalScanned } = await supabase
         .from('listings')
         .select('id', { count: 'exact', head: true })
         .eq('is_touchless', false)
         .not('review_mine_status', 'is', null)
-        .ilike('google_category', '%car_wash%');
+        .ilike('google_category', '%car wash%');
 
       const { count: totalFound } = await supabase
         .from('listings')
@@ -989,14 +989,14 @@ Deno.serve(async (req: Request) => {
         .select('id', { count: 'exact', head: true })
         .eq('is_touchless', false)
         .not('google_place_id', 'is', null)
-        .ilike('google_category', '%car_wash%');
+        .ilike('google_category', '%car wash%');
 
       const { count: totalScanned } = await supabase
         .from('listings')
         .select('id', { count: 'exact', head: true })
         .eq('is_touchless', false)
         .not('review_mine_status', 'is', null)
-        .ilike('google_category', '%car_wash%');
+        .ilike('google_category', '%car wash%');
 
       const { count: totalRemaining } = await supabase
         .from('listings')
@@ -1004,7 +1004,7 @@ Deno.serve(async (req: Request) => {
         .eq('is_touchless', false)
         .is('review_mine_status', null)
         .not('google_place_id', 'is', null)
-        .ilike('google_category', '%car_wash%');
+        .ilike('google_category', '%car wash%');
 
       const { count: totalFound } = await supabase
         .from('listings')
