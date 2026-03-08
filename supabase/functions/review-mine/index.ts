@@ -181,23 +181,35 @@ REASON: [one brief sentence]`;
 
 /** Helper to get total scanned count via database RPC (reliable). */
 async function getTotalScannedCount(
-  supabase: ReturnType<typeof createClient>,
+  supabaseUrl: string,
+  serviceKey: string,
 ): Promise<{ scannedClean: number; touchlessFound: number; totalScanned: number; totalRemaining: number }> {
-  const { data, error } = await supabase.rpc('review_mine_counts');
+  try {
+    const res = await fetch(`${supabaseUrl}/rest/v1/rpc/review_mine_counts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': serviceKey,
+        'Authorization': `Bearer ${serviceKey}`,
+      },
+    });
 
-  if (error || !data) {
-    console.error('review_mine_counts RPC failed:', error, 'data:', data);
+    if (!res.ok) {
+      console.error('review_mine_counts RPC HTTP error:', res.status, await res.text());
+      return { scannedClean: 0, touchlessFound: 0, totalScanned: 0, totalRemaining: 0 };
+    }
+
+    const counts = await res.json();
+    return {
+      scannedClean: counts.scanned_clean || 0,
+      touchlessFound: counts.touchless_found || 0,
+      totalScanned: counts.total_scanned || 0,
+      totalRemaining: counts.total_remaining || 0,
+    };
+  } catch (err) {
+    console.error('review_mine_counts RPC failed:', err);
     return { scannedClean: 0, touchlessFound: 0, totalScanned: 0, totalRemaining: 0 };
   }
-
-  // RPC returns JSON — may come as string or object depending on Supabase client version
-  const counts = typeof data === 'string' ? JSON.parse(data) : data;
-  return {
-    scannedClean: counts.scanned_clean || 0,
-    touchlessFound: counts.touchless_found || 0,
-    totalScanned: counts.total_scanned || 0,
-    totalRemaining: counts.total_remaining || 0,
-  };
 }
 
 /**
@@ -855,7 +867,7 @@ Deno.serve(async (req: Request) => {
       }
 
       if (!listings?.length) {
-        const counts = await getTotalScannedCount(supabase);
+        const counts = await getTotalScannedCount(supabaseUrl, serviceKey);
 
         return new Response(
           JSON.stringify({
@@ -1025,7 +1037,7 @@ Deno.serve(async (req: Request) => {
       }
 
       // Get total progress (single RPC call — reliable counts)
-      const counts = await getTotalScannedCount(supabase);
+      const counts = await getTotalScannedCount(supabaseUrl, serviceKey);
 
       // Trigger full enrichment pipeline for newly reclassified listings
       // (crawl website → extract amenities/packages → generate AI description)
@@ -1185,7 +1197,7 @@ Deno.serve(async (req: Request) => {
     // -----------------------------------------------------------------------
     if (action === 'progress') {
       // Single RPC call for all counts (Supabase JS count queries were unreliable)
-      const counts = await getTotalScannedCount(supabase);
+      const counts = await getTotalScannedCount(supabaseUrl, serviceKey);
 
       // Get recently found listings for display (with google_maps_url for verification)
       const { data: recentFinds } = await supabase
