@@ -180,13 +180,8 @@ REASON: [one brief sentence]`;
 }
 
 /**
- * Get total scanned counts using the database RPC and row-fetching.
- *
- * For scanned listings (~100-200 rows): fetch actual rows so we can
- * count by status in JS — avoids unreliable Supabase count queries.
- *
- * For remaining listings (~8000 rows): use the review_mine_counts RPC
- * because the Supabase client caps results at 1000 rows.
+ * Get total scanned counts using only .eq() queries (proven reliable in
+ * the edge function runtime) and pagination for the remaining count.
  */
 async function getTotalScannedCount(
   supabase: ReturnType<typeof createClient>,
@@ -194,55 +189,48 @@ async function getTotalScannedCount(
   serviceKey: string,
 ): Promise<{ scannedClean: number; touchlessFound: number; totalScanned: number; totalRemaining: number }> {
   try {
-    // --- Scanned counts: fetch actual rows and count in JS ---
-    // Use .in() with explicit values instead of .not('is', null) for reliability
-    const { data: scannedRows, error: scannedErr } = await supabase
-      .from('listings')
-      .select('review_mine_status')
-      .in('review_mine_status', ['scanned_clean', 'touchless_found']);
+    // --- Scanned counts: two .eq() queries (proven to work) ---
+    const [cleanResult, foundResult] = await Promise.all([
+      supabase.from('listings').select('id').eq('review_mine_status', 'scanned_clean'),
+      supabase.from('listings').select('id').eq('review_mine_status', 'touchless_found'),
+    ]);
 
-    if (scannedErr) {
-      console.error('Failed to fetch scanned listings:', scannedErr.message);
-    }
+    if (cleanResult.error) console.error('[counts] scanned_clean query error:', cleanResult.error.message);
+    if (foundResult.error) console.error('[counts] touchless_found query error:', foundResult.error.message);
 
-    const rows = scannedRows || [];
-    const scannedClean = rows.filter(
-      (r: { review_mine_status: string }) => r.review_mine_status === 'scanned_clean',
-    ).length;
-    const touchlessFound = rows.filter(
-      (r: { review_mine_status: string }) => r.review_mine_status === 'touchless_found',
-    ).length;
-    const totalScanned = rows.length;
+    const scannedClean = (cleanResult.data || []).length;
+    const touchlessFound = (foundResult.data || []).length;
+    const totalScanned = scannedClean + touchlessFound;
 
-    console.log(`[counts] Scanned rows fetched: ${rows.length} (clean=${scannedClean}, found=${touchlessFound})`);
+    console.log(`[counts] clean=${scannedClean}, found=${touchlessFound}, total=${totalScanned}`);
 
-    // --- Remaining count: use RPC (avoids 1000-row cap) ---
+    // --- Remaining count: paginate through in batches of 1000 ---
+    // (Supabase caps single queries at 1000 rows)
     let totalRemaining = 0;
-    try {
-      const res = await fetch(`${supabaseUrl}/rest/v1/rpc/review_mine_counts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': serviceKey,
-          'Authorization': `Bearer ${serviceKey}`,
-        },
-        body: '{}',
-      });
+    let offset = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data: page, error: pageErr } = await supabase
+        .from('listings')
+        .select('id')
+        .eq('is_touchless', false)
+        .is('review_mine_status', null)
+        .not('google_place_id', 'is', null)
+        .or('google_category.eq.Car wash,google_category.eq.car_wash')
+        .range(offset, offset + pageSize - 1);
 
-      const responseText = await res.text();
-      console.log(`[counts] RPC response (${res.status}): ${responseText.slice(0, 500)}`);
-
-      if (res.ok && responseText) {
-        const parsed = JSON.parse(responseText);
-        // Handle both object and array-wrapped responses
-        const counts = Array.isArray(parsed) ? parsed[0] : parsed;
-        if (counts && typeof counts === 'object') {
-          totalRemaining = counts.total_remaining || 0;
-        }
+      if (pageErr) {
+        console.error(`[counts] remaining page ${offset} error:`, pageErr.message);
+        break;
       }
-    } catch (rpcErr) {
-      console.error('RPC call failed, falling back to estimation:', rpcErr);
+
+      const batch = page || [];
+      totalRemaining += batch.length;
+      if (batch.length < pageSize) break;
+      offset += pageSize;
     }
+
+    console.log(`[counts] remaining=${totalRemaining}`);
 
     return { scannedClean, touchlessFound, totalScanned, totalRemaining };
   } catch (err) {
