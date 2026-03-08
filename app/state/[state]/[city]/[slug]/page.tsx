@@ -94,15 +94,18 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   const stateCode = getStateCode(params.state);
   const stateName = stateCode ? getStateName(stateCode) : listing.state;
   const topAmenities = (listing.amenities || []).slice(0, 3).join(', ');
-  const ratingPart = listing.rating > 0 ? `Rated ${Number(listing.rating).toFixed(1)}` : '';
-  const reviewPart = listing.review_count > 0 ? ` (${listing.review_count} reviews)` : '';
-  const amenityPart = topAmenities ? `. Touch-free, brushless car wash offering ${topAmenities}` : '';
+  const amenityPart = topAmenities ? ` Touch-free, brushless car wash offering ${topAmenities}.` : '';
   const canonicalUrl = `${SITE_URL}/state/${params.state}/${params.city}/${params.slug}`;
   const heroImage = listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
 
-  const title = `${listing.name} – Touchless Car Wash in ${listing.city}, ${listing.state}`;
-  const ogTitle = `${listing.name} – Touchless Car Wash in ${listing.city}, ${stateName}`;
-  const description = `${listing.name} — verified touch-free car wash at ${listing.address}, ${listing.city}, ${listing.state}. ${ratingPart}${reviewPart}${amenityPart}. Hours, directions, photos & more.`;
+  const title = `${listing.name} | Touchless Car Wash in ${listing.city}, ${listing.state}`;
+  const ogTitle = `${listing.name} | Touchless Car Wash in ${listing.city}, ${stateName}`;
+
+  // Lead with star rating for CTR — Google often shows this in snippet
+  const ratingPrefix = listing.rating > 0
+    ? `★ ${Number(listing.rating).toFixed(1)}${listing.review_count > 0 ? ` (${listing.review_count} reviews)` : ''} — `
+    : '';
+  const description = `${ratingPrefix}${listing.name} is a verified touchless car wash at ${listing.address}, ${listing.city}, ${listing.state}.${amenityPart} Hours, directions, photos & more.`;
 
   return {
     title: { absolute: title },
