@@ -381,7 +381,7 @@ async function insertSerpApiReviewSnippets(
       listing_id: listingId,
       reviewer_name: review.user?.name || null,
       rating: review.rating || null,
-      review_text: text.slice(0, 500),
+      review_text: text.slice(0, 2000),
       review_date: review.date || null,
       iso_date: review.iso_date || null,
       review_id: review.review_id || null,
