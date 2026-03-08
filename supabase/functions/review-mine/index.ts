@@ -1037,7 +1037,7 @@ Deno.serve(async (req: Request) => {
         .from('listings')
         .select('id, name, city, state, slug, google_place_id, google_maps_url, touchless_review_count')
         .eq('review_mine_status', 'touchless_found')
-        .order('updated_at', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(50);
 
       // Fetch review snippets for recent finds
