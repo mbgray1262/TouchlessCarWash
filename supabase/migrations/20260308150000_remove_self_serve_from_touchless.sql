@@ -19,11 +19,10 @@ SET
 WHERE is_touchless = true
   AND touchless_wash_types = ARRAY['self_serve_spray']::TEXT[];
 
--- 2. Remove self_serve_spray from hybrid listings (keep touchless_automatic)
+-- 2. Remove self_serve_spray from ALL remaining listings that have it
 UPDATE listings
 SET touchless_wash_types = array_remove(touchless_wash_types, 'self_serve_spray')
-WHERE 'self_serve_spray' = ANY(touchless_wash_types)
-  AND 'touchless_automatic' = ANY(touchless_wash_types);
+WHERE 'self_serve_spray' = ANY(touchless_wash_types);
 
 -- 3. Update CHECK constraint to only allow touchless_automatic
 ALTER TABLE listings DROP CONSTRAINT IF EXISTS valid_touchless_wash_types;
