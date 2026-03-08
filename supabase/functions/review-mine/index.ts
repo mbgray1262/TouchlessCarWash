@@ -86,6 +86,119 @@ const REVIEW_TOUCHLESS_KEYWORDS = [
   'soft-touch', 'soft touch',
 ];
 
+// ---------------------------------------------------------------------------
+// AI Verification — use Claude Haiku to assess review context
+// ---------------------------------------------------------------------------
+
+/**
+ * Use Claude AI to verify whether review evidence actually indicates a
+ * touchless car wash, or if keywords appear in a negative context (e.g.,
+ * "looking for brushless, go elsewhere" or "even a touchless wash is better").
+ *
+ * Returns { isTouchless, reasoning } where reasoning explains the verdict.
+ * Falls back to keyword-only match (isTouchless=true) if AI is unavailable.
+ */
+async function verifyTouchlessWithAI(
+  anthropicKey: string,
+  carWashName: string,
+  reviews: SerpApiReview[],
+): Promise<{ isTouchless: boolean; reasoning: string }> {
+  if (!anthropicKey) {
+    return { isTouchless: true, reasoning: 'AI verification unavailable — no API key' };
+  }
+
+  const reviewTexts = reviews
+    .map((r, i) => {
+      const text = r.snippet || r.extracted_snippet?.original || '';
+      return text ? `Review ${i + 1}: "${text}"` : null;
+    })
+    .filter(Boolean)
+    .join('\n');
+
+  if (!reviewTexts) {
+    return { isTouchless: false, reasoning: 'No review text to evaluate' };
+  }
+
+  const prompt = `You are evaluating whether a car wash business actually offers touchless/brushless washing based on customer reviews.
+
+Business name: "${carWashName}"
+
+Reviews that mention touchless-related keywords:
+${reviewTexts}
+
+Does the evidence indicate this car wash actually HAS or OFFERS a touchless, brushless, or no-touch wash?
+
+Rules:
+- Say YES only if reviewers describe THIS car wash AS being touchless/brushless/no-touch
+- Say NO if reviewers are comparing to touchless elsewhere, wishing it was touchless, or saying it's NOT touchless
+- Say NO if keywords appear in negative context ("go elsewhere for brushless", "even a touchless wash does better", "not touchless")
+- Say NO if the review describes the wash as having brushes or being a brush/friction wash
+- Say NO if the keyword is used to describe a different business or a general concept, not THIS car wash
+
+Respond in this exact format:
+TOUCHLESS: YES or NO
+REASON: [one brief sentence]`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-haiku-latest',
+        max_tokens: 100,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`Anthropic API error: ${res.status} ${errText}`);
+      return { isTouchless: true, reasoning: 'AI verification failed — falling back to keyword match' };
+    }
+
+    const data = await res.json();
+    const answer = (data.content?.[0]?.text || '').trim();
+
+    // Parse response
+    const touchlessMatch = answer.match(/TOUCHLESS:\s*(YES|NO)/i);
+    const reasonMatch = answer.match(/REASON:\s*(.+)/i);
+
+    const isTouchless = touchlessMatch ? touchlessMatch[1].toUpperCase() === 'YES' : true;
+    const reasoning = reasonMatch ? reasonMatch[1].trim() : answer.slice(0, 200);
+
+    return { isTouchless, reasoning };
+  } catch (err) {
+    console.error('AI verification failed:', err);
+    return { isTouchless: true, reasoning: 'AI verification timed out — falling back to keyword match' };
+  }
+}
+
+/** Helper to get total scanned count (scanned_clean + touchless_found). */
+async function getTotalScannedCount(
+  supabase: ReturnType<typeof createClient>,
+): Promise<{ scannedClean: number; touchlessFound: number; totalScanned: number }> {
+  const { count: scannedClean } = await supabase
+    .from('listings')
+    .select('id', { count: 'exact', head: true })
+    .eq('review_mine_status', 'scanned_clean');
+
+  const { count: touchlessFound } = await supabase
+    .from('listings')
+    .select('id', { count: 'exact', head: true })
+    .eq('review_mine_status', 'touchless_found');
+
+  return {
+    scannedClean: scannedClean || 0,
+    touchlessFound: touchlessFound || 0,
+    totalScanned: (scannedClean || 0) + (touchlessFound || 0),
+  };
+}
+
 /**
  * Call SerpAPI Google Maps Reviews with keyword query.
  * Returns reviews matching the query (typically "touchless" or "no touch").
@@ -717,6 +830,11 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Get Anthropic API key for AI verification (optional — falls back to keyword-only)
+    const anthropicKey =
+      Deno.env.get('ANTHROPIC_API_KEY') ??
+      (await getSecret(supabaseUrl, serviceKey, 'ANTHROPIC_API_KEY'));
+
     const body = await req.json();
     const action = body.action as string;
 
@@ -745,26 +863,15 @@ Deno.serve(async (req: Request) => {
       }
 
       if (!listings?.length) {
-        // Check total counts for progress reporting
-        const { count: totalScanned } = await supabase
-          .from('listings')
-          .select('id', { count: 'exact', head: true })
-          .eq('is_touchless', false)
-          .not('review_mine_status', 'is', null)
-          .in('google_category', ['Car wash', 'car_wash']);
-
-        const { count: totalFound } = await supabase
-          .from('listings')
-          .select('id', { count: 'exact', head: true })
-          .eq('review_mine_status', 'touchless_found');
+        const counts = await getTotalScannedCount(supabase);
 
         return new Response(
           JSON.stringify({
             message: 'No more listings to scan',
             scanned_this_batch: 0,
             found_touchless: 0,
-            total_scanned: totalScanned || 0,
-            total_touchless_found: totalFound || 0,
+            total_scanned: counts.totalScanned,
+            total_touchless_found: counts.touchlessFound,
             complete: true,
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -791,12 +898,14 @@ Deno.serve(async (req: Request) => {
         status: string;
         reviewCount: number;
         apiCalls: number;
+        aiVerdict?: string;
         reviews: Array<{ text: string; rating: number | null; reviewer: string | null; keywords: string[] }>;
       }> = [];
 
       let scanned = 0;
       let foundTouchless = 0;
       let totalApiCalls = 0;
+      let aiRejected = 0;
 
       for (const listing of listings) {
         scanned++;
@@ -808,8 +917,13 @@ Deno.serve(async (req: Request) => {
         totalApiCalls += apiCalls;
 
         if (error) {
-          // Mark as failed but don't stop the batch
+          // SerpAPI error — still mark as scanned_clean so it doesn't get retried endlessly
           console.error(`Error scanning ${listing.name}: ${error}`);
+          await supabase.from('listings').update({
+            review_mine_status: 'scanned_clean',
+            crawl_notes: `Review mine SerpAPI error: ${error}`,
+          }).eq('id', listing.id);
+
           results.push({
             id: listing.id,
             name: listing.name,
@@ -827,51 +941,77 @@ Deno.serve(async (req: Request) => {
         }
 
         if (reviews.length > 0) {
-          // Found touchless evidence — reclassify!
-          foundTouchless++;
-
-          // Insert review snippets
-          const snippetCount = await insertSerpApiReviewSnippets(supabase, listing.id, reviews);
-
-          // Update listing: flip to touchless
-          await supabase.from('listings').update({
-            is_touchless: true,
-            is_approved: true,
-            review_mine_status: 'touchless_found',
-            review_extract_status: 'extracted',
-            touchless_review_count: snippetCount,
-            crawl_notes: `Reclassified as touchless via review mining — ${snippetCount} review(s) with touchless evidence found.`,
-          }).eq('id', listing.id);
-
-          // Sync filters
-          await syncFiltersForListing(
-            supabase,
-            listing.id,
-            true,
-            [], // existing amenities not loaded, so just sync touchless filter
-            filterMap,
+          // Keywords found — now verify with AI that context is actually positive
+          const aiResult = await verifyTouchlessWithAI(
+            anthropicKey,
+            listing.name,
+            reviews,
           );
 
-          results.push({
-            id: listing.id,
-            name: listing.name,
-            city: listing.city,
-            state: listing.state,
-            slug: listing.slug,
-            google_place_id: listing.google_place_id,
-            google_maps_url: listing.google_maps_url,
-            status: 'touchless_found',
-            reviewCount: snippetCount,
-            apiCalls,
-            reviews: reviews.map((r) => ({
-              text: r.snippet || r.extracted_snippet?.original || '',
-              rating: r.rating ?? null,
-              reviewer: r.user?.name ?? null,
-              keywords: extractKeywords(r.snippet || r.extracted_snippet?.original || ''),
-            })),
-          });
+          const reviewMapped = reviews.map((r) => ({
+            text: r.snippet || r.extracted_snippet?.original || '',
+            rating: r.rating ?? null,
+            reviewer: r.user?.name ?? null,
+            keywords: extractKeywords(r.snippet || r.extracted_snippet?.original || ''),
+          }));
+
+          if (aiResult.isTouchless) {
+            // AI confirmed — reclassify as touchless!
+            foundTouchless++;
+
+            const snippetCount = await insertSerpApiReviewSnippets(supabase, listing.id, reviews);
+
+            await supabase.from('listings').update({
+              is_touchless: true,
+              is_approved: true,
+              review_mine_status: 'touchless_found',
+              review_extract_status: 'extracted',
+              touchless_review_count: snippetCount,
+              crawl_notes: `Reclassified as touchless via review mining (AI verified) — ${snippetCount} review(s). AI: ${aiResult.reasoning}`,
+            }).eq('id', listing.id);
+
+            await syncFiltersForListing(supabase, listing.id, true, [], filterMap);
+
+            results.push({
+              id: listing.id,
+              name: listing.name,
+              city: listing.city,
+              state: listing.state,
+              slug: listing.slug,
+              google_place_id: listing.google_place_id,
+              google_maps_url: listing.google_maps_url,
+              status: 'touchless_found',
+              reviewCount: snippetCount,
+              apiCalls,
+              aiVerdict: `✅ ${aiResult.reasoning}`,
+              reviews: reviewMapped,
+            });
+          } else {
+            // AI rejected — keywords found but in negative context
+            aiRejected++;
+
+            await supabase.from('listings').update({
+              review_mine_status: 'scanned_clean',
+              crawl_notes: `Review mine AI rejected: ${aiResult.reasoning}`,
+            }).eq('id', listing.id);
+
+            results.push({
+              id: listing.id,
+              name: listing.name,
+              city: listing.city,
+              state: listing.state,
+              slug: listing.slug,
+              google_place_id: listing.google_place_id,
+              google_maps_url: listing.google_maps_url,
+              status: 'ai_rejected',
+              reviewCount: 0,
+              apiCalls,
+              aiVerdict: `❌ ${aiResult.reasoning}`,
+              reviews: reviewMapped,
+            });
+          }
         } else {
-          // No evidence — mark as scanned
+          // No keyword matches — mark as scanned clean
           await supabase.from('listings').update({
             review_mine_status: 'scanned_clean',
           }).eq('id', listing.id);
@@ -892,7 +1032,9 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      // Get total progress — count scanned_clean + touchless_found for accurate total
+      // Get total progress
+      const counts = await getTotalScannedCount(supabase);
+
       const { count: totalRemaining } = await supabase
         .from('listings')
         .select('id', { count: 'exact', head: true })
@@ -901,26 +1043,15 @@ Deno.serve(async (req: Request) => {
         .not('google_place_id', 'is', null)
         .in('google_category', ['Car wash', 'car_wash']);
 
-      const { count: batchScannedClean } = await supabase
-        .from('listings')
-        .select('id', { count: 'exact', head: true })
-        .eq('review_mine_status', 'scanned_clean');
-
-      const { count: totalFound } = await supabase
-        .from('listings')
-        .select('id', { count: 'exact', head: true })
-        .eq('review_mine_status', 'touchless_found');
-
-      const totalScanned = (batchScannedClean || 0) + (totalFound || 0);
-
       return new Response(
         JSON.stringify({
           scanned_this_batch: scanned,
           found_touchless: foundTouchless,
+          ai_rejected: aiRejected,
           api_calls_used: totalApiCalls,
-          total_scanned: totalScanned,
+          total_scanned: counts.totalScanned,
           total_remaining: totalRemaining || 0,
-          total_touchless_found: totalFound || 0,
+          total_touchless_found: counts.touchlessFound,
           complete: (totalRemaining || 0) === 0,
           results,
         }),
@@ -966,39 +1097,65 @@ Deno.serve(async (req: Request) => {
       }
 
       if (reviews.length > 0) {
-        const snippetCount = await insertSerpApiReviewSnippets(supabase, listing.id, reviews);
+        // AI verification step
+        const aiResult = await verifyTouchlessWithAI(anthropicKey, listing.name, reviews);
 
-        // Load filter map
-        const { data: filters } = await supabase.from('filters').select('id, slug');
-        const filterMap: FilterMap = {};
-        for (const f of filters || []) filterMap[f.slug] = f.id;
+        const reviewMapped = reviews.map((r) => ({
+          text: r.snippet || r.extracted_snippet?.original || '',
+          rating: r.rating,
+          reviewer: r.user?.name,
+          keywords: extractKeywords(r.snippet || r.extracted_snippet?.original || ''),
+        }));
 
-        await supabase.from('listings').update({
-          is_touchless: true,
-          is_approved: true,
-          review_mine_status: 'touchless_found',
-          review_extract_status: 'extracted',
-          touchless_review_count: snippetCount,
-          crawl_notes: `Reclassified as touchless via review mining — ${snippetCount} review(s) with touchless evidence found.`,
-        }).eq('id', listing.id);
+        if (aiResult.isTouchless) {
+          const snippetCount = await insertSerpApiReviewSnippets(supabase, listing.id, reviews);
 
-        await syncFiltersForListing(supabase, listing.id, true, [], filterMap);
+          // Load filter map
+          const { data: filters } = await supabase.from('filters').select('id, slug');
+          const filterMap: FilterMap = {};
+          for (const f of filters || []) filterMap[f.slug] = f.id;
 
-        return new Response(
-          JSON.stringify({
-            status: 'touchless_found',
-            name: listing.name,
-            review_count: snippetCount,
-            api_calls: apiCalls,
-            reviews: reviews.map((r) => ({
-              text: r.snippet || r.extracted_snippet?.original || '',
-              rating: r.rating,
-              reviewer: r.user?.name,
-              keywords: extractKeywords(r.snippet || r.extracted_snippet?.original || ''),
-            })),
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-        );
+          await supabase.from('listings').update({
+            is_touchless: true,
+            is_approved: true,
+            review_mine_status: 'touchless_found',
+            review_extract_status: 'extracted',
+            touchless_review_count: snippetCount,
+            crawl_notes: `Reclassified as touchless via review mining (AI verified) — ${snippetCount} review(s). AI: ${aiResult.reasoning}`,
+          }).eq('id', listing.id);
+
+          await syncFiltersForListing(supabase, listing.id, true, [], filterMap);
+
+          return new Response(
+            JSON.stringify({
+              status: 'touchless_found',
+              name: listing.name,
+              review_count: snippetCount,
+              api_calls: apiCalls,
+              ai_verdict: `✅ ${aiResult.reasoning}`,
+              reviews: reviewMapped,
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+          );
+        } else {
+          // AI rejected — keywords in negative context
+          await supabase.from('listings').update({
+            review_mine_status: 'scanned_clean',
+            crawl_notes: `Review mine AI rejected: ${aiResult.reasoning}`,
+          }).eq('id', listing.id);
+
+          return new Response(
+            JSON.stringify({
+              status: 'ai_rejected',
+              name: listing.name,
+              review_count: 0,
+              api_calls: apiCalls,
+              ai_verdict: `❌ ${aiResult.reasoning}`,
+              reviews: reviewMapped,
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+          );
+        }
       }
 
       await supabase.from('listings').update({
@@ -1027,18 +1184,7 @@ Deno.serve(async (req: Request) => {
         .not('google_place_id', 'is', null)
         .in('google_category', ['Car wash', 'car_wash']);
 
-      // Count scanned_clean + touchless_found for accurate total
-      const { count: progressScannedClean } = await supabase
-        .from('listings')
-        .select('id', { count: 'exact', head: true })
-        .eq('review_mine_status', 'scanned_clean');
-
-      const { count: totalFound } = await supabase
-        .from('listings')
-        .select('id', { count: 'exact', head: true })
-        .eq('review_mine_status', 'touchless_found');
-
-      const totalScanned = (progressScannedClean || 0) + (totalFound || 0);
+      const counts = await getTotalScannedCount(supabase);
 
       const { count: totalRemaining } = await supabase
         .from('listings')
@@ -1083,9 +1229,9 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           total_car_wash_listings: totalCarWash || 0,
-          total_scanned: totalScanned,
+          total_scanned: counts.totalScanned,
           total_remaining: totalRemaining || 0,
-          total_touchless_found: totalFound || 0,
+          total_touchless_found: counts.touchlessFound,
           complete: (totalRemaining || 0) === 0,
           recent_finds: enrichedFinds,
         }),
