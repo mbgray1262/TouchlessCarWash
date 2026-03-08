@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   ArrowLeft, Search, Loader2, CheckCircle2, XCircle,
   Star, ExternalLink, Play, BarChart3, MessageSquare,
-  RefreshCw, MapPin, ChevronDown, ChevronUp, Map,
+  RefreshCw, MapPin, ChevronDown, ChevronUp, Map, ThumbsDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -221,6 +221,10 @@ export default function ReviewMinePage() {
   const [prospectResult, setProspectResult] = useState<ProspectResult | null>(null);
   const [prospectError, setProspectError] = useState<string | null>(null);
 
+  // Reject state
+  const [rejectingIds, setRejectingIds] = useState<Set<string>>(new Set());
+  const [rejectedIds, setRejectedIds] = useState<Set<string>>(new Set());
+
   // Cumulative stats for current session
   const [sessionStats, setSessionStats] = useState({
     batchesRun: 0,
@@ -255,8 +259,8 @@ export default function ReviewMinePage() {
         batch_size: batchSize,
       });
 
-      // Keep only the most recent 100 results to prevent page from slowing down
-      setScanResults((prev) => [...(data.results || []), ...prev].slice(0, 100));
+      // Replace previous results with new batch results (clear old batch)
+      setScanResults(data.results || []);
       setSessionStats((prev) => ({
         batchesRun: prev.batchesRun + 1,
         totalScanned: prev.totalScanned + data.scanned_this_batch,
@@ -301,6 +305,30 @@ export default function ReviewMinePage() {
       return () => clearTimeout(timer);
     }
   }, [autoScan, scanning, runScanBatch]);
+
+  const rejectTouchless = async (listingId: string) => {
+    setRejectingIds((prev) => new Set(prev).add(listingId));
+    try {
+      await callEdgeFunction('reject_touchless', { listing_id: listingId });
+      setRejectedIds((prev) => new Set(prev).add(listingId));
+      // Update scan results to reflect rejection
+      setScanResults((prev) =>
+        prev.map((r) =>
+          r.id === listingId ? { ...r, status: 'rejected_by_user' } : r,
+        ),
+      );
+      // Refresh progress to update counts
+      fetchProgress();
+    } catch (err) {
+      console.error('Failed to reject listing:', err);
+    } finally {
+      setRejectingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(listingId);
+        return next;
+      });
+    }
+  };
 
   const runProspect = async () => {
     if (!prospectQuery.trim()) return;
@@ -540,6 +568,8 @@ export default function ReviewMinePage() {
                             <div className="flex items-center gap-2 min-w-0">
                               {r.status === 'touchless_found' ? (
                                 <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                              ) : r.status === 'rejected_by_user' ? (
+                                <ThumbsDown className="w-4 h-4 text-red-500 shrink-0" />
                               ) : r.status === 'ai_rejected' ? (
                                 <XCircle className="w-4 h-4 text-amber-500 shrink-0" />
                               ) : r.status === 'error' ? (
@@ -549,17 +579,39 @@ export default function ReviewMinePage() {
                               )}
                               <span className="font-medium truncate">{r.name}</span>
                             </div>
-                            {r.status === 'touchless_found' && (
-                              <Badge className="bg-green-100 text-green-800 text-xs shrink-0">
-                                <MessageSquare className="w-3 h-3 mr-1" />
-                                {r.reviewCount} review{r.reviewCount !== 1 ? 's' : ''}
-                              </Badge>
-                            )}
-                            {r.status === 'ai_rejected' && (
-                              <Badge className="bg-amber-100 text-amber-800 text-xs shrink-0">
-                                AI Rejected
-                              </Badge>
-                            )}
+                            <div className="flex items-center gap-2 shrink-0">
+                              {r.status === 'touchless_found' && !rejectedIds.has(r.id) && (
+                                <button
+                                  onClick={() => rejectTouchless(r.id)}
+                                  disabled={rejectingIds.has(r.id)}
+                                  className="inline-flex items-center gap-1 px-2 py-1 text-xs text-red-600 hover:text-red-800 hover:bg-red-100 rounded transition-colors disabled:opacity-50"
+                                  title="Mark as not touchless"
+                                >
+                                  {rejectingIds.has(r.id) ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <ThumbsDown className="w-3 h-3" />
+                                  )}
+                                  Not Touchless
+                                </button>
+                              )}
+                              {r.status === 'rejected_by_user' && (
+                                <Badge className="bg-red-100 text-red-800 text-xs">
+                                  Rejected
+                                </Badge>
+                              )}
+                              {r.status === 'touchless_found' && (
+                                <Badge className="bg-green-100 text-green-800 text-xs">
+                                  <MessageSquare className="w-3 h-3 mr-1" />
+                                  {r.reviewCount} review{r.reviewCount !== 1 ? 's' : ''}
+                                </Badge>
+                              )}
+                              {r.status === 'ai_rejected' && (
+                                <Badge className="bg-amber-100 text-amber-800 text-xs">
+                                  AI Rejected
+                                </Badge>
+                              )}
+                            </div>
                           </div>
 
                           {/* AI verdict */}
@@ -769,11 +821,32 @@ export default function ReviewMinePage() {
                             {find.city}, {find.state}
                           </div>
                         </div>
-                        <Badge className="bg-green-100 text-green-800">
-                          <MessageSquare className="w-3 h-3 mr-1" />
-                          {find.touchless_review_count} review
-                          {find.touchless_review_count !== 1 ? 's' : ''}
-                        </Badge>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {!rejectedIds.has(find.id) ? (
+                            <button
+                              onClick={() => rejectTouchless(find.id)}
+                              disabled={rejectingIds.has(find.id)}
+                              className="inline-flex items-center gap-1 px-2 py-1 text-xs text-red-600 hover:text-red-800 hover:bg-red-100 rounded transition-colors disabled:opacity-50"
+                              title="Mark as not touchless"
+                            >
+                              {rejectingIds.has(find.id) ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <ThumbsDown className="w-3 h-3" />
+                              )}
+                              Not Touchless
+                            </button>
+                          ) : (
+                            <Badge className="bg-red-100 text-red-800 text-xs">
+                              Rejected
+                            </Badge>
+                          )}
+                          <Badge className="bg-green-100 text-green-800">
+                            <MessageSquare className="w-3 h-3 mr-1" />
+                            {find.touchless_review_count} review
+                            {find.touchless_review_count !== 1 ? 's' : ''}
+                          </Badge>
+                        </div>
                       </div>
 
                       {/* Verification links */}

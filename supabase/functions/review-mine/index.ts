@@ -1694,6 +1694,70 @@ Deno.serve(async (req: Request) => {
     }
 
     // -----------------------------------------------------------------------
+    // ACTION: reject_touchless — mark a listing as NOT touchless (override AI)
+    // -----------------------------------------------------------------------
+    if (action === 'reject_touchless') {
+      const listingId = body.listing_id;
+      if (!listingId) {
+        return new Response(
+          JSON.stringify({ error: 'listing_id required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      // Revert the listing: mark as not touchless, set status back to scanned_clean
+      const { error: updateError } = await supabase
+        .from('listings')
+        .update({
+          is_touchless: false,
+          is_approved: false,
+          review_mine_status: 'scanned_clean',
+          review_extract_status: null,
+          touchless_review_count: 0,
+          crawl_notes: 'Manually rejected as not touchless (AI false positive)',
+        })
+        .eq('id', listingId);
+
+      if (updateError) {
+        return new Response(
+          JSON.stringify({ error: `Failed to update listing: ${updateError.message}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      // Remove the touchless filter association
+      const { data: touchlessFilter } = await supabase
+        .from('filters')
+        .select('id')
+        .eq('slug', 'touchless')
+        .maybeSingle();
+
+      if (touchlessFilter) {
+        await supabase
+          .from('listing_filters')
+          .delete()
+          .eq('listing_id', listingId)
+          .eq('filter_id', touchlessFilter.id);
+      }
+
+      // Delete the review snippets that were imported
+      await supabase
+        .from('review_snippets')
+        .delete()
+        .eq('listing_id', listingId)
+        .eq('source', 'serpapi');
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'Listing marked as not touchless',
+          listing_id: listingId,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // -----------------------------------------------------------------------
     // ACTION: reset — reset review_mine_status for re-scanning
     // -----------------------------------------------------------------------
     if (action === 'reset') {
@@ -1716,7 +1780,7 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         error: 'Unknown action',
-        valid_actions: ['scan_batch', 'scan_single', 'progress', 'prospect', 'prospect_next', 'reset'],
+        valid_actions: ['scan_batch', 'scan_single', 'progress', 'prospect', 'prospect_next', 'reject_touchless', 'reset'],
       }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
