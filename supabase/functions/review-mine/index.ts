@@ -130,13 +130,16 @@ ${reviewTexts}
 Does the evidence indicate this car wash actually HAS or OFFERS a touchless, brushless, or no-touch wash?
 
 Rules:
-- Say YES only if reviewers describe THIS car wash AS being touchless/brushless/no-touch
+- Say YES only if reviewers CLEARLY and EXPLICITLY describe THIS car wash AS being touchless/brushless/no-touch
 - Say NO if reviewers are comparing to touchless elsewhere, wishing it was touchless, or saying it's NOT touchless
 - Say NO if keywords appear in negative context ("go elsewhere for brushless", "even a touchless wash does better", "not touchless", "not touch free", "isn't touchless")
 - CRITICAL: "Not touch free", "not touchless", "isn't brushless" etc. mean the car wash is NOT touchless — say NO
 - Say NO if the review is a negative/complaint review that mentions touch-free only to deny it
 - Say NO if the review describes the wash as having brushes or being a brush/friction wash
 - Say NO if the keyword is used to describe a different business or a general concept, not THIS car wash
+- Say NO if the keyword appears only incidentally (e.g. "spotless", "untouched") and the review is just describing a general positive experience without specifically confirming touchless/brushless wash technology
+- Say NO if the review is truncated and you cannot clearly confirm the keyword is used to describe the wash type
+- When in doubt, say NO — it is better to miss a real touchless wash than to incorrectly label one
 
 Respond in this exact format:
 TOUCHLESS: YES or NO
