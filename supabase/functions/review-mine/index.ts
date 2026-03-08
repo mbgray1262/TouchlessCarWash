@@ -1442,6 +1442,181 @@ Deno.serve(async (req: Request) => {
     }
 
     // -----------------------------------------------------------------------
+    // ACTION: prospect_next — pick next city from prospect_queue and run it
+    // -----------------------------------------------------------------------
+    if (action === 'prospect_next') {
+      // 1. Grab the highest-priority pending city
+      const { data: nextItem, error: fetchErr } = await supabase
+        .from('prospect_queue')
+        .select('*')
+        .eq('status', 'pending')
+        .order('priority', { ascending: false })
+        .order('id', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (fetchErr) {
+        return new Response(
+          JSON.stringify({ error: 'Failed to fetch next queue item', details: fetchErr.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      if (!nextItem) {
+        return new Response(
+          JSON.stringify({ message: 'Queue empty — all cities have been processed', done: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      // 2. Mark as processing
+      await supabase
+        .from('prospect_queue')
+        .update({ status: 'processing' })
+        .eq('id', nextItem.id);
+
+      console.log(`[prospect_next] Processing: ${nextItem.query} (priority ${nextItem.priority})`);
+
+      try {
+        const googleApiKey =
+          Deno.env.get('GOOGLE_PLACES_API_KEY') ??
+          (await getSecret(supabaseUrl, serviceKey, 'GOOGLE_PLACES_API_KEY'));
+
+        if (!googleApiKey) {
+          await supabase
+            .from('prospect_queue')
+            .update({ status: 'error', error_message: 'Google Places API key not configured', processed_at: new Date().toISOString() })
+            .eq('id', nextItem.id);
+          return new Response(
+            JSON.stringify({ error: 'Google Places API key not configured' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+          );
+        }
+
+        // 3. Search Google Places for car washes in this city
+        const places = await searchPlaces(googleApiKey, nextItem.query);
+
+        // 4. Filter out existing listings and rejected places
+        const existingIds = new Set<string>();
+        const rejectedIds = new Set<string>();
+
+        if (places.length > 0) {
+          const placeIds = places.map((p) => p.id);
+
+          const { data: existing } = await supabase
+            .from('listings')
+            .select('google_id')
+            .in('google_id', placeIds);
+          for (const e of existing || []) {
+            existingIds.add(e.google_id);
+          }
+
+          const { data: rejected } = await supabase
+            .from('discovery_rejections')
+            .select('google_id')
+            .in('google_id', placeIds);
+          for (const r of rejected || []) {
+            rejectedIds.add(r.google_id);
+          }
+        }
+
+        const newPlaces = places.filter(
+          (p) => !existingIds.has(p.id) && !rejectedIds.has(p.id),
+        );
+
+        // Load filter map
+        const { data: filters } = await supabase.from('filters').select('id, slug');
+        const filterMap: FilterMap = {};
+        for (const f of filters || []) filterMap[f.slug] = f.id;
+
+        let touchlessImported = 0;
+        let apiCalls = 0;
+
+        for (const place of newPlaces) {
+          const placeId = place.id.replace(/^places\//, '');
+
+          const { reviews, apiCalls: calls, error: reviewErr } = await searchReviewsMultiKeyword(
+            serpApiKey,
+            placeId,
+          );
+          apiCalls += calls;
+
+          if (reviewErr || reviews.length === 0) continue;
+
+          // Found touchless evidence — get details and import
+          const details = await getPlaceDetails(googleApiKey, place.id);
+          if (!details) continue;
+
+          const listingData = await buildListingData(details, googleApiKey, supabase);
+          if (!listingData) continue;
+
+          const { data: inserted, error: insertError } = await supabase
+            .from('listings')
+            .insert(listingData)
+            .select('id, slug')
+            .single();
+
+          if (insertError) continue;
+
+          const snippetCount = await insertSerpApiReviewSnippets(supabase, inserted.id, reviews);
+
+          await supabase.from('listings').update({
+            review_extract_status: 'extracted',
+            touchless_review_count: snippetCount,
+          }).eq('id', inserted.id);
+
+          const amenities = (listingData.amenities as string[]) || [];
+          await syncFiltersForListing(supabase, inserted.id, true, amenities, filterMap);
+
+          touchlessImported++;
+        }
+
+        // 5. Update queue entry with results
+        await supabase
+          .from('prospect_queue')
+          .update({
+            status: 'completed',
+            places_found: places.length,
+            already_in_db: existingIds.size,
+            new_checked: newPlaces.length,
+            touchless_imported: touchlessImported,
+            api_calls_used: apiCalls,
+            processed_at: new Date().toISOString(),
+          })
+          .eq('id', nextItem.id);
+
+        console.log(`[prospect_next] Done: ${nextItem.query} — ${places.length} places, ${touchlessImported} imported, ${apiCalls} API calls`);
+
+        return new Response(
+          JSON.stringify({
+            queue_id: nextItem.id,
+            query: nextItem.query,
+            state: nextItem.state,
+            places_found: places.length,
+            already_in_db: existingIds.size,
+            new_checked: newPlaces.length,
+            touchless_imported: touchlessImported,
+            api_calls_used: apiCalls,
+            done: false,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      } catch (err) {
+        // Mark as error so we don't retry forever
+        await supabase
+          .from('prospect_queue')
+          .update({
+            status: 'error',
+            error_message: String(err),
+            processed_at: new Date().toISOString(),
+          })
+          .eq('id', nextItem.id);
+
+        throw err; // Re-throw to hit the outer catch
+      }
+    }
+
+    // -----------------------------------------------------------------------
     // ACTION: reset — reset review_mine_status for re-scanning
     // -----------------------------------------------------------------------
     if (action === 'reset') {
@@ -1464,7 +1639,7 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         error: 'Unknown action',
-        valid_actions: ['scan_batch', 'scan_single', 'progress', 'prospect', 'reset'],
+        valid_actions: ['scan_batch', 'scan_single', 'progress', 'prospect', 'prospect_next', 'reset'],
       }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
