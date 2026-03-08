@@ -179,35 +179,57 @@ REASON: [one brief sentence]`;
   }
 }
 
-/** Helper to get total scanned count via database RPC (reliable). */
+/**
+ * Get total scanned counts by fetching actual rows and counting in JS.
+ * We avoid Supabase count queries and RPCs here because they return
+ * incorrect results from within the edge function runtime.
+ */
 async function getTotalScannedCount(
-  supabaseUrl: string,
-  serviceKey: string,
+  supabase: ReturnType<typeof createClient>,
 ): Promise<{ scannedClean: number; touchlessFound: number; totalScanned: number; totalRemaining: number }> {
   try {
-    const res = await fetch(`${supabaseUrl}/rest/v1/rpc/review_mine_counts`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': serviceKey,
-        'Authorization': `Bearer ${serviceKey}`,
-      },
-    });
+    // Fetch all scanned listings (those with review_mine_status set).
+    // Only selecting the status column keeps the payload small.
+    // Current volume is ~100-200 rows — well within limits.
+    const { data: scannedRows, error: scannedErr } = await supabase
+      .from('listings')
+      .select('review_mine_status')
+      .not('review_mine_status', 'is', null)
+      .limit(50000);
 
-    if (!res.ok) {
-      console.error('review_mine_counts RPC HTTP error:', res.status, await res.text());
-      return { scannedClean: 0, touchlessFound: 0, totalScanned: 0, totalRemaining: 0 };
+    if (scannedErr) {
+      console.error('Failed to fetch scanned listings:', scannedErr.message);
     }
 
-    const counts = await res.json();
-    return {
-      scannedClean: counts.scanned_clean || 0,
-      touchlessFound: counts.touchless_found || 0,
-      totalScanned: counts.total_scanned || 0,
-      totalRemaining: counts.total_remaining || 0,
-    };
+    const rows = scannedRows || [];
+    const scannedClean = rows.filter(
+      (r: { review_mine_status: string }) => r.review_mine_status === 'scanned_clean',
+    ).length;
+    const touchlessFound = rows.filter(
+      (r: { review_mine_status: string }) => r.review_mine_status === 'touchless_found',
+    ).length;
+    const totalScanned = rows.length;
+
+    // Fetch remaining (unscanned, non-touchless, valid car washes).
+    // ~8000 rows — we only fetch the id column to keep it lightweight.
+    const { data: remainingRows, error: remainErr } = await supabase
+      .from('listings')
+      .select('id')
+      .eq('is_touchless', false)
+      .is('review_mine_status', null)
+      .not('google_place_id', 'is', null)
+      .in('google_category', ['Car wash', 'car_wash'])
+      .limit(50000);
+
+    if (remainErr) {
+      console.error('Failed to fetch remaining listings:', remainErr.message);
+    }
+
+    const totalRemaining = (remainingRows || []).length;
+
+    return { scannedClean, touchlessFound, totalScanned, totalRemaining };
   } catch (err) {
-    console.error('review_mine_counts RPC failed:', err);
+    console.error('getTotalScannedCount failed:', err);
     return { scannedClean: 0, touchlessFound: 0, totalScanned: 0, totalRemaining: 0 };
   }
 }
@@ -867,7 +889,7 @@ Deno.serve(async (req: Request) => {
       }
 
       if (!listings?.length) {
-        const counts = await getTotalScannedCount(supabaseUrl, serviceKey);
+        const counts = await getTotalScannedCount(supabase);
 
         return new Response(
           JSON.stringify({
@@ -1036,8 +1058,8 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      // Get total progress (single RPC call — reliable counts)
-      const counts = await getTotalScannedCount(supabaseUrl, serviceKey);
+      // Get total progress
+      const counts = await getTotalScannedCount(supabase);
 
       // Trigger full enrichment pipeline for newly reclassified listings
       // (crawl website → extract amenities/packages → generate AI description)
@@ -1196,8 +1218,8 @@ Deno.serve(async (req: Request) => {
     // ACTION: progress — get current scan progress
     // -----------------------------------------------------------------------
     if (action === 'progress') {
-      // Single RPC call for all counts (Supabase JS count queries were unreliable)
-      const counts = await getTotalScannedCount(supabaseUrl, serviceKey);
+      // Get scan progress counts
+      const counts = await getTotalScannedCount(supabase);
 
       // Get recently found listings for display (with google_maps_url for verification)
       const { data: recentFinds } = await supabase
