@@ -223,7 +223,6 @@ function buildHeroDescription(listing: Listing): string {
 
 const WASH_TYPE_LABELS: Record<string, { label: string; color: string }> = {
   touchless_automatic: { label: 'Touchless Automatic', color: 'bg-blue-100 text-blue-800 border-blue-200' },
-  self_serve_spray: { label: 'Self-Serve Spray', color: 'bg-purple-100 text-purple-800 border-purple-200' },
 };
 
 const BRAND_LABELS: Record<string, string> = {

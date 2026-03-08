@@ -109,7 +109,6 @@ async function gatherCityData(
   }
   const washTypeLabels: Record<string, string> = {
     touchless_automatic: 'touchless automatic',
-    self_serve_spray: 'self-serve spray',
   };
   const washTypes = Array.from(washTypeSet).map(wt => washTypeLabels[wt] || wt);
 

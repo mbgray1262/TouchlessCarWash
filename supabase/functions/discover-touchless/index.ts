@@ -252,11 +252,6 @@ const AMENITY_TO_FILTER_SLUG: Record<string, string> = {
   'Monthly Plan': 'unlimited-wash-club',
   'Unlimited': 'unlimited-wash-club',
   'Unlimited Wash Plans': 'unlimited-wash-club',
-  'Self-Service Bays': 'self-serve-bays',
-  'Self-Serve Bays': 'self-serve-bays',
-  'Self Service': 'self-serve-bays',
-  'Self Serve': 'self-serve-bays',
-  'Wand Wash': 'self-serve-bays',
   'Express Wash': 'touchless-automatic',
   'RV Wash': 'rv-oversized',
   'Truck Wash': 'rv-oversized',
@@ -748,7 +743,6 @@ function inferAmenities(name: string, types: string[]): string[] {
   if (typeSet.has('atm')) amenities.push('ATM');
   if (lower.includes('vacuum') || lower.includes('vac')) amenities.push('Free Vacuum');
   if (lower.includes('detail')) amenities.push('Detailing Services');
-  if (lower.includes('self') && lower.includes('serv')) amenities.push('Self-Service Bays');
   if (lower.includes('express')) amenities.push('Express Wash');
   if (lower.includes('unlimited') || lower.includes('membership')) amenities.push('Unlimited Wash Plans');
 
@@ -756,12 +750,11 @@ function inferAmenities(name: string, types: string[]): string[] {
 }
 
 /** Infer touchless wash types from the business name.
- *  Valid values: 'touchless_automatic', 'self_serve_spray' */
+ *  Valid values: 'touchless_automatic' */
 function inferWashTypes(name: string): string[] {
   const types: string[] = [];
   const lower = name.toLowerCase();
 
-  // Most touchless car washes are automatic (in-bay or tunnel)
   if (
     lower.includes('touchless') || lower.includes('touch-free') || lower.includes('touch free') ||
     lower.includes('brushless') || lower.includes('brush-free') || lower.includes('brush free') ||
@@ -769,11 +762,6 @@ function inferWashTypes(name: string): string[] {
     lower.includes('no touch')
   ) {
     types.push('touchless_automatic');
-  }
-
-  // Self-serve spray bays
-  if (lower.includes('self') && (lower.includes('serv') || lower.includes('wash'))) {
-    types.push('self_serve_spray');
   }
 
   return types;

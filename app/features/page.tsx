@@ -21,12 +21,12 @@ const ICON_MAP: Record<string, React.ReactNode> = {
 export const metadata: Metadata = {
   title: 'Touchless Car Wash Features & Amenities',
   description:
-    'Browse touchless car washes by feature — free vacuums, 24-hour access, self-serve bays, membership programs, and more. Filter across all 50 states.',
+    'Browse touchless car washes by feature — free vacuums, 24-hour access, membership programs, unlimited wash clubs, and more. Filter across all 50 states.',
   alternates: { canonical: `${SITE_URL}/features` },
   openGraph: {
     title: 'Touchless Car Wash Features & Amenities | Touchless Car Wash Finder',
     description:
-      'Browse touchless car washes by feature — free vacuums, 24-hour access, self-serve bays, membership programs, and more.',
+      'Browse touchless car washes by feature — free vacuums, 24-hour access, membership programs, unlimited wash clubs, and more.',
     url: `${SITE_URL}/features`,
     siteName: 'Touchless Car Wash Finder',
     type: 'website',
@@ -123,7 +123,7 @@ export default async function FeaturesIndexPage() {
                   <span className="flex-shrink-0 w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 group-open:rotate-45 transition-transform text-lg leading-none">+</span>
                 </summary>
                 <div className="px-6 pb-6 pt-1 text-gray-600 leading-relaxed text-sm">
-                  You can filter touchless car washes by free vacuum stations, 24-hour availability, self-serve spray bays, membership programs, unlimited wash clubs, and undercarriage cleaning. Each feature page shows all states with qualifying locations.
+                  You can filter touchless car washes by free vacuum stations, 24-hour availability, membership programs, unlimited wash clubs, and undercarriage cleaning. Each feature page shows all states with qualifying locations.
                 </div>
               </details>
               <details className="group bg-white">

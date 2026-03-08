@@ -20,10 +20,6 @@ const AMENITY_TO_FILTER_SLUG: Record<string, string> = {
   'Membership': 'unlimited-wash-club',
   'Monthly Plan': 'unlimited-wash-club',
   'Unlimited': 'unlimited-wash-club',
-  'Self-Serve Bays': 'self-serve-bays',
-  'Self Service': 'self-serve-bays',
-  'Wand Wash': 'self-serve-bays',
-  'Self Serve': 'self-serve-bays',
   'RV Wash': 'rv-oversized',
   'Truck Wash': 'rv-oversized',
   'Oversized Vehicle': 'rv-oversized',
@@ -76,11 +72,12 @@ Return ONLY a valid JSON object with these fields:
 }
 
 CLASSIFICATION RULES:
-- is_touchless = true if the site mentions: touchless, touch free, laser wash, no touch, friction free, self serve, wand wash, coin operated, bay wash
+- is_touchless = true if the site mentions AUTOMATED touchless washing: touchless, touch free, laser wash, no touch, friction free, brushless
 - is_touchless = false if it ONLY mentions: soft touch, soft cloth, foam brush, brush wash, friction wash, hand wash, full service hand dry
-- is_touchless = true if it offers BOTH touchless AND brush options (they have a touchless option)
+- is_touchless = false if the business ONLY offers self-serve/wand wash/coin-operated bays (self-serve alone does not qualify as touchless)
+- is_touchless = true if it offers BOTH automated touchless AND brush options (they have an automated touchless option)
 - is_touchless = null if there's no clear evidence either way
-- For amenities, look for: vacuum, air freshener, towels, tire shine, wax, ceramic, membership/unlimited club, detailing, pet wash, RV/truck wash, self-serve bays, interior cleaning, underbody wash
+- For amenities, look for: vacuum, air freshener, towels, tire shine, wax, ceramic, membership/unlimited club, detailing, pet wash, RV/truck wash, interior cleaning, underbody wash
 - Description should be a brief factual summary, not marketing copy`,
       }],
     }),
