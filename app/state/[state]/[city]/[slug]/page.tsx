@@ -11,6 +11,7 @@ import LogoImage from '@/components/LogoImage';
 import HeroImageFallback from '@/components/HeroImageFallback';
 import PhotoGalleryGrid from '@/components/PhotoGalleryGrid';
 import SuggestEditModal from '@/components/SuggestEditModal';
+import { TrackableLink } from '@/components/TrackableLink';
 import { ListingBreadcrumb } from '@/components/ListingBreadcrumb';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -93,15 +94,18 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   const stateCode = getStateCode(params.state);
   const stateName = stateCode ? getStateName(stateCode) : listing.state;
   const topAmenities = (listing.amenities || []).slice(0, 3).join(', ');
-  const ratingPart = listing.rating > 0 ? `Rated ${Number(listing.rating).toFixed(1)}` : '';
-  const reviewPart = listing.review_count > 0 ? ` (${listing.review_count} reviews)` : '';
-  const amenityPart = topAmenities ? `. Touch-free, brushless car wash offering ${topAmenities}` : '';
+  const amenityPart = topAmenities ? ` Touch-free, brushless car wash offering ${topAmenities}.` : '';
   const canonicalUrl = `${SITE_URL}/state/${params.state}/${params.city}/${params.slug}`;
   const heroImage = listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
 
-  const title = `${listing.name} – Touchless Car Wash in ${listing.city}, ${listing.state}`;
-  const ogTitle = `${listing.name} – Touchless Car Wash in ${listing.city}, ${stateName}`;
-  const description = `${listing.name} — verified touch-free car wash at ${listing.address}, ${listing.city}, ${listing.state}. ${ratingPart}${reviewPart}${amenityPart}. Hours, directions, photos & more.`;
+  const title = `${listing.name} | Touchless Car Wash in ${listing.city}, ${listing.state}`;
+  const ogTitle = `${listing.name} | Touchless Car Wash in ${listing.city}, ${stateName}`;
+
+  // Lead with star rating for CTR — Google often shows this in snippet
+  const ratingPrefix = listing.rating > 0
+    ? `★ ${Number(listing.rating).toFixed(1)}${listing.review_count > 0 ? ` (${listing.review_count} reviews)` : ''} — `
+    : '';
+  const description = `${ratingPrefix}${listing.name} is a verified touchless car wash at ${listing.address}, ${listing.city}, ${listing.state}.${amenityPart} Hours, directions, photos & more.`;
 
   return {
     title: { absolute: title },
@@ -1007,40 +1011,49 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                   {listing.phone && (
                     <div className="flex items-center gap-3">
                       <Phone className="w-4 h-4 text-gray-400 shrink-0" />
-                      <a href={`tel:${listing.phone}`} className="text-sm text-blue-600 hover:underline">
+                      <TrackableLink
+                        href={`tel:${listing.phone}`}
+                        listingId={listing.id}
+                        eventType="phone"
+                        className="text-sm text-blue-600 hover:underline"
+                      >
                         {listing.phone}
-                      </a>
+                      </TrackableLink>
                     </div>
                   )}
                   {listing.website && (
                     <div className="flex items-center gap-3">
                       <Globe className="w-4 h-4 text-gray-400 shrink-0" />
-                      <a
+                      <TrackableLink
                         href={listing.website}
+                        listingId={listing.id}
+                        eventType="website"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm text-blue-600 hover:underline flex items-center gap-1 truncate"
                       >
                         <span className="truncate">Visit Website</span>
                         <ExternalLink className="w-3 h-3 shrink-0" />
-                      </a>
+                      </TrackableLink>
                     </div>
                   )}
                 </div>
 
                 {listing.latitude && listing.longitude && (
-                  <a
+                  <TrackableLink
                     href={listing.google_place_id
                       ? `https://www.google.com/maps/place/?q=place_id:${listing.google_place_id}`
                       : `https://www.google.com/maps/search/?api=1&query=${listing.latitude},${listing.longitude}`
                     }
+                    listingId={listing.id}
+                    eventType="directions"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-4 flex items-center justify-center gap-2 w-full bg-[#22C55E] text-white text-sm font-semibold py-3 rounded-xl hover:bg-[#16A34A] transition-colors shadow-sm"
                   >
                     <Navigation className="w-4 h-4" />
                     Get Directions
-                  </a>
+                  </TrackableLink>
                 )}
                 <SuggestEditModal listingId={listing.id} listingName={listing.name} />
               </div>

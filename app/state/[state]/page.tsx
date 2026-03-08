@@ -18,6 +18,8 @@ import {
 import { FEATURES } from '@/lib/features';
 import type { Metadata } from 'next';
 
+export const revalidate = 3600; // 1 hour — ISR for faster Googlebot response times
+
 interface StatePageProps {
   params: {
     state: string;
@@ -106,15 +108,16 @@ export async function generateMetadata({ params }: StatePageProps): Promise<Meta
     : `Find ${totalCount} verified touchless & touch-free car washes in ${stateName}. Browse laser car wash and no-touch locations by city with ratings, hours, and contact info. Updated ${month} ${year}.`;
 
   const canonicalUrl = `https://touchlesscarwashfinder.com/state/${params.state}`;
+  const title = `Best Touchless Car Washes in ${stateName} (${totalCount} Locations) | ${year}`;
 
   return {
-    title: `Touchless Car Washes in ${stateName}`,
+    title,
     description: metaDescription,
     alternates: {
       canonical: canonicalUrl,
     },
     openGraph: {
-      title: `Touchless Car Washes in ${stateName} | Touchless Car Wash Finder`,
+      title: `${title} | Touchless Car Wash Finder`,
       description: metaDescription,
       url: canonicalUrl,
       siteName: 'Touchless Car Wash Finder',

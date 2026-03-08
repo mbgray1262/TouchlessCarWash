@@ -10,6 +10,8 @@ import { Pagination, PAGE_SIZE } from '@/components/Pagination';
 import { SearchFilters } from '@/components/SearchFilters';
 import type { Metadata } from 'next';
 
+export const revalidate = 3600; // 1 hour — ISR for faster Googlebot response times
+
 interface Filter {
   id: number;
   name: string;
@@ -138,15 +140,16 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
     : `Find ${listings.length} touchless & touch-free car washes in ${cityName}, ${stateName}. Browse verified no-touch, scratch-free laser car wash locations with ratings and reviews.`;
 
   const canonicalUrl = `https://touchlesscarwashfinder.com/state/${params.state}/${params.city}`;
+  const title = `Best Touchless Car Wash in ${cityName}, ${stateCode} | ${listings.length} Verified`;
 
   return {
-    title: `Touchless Car Washes in ${cityName}, ${stateCode}`,
+    title,
     description: metaDescription,
     alternates: {
       canonical: canonicalUrl,
     },
     openGraph: {
-      title: `Touchless Car Washes in ${cityName}, ${stateCode} | Touchless Car Wash Finder`,
+      title: `${title} | Touchless Car Wash Finder`,
       description: metaDescription,
       url: canonicalUrl,
       siteName: 'Touchless Car Wash Finder',

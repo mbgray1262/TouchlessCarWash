@@ -2,31 +2,106 @@
 
 import Link from 'next/link';
 import { Droplet } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { useState } from 'react';
+import { NewsletterForm } from '@/components/NewsletterForm';
+
+// Top 30 cities by touchless car wash listing count (data-driven, updated periodically)
+const TOP_CITIES: { name: string; stateSlug: string; citySlug: string; stateCode: string }[] = [
+  { name: 'Phoenix', stateSlug: 'arizona', citySlug: 'phoenix', stateCode: 'AZ' },
+  { name: 'Mesa', stateSlug: 'arizona', citySlug: 'mesa', stateCode: 'AZ' },
+  { name: 'Louisville', stateSlug: 'kentucky', citySlug: 'louisville', stateCode: 'KY' },
+  { name: 'Tulsa', stateSlug: 'oklahoma', citySlug: 'tulsa', stateCode: 'OK' },
+  { name: 'Orlando', stateSlug: 'florida', citySlug: 'orlando', stateCode: 'FL' },
+  { name: 'Columbus', stateSlug: 'ohio', citySlug: 'columbus', stateCode: 'OH' },
+  { name: 'Omaha', stateSlug: 'nebraska', citySlug: 'omaha', stateCode: 'NE' },
+  { name: 'Chicago', stateSlug: 'illinois', citySlug: 'chicago', stateCode: 'IL' },
+  { name: 'San Diego', stateSlug: 'california', citySlug: 'san-diego', stateCode: 'CA' },
+  { name: 'Houston', stateSlug: 'texas', citySlug: 'houston', stateCode: 'TX' },
+  { name: 'Akron', stateSlug: 'ohio', citySlug: 'akron', stateCode: 'OH' },
+  { name: 'Canton', stateSlug: 'ohio', citySlug: 'canton', stateCode: 'OH' },
+  { name: 'Dayton', stateSlug: 'ohio', citySlug: 'dayton', stateCode: 'OH' },
+  { name: 'Syracuse', stateSlug: 'new-york', citySlug: 'syracuse', stateCode: 'NY' },
+  { name: 'Evansville', stateSlug: 'indiana', citySlug: 'evansville', stateCode: 'IN' },
+  { name: 'Denver', stateSlug: 'colorado', citySlug: 'denver', stateCode: 'CO' },
+  { name: 'Tucson', stateSlug: 'arizona', citySlug: 'tucson', stateCode: 'AZ' },
+  { name: 'Pittsburgh', stateSlug: 'pennsylvania', citySlug: 'pittsburgh', stateCode: 'PA' },
+  { name: 'Wichita', stateSlug: 'kansas', citySlug: 'wichita', stateCode: 'KS' },
+  { name: 'Reno', stateSlug: 'nevada', citySlug: 'reno', stateCode: 'NV' },
+  { name: 'Spokane', stateSlug: 'washington', citySlug: 'spokane', stateCode: 'WA' },
+  { name: 'Tacoma', stateSlug: 'washington', citySlug: 'tacoma', stateCode: 'WA' },
+  { name: 'Boulder', stateSlug: 'colorado', citySlug: 'boulder', stateCode: 'CO' },
+  { name: 'Huntsville', stateSlug: 'alabama', citySlug: 'huntsville', stateCode: 'AL' },
+  { name: 'Virginia Beach', stateSlug: 'virginia', citySlug: 'virginia-beach', stateCode: 'VA' },
+  { name: 'Greenville', stateSlug: 'south-carolina', citySlug: 'greenville', stateCode: 'SC' },
+  { name: 'Aurora', stateSlug: 'colorado', citySlug: 'aurora', stateCode: 'CO' },
+  { name: 'Buffalo', stateSlug: 'new-york', citySlug: 'buffalo', stateCode: 'NY' },
+  { name: 'Rochester', stateSlug: 'new-york', citySlug: 'rochester', stateCode: 'NY' },
+  { name: 'Muncie', stateSlug: 'indiana', citySlug: 'muncie', stateCode: 'IN' },
+];
+
+// All 50 states + DC
+const ALL_STATES: { name: string; slug: string }[] = [
+  { name: 'Alabama', slug: 'alabama' },
+  { name: 'Alaska', slug: 'alaska' },
+  { name: 'Arizona', slug: 'arizona' },
+  { name: 'Arkansas', slug: 'arkansas' },
+  { name: 'California', slug: 'california' },
+  { name: 'Colorado', slug: 'colorado' },
+  { name: 'Connecticut', slug: 'connecticut' },
+  { name: 'Delaware', slug: 'delaware' },
+  { name: 'DC', slug: 'district-of-columbia' },
+  { name: 'Florida', slug: 'florida' },
+  { name: 'Georgia', slug: 'georgia' },
+  { name: 'Hawaii', slug: 'hawaii' },
+  { name: 'Idaho', slug: 'idaho' },
+  { name: 'Illinois', slug: 'illinois' },
+  { name: 'Indiana', slug: 'indiana' },
+  { name: 'Iowa', slug: 'iowa' },
+  { name: 'Kansas', slug: 'kansas' },
+  { name: 'Kentucky', slug: 'kentucky' },
+  { name: 'Louisiana', slug: 'louisiana' },
+  { name: 'Maine', slug: 'maine' },
+  { name: 'Maryland', slug: 'maryland' },
+  { name: 'Massachusetts', slug: 'massachusetts' },
+  { name: 'Michigan', slug: 'michigan' },
+  { name: 'Minnesota', slug: 'minnesota' },
+  { name: 'Mississippi', slug: 'mississippi' },
+  { name: 'Missouri', slug: 'missouri' },
+  { name: 'Montana', slug: 'montana' },
+  { name: 'Nebraska', slug: 'nebraska' },
+  { name: 'Nevada', slug: 'nevada' },
+  { name: 'New Hampshire', slug: 'new-hampshire' },
+  { name: 'New Jersey', slug: 'new-jersey' },
+  { name: 'New Mexico', slug: 'new-mexico' },
+  { name: 'New York', slug: 'new-york' },
+  { name: 'North Carolina', slug: 'north-carolina' },
+  { name: 'North Dakota', slug: 'north-dakota' },
+  { name: 'Ohio', slug: 'ohio' },
+  { name: 'Oklahoma', slug: 'oklahoma' },
+  { name: 'Oregon', slug: 'oregon' },
+  { name: 'Pennsylvania', slug: 'pennsylvania' },
+  { name: 'Rhode Island', slug: 'rhode-island' },
+  { name: 'South Carolina', slug: 'south-carolina' },
+  { name: 'South Dakota', slug: 'south-dakota' },
+  { name: 'Tennessee', slug: 'tennessee' },
+  { name: 'Texas', slug: 'texas' },
+  { name: 'Utah', slug: 'utah' },
+  { name: 'Vermont', slug: 'vermont' },
+  { name: 'Virginia', slug: 'virginia' },
+  { name: 'Washington', slug: 'washington' },
+  { name: 'West Virginia', slug: 'west-virginia' },
+  { name: 'Wisconsin', slug: 'wisconsin' },
+  { name: 'Wyoming', slug: 'wyoming' },
+];
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
-  const [email, setEmail] = useState('');
-
-  const handleEmailSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setEmail('');
-  };
 
   return (
     <footer className="bg-[#0F2744] mt-auto">
       <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div>
-            <h3 className="font-semibold text-white mb-4">About</h3>
-            <p className="text-sm text-white/70 leading-relaxed">
-              The most comprehensive directory of touchless, touch-free, and brushless car washes across the United States.
-              Find, compare, and review the best no-touch wash locations near you.
-            </p>
-          </div>
-
+        {/* Main footer grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {/* About + Quick Links */}
           <div>
             <h3 className="font-semibold text-white mb-4">Quick Links</h3>
             <ul className="space-y-2 text-sm">
@@ -38,6 +113,11 @@ export function Footer() {
               <li>
                 <Link href="/search" className="text-white/70 hover:text-[#22C55E] transition-colors">
                   Find a Wash
+                </Link>
+              </li>
+              <li>
+                <Link href="/best" className="text-white/70 hover:text-[#22C55E] transition-colors">
+                  Best Of
                 </Link>
               </li>
               <li>
@@ -55,41 +135,57 @@ export function Footer() {
                   About Us
                 </Link>
               </li>
+              <li>
+                <Link href="/add-listing" className="text-white/70 hover:text-[#22C55E] transition-colors">
+                  Add Your Business
+                </Link>
+              </li>
             </ul>
           </div>
 
+          {/* Browse by State — all 50 + DC */}
           <div>
-            <h3 className="font-semibold text-white mb-4">Top States</h3>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/state/california" className="text-white/70 hover:text-[#22C55E] transition-colors">California</Link></li>
-              <li><Link href="/state/texas" className="text-white/70 hover:text-[#22C55E] transition-colors">Texas</Link></li>
-              <li><Link href="/state/florida" className="text-white/70 hover:text-[#22C55E] transition-colors">Florida</Link></li>
-              <li><Link href="/state/new-york" className="text-white/70 hover:text-[#22C55E] transition-colors">New York</Link></li>
-              <li><Link href="/state/ohio" className="text-white/70 hover:text-[#22C55E] transition-colors">Ohio</Link></li>
-              <li><Link href="/states" className="text-white/70 hover:text-[#22C55E] transition-colors">All States &rarr;</Link></li>
-            </ul>
+            <h3 className="font-semibold text-white mb-4">Browse by State</h3>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+              {ALL_STATES.map((s) => (
+                <Link
+                  key={s.slug}
+                  href={`/state/${s.slug}`}
+                  className="text-white/60 hover:text-[#22C55E] transition-colors truncate"
+                >
+                  {s.name}
+                </Link>
+              ))}
+            </div>
           </div>
 
+          {/* Top Cities */}
+          <div>
+            <h3 className="font-semibold text-white mb-4">Top Cities</h3>
+            <div className="grid grid-cols-1 gap-y-1 text-xs max-h-[400px] overflow-y-auto">
+              {TOP_CITIES.map((c) => (
+                <Link
+                  key={`${c.stateSlug}-${c.citySlug}`}
+                  href={`/state/${c.stateSlug}/${c.citySlug}`}
+                  className="text-white/60 hover:text-[#22C55E] transition-colors truncate"
+                >
+                  {c.name}, {c.stateCode}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Newsletter */}
           <div>
             <h3 className="font-semibold text-white mb-4">Stay Updated</h3>
             <p className="text-sm text-white/70 mb-4">
               Get the latest listings and car care tips delivered to your inbox.
             </p>
-            <form onSubmit={handleEmailSubmit} className="flex gap-2">
-              <Input
-                type="email"
-                placeholder="Your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
-              />
-              <Button type="submit" className="bg-[#22C55E] hover:bg-[#16A34A] text-white">
-                Join
-              </Button>
-            </form>
+            <NewsletterForm />
           </div>
         </div>
 
+        {/* Bottom bar */}
         <div className="border-t border-white/20 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <Link href="/" className="flex items-center gap-2">
             <Droplet className="w-6 h-6 text-[#22C55E]" />
