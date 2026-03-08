@@ -11,6 +11,7 @@ import LogoImage from '@/components/LogoImage';
 import HeroImageFallback from '@/components/HeroImageFallback';
 import PhotoGalleryGrid from '@/components/PhotoGalleryGrid';
 import SuggestEditModal from '@/components/SuggestEditModal';
+import { TrackableLink } from '@/components/TrackableLink';
 import { ListingBreadcrumb } from '@/components/ListingBreadcrumb';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -1007,40 +1008,49 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                   {listing.phone && (
                     <div className="flex items-center gap-3">
                       <Phone className="w-4 h-4 text-gray-400 shrink-0" />
-                      <a href={`tel:${listing.phone}`} className="text-sm text-blue-600 hover:underline">
+                      <TrackableLink
+                        href={`tel:${listing.phone}`}
+                        listingId={listing.id}
+                        eventType="phone"
+                        className="text-sm text-blue-600 hover:underline"
+                      >
                         {listing.phone}
-                      </a>
+                      </TrackableLink>
                     </div>
                   )}
                   {listing.website && (
                     <div className="flex items-center gap-3">
                       <Globe className="w-4 h-4 text-gray-400 shrink-0" />
-                      <a
+                      <TrackableLink
                         href={listing.website}
+                        listingId={listing.id}
+                        eventType="website"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm text-blue-600 hover:underline flex items-center gap-1 truncate"
                       >
                         <span className="truncate">Visit Website</span>
                         <ExternalLink className="w-3 h-3 shrink-0" />
-                      </a>
+                      </TrackableLink>
                     </div>
                   )}
                 </div>
 
                 {listing.latitude && listing.longitude && (
-                  <a
+                  <TrackableLink
                     href={listing.google_place_id
                       ? `https://www.google.com/maps/place/?q=place_id:${listing.google_place_id}`
                       : `https://www.google.com/maps/search/?api=1&query=${listing.latitude},${listing.longitude}`
                     }
+                    listingId={listing.id}
+                    eventType="directions"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-4 flex items-center justify-center gap-2 w-full bg-[#22C55E] text-white text-sm font-semibold py-3 rounded-xl hover:bg-[#16A34A] transition-colors shadow-sm"
                   >
                     <Navigation className="w-4 h-4" />
                     Get Directions
-                  </a>
+                  </TrackableLink>
                 )}
                 <SuggestEditModal listingId={listing.id} listingName={listing.name} />
               </div>
