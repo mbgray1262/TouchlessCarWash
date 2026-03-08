@@ -892,7 +892,7 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      // Get total progress
+      // Get total progress — count scanned_clean + touchless_found for accurate total
       const { count: totalRemaining } = await supabase
         .from('listings')
         .select('id', { count: 'exact', head: true })
@@ -901,24 +901,24 @@ Deno.serve(async (req: Request) => {
         .not('google_place_id', 'is', null)
         .in('google_category', ['Car wash', 'car_wash']);
 
-      const { count: totalScanned } = await supabase
+      const { count: batchScannedClean } = await supabase
         .from('listings')
         .select('id', { count: 'exact', head: true })
-        .eq('is_touchless', false)
-        .not('review_mine_status', 'is', null)
-        .in('google_category', ['Car wash', 'car_wash']);
+        .eq('review_mine_status', 'scanned_clean');
 
       const { count: totalFound } = await supabase
         .from('listings')
         .select('id', { count: 'exact', head: true })
         .eq('review_mine_status', 'touchless_found');
 
+      const totalScanned = (batchScannedClean || 0) + (totalFound || 0);
+
       return new Response(
         JSON.stringify({
           scanned_this_batch: scanned,
           found_touchless: foundTouchless,
           api_calls_used: totalApiCalls,
-          total_scanned: totalScanned || 0,
+          total_scanned: totalScanned,
           total_remaining: totalRemaining || 0,
           total_touchless_found: totalFound || 0,
           complete: (totalRemaining || 0) === 0,
@@ -1027,12 +1027,18 @@ Deno.serve(async (req: Request) => {
         .not('google_place_id', 'is', null)
         .in('google_category', ['Car wash', 'car_wash']);
 
-      const { count: totalScanned } = await supabase
+      // Count scanned_clean + touchless_found for accurate total
+      const { count: progressScannedClean } = await supabase
         .from('listings')
         .select('id', { count: 'exact', head: true })
-        .eq('is_touchless', false)
-        .not('review_mine_status', 'is', null)
-        .in('google_category', ['Car wash', 'car_wash']);
+        .eq('review_mine_status', 'scanned_clean');
+
+      const { count: totalFound } = await supabase
+        .from('listings')
+        .select('id', { count: 'exact', head: true })
+        .eq('review_mine_status', 'touchless_found');
+
+      const totalScanned = (progressScannedClean || 0) + (totalFound || 0);
 
       const { count: totalRemaining } = await supabase
         .from('listings')
@@ -1041,11 +1047,6 @@ Deno.serve(async (req: Request) => {
         .is('review_mine_status', null)
         .not('google_place_id', 'is', null)
         .in('google_category', ['Car wash', 'car_wash']);
-
-      const { count: totalFound } = await supabase
-        .from('listings')
-        .select('id', { count: 'exact', head: true })
-        .eq('review_mine_status', 'touchless_found');
 
       // Get recently found listings for display (with google_maps_url for verification)
       const { data: recentFinds } = await supabase
@@ -1082,7 +1083,7 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           total_car_wash_listings: totalCarWash || 0,
-          total_scanned: totalScanned || 0,
+          total_scanned: totalScanned,
           total_remaining: totalRemaining || 0,
           total_touchless_found: totalFound || 0,
           complete: (totalRemaining || 0) === 0,
