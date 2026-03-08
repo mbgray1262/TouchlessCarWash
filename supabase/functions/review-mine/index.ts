@@ -506,9 +506,8 @@ async function searchPlaces(
   const allResults: PlaceResult[] = [];
   const seenIds = new Set<string>();
 
-  // For prospecting, just search "car wash {area}" — we use SerpAPI reviews
-  // to determine touchless, not the business name
-  const queries = [`car wash ${query}`];
+  // Search for car washes in the area
+  const queries = [query.startsWith('touchless ') ? query : `car wash ${query}`];
 
   for (const q of queries) {
     try {
@@ -1507,8 +1506,9 @@ Deno.serve(async (req: Request) => {
           );
         }
 
-        // 3. Search Google Places for car washes in this city
-        const places = await searchPlaces(googleApiKey, nextItem.query);
+        // 3. Search Google Places specifically for "touchless car wash" in this city
+        //    This returns places Google thinks are relevant to "touchless" — much better hit rate
+        const places = await searchPlaces(googleApiKey, `touchless ${nextItem.query}`);
 
         // 4. Filter out existing listings and rejected places
         const existingIds = new Set<string>();
@@ -1517,12 +1517,25 @@ Deno.serve(async (req: Request) => {
         if (places.length > 0) {
           const placeIds = places.map((p) => p.id);
 
-          const { data: existing } = await supabase
+          // Also check by google_place_id (without "places/" prefix)
+          const cleanPlaceIds = placeIds.map((id) => id.replace(/^places\//, ''));
+
+          const { data: existingById } = await supabase
             .from('listings')
             .select('google_id')
             .in('google_id', placeIds);
-          for (const e of existing || []) {
+          for (const e of existingById || []) {
             existingIds.add(e.google_id);
+          }
+
+          const { data: existingByPlaceId } = await supabase
+            .from('listings')
+            .select('google_place_id')
+            .in('google_place_id', cleanPlaceIds);
+          for (const e of existingByPlaceId || []) {
+            // Add with "places/" prefix so the filter below catches it
+            existingIds.add(`places/${e.google_place_id}`);
+            existingIds.add(e.google_place_id);
           }
 
           const { data: rejected } = await supabase
@@ -1545,6 +1558,7 @@ Deno.serve(async (req: Request) => {
 
         let touchlessImported = 0;
         let apiCalls = 0;
+        let nameMatches = 0;
 
         for (const place of newPlaces) {
           const placeId = place.id.replace(/^places\//, '');
@@ -1556,8 +1570,11 @@ Deno.serve(async (req: Request) => {
           let reviews: Array<{ reviewer_name: string; rating: number; review_text: string; touchless_keywords: string[] }> = [];
 
           if (nameMatchesTouchless) {
+            nameMatches++;
             console.log(`[prospect_next] Name match — skipping SerpAPI for: ${placeName}`);
           } else {
+            // Only check reviews if the place looks like it could be touchless
+            // (Google returned it for a "touchless" search, so worth checking)
             const result = await searchReviewsMultiKeyword(
               serpApiKey,
               placeId,
@@ -1613,7 +1630,7 @@ Deno.serve(async (req: Request) => {
           })
           .eq('id', nextItem.id);
 
-        console.log(`[prospect_next] Done: ${nextItem.query} — ${places.length} places, ${touchlessImported} imported, ${apiCalls} API calls`);
+        console.log(`[prospect_next] Done: ${nextItem.query} — ${places.length} places, ${touchlessImported} imported (${nameMatches} by name), ${apiCalls} API calls`);
 
         return new Response(
           JSON.stringify({
@@ -1624,6 +1641,7 @@ Deno.serve(async (req: Request) => {
             already_in_db: existingIds.size,
             new_checked: newPlaces.length,
             touchless_imported: touchlessImported,
+            name_matches: nameMatches,
             api_calls_used: apiCalls,
             done: false,
           }),
