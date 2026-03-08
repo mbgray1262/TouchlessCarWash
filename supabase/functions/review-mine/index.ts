@@ -179,29 +179,23 @@ REASON: [one brief sentence]`;
   }
 }
 
-/** Helper to get total scanned count (scanned_clean + touchless_found). */
+/** Helper to get total scanned count via database RPC (reliable). */
 async function getTotalScannedCount(
   supabase: ReturnType<typeof createClient>,
-): Promise<{ scannedClean: number; touchlessFound: number; totalScanned: number }> {
-  // Count all listings with any review_mine_status set (single query, reliable count)
-  const { count: totalScanned } = await supabase
-    .from('listings')
-    .select('id', { count: 'exact', head: true })
-    .not('review_mine_status', 'is', null);
+): Promise<{ scannedClean: number; touchlessFound: number; totalScanned: number; totalRemaining: number }> {
+  const { data, error } = await supabase.rpc('review_mine_counts');
 
-  // Count just touchless_found (small result set, always works)
-  const { count: touchlessFound } = await supabase
-    .from('listings')
-    .select('id', { count: 'exact', head: true })
-    .eq('review_mine_status', 'touchless_found');
+  if (error || !data) {
+    console.error('review_mine_counts RPC failed:', error);
+    return { scannedClean: 0, touchlessFound: 0, totalScanned: 0, totalRemaining: 0 };
+  }
 
-  const tf = touchlessFound || 0;
-  const ts = totalScanned || 0;
-
+  const counts = typeof data === 'string' ? JSON.parse(data) : data;
   return {
-    scannedClean: ts - tf,
-    touchlessFound: tf,
-    totalScanned: ts,
+    scannedClean: counts.scanned_clean || 0,
+    touchlessFound: counts.touchless_found || 0,
+    totalScanned: counts.total_scanned || 0,
+    totalRemaining: counts.total_remaining || 0,
   };
 }
 
@@ -1029,16 +1023,8 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      // Get total progress
+      // Get total progress (single RPC call — reliable counts)
       const counts = await getTotalScannedCount(supabase);
-
-      const { count: totalRemaining } = await supabase
-        .from('listings')
-        .select('id', { count: 'exact', head: true })
-        .eq('is_touchless', false)
-        .is('review_mine_status', null)
-        .not('google_place_id', 'is', null)
-        .in('google_category', ['Car wash', 'car_wash']);
 
       // Trigger full enrichment pipeline for newly reclassified listings
       // (crawl website → extract amenities/packages → generate AI description)
@@ -1070,9 +1056,9 @@ Deno.serve(async (req: Request) => {
           ai_rejected: aiRejected,
           api_calls_used: totalApiCalls,
           total_scanned: counts.totalScanned,
-          total_remaining: totalRemaining || 0,
+          total_remaining: counts.totalRemaining,
           total_touchless_found: counts.touchlessFound,
-          complete: (totalRemaining || 0) === 0,
+          complete: counts.totalRemaining === 0,
           results,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -1197,22 +1183,8 @@ Deno.serve(async (req: Request) => {
     // ACTION: progress — get current scan progress
     // -----------------------------------------------------------------------
     if (action === 'progress') {
-      const { count: totalCarWash } = await supabase
-        .from('listings')
-        .select('id', { count: 'exact', head: true })
-        .eq('is_touchless', false)
-        .not('google_place_id', 'is', null)
-        .in('google_category', ['Car wash', 'car_wash']);
-
+      // Single RPC call for all counts (Supabase JS count queries were unreliable)
       const counts = await getTotalScannedCount(supabase);
-
-      const { count: totalRemaining } = await supabase
-        .from('listings')
-        .select('id', { count: 'exact', head: true })
-        .eq('is_touchless', false)
-        .is('review_mine_status', null)
-        .not('google_place_id', 'is', null)
-        .in('google_category', ['Car wash', 'car_wash']);
 
       // Get recently found listings for display (with google_maps_url for verification)
       const { data: recentFinds } = await supabase
@@ -1248,11 +1220,11 @@ Deno.serve(async (req: Request) => {
 
       return new Response(
         JSON.stringify({
-          total_car_wash_listings: totalCarWash || 0,
+          total_car_wash_listings: counts.totalScanned + counts.totalRemaining,
           total_scanned: counts.totalScanned,
-          total_remaining: totalRemaining || 0,
+          total_remaining: counts.totalRemaining,
           total_touchless_found: counts.touchlessFound,
-          complete: (totalRemaining || 0) === 0,
+          complete: counts.totalRemaining === 0,
           recent_finds: enrichedFinds,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
