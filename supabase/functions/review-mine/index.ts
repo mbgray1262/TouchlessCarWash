@@ -1,0 +1,1250 @@
+import { createClient } from 'npm:@supabase/supabase-js@2';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
+};
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+async function getSecret(supabaseUrl: string, serviceKey: string, name: string): Promise<string> {
+  const res = await fetch(`${supabaseUrl}/rest/v1/rpc/get_secret`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${serviceKey}`,
+      'Content-Type': 'application/json',
+      apikey: serviceKey,
+    },
+    body: JSON.stringify({ secret_name: name }),
+  });
+  if (!res.ok) return '';
+  const text = await res.text();
+  return text.replace(/^"|"$/g, '');
+}
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+async function makeUniqueSlug(
+  supabase: ReturnType<typeof createClient>,
+  base: string,
+): Promise<string> {
+  let slug = slugify(base);
+  let attempt = 0;
+  while (true) {
+    const candidate = attempt === 0 ? slug : `${slug}-${attempt}`;
+    const { data } = await supabase
+      .from('listings')
+      .select('id')
+      .eq('slug', candidate)
+      .maybeSingle();
+    if (!data) return candidate;
+    attempt++;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// SerpAPI Types & Helpers
+// ---------------------------------------------------------------------------
+
+interface SerpApiReview {
+  rating?: number;
+  date?: string;
+  iso_date?: string;
+  snippet?: string;
+  extracted_snippet?: { original: string };
+  user?: { name: string; reviews?: number };
+  review_id?: string;
+}
+
+interface SerpApiResponse {
+  reviews?: SerpApiReview[];
+  search_metadata?: {
+    status?: string;
+    total_results?: number;
+  };
+  error?: string;
+}
+
+/** Keywords that indicate touchless evidence in reviews. */
+const REVIEW_TOUCHLESS_KEYWORDS = [
+  'touchless', 'touch-free', 'touchfree', 'touch free',
+  'brushless', 'brush-free', 'brushfree', 'brush free',
+  'no brush', 'no-brush', 'no brushes',
+  'laser wash', 'laserwash',
+  'no-touch', 'no touch', 'notouch',
+  'frictionless', 'friction-free',
+  'soft-touch', 'soft touch',
+];
+
+/**
+ * Call SerpAPI Google Maps Reviews with keyword query.
+ * Returns reviews matching the query (typically "touchless" or "no touch").
+ */
+async function searchReviews(
+  serpApiKey: string,
+  placeId: string,
+  query: string,
+): Promise<{ reviews: SerpApiReview[]; error?: string }> {
+  const params = new URLSearchParams({
+    engine: 'google_maps_reviews',
+    place_id: placeId,
+    q: query,
+    api_key: serpApiKey,
+    hl: 'en',
+  });
+
+  try {
+    const res = await fetch(`https://serpapi.com/search.json?${params}`, {
+      signal: AbortSignal.timeout(30000),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`SerpAPI error for ${placeId}: ${res.status} ${errText}`);
+      return { reviews: [], error: `HTTP ${res.status}: ${errText}` };
+    }
+
+    const data: SerpApiResponse = await res.json();
+
+    if (data.error) {
+      return { reviews: [], error: data.error };
+    }
+
+    return { reviews: data.reviews || [] };
+  } catch (err) {
+    console.error(`SerpAPI fetch failed for ${placeId}:`, err);
+    return { reviews: [], error: String(err) };
+  }
+}
+
+/**
+ * Search reviews for multiple touchless-related keywords.
+ * Uses "touchless" as primary query, then "no touch" and "brushless" for broader coverage.
+ * Deduplicates by review_id.
+ */
+async function searchReviewsMultiKeyword(
+  serpApiKey: string,
+  placeId: string,
+): Promise<{ reviews: SerpApiReview[]; apiCalls: number; error?: string }> {
+  // Primary query — catches "touchless", "touch-free", etc.
+  const primary = await searchReviews(serpApiKey, placeId, 'touchless');
+
+  if (primary.error) {
+    return { reviews: [], apiCalls: 1, error: primary.error };
+  }
+
+  // If we already found evidence, no need for more API calls
+  if (primary.reviews.length > 0) {
+    return { reviews: primary.reviews, apiCalls: 1 };
+  }
+
+  // Secondary query — catches "no touch", "no-touch"
+  const secondary = await searchReviews(serpApiKey, placeId, 'no touch');
+
+  if (secondary.reviews.length > 0) {
+    return { reviews: secondary.reviews, apiCalls: 2 };
+  }
+
+  // Tertiary query — catches "brushless", "brush free"
+  const tertiary = await searchReviews(serpApiKey, placeId, 'brushless');
+
+  return { reviews: tertiary.reviews, apiCalls: 3 };
+}
+
+/**
+ * Extract keyword matches from a review text.
+ */
+function extractKeywords(text: string): string[] {
+  const lower = text.toLowerCase();
+  return REVIEW_TOUCHLESS_KEYWORDS.filter((kw) => lower.includes(kw));
+}
+
+/**
+ * Insert SerpAPI review evidence into the review_snippets table.
+ */
+async function insertSerpApiReviewSnippets(
+  supabase: ReturnType<typeof createClient>,
+  listingId: string,
+  reviews: SerpApiReview[],
+): Promise<number> {
+  if (!reviews.length) return 0;
+
+  const snippets: Array<Record<string, unknown>> = [];
+
+  for (const review of reviews) {
+    const text = review.snippet || review.extracted_snippet?.original;
+    if (!text) continue;
+
+    const matchedKeywords = extractKeywords(text);
+
+    snippets.push({
+      listing_id: listingId,
+      reviewer_name: review.user?.name || null,
+      rating: review.rating || null,
+      review_text: text.slice(0, 500),
+      review_date: review.date || null,
+      iso_date: review.iso_date || null,
+      review_id: review.review_id || null,
+      touchless_keywords: matchedKeywords.length > 0 ? matchedKeywords : ['touchless'],
+      is_touchless_evidence: true,
+      source: 'serpapi',
+    });
+  }
+
+  if (snippets.length === 0) return 0;
+
+  // Use upsert with review_id to avoid duplicates on re-runs
+  const { error } = await supabase
+    .from('review_snippets')
+    .upsert(snippets, { onConflict: 'review_id', ignoreDuplicates: true });
+
+  if (error) {
+    console.error('Failed to insert review snippets:', error.message);
+    // Try insert without upsert (in case review_id is null)
+    const { error: insertError } = await supabase.from('review_snippets').insert(snippets);
+    if (insertError) {
+      console.error('Insert fallback also failed:', insertError.message);
+      return 0;
+    }
+  }
+
+  return snippets.length;
+}
+
+// ---------------------------------------------------------------------------
+// Google Places API helpers (for prospect action)
+// ---------------------------------------------------------------------------
+
+const SEARCH_FIELDS = [
+  'places.id',
+  'places.displayName',
+  'places.formattedAddress',
+  'places.location',
+  'places.rating',
+  'places.userRatingCount',
+  'places.businessStatus',
+  'places.googleMapsUri',
+  'places.websiteUri',
+  'places.types',
+  'places.primaryType',
+].join(',');
+
+const DETAIL_FIELDS = [
+  'id',
+  'displayName',
+  'formattedAddress',
+  'addressComponents',
+  'location',
+  'rating',
+  'userRatingCount',
+  'businessStatus',
+  'googleMapsUri',
+  'nationalPhoneNumber',
+  'internationalPhoneNumber',
+  'websiteUri',
+  'regularOpeningHours',
+  'types',
+  'primaryType',
+  'photos',
+  'editorialSummary',
+  'priceLevel',
+  'paymentOptions',
+  'reviews',
+].join(',');
+
+interface PlaceResult {
+  id: string;
+  displayName?: { text: string; languageCode?: string };
+  formattedAddress?: string;
+  location?: { latitude: number; longitude: number };
+  rating?: number;
+  userRatingCount?: number;
+  businessStatus?: string;
+  googleMapsUri?: string;
+  types?: string[];
+  primaryType?: string;
+  nationalPhoneNumber?: string;
+  internationalPhoneNumber?: string;
+  websiteUri?: string;
+  regularOpeningHours?: { weekdayDescriptions?: string[] };
+  addressComponents?: Array<{
+    longText: string;
+    shortText: string;
+    types: string[];
+  }>;
+  photos?: Array<{ name: string; widthPx: number; heightPx: number }>;
+  editorialSummary?: { text: string; languageCode?: string };
+  priceLevel?: string;
+  paymentOptions?: {
+    acceptsCreditCards?: boolean;
+    acceptsDebitCards?: boolean;
+    acceptsCashOnly?: boolean;
+    acceptsNfc?: boolean;
+  };
+  reviews?: Array<{
+    text?: { text: string };
+    rating?: number;
+    originalText?: { text: string };
+    authorAttribution?: { displayName: string };
+  }>;
+}
+
+/** Google Places types that definitively mark a business as NOT a car wash. */
+const EXCLUDE_PLACE_TYPES = new Set([
+  'doctor', 'dentist', 'hospital', 'health', 'physiotherapist', 'dermatologist',
+  'pharmacy', 'drugstore', 'spa', 'beauty_salon', 'hair_care', 'hair_salon',
+  'veterinary_care', 'lawyer', 'accounting', 'insurance_agency', 'real_estate_agency',
+  'restaurant', 'cafe', 'bar', 'bakery', 'meal_delivery', 'meal_takeaway', 'food',
+  'school', 'university', 'primary_school', 'secondary_school',
+  'church', 'mosque', 'synagogue', 'bank', 'finance',
+  'clothing_store', 'shoe_store', 'jewelry_store',
+  'electronics_store', 'furniture_store', 'home_goods_store',
+  'gym', 'movie_theater', 'night_club', 'lodging', 'hotel', 'motel',
+  'laundry', 'dry_cleaning', 'plumber', 'electrician', 'roofing_contractor', 'painter',
+]);
+
+const EXCLUDE_NAME_KEYWORDS = [
+  'dermatology', 'derma', 'dental', 'dentist', 'medical', 'clinic', 'hospital',
+  'surgery', 'surgeon', 'orthodont', 'chiropractic', 'physical therapy', 'optom',
+  'pharmacy', 'veterinar', 'animal hospital',
+  'salon', 'barbershop', 'barber', 'nail ', 'nails ', 'tattoo',
+  'restaurant', 'pizza', 'burger', 'cafe', 'coffee', 'bakery', 'grill', 'bistro', 'diner',
+  'church', 'school', 'university', 'academy',
+  'law firm', 'attorney', 'legal service',
+  'insurance', 'real estate', 'realty', 'hotel', 'motel',
+  'gym', 'fitness', 'crossfit', 'yoga',
+  'laundromat', 'dry clean', 'plumbing', 'electric', 'roofing', 'hvac',
+  'pet grooming', 'dog grooming',
+];
+
+function isLikelyCarWash(place: PlaceResult): boolean {
+  const types = new Set(place.types || []);
+  if (types.has('car_wash')) return true;
+  if (place.primaryType === 'car_wash') return true;
+  if (place.primaryType && EXCLUDE_PLACE_TYPES.has(place.primaryType)) return false;
+  for (const t of types) {
+    if (EXCLUDE_PLACE_TYPES.has(t)) return false;
+  }
+  const lowerName = (place.displayName?.text || '').toLowerCase();
+  for (const kw of EXCLUDE_NAME_KEYWORDS) {
+    if (lowerName.includes(kw)) return false;
+  }
+  return true;
+}
+
+async function searchPlaces(
+  googleApiKey: string,
+  query: string,
+): Promise<PlaceResult[]> {
+  const allResults: PlaceResult[] = [];
+  const seenIds = new Set<string>();
+
+  // For prospecting, just search "car wash {area}" — we use SerpAPI reviews
+  // to determine touchless, not the business name
+  const queries = [`car wash ${query}`];
+
+  for (const q of queries) {
+    try {
+      const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': googleApiKey,
+          'X-Goog-FieldMask': SEARCH_FIELDS,
+        },
+        body: JSON.stringify({
+          textQuery: q,
+          maxResultCount: 20,
+          languageCode: 'en',
+        }),
+      });
+
+      if (!res.ok) {
+        console.error(`Places search error for "${q}": ${res.status}`);
+        continue;
+      }
+
+      const data = await res.json();
+      for (const place of data.places || []) {
+        if (!seenIds.has(place.id)) {
+          seenIds.add(place.id);
+          allResults.push(place);
+        }
+      }
+    } catch (err) {
+      console.error(`Places search failed for "${q}":`, err);
+    }
+  }
+
+  return allResults.filter(isLikelyCarWash);
+}
+
+async function getPlaceDetails(
+  googleApiKey: string,
+  placeId: string,
+): Promise<PlaceResult | null> {
+  try {
+    const res = await fetch(
+      `https://places.googleapis.com/v1/places/${placeId}`,
+      {
+        headers: {
+          'X-Goog-Api-Key': googleApiKey,
+          'X-Goog-FieldMask': DETAIL_FIELDS,
+        },
+      },
+    );
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+function parseAddress(formatted: string): {
+  address: string; city: string; state: string; zip: string;
+} {
+  const parts = formatted.split(',').map((s) => s.trim());
+  if (parts.length >= 3) {
+    const address = parts[0];
+    const city = parts[1];
+    const stateZipCountry = parts[2].trim();
+    const stateZipMatch = stateZipCountry.match(/^([A-Z]{2})\s*(\d{5}(-\d{4})?)?/);
+    if (stateZipMatch) {
+      return { address, city, state: stateZipMatch[1], zip: stateZipMatch[2] || '' };
+    }
+    return { address, city, state: stateZipCountry, zip: '' };
+  }
+  return { address: formatted, city: '', state: '', zip: '' };
+}
+
+function parseHours(
+  openingHours?: { weekdayDescriptions?: string[] },
+): Record<string, string> | null {
+  if (!openingHours?.weekdayDescriptions?.length) return null;
+  const hours: Record<string, string> = {};
+  for (const desc of openingHours.weekdayDescriptions) {
+    const colonIdx = desc.indexOf(':');
+    if (colonIdx > 0) {
+      const day = desc.substring(0, colonIdx).trim().toLowerCase();
+      const time = desc.substring(colonIdx + 1).trim();
+      hours[day] = time;
+    }
+  }
+  return Object.keys(hours).length > 0 ? hours : null;
+}
+
+function mapPriceLevel(level?: string): string | null {
+  if (!level) return null;
+  const map: Record<string, string> = {
+    PRICE_LEVEL_FREE: 'Free',
+    PRICE_LEVEL_INEXPENSIVE: '$',
+    PRICE_LEVEL_MODERATE: '$$',
+    PRICE_LEVEL_EXPENSIVE: '$$$',
+    PRICE_LEVEL_VERY_EXPENSIVE: '$$$$',
+  };
+  return map[level] || null;
+}
+
+function inferAmenities(name: string, types: string[]): string[] {
+  const amenities: string[] = [];
+  const lower = name.toLowerCase();
+  const typeSet = new Set(types);
+  if (typeSet.has('gas_station')) amenities.push('Gas Station');
+  if (typeSet.has('convenience_store')) amenities.push('Convenience Store');
+  if (typeSet.has('atm')) amenities.push('ATM');
+  if (lower.includes('vacuum') || lower.includes('vac')) amenities.push('Free Vacuum');
+  if (lower.includes('detail')) amenities.push('Detailing Services');
+  if (lower.includes('self') && lower.includes('serv')) amenities.push('Self-Service Bays');
+  if (lower.includes('express')) amenities.push('Express Wash');
+  if (lower.includes('unlimited') || lower.includes('membership')) amenities.push('Unlimited Wash Plans');
+  return amenities;
+}
+
+function inferWashTypes(name: string): string[] {
+  const types: string[] = [];
+  const lower = name.toLowerCase();
+  if (
+    lower.includes('touchless') || lower.includes('touch-free') || lower.includes('touch free') ||
+    lower.includes('brushless') || lower.includes('brush-free') || lower.includes('brush free') ||
+    lower.includes('laser') || lower.includes('frictionless') || lower.includes('no-touch') ||
+    lower.includes('no touch')
+  ) {
+    types.push('touchless_automatic');
+  }
+  if (lower.includes('self') && (lower.includes('serv') || lower.includes('wash'))) {
+    types.push('self_serve_spray');
+  }
+  return types;
+}
+
+function extractPaymentMethods(opts?: PlaceResult['paymentOptions']): string[] {
+  if (!opts) return [];
+  const methods: string[] = [];
+  if (opts.acceptsCreditCards) methods.push('Credit Cards');
+  if (opts.acceptsDebitCards) methods.push('Debit Cards');
+  if (opts.acceptsCashOnly) methods.push('Cash Only');
+  if (opts.acceptsNfc) methods.push('Contactless / NFC');
+  return methods;
+}
+
+function extractReviewHighlights(reviews?: PlaceResult['reviews']): string[] {
+  if (!reviews?.length) return [];
+  return reviews
+    .filter((r) => r.text?.text && (r.rating ?? 0) >= 4)
+    .slice(0, 5)
+    .map((r) => r.text!.text.slice(0, 200));
+}
+
+function getPhotoUrls(
+  photos: Array<{ name: string; widthPx: number; heightPx: number }> | undefined,
+  googleApiKey: string,
+): string[] {
+  if (!photos?.length) return [];
+  return photos.slice(0, 10).map(
+    (p) =>
+      `https://places.googleapis.com/v1/${p.name}/media?maxHeightPx=800&maxWidthPx=1200&key=${googleApiKey}`,
+  );
+}
+
+/**
+ * Build a complete listing data object from Google Place details.
+ * Used for the prospect action to create new listings.
+ */
+async function buildListingData(
+  details: PlaceResult,
+  googleApiKey: string,
+  supabase: ReturnType<typeof createClient>,
+): Promise<Record<string, unknown> | null> {
+  const status = details.businessStatus;
+  if (status === 'CLOSED_PERMANENTLY' || status === 'CLOSED_TEMPORARILY') {
+    return null;
+  }
+
+  const name = details.displayName?.text || 'Unknown Car Wash';
+
+  let address = '';
+  let city = '';
+  let state = '';
+  let zip = '';
+
+  if (details.addressComponents?.length) {
+    const comps = details.addressComponents;
+    const findComp = (type: string) => comps.find((c) => c.types?.includes(type));
+    const streetNumber = findComp('street_number')?.longText || '';
+    const route = findComp('route')?.longText || '';
+    address = [streetNumber, route].filter(Boolean).join(' ');
+    city = findComp('locality')?.longText || findComp('sublocality')?.longText || '';
+    state = findComp('administrative_area_level_1')?.shortText || '';
+    zip = findComp('postal_code')?.longText || '';
+  } else if (details.formattedAddress) {
+    const parsed = parseAddress(details.formattedAddress);
+    address = parsed.address;
+    city = parsed.city;
+    state = parsed.state;
+    zip = parsed.zip;
+  }
+
+  const hours = parseHours(details.regularOpeningHours);
+  const slug = await makeUniqueSlug(supabase, name);
+  const photoUrls = getPhotoUrls(details.photos, googleApiKey);
+  const heroImage = photoUrls[0] || null;
+
+  const lat = details.location?.latitude;
+  const lng = details.location?.longitude;
+  const streetViewUrl =
+    lat && lng
+      ? `https://maps.googleapis.com/maps/api/streetview?size=800x400&location=${lat},${lng}&key=${googleApiKey}`
+      : null;
+
+  const amenities = inferAmenities(name, details.types || []);
+  const washTypes = inferWashTypes(name);
+  // For review-mined listings, always include touchless_automatic
+  if (!washTypes.includes('touchless_automatic')) {
+    washTypes.push('touchless_automatic');
+  }
+
+  const paymentMethods = extractPaymentMethods(details.paymentOptions);
+  const reviewHighlights = extractReviewHighlights(details.reviews);
+  const priceRange = mapPriceLevel(details.priceLevel);
+
+  const description = details.editorialSummary?.text ||
+    `${name} is a touchless car wash located in ${city}, ${state}. Visit for a scratch-free, no-contact clean that protects your vehicle's finish.`;
+
+  const extractedData: Record<string, unknown> = {};
+  if (paymentMethods.length) extractedData.payment_methods = paymentMethods;
+  if (reviewHighlights.length) extractedData.review_highlights = reviewHighlights;
+  if (amenities.length) extractedData.amenities_detailed = amenities;
+
+  return {
+    slug,
+    name,
+    address,
+    city,
+    state,
+    zip,
+    phone: details.nationalPhoneNumber || details.internationalPhoneNumber || null,
+    website: details.websiteUri || null,
+    hours: hours || {},
+    wash_packages: [],
+    amenities,
+    photos: photoUrls,
+    hero_image: heroImage,
+    google_photo_url: heroImage,
+    google_photos_count: details.photos?.length || 0,
+    street_view_url: streetViewUrl,
+    rating: details.rating || 0,
+    review_count: details.userRatingCount || 0,
+    latitude: lat || null,
+    longitude: lng || null,
+    is_touchless: true,
+    is_approved: true,
+    is_featured: false,
+    google_id: details.id,
+    google_place_id: details.id?.replace(/^places\//, '') || null,
+    google_maps_url: details.googleMapsUri || null,
+    google_category: details.primaryType || null,
+    google_subtypes: details.types?.join(', ') || null,
+    business_status: details.businessStatus || null,
+    google_description: details.editorialSummary?.text || null,
+    description,
+    description_generated_at: new Date().toISOString(),
+    touchless_wash_types: washTypes,
+    price_range: priceRange,
+    extracted_data: Object.keys(extractedData).length > 0 ? extractedData : null,
+    crawl_status: 'classified',
+    crawl_notes: 'Imported via review mining — touchless evidence found in Google reviews.',
+    review_mine_status: 'touchless_found',
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Filter sync (reused from discover-touchless)
+// ---------------------------------------------------------------------------
+
+const AMENITY_TO_FILTER_SLUG: Record<string, string> = {
+  'Free Vacuum': 'free-vacuum',
+  'Free Vacuums': 'free-vacuum',
+  'Vacuum': 'free-vacuum',
+  'Unlimited Wash Club': 'unlimited-wash-club',
+  'Membership': 'unlimited-wash-club',
+  'Monthly Plan': 'unlimited-wash-club',
+  'Unlimited': 'unlimited-wash-club',
+  'Unlimited Wash Plans': 'unlimited-wash-club',
+  'Self-Service Bays': 'self-serve-bays',
+  'Self-Serve Bays': 'self-serve-bays',
+  'Self Service': 'self-serve-bays',
+  'Self Serve': 'self-serve-bays',
+  'Wand Wash': 'self-serve-bays',
+  'Express Wash': 'touchless-automatic',
+  'RV Wash': 'rv-oversized',
+  'Truck Wash': 'rv-oversized',
+  'Oversized Vehicle': 'rv-oversized',
+  'RV/Truck Wash': 'rv-oversized',
+};
+
+type FilterMap = Record<string, number>;
+
+async function syncFiltersForListing(
+  supabase: ReturnType<typeof createClient>,
+  listingId: string,
+  isTouchless: boolean | null,
+  amenities: string[],
+  filterMap: FilterMap,
+): Promise<void> {
+  const inserts: { listing_id: string; filter_id: number }[] = [];
+  if (isTouchless === true && filterMap['touchless-automatic']) {
+    inserts.push({ listing_id: listingId, filter_id: filterMap['touchless-automatic'] });
+  }
+  for (const amenity of amenities) {
+    const slug = AMENITY_TO_FILTER_SLUG[amenity];
+    if (slug && filterMap[slug]) {
+      inserts.push({ listing_id: listingId, filter_id: filterMap[slug] });
+    }
+  }
+  if (inserts.length > 0) {
+    await supabase.from('listing_filters').upsert(inserts, { onConflict: 'listing_id,filter_id' });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Main handler
+// ---------------------------------------------------------------------------
+
+Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, serviceKey);
+
+    // Get SerpAPI key
+    const serpApiKey =
+      Deno.env.get('SERPAPI_KEY') ??
+      (await getSecret(supabaseUrl, serviceKey, 'SERPAPI_KEY'));
+
+    if (!serpApiKey) {
+      return new Response(
+        JSON.stringify({ error: 'SerpAPI key not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    const body = await req.json();
+    const action = body.action as string;
+
+    // -----------------------------------------------------------------------
+    // ACTION: scan_batch — scan existing non-touchless car wash listings
+    // -----------------------------------------------------------------------
+    if (action === 'scan_batch') {
+      const batchSize = Math.min(body.batch_size || 50, 100);
+
+      // Fetch unscanned non-touchless car wash listings
+      const { data: listings, error: fetchError } = await supabase
+        .from('listings')
+        .select('id, name, google_place_id, city, state, rating, review_count')
+        .eq('is_touchless', false)
+        .is('review_mine_status', null)
+        .not('google_place_id', 'is', null)
+        .ilike('google_category', '%car_wash%')
+        .order('review_count', { ascending: false }) // Prioritize listings with more reviews
+        .limit(batchSize);
+
+      if (fetchError) {
+        return new Response(
+          JSON.stringify({ error: 'Failed to fetch listings', details: fetchError.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      if (!listings?.length) {
+        // Check total counts for progress reporting
+        const { count: totalScanned } = await supabase
+          .from('listings')
+          .select('id', { count: 'exact', head: true })
+          .eq('is_touchless', false)
+          .not('review_mine_status', 'is', null)
+          .ilike('google_category', '%car_wash%');
+
+        const { count: totalFound } = await supabase
+          .from('listings')
+          .select('id', { count: 'exact', head: true })
+          .eq('review_mine_status', 'touchless_found');
+
+        return new Response(
+          JSON.stringify({
+            message: 'No more listings to scan',
+            scanned_this_batch: 0,
+            found_touchless: 0,
+            total_scanned: totalScanned || 0,
+            total_touchless_found: totalFound || 0,
+            complete: true,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      // Load filter map for filter sync
+      const { data: filters } = await supabase
+        .from('filters')
+        .select('id, slug');
+      const filterMap: FilterMap = {};
+      for (const f of filters || []) {
+        filterMap[f.slug] = f.id;
+      }
+
+      const results: Array<{
+        id: string;
+        name: string;
+        city: string;
+        state: string;
+        status: string;
+        reviewCount: number;
+        apiCalls: number;
+      }> = [];
+
+      let scanned = 0;
+      let foundTouchless = 0;
+      let totalApiCalls = 0;
+
+      for (const listing of listings) {
+        scanned++;
+
+        const { reviews, apiCalls, error } = await searchReviewsMultiKeyword(
+          serpApiKey,
+          listing.google_place_id,
+        );
+        totalApiCalls += apiCalls;
+
+        if (error) {
+          // Mark as failed but don't stop the batch
+          console.error(`Error scanning ${listing.name}: ${error}`);
+          results.push({
+            id: listing.id,
+            name: listing.name,
+            city: listing.city,
+            state: listing.state,
+            status: 'error',
+            reviewCount: 0,
+            apiCalls,
+          });
+          continue;
+        }
+
+        if (reviews.length > 0) {
+          // Found touchless evidence — reclassify!
+          foundTouchless++;
+
+          // Insert review snippets
+          const snippetCount = await insertSerpApiReviewSnippets(supabase, listing.id, reviews);
+
+          // Update listing: flip to touchless
+          await supabase.from('listings').update({
+            is_touchless: true,
+            is_approved: true,
+            review_mine_status: 'touchless_found',
+            review_extract_status: 'extracted',
+            touchless_review_count: snippetCount,
+            crawl_notes: `Reclassified as touchless via review mining — ${snippetCount} review(s) with touchless evidence found.`,
+          }).eq('id', listing.id);
+
+          // Sync filters
+          await syncFiltersForListing(
+            supabase,
+            listing.id,
+            true,
+            [], // existing amenities not loaded, so just sync touchless filter
+            filterMap,
+          );
+
+          results.push({
+            id: listing.id,
+            name: listing.name,
+            city: listing.city,
+            state: listing.state,
+            status: 'touchless_found',
+            reviewCount: snippetCount,
+            apiCalls,
+          });
+        } else {
+          // No evidence — mark as scanned
+          await supabase.from('listings').update({
+            review_mine_status: 'scanned_clean',
+          }).eq('id', listing.id);
+
+          results.push({
+            id: listing.id,
+            name: listing.name,
+            city: listing.city,
+            state: listing.state,
+            status: 'scanned_clean',
+            reviewCount: 0,
+            apiCalls,
+          });
+        }
+      }
+
+      // Get total progress
+      const { count: totalRemaining } = await supabase
+        .from('listings')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_touchless', false)
+        .is('review_mine_status', null)
+        .not('google_place_id', 'is', null)
+        .ilike('google_category', '%car_wash%');
+
+      const { count: totalScanned } = await supabase
+        .from('listings')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_touchless', false)
+        .not('review_mine_status', 'is', null)
+        .ilike('google_category', '%car_wash%');
+
+      const { count: totalFound } = await supabase
+        .from('listings')
+        .select('id', { count: 'exact', head: true })
+        .eq('review_mine_status', 'touchless_found');
+
+      return new Response(
+        JSON.stringify({
+          scanned_this_batch: scanned,
+          found_touchless: foundTouchless,
+          api_calls_used: totalApiCalls,
+          total_scanned: totalScanned || 0,
+          total_remaining: totalRemaining || 0,
+          total_touchless_found: totalFound || 0,
+          complete: (totalRemaining || 0) === 0,
+          results,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // -----------------------------------------------------------------------
+    // ACTION: scan_single — scan a single listing by ID
+    // -----------------------------------------------------------------------
+    if (action === 'scan_single') {
+      const listingId = body.listing_id;
+      if (!listingId) {
+        return new Response(
+          JSON.stringify({ error: 'listing_id required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      const { data: listing } = await supabase
+        .from('listings')
+        .select('id, name, google_place_id, city, state')
+        .eq('id', listingId)
+        .maybeSingle();
+
+      if (!listing?.google_place_id) {
+        return new Response(
+          JSON.stringify({ error: 'Listing not found or missing google_place_id' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      const { reviews, apiCalls, error } = await searchReviewsMultiKeyword(
+        serpApiKey,
+        listing.google_place_id,
+      );
+
+      if (error) {
+        return new Response(
+          JSON.stringify({ error: `SerpAPI error: ${error}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      if (reviews.length > 0) {
+        const snippetCount = await insertSerpApiReviewSnippets(supabase, listing.id, reviews);
+
+        // Load filter map
+        const { data: filters } = await supabase.from('filters').select('id, slug');
+        const filterMap: FilterMap = {};
+        for (const f of filters || []) filterMap[f.slug] = f.id;
+
+        await supabase.from('listings').update({
+          is_touchless: true,
+          is_approved: true,
+          review_mine_status: 'touchless_found',
+          review_extract_status: 'extracted',
+          touchless_review_count: snippetCount,
+          crawl_notes: `Reclassified as touchless via review mining — ${snippetCount} review(s) with touchless evidence found.`,
+        }).eq('id', listing.id);
+
+        await syncFiltersForListing(supabase, listing.id, true, [], filterMap);
+
+        return new Response(
+          JSON.stringify({
+            status: 'touchless_found',
+            name: listing.name,
+            review_count: snippetCount,
+            api_calls: apiCalls,
+            reviews: reviews.map((r) => ({
+              text: r.snippet || r.extracted_snippet?.original || '',
+              rating: r.rating,
+              reviewer: r.user?.name,
+              keywords: extractKeywords(r.snippet || r.extracted_snippet?.original || ''),
+            })),
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      await supabase.from('listings').update({
+        review_mine_status: 'scanned_clean',
+      }).eq('id', listing.id);
+
+      return new Response(
+        JSON.stringify({
+          status: 'scanned_clean',
+          name: listing.name,
+          review_count: 0,
+          api_calls: apiCalls,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // -----------------------------------------------------------------------
+    // ACTION: progress — get current scan progress
+    // -----------------------------------------------------------------------
+    if (action === 'progress') {
+      const { count: totalCarWash } = await supabase
+        .from('listings')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_touchless', false)
+        .not('google_place_id', 'is', null)
+        .ilike('google_category', '%car_wash%');
+
+      const { count: totalScanned } = await supabase
+        .from('listings')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_touchless', false)
+        .not('review_mine_status', 'is', null)
+        .ilike('google_category', '%car_wash%');
+
+      const { count: totalRemaining } = await supabase
+        .from('listings')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_touchless', false)
+        .is('review_mine_status', null)
+        .not('google_place_id', 'is', null)
+        .ilike('google_category', '%car_wash%');
+
+      const { count: totalFound } = await supabase
+        .from('listings')
+        .select('id', { count: 'exact', head: true })
+        .eq('review_mine_status', 'touchless_found');
+
+      // Get recently found listings for display
+      const { data: recentFinds } = await supabase
+        .from('listings')
+        .select('id, name, city, state, slug, touchless_review_count')
+        .eq('review_mine_status', 'touchless_found')
+        .order('updated_at', { ascending: false })
+        .limit(20);
+
+      return new Response(
+        JSON.stringify({
+          total_car_wash_listings: totalCarWash || 0,
+          total_scanned: totalScanned || 0,
+          total_remaining: totalRemaining || 0,
+          total_touchless_found: totalFound || 0,
+          complete: (totalRemaining || 0) === 0,
+          recent_finds: recentFinds || [],
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // -----------------------------------------------------------------------
+    // ACTION: prospect — discover new car washes and check reviews
+    // -----------------------------------------------------------------------
+    if (action === 'prospect') {
+      const query = body.query;
+      if (!query) {
+        return new Response(
+          JSON.stringify({ error: 'query required (city, state, or region)' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      const googleApiKey =
+        Deno.env.get('GOOGLE_PLACES_API_KEY') ??
+        (await getSecret(supabaseUrl, serviceKey, 'GOOGLE_PLACES_API_KEY'));
+
+      if (!googleApiKey) {
+        return new Response(
+          JSON.stringify({ error: 'Google Places API key not configured' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      // 1. Search Google Places for car washes in the area
+      const places = await searchPlaces(googleApiKey, query);
+
+      // 2. Filter out existing listings and rejected places
+      const existingIds = new Set<string>();
+      const rejectedIds = new Set<string>();
+
+      if (places.length > 0) {
+        const placeIds = places.map((p) => p.id);
+
+        // Check existing listings
+        const { data: existing } = await supabase
+          .from('listings')
+          .select('google_id')
+          .in('google_id', placeIds);
+        for (const e of existing || []) {
+          existingIds.add(e.google_id);
+        }
+
+        // Check rejections
+        const { data: rejected } = await supabase
+          .from('discovery_rejections')
+          .select('google_id')
+          .in('google_id', placeIds);
+        for (const r of rejected || []) {
+          rejectedIds.add(r.google_id);
+        }
+      }
+
+      const newPlaces = places.filter(
+        (p) => !existingIds.has(p.id) && !rejectedIds.has(p.id),
+      );
+
+      // Load filter map
+      const { data: filters } = await supabase.from('filters').select('id, slug');
+      const filterMap: FilterMap = {};
+      for (const f of filters || []) filterMap[f.slug] = f.id;
+
+      const imported: Array<{
+        id: string;
+        name: string;
+        city: string;
+        state: string;
+        reviewCount: number;
+        slug: string;
+      }> = [];
+      const skipped: Array<{
+        name: string;
+        address: string;
+        reason: string;
+      }> = [];
+
+      let apiCalls = 0;
+
+      for (const place of newPlaces) {
+        // Extract place_id (remove "places/" prefix if present)
+        const placeId = place.id.replace(/^places\//, '');
+
+        // Search reviews for touchless evidence
+        const { reviews, apiCalls: calls, error } = await searchReviewsMultiKeyword(
+          serpApiKey,
+          placeId,
+        );
+        apiCalls += calls;
+
+        if (error) {
+          skipped.push({
+            name: place.displayName?.text || 'Unknown',
+            address: place.formattedAddress || '',
+            reason: `SerpAPI error: ${error}`,
+          });
+          continue;
+        }
+
+        if (reviews.length === 0) {
+          skipped.push({
+            name: place.displayName?.text || 'Unknown',
+            address: place.formattedAddress || '',
+            reason: 'No touchless evidence in reviews',
+          });
+          continue;
+        }
+
+        // Found touchless evidence — get full details and import
+        const details = await getPlaceDetails(googleApiKey, place.id);
+        if (!details) {
+          skipped.push({
+            name: place.displayName?.text || 'Unknown',
+            address: place.formattedAddress || '',
+            reason: 'Failed to fetch place details',
+          });
+          continue;
+        }
+
+        const listingData = await buildListingData(details, googleApiKey, supabase);
+        if (!listingData) {
+          skipped.push({
+            name: place.displayName?.text || 'Unknown',
+            address: place.formattedAddress || '',
+            reason: 'Business is closed',
+          });
+          continue;
+        }
+
+        // Insert the listing
+        const { data: inserted, error: insertError } = await supabase
+          .from('listings')
+          .insert(listingData)
+          .select('id, slug')
+          .single();
+
+        if (insertError) {
+          skipped.push({
+            name: place.displayName?.text || 'Unknown',
+            address: place.formattedAddress || '',
+            reason: `Insert failed: ${insertError.message}`,
+          });
+          continue;
+        }
+
+        // Insert review snippets
+        const snippetCount = await insertSerpApiReviewSnippets(supabase, inserted.id, reviews);
+
+        // Update review count on listing
+        await supabase.from('listings').update({
+          review_extract_status: 'extracted',
+          touchless_review_count: snippetCount,
+        }).eq('id', inserted.id);
+
+        // Sync filters
+        const amenities = (listingData.amenities as string[]) || [];
+        await syncFiltersForListing(supabase, inserted.id, true, amenities, filterMap);
+
+        imported.push({
+          id: inserted.id,
+          name: listingData.name as string,
+          city: listingData.city as string,
+          state: listingData.state as string,
+          reviewCount: snippetCount,
+          slug: inserted.slug,
+        });
+      }
+
+      return new Response(
+        JSON.stringify({
+          query,
+          total_places_found: places.length,
+          already_in_db: existingIds.size,
+          previously_rejected: rejectedIds.size,
+          new_places_checked: newPlaces.length,
+          api_calls_used: apiCalls,
+          imported,
+          skipped,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // -----------------------------------------------------------------------
+    // ACTION: reset — reset review_mine_status for re-scanning
+    // -----------------------------------------------------------------------
+    if (action === 'reset') {
+      const status = body.status || 'scanned_clean';
+      const { count } = await supabase
+        .from('listings')
+        .update({ review_mine_status: null })
+        .eq('review_mine_status', status)
+        .select('id', { count: 'exact', head: true });
+
+      return new Response(
+        JSON.stringify({
+          message: `Reset ${count || 0} listings with status '${status}' to unscanned`,
+          reset_count: count || 0,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        error: 'Unknown action',
+        valid_actions: ['scan_batch', 'scan_single', 'progress', 'prospect', 'reset'],
+      }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    );
+  } catch (err) {
+    console.error('review-mine error:', err);
+    return new Response(
+      JSON.stringify({ error: 'Internal error', details: String(err) }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    );
+  }
+});

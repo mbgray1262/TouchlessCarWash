@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   ArrowLeft, Link2, Loader2, CheckCircle2, XCircle, ExternalLink,
   MapPin, Phone, Globe, Star, Clock, Sparkles, Image as ImageIcon,
-  AlertCircle, ChevronRight, Images, Tag, ShieldCheck,
+  AlertCircle, ChevronRight, Images, Tag, ShieldCheck, MessageSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -212,6 +212,13 @@ export default function ImportPage() {
             >
               <MapPin className="w-4 h-4" />
               Discover New Listings
+            </Link>
+            <Link
+              href="/admin/import/review-mine"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-purple-600 hover:text-purple-800 border border-purple-200 hover:border-purple-400 rounded-lg px-3 py-2 bg-purple-50 hover:bg-purple-100 transition-colors"
+            >
+              <MessageSquare className="w-4 h-4" />
+              Review Mining
             </Link>
           </div>
         </div>
