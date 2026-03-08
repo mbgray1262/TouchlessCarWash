@@ -99,23 +99,6 @@ const REVIEW_TOUCHLESS_KEYWORDS = [
  * Falls back to keyword-only match (isTouchless=true) if AI is unavailable.
  */
 
-/** Infer amenities from Google Places types and business name. */
-function inferAmenitiesFromGoogle(name: string, types: string[]): string[] {
-  const amenities: string[] = [];
-  const lower = name.toLowerCase();
-  const typeSet = new Set(types);
-
-  if (typeSet.has('gas_station')) amenities.push('Gas Station');
-  if (typeSet.has('convenience_store')) amenities.push('Convenience Store');
-  if (typeSet.has('atm')) amenities.push('ATM');
-  if (lower.includes('vacuum') || lower.includes('vac')) amenities.push('Free Vacuum');
-  if (lower.includes('detail')) amenities.push('Detailing Services');
-  if (lower.includes('express')) amenities.push('Express Wash');
-  if (lower.includes('unlimited') || lower.includes('membership')) amenities.push('Unlimited Wash Plans');
-
-  return amenities;
-}
-
 async function verifyTouchlessWithAI(
   anthropicKey: string,
   carWashName: string,
@@ -856,7 +839,7 @@ Deno.serve(async (req: Request) => {
       // Fetch unscanned non-touchless car wash listings
       const { data: listings, error: fetchError } = await supabase
         .from('listings')
-        .select('id, name, slug, google_place_id, google_maps_url, city, state, rating, review_count, google_subtypes, amenities')
+        .select('id, name, slug, google_place_id, google_maps_url, city, state, rating, review_count')
         .eq('is_touchless', false)
         .is('review_mine_status', null)
         .not('google_place_id', 'is', null)
@@ -970,23 +953,16 @@ Deno.serve(async (req: Request) => {
 
             const snippetCount = await insertSerpApiReviewSnippets(supabase, listing.id, reviews);
 
-            // Infer amenities from Google subtypes and business name
-            const googleTypes = (listing.google_subtypes || '').split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean);
-            const inferredAmenities = inferAmenitiesFromGoogle(listing.name, googleTypes);
-            const existingAmenities: string[] = listing.amenities || [];
-            const mergedAmenities = [...new Set([...existingAmenities, ...inferredAmenities])];
-
             await supabase.from('listings').update({
               is_touchless: true,
               is_approved: true,
               review_mine_status: 'touchless_found',
               review_extract_status: 'extracted',
               touchless_review_count: snippetCount,
-              amenities: mergedAmenities,
               crawl_notes: `Reclassified as touchless via review mining (AI verified) — ${snippetCount} review(s). AI: ${aiResult.reasoning}`,
             }).eq('id', listing.id);
 
-            await syncFiltersForListing(supabase, listing.id, true, mergedAmenities, filterMap);
+            await syncFiltersForListing(supabase, listing.id, true, [], filterMap);
 
             results.push({
               id: listing.id,
@@ -1059,7 +1035,8 @@ Deno.serve(async (req: Request) => {
         .not('google_place_id', 'is', null)
         .in('google_category', ['Car wash', 'car_wash']);
 
-      // Trigger AI description generation for newly reclassified listings
+      // Trigger full enrichment pipeline for newly reclassified listings
+      // (crawl website → extract amenities/packages → generate AI description)
       const touchlessIds = results
         .filter((r: { status: string }) => r.status === 'touchless_found')
         .map((r: { id: string }) => r.id);
@@ -1067,18 +1044,17 @@ Deno.serve(async (req: Request) => {
       if (touchlessIds.length > 0) {
         const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY')!;
         EdgeRuntime.waitUntil(
-          fetch(`${supabaseUrl}/functions/v1/generate-descriptions`, {
+          fetch(`${supabaseUrl}/functions/v1/discover-touchless`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${supabaseAnon}`,
             },
             body: JSON.stringify({
-              action: 'start',
+              action: 'enrich',
               listing_ids: touchlessIds,
-              regenerate: true,
             }),
-          }).catch((err) => console.error('Failed to trigger description generation:', err))
+          }).catch((err) => console.error('Failed to trigger enrichment pipeline:', err))
         );
       }
 
