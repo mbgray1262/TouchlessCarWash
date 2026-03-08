@@ -300,11 +300,18 @@ async function searchReviewsMultiKeyword(
     return { reviews: verifiedPrimary, apiCalls: 1 };
   }
 
-  // Fallback — "brushless" and "brush free" won't match "touch"
+  // Second query — "brushless" and "brush free" won't match "touch"
   const secondary = await searchReviews(serpApiKey, placeId, 'brushless');
   const verifiedSecondary = filterVerifiedReviews(secondary.reviews);
+  if (verifiedSecondary.length > 0) {
+    return { reviews: verifiedSecondary, apiCalls: 2 };
+  }
 
-  return { reviews: verifiedSecondary, apiCalls: 2 };
+  // Third query — "laser wash" is a common term for touchless washes
+  const tertiary = await searchReviews(serpApiKey, placeId, 'laser');
+  const verifiedTertiary = filterVerifiedReviews(tertiary.reviews);
+
+  return { reviews: verifiedTertiary, apiCalls: 3 };
 }
 
 /**
@@ -322,10 +329,10 @@ function extractKeywords(text: string): string[] {
 const NEGATION_PATTERNS = [
   /\bnot\s+touch\s*-?\s*(?:less|free)\b/i,
   /\bnot\s+brush\s*-?\s*(?:less|free)\b/i,
-  /\bnot\s+(?:a\s+)?(?:touchless|brushless|touch-free|brush-free)\b/i,
-  /\bisn'?t\s+(?:touchless|brushless|touch-free|brush-free|touch\s*free)\b/i,
-  /\bno(?:t|thing)\s+(?:touchless|touch-free|touch\s*free)\b/i,
-  /\bwasn'?t\s+(?:touchless|brushless|touch-free|touch\s*free)\b/i,
+  /\bnot\s+(?:a\s+)?(?:touchless|brushless|touch-free|brush-free|laser\s*wash)\b/i,
+  /\bisn'?t\s+(?:touchless|brushless|touch-free|brush-free|touch\s*free|(?:a\s+)?laser\s*wash)\b/i,
+  /\bno(?:t|thing)\s+(?:touchless|touch-free|touch\s*free|laser\s*wash)\b/i,
+  /\bwasn'?t\s+(?:touchless|brushless|touch-free|touch\s*free|(?:a\s+)?laser\s*wash)\b/i,
 ];
 
 /**
@@ -1375,7 +1382,7 @@ Deno.serve(async (req: Request) => {
         const placeName = place.displayName?.text || 'Unknown';
 
         // Check if name alone tells us it's touchless (saves SerpAPI credits)
-        const nameMatchesTouchless = /touch\s*-?\s*less|touch\s*-?\s*free|no\s*-?\s*touch|contactless\s+wash/i.test(placeName);
+        const nameMatchesTouchless = /touch\s*-?\s*less|touch\s*-?\s*free|no\s*-?\s*touch|contactless\s+wash|laser\s*wash|brush\s*-?\s*less|brush\s*-?\s*free/i.test(placeName);
 
         let reviews: Array<{ reviewer_name: string; rating: number; review_text: string; touchless_keywords: string[] }> = [];
 
@@ -1599,7 +1606,7 @@ Deno.serve(async (req: Request) => {
           const placeName = place.displayName?.text || 'Unknown';
 
           // Check if name alone tells us it's touchless (saves SerpAPI credits)
-          const nameMatchesTouchless = /touch\s*-?\s*less|touch\s*-?\s*free|no\s*-?\s*touch|contactless\s+wash/i.test(placeName);
+          const nameMatchesTouchless = /touch\s*-?\s*less|touch\s*-?\s*free|no\s*-?\s*touch|contactless\s+wash|laser\s*wash|brush\s*-?\s*less|brush\s*-?\s*free/i.test(placeName);
 
           let reviews: Array<{ reviewer_name: string; rating: number; review_text: string; touchless_keywords: string[] }> = [];
 
