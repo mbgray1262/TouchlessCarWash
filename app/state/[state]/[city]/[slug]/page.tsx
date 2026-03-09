@@ -531,6 +531,50 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
+/**
+ * Smart-truncate a review to ~maxLen chars, keeping the first keyword visible.
+ * If the keyword is near the start the text is simply trimmed at the end.
+ * If the keyword is buried deep, we trim from both sides and add ellipses.
+ */
+function smartTruncate(text: string, keywords: string[], maxLen = 280): string {
+  if (text.length <= maxLen) return text;
+  if (!keywords || keywords.length === 0) return text.slice(0, maxLen).trimEnd() + '…';
+
+  // Find the earliest keyword match
+  const escaped = keywords.map((kw) => kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const pattern = new RegExp(escaped.join('|'), 'gi');
+  const match = pattern.exec(text);
+
+  if (!match) return text.slice(0, maxLen).trimEnd() + '…';
+
+  const kwStart = match.index;
+  const kwEnd = kwStart + match[0].length;
+
+  // If keyword is within the first maxLen chars, just truncate the end
+  if (kwEnd <= maxLen - 20) {
+    return text.slice(0, maxLen).trimEnd() + '…';
+  }
+
+  // Otherwise center a window around the keyword
+  const padding = Math.floor((maxLen - match[0].length) / 2);
+  let start = Math.max(0, kwStart - padding);
+  let end = Math.min(text.length, kwEnd + padding);
+
+  // Snap to word boundaries
+  if (start > 0) {
+    const spaceAfter = text.indexOf(' ', start);
+    if (spaceAfter !== -1 && spaceAfter < start + 20) start = spaceAfter + 1;
+  }
+  if (end < text.length) {
+    const spaceBefore = text.lastIndexOf(' ', end);
+    if (spaceBefore > end - 20) end = spaceBefore;
+  }
+
+  const prefix = start > 0 ? '…' : '';
+  const suffix = end < text.length ? '…' : '';
+  return prefix + text.slice(start, end).trim() + suffix;
+}
+
 /** Highlight touchless keywords in review text with green accent. */
 function HighlightedReviewText({ text, keywords }: { text: string; keywords: string[] }) {
   if (!keywords || keywords.length === 0) return <>{text}</>;
@@ -557,13 +601,14 @@ function HighlightedReviewText({ text, keywords }: { text: string; keywords: str
 }
 
 function ReviewSnippetCard({ snippet }: { snippet: ReviewSnippet }) {
+  const displayText = smartTruncate(snippet.review_text, snippet.touchless_keywords);
   return (
     <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
       <div className="flex items-start gap-3">
         <Quote className="w-5 h-5 text-[#22C55E]/40 shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm text-gray-700 leading-relaxed line-clamp-4">
-            <HighlightedReviewText text={snippet.review_text} keywords={snippet.touchless_keywords} />
+          <p className="text-sm text-gray-700 leading-relaxed">
+            <HighlightedReviewText text={displayText} keywords={snippet.touchless_keywords} />
           </p>
           <div className="flex items-center gap-3 mt-2.5">
             {snippet.rating && snippet.rating > 0 && (
