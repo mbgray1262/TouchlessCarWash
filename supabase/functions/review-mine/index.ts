@@ -309,9 +309,11 @@ async function runSentimentAnalysis(
   anthropicKey: string,
   listing: { id: string; name: string; google_place_id: string },
 ): Promise<{ success: boolean; apiCalls: number; sentiment?: SentimentResult; error?: string }> {
-  // Fetch general reviews (no keyword filter, sorted by newest) — single page is enough for sentiment
+  // Fetch general reviews (no keyword filter) — 3 pages (~30 reviews) for a
+  // representative sentiment sample. Using "most relevant" sort (default) gives
+  // a balanced mix rather than skewing towards recent complaints.
   const { reviews, apiCalls: serpCalls, error } = await searchReviews(
-    serpApiKey, listing.google_place_id, '', { sort_by: 'newestFirst', maxPages: 1 },
+    serpApiKey, listing.google_place_id, '', { maxPages: 3 },
   );
 
   if (error) {
