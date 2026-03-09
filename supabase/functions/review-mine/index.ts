@@ -408,7 +408,7 @@ async function searchReviews(
     });
     // num param only works when query, next_page_token, or topic_id is set
     if (query || nextPageToken) params.set('num', String(num));
-    if (query) params.set('q', query);
+    if (query) params.set('query', query);
     if (opts?.sort_by) params.set('sort_by', opts.sort_by);
     if (nextPageToken) params.set('next_page_token', nextPageToken);
 
@@ -1084,17 +1084,15 @@ Deno.serve(async (req: Request) => {
     if (action === 'scan_batch') {
       const batchSize = Math.min(body.batch_size || 50, 100);
 
-      // Fetch unscanned car wash listings that haven't been scanned yet.
-      // Includes: is_touchless = false OR NULL (unclassified), all car wash categories,
-      // and uncategorized listings with "car wash" in the name.
+      // Fetch car wash listings that haven't been scanned yet (review_mine_status IS NULL).
+      // Includes both previously-touchless and unclassified listings so re-scans work correctly.
       const { data: listings, error: fetchError } = await supabase
         .from('listings')
-        .select('id, name, slug, google_place_id, google_maps_url, city, state, rating, review_count')
+        .select('id, name, slug, google_place_id, google_maps_url, city, state, rating, review_count, is_touchless')
         .is('review_mine_status', null)
-        .not('is_touchless', 'eq', true)
         .not('google_place_id', 'is', null)
         .or('google_category.in.("Car wash","car_wash","Self service car wash"),and(google_category.is.null,name.ilike.%car wash%),and(google_category.is.null,name.ilike.%carwash%)')
-        .order('review_count', { ascending: false }) // Prioritize listings with more reviews
+        .order('review_count', { ascending: false, nullsFirst: false }) // Prioritize listings with more reviews, NULLs last
         .limit(batchSize);
 
       if (fetchError) {
