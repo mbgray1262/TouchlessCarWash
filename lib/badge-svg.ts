@@ -28,7 +28,7 @@ function escapeXml(str: string): string {
 }
 
 const FONT_STACK =
-  'Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif';
+  'Inter,-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif';
 
 export function generateBadgeSvg(options: BadgeSvgOptions): string {
   const { rank, metroName, year, theme, size } = options;
