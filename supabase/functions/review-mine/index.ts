@@ -309,11 +309,10 @@ async function runSentimentAnalysis(
   anthropicKey: string,
   listing: { id: string; name: string; google_place_id: string },
 ): Promise<{ success: boolean; apiCalls: number; sentiment?: SentimentResult; error?: string }> {
-  // Fetch general reviews (no keyword filter) — 3 pages (~30 reviews) for a
-  // representative sentiment sample. Using "most relevant" sort (default) gives
-  // a balanced mix rather than skewing towards recent complaints.
+  // Fetch general reviews (no keyword filter) — 1 page (~10 most relevant reviews).
+  // SerpAPI's default "most relevant" sort gives a balanced mix.
   const { reviews, apiCalls: serpCalls, error } = await searchReviews(
-    serpApiKey, listing.google_place_id, '', { maxPages: 3 },
+    serpApiKey, listing.google_place_id, '', { maxPages: 1 },
   );
 
   if (error) {
@@ -462,13 +461,13 @@ async function searchReviewsMultiKeyword(
   placeId: string,
 ): Promise<{ reviews: SerpApiReview[]; apiCalls: number; error?: string }> {
   // Single query using OR operator — searches for all touchless-related keywords.
-  // Paginate up to 5 pages (50 reviews max) to capture all keyword-matched reviews.
+  // Paginate up to 2 pages (20 reviews) — enough for the vast majority of listings.
   // "touch" catches: touchless, no-touch, touch-free, soft-touch, touch less
   // "brushless" catches: brushless, brush-free
   // "laser" catches: laser wash, laserwash
   // "contactless" catches: contactless, contact-free
   const result = await searchReviews(serpApiKey, placeId, 'touch OR brushless OR laser OR contactless', {
-    maxPages: 5,
+    maxPages: 2,
   });
 
   if (result.error) {
