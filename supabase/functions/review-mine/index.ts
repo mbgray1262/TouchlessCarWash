@@ -72,16 +72,21 @@ interface SerpApiResponse {
     status?: string;
     total_results?: number;
   };
+  serpapi_pagination?: {
+    next_page_token?: string;
+    next?: string;
+  };
   error?: string;
 }
 
 /** Keywords that indicate touchless evidence in reviews. */
 const REVIEW_TOUCHLESS_KEYWORDS = [
-  'touchless', 'touch-free', 'touchfree', 'touch free',
+  'touchless', 'touch-free', 'touchfree', 'touch free', 'touch less',
   'brushless', 'brush-free', 'brushfree', 'brush free',
   'no brush', 'no-brush', 'no brushes',
   'laser wash', 'laserwash',
   'no-touch', 'no touch', 'notouch',
+  'contactless', 'contact-free', 'contact free',
   'frictionless', 'friction-free',
   'soft-touch', 'soft touch',
 ];
@@ -287,14 +292,14 @@ async function runSentimentAnalysis(
   anthropicKey: string,
   listing: { id: string; name: string; google_place_id: string },
 ): Promise<{ success: boolean; apiCalls: number; sentiment?: SentimentResult; error?: string }> {
-  // Fetch general reviews (no keyword filter, sorted by newest)
-  const { reviews, error } = await searchReviews(
-    serpApiKey, listing.google_place_id, '', { sort_by: 'newestFirst' },
+  // Fetch general reviews (no keyword filter, sorted by newest) — single page is enough for sentiment
+  const { reviews, apiCalls: serpCalls, error } = await searchReviews(
+    serpApiKey, listing.google_place_id, '', { sort_by: 'newestFirst', maxPages: 1 },
   );
 
   if (error) {
     console.error(`[sentiment] SerpAPI error for ${listing.name}: ${error}`);
-    return { success: false, apiCalls: 1, error: `SerpAPI: ${error}` };
+    return { success: false, apiCalls: serpCalls, error: `SerpAPI: ${error}` };
   }
 
   if (reviews.length === 0) {
@@ -302,7 +307,7 @@ async function runSentimentAnalysis(
     await supabase.from('listings').update({
       sentiment_analyzed_at: new Date().toISOString(),
     }).eq('id', listing.id);
-    return { success: false, apiCalls: 1, error: 'No reviews available' };
+    return { success: false, apiCalls: serpCalls, error: 'No reviews available' };
   }
 
   console.log(`[sentiment] Got ${reviews.length} reviews for ${listing.name}, running AI analysis...`);
@@ -311,7 +316,7 @@ async function runSentimentAnalysis(
 
   if (!aiResult.result) {
     console.error(`[sentiment] AI analysis failed for ${listing.name}: ${aiResult.error}`);
-    return { success: false, apiCalls: 1, error: `AI: ${aiResult.error}` };
+    return { success: false, apiCalls: serpCalls + 1, error: `AI: ${aiResult.error}` };
   }
 
   const sentiment = aiResult.result;
@@ -323,7 +328,7 @@ async function runSentimentAnalysis(
     sentiment_analyzed_at: new Date().toISOString(),
   }).eq('id', listing.id);
 
-  return { success: true, apiCalls: 1, sentiment };
+  return { success: true, apiCalls: serpCalls + 1, sentiment };
 }
 
 /**
@@ -361,45 +366,67 @@ async function getTotalScannedCount(
 
 /**
  * Call SerpAPI Google Maps Reviews with keyword query.
- * Returns reviews matching the query (typically "touchless" or "no touch").
+ * Supports pagination via next_page_token to fetch multiple pages of results.
+ * Each page costs 1 SerpAPI credit; maxPages caps the total API calls.
  */
 async function searchReviews(
   serpApiKey: string,
   placeId: string,
   query: string,
-  opts?: { sort_by?: string },
-): Promise<{ reviews: SerpApiReview[]; error?: string }> {
-  const params = new URLSearchParams({
-    engine: 'google_maps_reviews',
-    place_id: placeId,
-    api_key: serpApiKey,
-    hl: 'en',
-  });
-  if (query) params.set('q', query);
-  if (opts?.sort_by) params.set('sort_by', opts.sort_by);
+  opts?: { sort_by?: string; maxPages?: number },
+): Promise<{ reviews: SerpApiReview[]; apiCalls: number; error?: string }> {
+  const maxPages = opts?.maxPages ?? 1;
+  const allReviews: SerpApiReview[] = [];
+  let apiCalls = 0;
+  let nextPageToken: string | undefined;
 
-  try {
-    const res = await fetch(`https://serpapi.com/search.json?${params}`, {
-      signal: AbortSignal.timeout(30000),
+  for (let page = 0; page < maxPages; page++) {
+    const params = new URLSearchParams({
+      engine: 'google_maps_reviews',
+      place_id: placeId,
+      api_key: serpApiKey,
+      hl: 'en',
     });
+    if (query) params.set('q', query);
+    if (opts?.sort_by) params.set('sort_by', opts.sort_by);
+    if (nextPageToken) params.set('next_page_token', nextPageToken);
 
-    if (!res.ok) {
-      const errText = await res.text();
-      console.error(`SerpAPI error for ${placeId}: ${res.status} ${errText}`);
-      return { reviews: [], error: `HTTP ${res.status}: ${errText}` };
+    try {
+      const res = await fetch(`https://serpapi.com/search.json?${params}`, {
+        signal: AbortSignal.timeout(30000),
+      });
+      apiCalls++;
+
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error(`SerpAPI error for ${placeId}: ${res.status} ${errText}`);
+        if (allReviews.length > 0) break; // Return what we have so far
+        return { reviews: [], apiCalls, error: `HTTP ${res.status}: ${errText}` };
+      }
+
+      const data: SerpApiResponse = await res.json();
+
+      if (data.error) {
+        if (allReviews.length > 0) break;
+        return { reviews: [], apiCalls, error: data.error };
+      }
+
+      const pageReviews = data.reviews || [];
+      allReviews.push(...pageReviews);
+
+      // Check for next page
+      nextPageToken = data.serpapi_pagination?.next_page_token;
+      if (!nextPageToken || pageReviews.length === 0) break;
+
+      console.log(`[serpapi] Page ${page + 1}: got ${pageReviews.length} reviews, fetching next page...`);
+    } catch (err) {
+      console.error(`SerpAPI fetch failed for ${placeId} (page ${page + 1}):`, err);
+      if (allReviews.length > 0) break;
+      return { reviews: [], apiCalls, error: String(err) };
     }
-
-    const data: SerpApiResponse = await res.json();
-
-    if (data.error) {
-      return { reviews: [], error: data.error };
-    }
-
-    return { reviews: data.reviews || [] };
-  } catch (err) {
-    console.error(`SerpAPI fetch failed for ${placeId}:`, err);
-    return { reviews: [], error: String(err) };
   }
+
+  return { reviews: allReviews, apiCalls };
 }
 
 /**
@@ -415,20 +442,24 @@ async function searchReviewsMultiKeyword(
   serpApiKey: string,
   placeId: string,
 ): Promise<{ reviews: SerpApiReview[]; apiCalls: number; error?: string }> {
-  // Single query using OR operator — searches for all touchless-related keywords
-  // in one API call instead of 3 separate calls.
-  // "touch" catches: touchless, no-touch, touch-free, soft-touch
+  // Single query using OR operator — searches for all touchless-related keywords.
+  // Paginate up to 5 pages (50 reviews max) to capture all keyword-matched reviews.
+  // "touch" catches: touchless, no-touch, touch-free, soft-touch, touch less
   // "brushless" catches: brushless, brush-free
   // "laser" catches: laser wash, laserwash
-  const result = await searchReviews(serpApiKey, placeId, 'touch OR brushless OR laser');
+  // "contactless" catches: contactless, contact-free
+  const result = await searchReviews(serpApiKey, placeId, 'touch OR brushless OR laser OR contactless', {
+    maxPages: 5,
+  });
 
   if (result.error) {
-    return { reviews: [], apiCalls: 1, error: result.error };
+    return { reviews: [], apiCalls: result.apiCalls, error: result.error };
   }
 
   // Filter to only reviews that genuinely contain our exact keywords
   const verified = filterVerifiedReviews(result.reviews);
-  return { reviews: verified, apiCalls: 1 };
+  console.log(`[multi-kw] ${result.reviews.length} raw → ${verified.length} verified (${result.apiCalls} API calls)`);
+  return { reviews: verified, apiCalls: result.apiCalls };
 }
 
 /**
