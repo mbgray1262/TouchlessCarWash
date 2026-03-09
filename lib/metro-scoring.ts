@@ -47,12 +47,13 @@ export function scoreListing(
   }
   // 0 points if no touchless review evidence
 
-  // ── Sentiment quality (10 points max) ───────────────────────────────
-  // AI-analyzed review sentiment score (1–5 scale). Listings without
-  // sentiment data get a neutral default (3.0/5 → 5/10 pts) so rankings
-  // aren't disrupted before backfill completes.
-  const sentimentScore = listing.sentiment_score ?? 3.0;
-  score += ((sentimentScore - 1) / 4) * 10;
+  // ── Touchless sentiment (10 points max) ─────────────────────────────
+  // Simple positive/negative/neutral from touchless review analysis.
+  // Positive = 10, Neutral/unknown = 5 (default), Negative = 0.
+  const sentiment = listing.touchless_sentiment;
+  if (sentiment === 'positive') score += 10;
+  else if (sentiment === 'negative') score += 0;
+  else score += 5; // neutral or null — don't penalize before backfill
 
   // ── Data completeness (10 points max) ───────────────────────────────
   let completeness = 0;

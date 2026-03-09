@@ -88,7 +88,6 @@ const REVIEW_TOUCHLESS_KEYWORDS = [
   'no-touch', 'no touch', 'notouch',
   'contactless', 'contact-free', 'contact free',
   'frictionless', 'friction-free',
-  'soft-touch', 'soft touch',
 ];
 
 /**
@@ -117,7 +116,8 @@ const CONTACTLESS_PAYMENT_PATTERNS = [
  * touchless car wash, or if keywords appear in a negative context (e.g.,
  * "looking for brushless, go elsewhere" or "even a touchless wash is better").
  *
- * Returns { isTouchless, reasoning } where reasoning explains the verdict.
+ * Returns { isTouchless, reasoning, sentiment } where reasoning explains the verdict
+ * and sentiment is the overall touchless experience sentiment (positive/negative/neutral).
  * Falls back to keyword-only match (isTouchless=true) if AI is unavailable.
  */
 
@@ -125,9 +125,9 @@ async function verifyTouchlessWithAI(
   anthropicKey: string,
   carWashName: string,
   reviews: SerpApiReview[],
-): Promise<{ isTouchless: boolean; reasoning: string }> {
+): Promise<{ isTouchless: boolean; reasoning: string; sentiment: 'positive' | 'negative' | 'neutral' | null }> {
   if (!anthropicKey) {
-    return { isTouchless: true, reasoning: 'AI verification unavailable — no API key' };
+    return { isTouchless: true, reasoning: 'AI verification unavailable — no API key', sentiment: null };
   }
 
   const reviewTexts = reviews
@@ -158,13 +158,100 @@ Rules:
 - CRITICAL: "Not touch free", "not touchless", "isn't brushless" etc. mean the car wash is NOT touchless — say NO
 - Say NO if the review is a negative/complaint review that mentions touch-free only to deny it
 - Say NO if the review describes the wash as having brushes or being a brush/friction wash
+- CRITICAL: "Soft touch" or "soft-touch" means the wash uses soft cloth/foam BRUSHES — this is NOT touchless. Say NO if "soft touch" is the only evidence
 - Say NO if the keyword is used to describe a different business or a general concept, not THIS car wash
 - Say NO if the keyword appears only incidentally (e.g. "spotless", "untouched") and the review is just describing a general positive experience without specifically confirming touchless/brushless wash technology
 - Say NO if the review is truncated and you cannot clearly confirm the keyword is used to describe the wash type
 - When in doubt, say NO — it is better to miss a real touchless wash than to incorrectly label one
 
+If YES, also assess the overall SENTIMENT of the touchless experience described in the reviews:
+- POSITIVE: Reviewers are happy with the touchless wash quality, recommend it, or describe good results
+- NEGATIVE: Reviewers complain about the touchless wash quality, describe damage, poor cleaning, or bad experience
+- NEUTRAL: Mixed opinions, purely factual mentions, or not enough context to judge quality
+
 Respond in this exact format:
 TOUCHLESS: YES or NO
+SENTIMENT: POSITIVE, NEGATIVE, or NEUTRAL (only if TOUCHLESS is YES)
+REASON: [one brief sentence]`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 150,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`Anthropic API error: ${res.status} ${errText}`);
+      return { isTouchless: true, reasoning: 'AI verification failed — falling back to keyword match' };
+    }
+
+    const data = await res.json();
+    const answer = (data.content?.[0]?.text || '').trim();
+
+    // Parse response
+    const touchlessMatch = answer.match(/TOUCHLESS:\s*(YES|NO)/i);
+    const sentimentMatch = answer.match(/SENTIMENT:\s*(POSITIVE|NEGATIVE|NEUTRAL)/i);
+    const reasonMatch = answer.match(/REASON:\s*(.+)/i);
+
+    const isTouchless = touchlessMatch ? touchlessMatch[1].toUpperCase() === 'YES' : true;
+    const reasoning = reasonMatch ? reasonMatch[1].trim() : answer.slice(0, 200);
+    const sentiment = isTouchless && sentimentMatch
+      ? sentimentMatch[1].toLowerCase() as 'positive' | 'negative' | 'neutral'
+      : null;
+
+    return { isTouchless, reasoning, sentiment };
+  } catch (err) {
+    console.error('AI verification failed:', err);
+    return { isTouchless: true, reasoning: 'AI verification timed out — falling back to keyword match', sentiment: null };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Sentiment analysis (touchless-specific)
+// ---------------------------------------------------------------------------
+
+/**
+ * Analyze touchless sentiment from existing review snippets using Claude Haiku.
+ * Used for backfilling sentiment on listings that were already scanned.
+ * Returns positive/negative/neutral based on how reviewers describe the touchless experience.
+ */
+async function analyzeTouchlessSentiment(
+  anthropicKey: string,
+  carWashName: string,
+  snippetTexts: string[],
+): Promise<{ sentiment: 'positive' | 'negative' | 'neutral'; reasoning: string } | null> {
+  if (!anthropicKey || snippetTexts.length === 0) return null;
+
+  const reviewTexts = snippetTexts
+    .map((text, i) => `Review ${i + 1}: "${text}"`)
+    .join('\n');
+
+  const prompt = `You are evaluating the overall sentiment of the touchless car wash experience based on customer reviews.
+
+Business name: "${carWashName}"
+
+Reviews mentioning the touchless wash:
+${reviewTexts}
+
+What is the overall sentiment about the TOUCHLESS wash experience specifically?
+
+- POSITIVE: Reviewers are happy with the touchless wash quality, recommend it, or describe good results
+- NEGATIVE: Reviewers complain about the touchless wash quality, describe damage, poor cleaning, or bad experience
+- NEUTRAL: Mixed opinions, purely factual mentions, or not enough context to judge quality
+
+Respond in this exact format:
+SENTIMENT: POSITIVE, NEGATIVE, or NEUTRAL
 REASON: [one brief sentence]`;
 
   try {
@@ -183,170 +270,23 @@ REASON: [one brief sentence]`;
       signal: AbortSignal.timeout(15000),
     });
 
-    if (!res.ok) {
-      const errText = await res.text();
-      console.error(`Anthropic API error: ${res.status} ${errText}`);
-      return { isTouchless: true, reasoning: 'AI verification failed — falling back to keyword match' };
-    }
+    if (!res.ok) return null;
 
     const data = await res.json();
     const answer = (data.content?.[0]?.text || '').trim();
 
-    // Parse response
-    const touchlessMatch = answer.match(/TOUCHLESS:\s*(YES|NO)/i);
+    const sentimentMatch = answer.match(/SENTIMENT:\s*(POSITIVE|NEGATIVE|NEUTRAL)/i);
     const reasonMatch = answer.match(/REASON:\s*(.+)/i);
 
-    const isTouchless = touchlessMatch ? touchlessMatch[1].toUpperCase() === 'YES' : true;
-    const reasoning = reasonMatch ? reasonMatch[1].trim() : answer.slice(0, 200);
+    if (!sentimentMatch) return null;
 
-    return { isTouchless, reasoning };
-  } catch (err) {
-    console.error('AI verification failed:', err);
-    return { isTouchless: true, reasoning: 'AI verification timed out — falling back to keyword match' };
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Sentiment analysis
-// ---------------------------------------------------------------------------
-
-interface SentimentResult {
-  score: number;       // 1.0 – 5.0
-  positive: string[];  // e.g. ["clean facility", "fast service"]
-  negative: string[];  // e.g. ["poor drying", "expensive"]
-  summary: string;     // 1–2 sentence quality summary
-}
-
-/**
- * Analyze customer review sentiment via Claude Haiku.
- * Accepts a set of general (unfiltered) reviews and returns structured sentiment data.
- */
-async function analyzeSentimentWithAI(
-  anthropicKey: string,
-  carWashName: string,
-  reviews: SerpApiReview[],
-): Promise<{ result: SentimentResult | null; error?: string }> {
-  if (!anthropicKey) {
-    return { result: null, error: 'no_key' };
-  }
-
-  const reviewTexts = reviews
-    .map((r, i) => {
-      const text = r.snippet || r.extracted_snippet?.original || '';
-      const rating = r.rating ? ` (${r.rating}/5 stars)` : '';
-      return text ? `Review ${i + 1}${rating}: "${text}"` : null;
-    })
-    .filter(Boolean)
-    .join('\n');
-
-  if (!reviewTexts) return { result: null, error: 'no_review_texts' };
-
-  const prompt = `You are analyzing customer reviews for a car wash to determine overall quality and sentiment.
-
-Business name: "${carWashName}"
-
-Customer reviews:
-${reviewTexts}
-
-Analyze these reviews and provide:
-1. An overall quality score from 1.0 to 5.0 (matching Google's star scale)
-2. Up to 5 positive themes customers mention (short 2-4 word phrases)
-3. Up to 3 negative themes customers mention (short 2-4 word phrases), or empty if none
-4. A 1-2 sentence quality summary suitable for display on a website
-
-Respond ONLY with valid JSON in this exact format (no markdown, no extra text):
-{"score":4.2,"positive":["clean facility","fast service"],"negative":["poor drying"],"summary":"Customers praise the fast service and clean results. Some note the drying could be improved."}`;
-
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': anthropicKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 250,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-      signal: AbortSignal.timeout(15000),
-    });
-
-    if (!res.ok) {
-      const errBody = await res.text().catch(() => '');
-      return { result: null, error: `api_${res.status}: ${errBody.slice(0, 200)}` };
-    }
-
-    const data = await res.json();
-    let answer = (data.content?.[0]?.text || '').trim();
-    // Strip markdown code fences if present (```json ... ```)
-    answer = answer.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
-
-    const parsed = JSON.parse(answer);
     return {
-      result: {
-        score: Math.max(1, Math.min(5, Math.round(Number(parsed.score) * 100) / 100 || 3)),
-        positive: (Array.isArray(parsed.positive) ? parsed.positive : []).slice(0, 5),
-        negative: (Array.isArray(parsed.negative) ? parsed.negative : []).slice(0, 3),
-        summary: String(parsed.summary || '').slice(0, 300),
-      },
+      sentiment: sentimentMatch[1].toLowerCase() as 'positive' | 'negative' | 'neutral',
+      reasoning: reasonMatch ? reasonMatch[1].trim() : '',
     };
-  } catch (err) {
-    return { result: null, error: `exception: ${String(err).slice(0, 200)}` };
+  } catch {
+    return null;
   }
-}
-
-/**
- * Run the full sentiment analysis pipeline for a single listing:
- * 1. Fetch general (unfiltered) reviews via SerpAPI
- * 2. Analyze sentiment via Claude Haiku
- * 3. Store results in the listings table
- */
-async function runSentimentAnalysis(
-  supabase: ReturnType<typeof createClient>,
-  serpApiKey: string,
-  anthropicKey: string,
-  listing: { id: string; name: string; google_place_id: string },
-): Promise<{ success: boolean; apiCalls: number; sentiment?: SentimentResult; error?: string }> {
-  // Fetch general reviews (no keyword filter) — 1 page (~10 most relevant reviews).
-  // SerpAPI's default "most relevant" sort gives a balanced mix.
-  const { reviews, apiCalls: serpCalls, error } = await searchReviews(
-    serpApiKey, listing.google_place_id, '', { maxPages: 1 },
-  );
-
-  if (error) {
-    console.error(`[sentiment] SerpAPI error for ${listing.name}: ${error}`);
-    return { success: false, apiCalls: serpCalls, error: `SerpAPI: ${error}` };
-  }
-
-  if (reviews.length === 0) {
-    console.log(`[sentiment] No reviews returned for ${listing.name} — marking as analyzed`);
-    await supabase.from('listings').update({
-      sentiment_analyzed_at: new Date().toISOString(),
-    }).eq('id', listing.id);
-    return { success: false, apiCalls: serpCalls, error: 'No reviews available' };
-  }
-
-  console.log(`[sentiment] Got ${reviews.length} reviews for ${listing.name}, running AI analysis...`);
-
-  const aiResult = await analyzeSentimentWithAI(anthropicKey, listing.name, reviews);
-
-  if (!aiResult.result) {
-    console.error(`[sentiment] AI analysis failed for ${listing.name}: ${aiResult.error}`);
-    return { success: false, apiCalls: serpCalls + 1, error: `AI: ${aiResult.error}` };
-  }
-
-  const sentiment = aiResult.result;
-
-  await supabase.from('listings').update({
-    sentiment_score: sentiment.score,
-    sentiment_themes: { positive: sentiment.positive, negative: sentiment.negative },
-    sentiment_summary: sentiment.summary,
-    sentiment_analyzed_at: new Date().toISOString(),
-  }).eq('id', listing.id);
-
-  return { success: true, apiCalls: serpCalls + 1, sentiment };
 }
 
 /**
@@ -1207,17 +1147,11 @@ Deno.serve(async (req: Request) => {
               review_mine_status: 'touchless_found',
               review_extract_status: 'extracted',
               touchless_review_count: snippetCount,
+              touchless_sentiment: aiResult.sentiment,
               crawl_notes: `Reclassified as touchless via review mining (AI verified) — ${snippetCount} review(s). AI: ${aiResult.reasoning}`,
             }).eq('id', listing.id);
 
             await syncFiltersForListing(supabase, listing.id, true, [], filterMap);
-
-            // Run sentiment analysis for this newly confirmed touchless listing
-            const sentimentResult = await runSentimentAnalysis(
-              supabase, serpApiKey, anthropicKey,
-              { id: listing.id, name: listing.name, google_place_id: listing.google_place_id },
-            );
-            totalApiCalls += sentimentResult.apiCalls;
 
             results.push({
               id: listing.id,
@@ -1229,11 +1163,10 @@ Deno.serve(async (req: Request) => {
               google_maps_url: listing.google_maps_url,
               status: 'touchless_found',
               reviewCount: snippetCount,
-              apiCalls: apiCalls + sentimentResult.apiCalls,
+              apiCalls: apiCalls,
               aiVerdict: `✅ ${aiResult.reasoning}`,
               reviews: reviewMapped,
-              sentimentScore: sentimentResult.sentiment?.score ?? null,
-              sentimentSummary: sentimentResult.sentiment?.summary ?? null,
+              touchlessSentiment: aiResult.sentiment,
             });
           } else {
             // AI rejected — keywords found but in negative context
@@ -1385,27 +1318,21 @@ Deno.serve(async (req: Request) => {
             review_mine_status: 'touchless_found',
             review_extract_status: 'extracted',
             touchless_review_count: snippetCount,
+            touchless_sentiment: aiResult.sentiment,
             crawl_notes: `Reclassified as touchless via review mining (AI verified) — ${snippetCount} review(s). AI: ${aiResult.reasoning}`,
           }).eq('id', listing.id);
 
           await syncFiltersForListing(supabase, listing.id, true, [], filterMap);
-
-          // Run sentiment analysis for this newly confirmed touchless listing
-          const sentimentResult = await runSentimentAnalysis(
-            supabase, serpApiKey, anthropicKey,
-            { id: listing.id, name: listing.name, google_place_id: listing.google_place_id },
-          );
 
           return new Response(
             JSON.stringify({
               status: 'touchless_found',
               name: listing.name,
               review_count: snippetCount,
-              api_calls: apiCalls + sentimentResult.apiCalls,
+              api_calls: apiCalls,
               ai_verdict: `✅ ${aiResult.reasoning}`,
               reviews: reviewMapped,
-              sentiment_score: sentimentResult.sentiment?.score ?? null,
-              sentiment_summary: sentimentResult.sentiment?.summary ?? null,
+              touchless_sentiment: aiResult.sentiment,
             }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
           );
@@ -1852,15 +1779,6 @@ Deno.serve(async (req: Request) => {
           const amenities = (listingData.amenities as string[]) || [];
           await syncFiltersForListing(supabase, inserted.id, true, amenities, filterMap);
 
-          // Run sentiment analysis for newly imported touchless listing
-          const placeGooglePlaceId = (listingData.google_place_id as string) || place.id?.replace(/^places\//, '');
-          if (placeGooglePlaceId) {
-            await runSentimentAnalysis(
-              supabase, serpApiKey, anthropicKey,
-              { id: inserted.id, name: listingData.name as string, google_place_id: placeGooglePlaceId },
-            );
-          }
-
           touchlessImported++;
         }
 
@@ -1995,20 +1913,19 @@ Deno.serve(async (req: Request) => {
     }
 
     // -----------------------------------------------------------------------
-    // ACTION: sentiment_backfill — analyze sentiment for touchless listings
-    // that were imported before sentiment analysis was added.
+    // ACTION: sentiment_backfill — Backfill touchless_sentiment for touchless
+    // listings using their existing review snippets + Claude Haiku.
+    // No SerpAPI calls needed — uses already-collected touchless review snippets.
     // -----------------------------------------------------------------------
     if (action === 'sentiment_backfill') {
-      const batchSize = Math.min(body.batch_size || 10, 25);
+      const batchSize = Math.min(body.batch_size || 25, 50);
 
-      // Get touchless listings that haven't been sentiment-analyzed yet
+      // Get touchless listings that don't have sentiment yet
       const { data: listings, error: fetchError } = await supabase
         .from('listings')
-        .select('id, name, google_place_id')
+        .select('id, name')
         .eq('is_touchless', true)
-        .is('sentiment_analyzed_at', null)
-        .not('google_place_id', 'is', null)
-        .order('review_count', { ascending: false }) // Prioritize high-review listings
+        .is('touchless_sentiment', null)
         .limit(batchSize);
 
       if (fetchError) {
@@ -2021,7 +1938,7 @@ Deno.serve(async (req: Request) => {
       if (!listings?.length) {
         return new Response(
           JSON.stringify({
-            message: 'All touchless listings have been sentiment-analyzed',
+            message: 'All touchless listings have sentiment assigned',
             analyzed: 0,
             remaining: 0,
             api_calls: 0,
@@ -2031,33 +1948,62 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      // Fetch all review snippets for these listings in one query
+      const listingIds = listings.map((l) => l.id);
+      const { data: allSnippets } = await supabase
+        .from('review_snippets')
+        .select('listing_id, review_text')
+        .in('listing_id', listingIds)
+        .eq('is_touchless_evidence', true);
+
+      // Group snippets by listing
+      const snippetsByListing = new Map<string, string[]>();
+      for (const s of allSnippets || []) {
+        if (!s.review_text) continue;
+        const existing = snippetsByListing.get(s.listing_id) || [];
+        existing.push(s.review_text);
+        snippetsByListing.set(s.listing_id, existing);
+      }
+
       const results: Array<{
         id: string;
         name: string;
-        success: boolean;
-        score: number | null;
-        summary: string | null;
-        themes: { positive: string[]; negative: string[] } | null;
-        error?: string;
+        sentiment: string | null;
+        snippet_count: number;
+        reasoning: string;
       }> = [];
       let analyzed = 0;
       let totalApiCalls = 0;
 
       for (const listing of listings) {
-        const result = await runSentimentAnalysis(supabase, serpApiKey, anthropicKey, listing);
-        totalApiCalls += result.apiCalls;
-        if (result.success) analyzed++;
-        results.push({
-          id: listing.id,
-          name: listing.name,
-          success: result.success,
-          score: result.sentiment?.score ?? null,
-          summary: result.sentiment?.summary ?? null,
-          themes: result.sentiment
-            ? { positive: result.sentiment.positive, negative: result.sentiment.negative }
-            : null,
-          error: result.error || (result.success ? undefined : 'Unknown error'),
-        });
+        const snippets = snippetsByListing.get(listing.id) || [];
+
+        if (snippets.length === 0) {
+          // No snippets — set neutral as default
+          await supabase.from('listings').update({
+            touchless_sentiment: 'neutral',
+          }).eq('id', listing.id);
+          results.push({ id: listing.id, name: listing.name, sentiment: 'neutral', snippet_count: 0, reasoning: 'No review snippets available' });
+          analyzed++;
+          continue;
+        }
+
+        const aiResult = await analyzeTouchlessSentiment(anthropicKey, listing.name, snippets);
+        totalApiCalls++;
+
+        if (aiResult) {
+          await supabase.from('listings').update({
+            touchless_sentiment: aiResult.sentiment,
+          }).eq('id', listing.id);
+          results.push({ id: listing.id, name: listing.name, sentiment: aiResult.sentiment, snippet_count: snippets.length, reasoning: aiResult.reasoning });
+        } else {
+          // AI failed — set neutral as fallback
+          await supabase.from('listings').update({
+            touchless_sentiment: 'neutral',
+          }).eq('id', listing.id);
+          results.push({ id: listing.id, name: listing.name, sentiment: 'neutral', snippet_count: snippets.length, reasoning: 'AI analysis failed — defaulted to neutral' });
+        }
+        analyzed++;
       }
 
       // Count remaining
@@ -2065,145 +2011,13 @@ Deno.serve(async (req: Request) => {
         .from('listings')
         .select('id', { count: 'exact', head: true })
         .eq('is_touchless', true)
-        .is('sentiment_analyzed_at', null)
-        .not('google_place_id', 'is', null);
+        .is('touchless_sentiment', null);
 
       return new Response(
         JSON.stringify({
           analyzed,
           total_in_batch: listings.length,
           remaining: count ?? 0,
-          api_calls: totalApiCalls,
-          results,
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
-    }
-
-    // -----------------------------------------------------------------------
-    // ACTION: review_rescan — Re-scan touchless listings with paginated
-    // keyword search to capture ALL touchless review snippets, and refresh
-    // sentiment scores with a larger review sample.
-    // -----------------------------------------------------------------------
-    if (action === 'review_rescan') {
-      const batchSize = Math.min(body.batch_size || 5, 15);
-
-      // Fetch touchless listings ordered by review_count desc (richest first).
-      // Use offset-based pagination so the admin panel can call repeatedly.
-      const offset = body.offset || 0;
-
-      const { data: listings, error: fetchError } = await supabase
-        .from('listings')
-        .select('id, name, slug, google_place_id, review_count')
-        .eq('is_touchless', true)
-        .not('google_place_id', 'is', null)
-        .order('review_count', { ascending: false })
-        .range(offset, offset + batchSize - 1);
-
-      if (fetchError) {
-        return new Response(
-          JSON.stringify({ error: 'Failed to fetch listings', details: fetchError.message }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-        );
-      }
-
-      // Total count for progress tracking
-      const { count: totalTouchless } = await supabase
-        .from('listings')
-        .select('id', { count: 'exact', head: true })
-        .eq('is_touchless', true)
-        .not('google_place_id', 'is', null);
-
-      if (!listings?.length) {
-        return new Response(
-          JSON.stringify({
-            message: 'All touchless listings have been rescanned',
-            rescanned: 0,
-            total: totalTouchless ?? 0,
-            offset,
-            api_calls: 0,
-            results: [],
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-        );
-      }
-
-      const results: Array<{
-        id: string;
-        name: string;
-        review_count: number;
-        new_snippets: number;
-        total_snippets: number;
-        sentiment_score: number | null;
-        sentiment_summary: string | null;
-        api_calls: number;
-        error?: string;
-      }> = [];
-      let totalApiCalls = 0;
-      let totalNewSnippets = 0;
-
-      for (const listing of listings) {
-        let listingApiCalls = 0;
-        let newSnippets = 0;
-        let sentimentScore: number | null = null;
-        let sentimentSummary: string | null = null;
-        let listingError: string | undefined;
-
-        try {
-          // Step 1: Re-scan touchless reviews with pagination
-          const kwResult = await searchReviewsMultiKeyword(serpApiKey, listing.google_place_id);
-          listingApiCalls += kwResult.apiCalls;
-
-          if (kwResult.reviews.length > 0) {
-            newSnippets = await insertSerpApiReviewSnippets(supabase, listing.id, kwResult.reviews);
-          }
-
-          // Step 2: Refresh sentiment analysis with better sampling
-          const sentResult = await runSentimentAnalysis(supabase, serpApiKey, anthropicKey, listing);
-          listingApiCalls += sentResult.apiCalls;
-          sentimentScore = sentResult.sentiment?.score ?? null;
-          sentimentSummary = sentResult.sentiment?.summary ?? null;
-          if (!sentResult.success && sentResult.error) {
-            listingError = sentResult.error;
-          }
-        } catch (err) {
-          listingError = String(err).slice(0, 200);
-        }
-
-        // Get total snippet count for this listing
-        const { count: snippetCount } = await supabase
-          .from('review_snippets')
-          .select('id', { count: 'exact', head: true })
-          .eq('listing_id', listing.id)
-          .eq('is_touchless_evidence', true);
-
-        totalApiCalls += listingApiCalls;
-        totalNewSnippets += newSnippets;
-
-        results.push({
-          id: listing.id,
-          name: listing.name,
-          review_count: listing.review_count ?? 0,
-          new_snippets: newSnippets,
-          total_snippets: snippetCount ?? 0,
-          sentiment_score: sentimentScore,
-          sentiment_summary: sentimentSummary,
-          api_calls: listingApiCalls,
-          error: listingError,
-        });
-
-        console.log(`[rescan] ${listing.name}: +${newSnippets} snippets, sentiment=${sentimentScore}, ${listingApiCalls} API calls`);
-      }
-
-      const nextOffset = offset + listings.length;
-
-      return new Response(
-        JSON.stringify({
-          rescanned: listings.length,
-          total: totalTouchless ?? 0,
-          offset,
-          next_offset: nextOffset < (totalTouchless ?? 0) ? nextOffset : null,
-          new_snippets: totalNewSnippets,
           api_calls: totalApiCalls,
           results,
         }),
