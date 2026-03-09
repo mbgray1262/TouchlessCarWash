@@ -1094,11 +1094,21 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                   <p className="text-xs text-gray-400 mb-4">
                     Real reviews from Google mentioning the touchless experience
                   </p>
-                  <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
-                    {reviewSnippets.map((snippet) => (
-                      <ReviewSnippetCard key={snippet.id} snippet={snippet} />
-                    ))}
+                  <div className="relative">
+                    <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
+                      {reviewSnippets.map((snippet) => (
+                        <ReviewSnippetCard key={snippet.id} snippet={snippet} />
+                      ))}
+                    </div>
+                    {reviewSnippets.length > 5 && (
+                      <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent" />
+                    )}
                   </div>
+                  {reviewSnippets.length > 5 && (
+                    <p className="text-xs text-gray-400 text-center mt-2">
+                      Scroll to see all {reviewSnippets.length} reviews
+                    </p>
+                  )}
                   {listing.google_place_id && (
                     <div className="mt-4 pt-3 border-t border-gray-100">
                       <a
