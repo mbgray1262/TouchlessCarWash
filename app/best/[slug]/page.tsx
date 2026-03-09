@@ -8,6 +8,7 @@ import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
 import { getStateSlug } from '@/lib/constants';
 import { METRO_AREAS, getMetroBySlug, boundingBox, haversineDistance, type MetroArea } from '@/lib/metro-areas';
 import { scoreListing, type ScoredListing } from '@/lib/metro-scoring';
+import { METRO_CONTENT, buildExpertGuide } from '@/lib/metro-content';
 import { OpenStatusBadge } from '@/components/OpenStatusBadge';
 import LogoImage from '@/components/LogoImage';
 import HeroImageFallback from '@/components/HeroImageFallback';
@@ -329,6 +330,25 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
           </div>
         </div>
 
+        {/* Expert Guide — unique editorial content per metro */}
+        {METRO_CONTENT[metro.slug] && (() => {
+          const guideParas = buildExpertGuide(metro.name, METRO_CONTENT[metro.slug], topListings.length);
+          return (
+            <section className="py-10 px-4 bg-white border-b border-gray-100">
+              <div className="container mx-auto max-w-3xl">
+                <h2 className="text-xl font-bold text-[#0F2744] mb-4">
+                  Expert Guide: Touchless Car Washes in {metro.name}
+                </h2>
+                <div className="space-y-3 text-gray-700 text-[15px] leading-relaxed">
+                  {guideParas.map((para, i) => (
+                    <p key={i}>{para}</p>
+                  ))}
+                </div>
+              </div>
+            </section>
+          );
+        })()}
+
         {/* Ranked Listings */}
         <section className="py-12 px-4 bg-white">
           <div className="container mx-auto max-w-4xl">
@@ -338,7 +358,7 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
                 const snippet = reviewSnippets.get(listing.id);
                 const cardImage = listing.hero_image ?? listing.google_photo_url ?? null;
                 const cardLogo = listing.logo_photo ?? listing.google_logo_url ?? null;
-                const listingHref = `/state/${getStateSlug(listing.state)}/${listing.city.toLowerCase().replace(/\s+/g, '-')}/${listing.slug}?from=best-${metro.slug}`;
+                const listingHref = `/state/${getStateSlug(listing.state)}/${listing.city.toLowerCase().replace(/\s+/g, '-')}/${listing.slug}`;
 
                 return (
                   <Link key={listing.id} href={listingHref} className="group block">
