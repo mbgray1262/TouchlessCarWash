@@ -2,6 +2,11 @@
 command = "npx next build"
 publish = ".next"
 
+[build.environment]
+# Google Maps JS API key is intentionally client-side (restricted by HTTP referrer).
+# Netlify's smart secret scanner flags it in the build output — false positive.
+SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
+
 [[plugins]]
 package = "@netlify/plugin-nextjs"
 
