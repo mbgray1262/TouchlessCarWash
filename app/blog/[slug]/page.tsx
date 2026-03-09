@@ -4,6 +4,7 @@ import { ChevronRight, Calendar, User, ArrowLeft, ArrowRight } from 'lucide-reac
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase, type BlogPost } from '@/lib/supabase';
+import { US_STATES, slugify } from '@/lib/constants';
 import type { Metadata } from 'next';
 
 interface BlogPostPageProps {
@@ -150,14 +151,55 @@ function renderMarkdown(md: string): string {
   return out.join('\n');
 }
 
+// Build lookup maps for auto-linking locations in blog content
+const STATE_BY_CODE = new Map(US_STATES.map(s => [s.code, s]));
+const STATE_BY_NAME = new Map(US_STATES.map(s => [s.name.toLowerCase(), s]));
+
+// Match "City, ST" (2-letter code) or "City, State Name" patterns
+// City = 1+ capitalized words; State = known code or full name
+const CITY_STATE_CODE_RE = /\b([A-Z][a-zA-Z]+(?:\s[A-Z][a-zA-Z]+)*),\s*([A-Z]{2})\b/g;
+const CITY_STATE_NAME_RE = new RegExp(
+  `\\b([A-Z][a-zA-Z]+(?:\\s[A-Z][a-zA-Z]+)*),\\s*(${US_STATES.map(s => s.name).join('|')})\\b`,
+  'g',
+);
+
+function autoLinkLocations(text: string): string {
+  // Skip if the text already contains an <a> tag (already linked)
+  if (text.includes('<a ')) return text;
+
+  // First pass: "City, ST" (e.g., "Houston, TX")
+  let result = text.replace(CITY_STATE_CODE_RE, (match, city, code) => {
+    const state = STATE_BY_CODE.get(code);
+    if (!state) return match;
+    const stateSlug = slugify(state.name);
+    const citySlug = slugify(city);
+    return `<a href="/state/${stateSlug}/${citySlug}" class="text-blue-600 hover:underline font-medium">${match}</a>`;
+  });
+
+  // Second pass: "City, State Name" (e.g., "Houston, Texas")
+  result = result.replace(CITY_STATE_NAME_RE, (match, city, stateName) => {
+    // Don't double-link
+    if (result.includes(`>${match}</a>`)) return match;
+    const state = STATE_BY_NAME.get(stateName.toLowerCase());
+    if (!state) return match;
+    const stateSlug = slugify(state.name);
+    const citySlug = slugify(city);
+    return `<a href="/state/${stateSlug}/${citySlug}" class="text-blue-600 hover:underline font-medium">${match}</a>`;
+  });
+
+  return result;
+}
+
 function inlineMarkdown(text: string): string {
-  return text
-    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="rounded-xl w-full object-cover shadow-sm my-4" />')
-    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/`(.+?)`/g, '<code class="bg-gray-100 px-1.5 py-0.5 rounded text-sm font-mono text-[#0F2744]">$1</code>')
-    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" class="text-blue-600 hover:underline font-medium">$1</a>');
+  return autoLinkLocations(
+    text
+      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="rounded-xl w-full object-cover shadow-sm my-4" />')
+      .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/`(.+?)`/g, '<code class="bg-gray-100 px-1.5 py-0.5 rounded text-sm font-mono text-[#0F2744]">$1</code>')
+      .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" class="text-blue-600 hover:underline font-medium">$1</a>')
+  );
 }
 
 export default async function BlogPostPage({ params }: BlogPostPageProps) {
