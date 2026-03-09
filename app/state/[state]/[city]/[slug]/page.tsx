@@ -13,6 +13,7 @@ import HeroImageFallback from '@/components/HeroImageFallback';
 import PhotoGalleryGrid from '@/components/PhotoGalleryGrid';
 import SuggestEditModal from '@/components/SuggestEditModal';
 import { TrackableLink } from '@/components/TrackableLink';
+import { HoursStatusBadge } from '@/components/HoursStatusBadge';
 import { ListingBreadcrumb } from '@/components/ListingBreadcrumb';
 import { WhyVisitSection } from '@/components/WhyVisitSection';
 import { Badge } from '@/components/ui/badge';
@@ -741,7 +742,8 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
 
   const galleryPhotos = allGalleryPhotos.slice(0, 8);
   const hours = listing.hours as Record<string, string> | null;
-  const openStatus = getOpenStatus(hours);
+  // Open/closed status is now handled client-side by HoursStatusBadge
+  // to use the user's local timezone instead of the server's UTC time
   const heroDescription = buildHeroDescription(listing);
 
   const canonicalUrl = `${SITE_URL}/state/${params.state}/${params.city}/${params.slug}`;
@@ -1272,16 +1274,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                   <h2 className="text-sm font-bold text-[#0F2744] uppercase tracking-wide mb-4 flex items-center gap-2">
                     <Clock className="w-4 h-4" />
                     Hours of Operation
-                    {openStatus === 'open' && (
-                      <span className="ml-auto text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                        Open Now
-                      </span>
-                    )}
-                    {openStatus === 'closed' && (
-                      <span className="ml-auto text-xs font-semibold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
-                        Closed
-                      </span>
-                    )}
+                    <HoursStatusBadge hours={hours} />
                   </h2>
                   <div className="space-y-1.5">
                     {DAY_ORDER.filter((d) => hours[d]).map((day) => (
