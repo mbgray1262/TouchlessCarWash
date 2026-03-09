@@ -104,12 +104,22 @@ async function getTotalCount(): Promise<number> {
   return error ? 0 : (count ?? 0);
 }
 
+async function getTotalReviewCount(): Promise<number> {
+  const { count, error } = await supabase
+    .from('review_snippets')
+    .select('*', { count: 'exact', head: true });
+
+  return error ? 0 : (count ?? 0);
+}
+
 export default async function Home() {
-  const [featuredListings, stateListingCounts, totalCount] = await Promise.all([
-    getFeaturedListings(),
-    getStateListingCounts(),
-    getTotalCount(),
-  ]);
+  const [featuredListings, stateListingCounts, totalCount, totalReviews] =
+    await Promise.all([
+      getFeaturedListings(),
+      getStateListingCounts(),
+      getTotalCount(),
+      getTotalReviewCount(),
+    ]);
 
   const organizationSchema = {
     '@context': 'https://schema.org',
@@ -182,8 +192,8 @@ export default async function Home() {
               <div className="text-sm text-white/80">States + DC Covered</div>
             </div>
             <div>
-              <div className="text-4xl md:text-5xl font-bold text-white mb-2">100%</div>
-              <div className="text-sm text-white/80">Touchless Guaranteed</div>
+              <div className="text-4xl md:text-5xl font-bold text-white mb-2">{(Math.floor(totalReviews / 100) * 100).toLocaleString()}+</div>
+              <div className="text-sm text-white/80">Customer Reviews</div>
             </div>
           </div>
         </div>
