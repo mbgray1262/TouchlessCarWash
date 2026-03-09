@@ -203,8 +203,10 @@ async function analyzeSentimentWithAI(
   anthropicKey: string,
   carWashName: string,
   reviews: SerpApiReview[],
-): Promise<SentimentResult | null> {
-  if (!anthropicKey) return null;
+): Promise<{ result: SentimentResult | null; error?: string }> {
+  if (!anthropicKey) {
+    return { result: null, error: 'no_key' };
+  }
 
   const reviewTexts = reviews
     .map((r, i) => {
@@ -215,7 +217,7 @@ async function analyzeSentimentWithAI(
     .filter(Boolean)
     .join('\n');
 
-  if (!reviewTexts) return null;
+  if (!reviewTexts) return { result: null, error: 'no_review_texts' };
 
   const prompt = `You are analyzing customer reviews for a car wash to determine overall quality and sentiment.
 
@@ -250,23 +252,26 @@ Respond ONLY with valid JSON in this exact format (no markdown, no extra text):
     });
 
     if (!res.ok) {
-      console.error(`Sentiment AI error: ${res.status}`);
-      return null;
+      const errBody = await res.text().catch(() => '');
+      return { result: null, error: `api_${res.status}: ${errBody.slice(0, 200)}` };
     }
 
     const data = await res.json();
-    const answer = (data.content?.[0]?.text || '').trim();
+    let answer = (data.content?.[0]?.text || '').trim();
+    // Strip markdown code fences if present (```json ... ```)
+    answer = answer.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
 
     const parsed = JSON.parse(answer);
     return {
-      score: Math.max(1, Math.min(5, Math.round(Number(parsed.score) * 100) / 100 || 3)),
-      positive: (Array.isArray(parsed.positive) ? parsed.positive : []).slice(0, 5),
-      negative: (Array.isArray(parsed.negative) ? parsed.negative : []).slice(0, 3),
-      summary: String(parsed.summary || '').slice(0, 300),
+      result: {
+        score: Math.max(1, Math.min(5, Math.round(Number(parsed.score) * 100) / 100 || 3)),
+        positive: (Array.isArray(parsed.positive) ? parsed.positive : []).slice(0, 5),
+        negative: (Array.isArray(parsed.negative) ? parsed.negative : []).slice(0, 3),
+        summary: String(parsed.summary || '').slice(0, 300),
+      },
     };
   } catch (err) {
-    console.error('Sentiment analysis failed:', err);
-    return null;
+    return { result: null, error: `exception: ${String(err).slice(0, 200)}` };
   }
 }
 
@@ -302,12 +307,14 @@ async function runSentimentAnalysis(
 
   console.log(`[sentiment] Got ${reviews.length} reviews for ${listing.name}, running AI analysis...`);
 
-  const sentiment = await analyzeSentimentWithAI(anthropicKey, listing.name, reviews);
+  const aiResult = await analyzeSentimentWithAI(anthropicKey, listing.name, reviews);
 
-  if (!sentiment) {
-    console.error(`[sentiment] AI analysis returned null for ${listing.name}`);
-    return { success: false, apiCalls: 1, error: 'AI analysis failed' };
+  if (!aiResult.result) {
+    console.error(`[sentiment] AI analysis failed for ${listing.name}: ${aiResult.error}`);
+    return { success: false, apiCalls: 1, error: `AI: ${aiResult.error}` };
   }
+
+  const sentiment = aiResult.result;
 
   await supabase.from('listings').update({
     sentiment_score: sentiment.score,
