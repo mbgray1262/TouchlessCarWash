@@ -244,7 +244,7 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
           addressLocality: listing.city,
           addressRegion: listing.state,
         },
-        ...(listing.rating ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: listing.rating, reviewCount: listing.review_count, bestRating: 5 } } : {}),
+        ...(listing.rating > 0 && listing.review_count > 0 ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: listing.rating, reviewCount: listing.review_count, bestRating: 5 } } : {}),
         url: `https://touchlesscarwashfinder.com/state/${getStateSlug(listing.state)}/${listing.city.toLowerCase().replace(/\s+/g, '-')}/${listing.slug}`,
       },
     })),
