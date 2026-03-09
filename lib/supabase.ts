@@ -27,6 +27,7 @@ export type Listing = {
   latitude: number | null;
   longitude: number | null;
   created_at: string;
+  updated_at: string;
   hero_image: string | null;
   logo_photo: string | null;
   parent_chain: string | null;
