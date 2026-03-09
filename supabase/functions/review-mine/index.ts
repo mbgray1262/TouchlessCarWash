@@ -91,6 +91,23 @@ const REVIEW_TOUCHLESS_KEYWORDS = [
   'soft-touch', 'soft touch',
 ];
 
+/**
+ * Patterns where "contactless" is used about PAYMENT, not wash type.
+ * Reviews matching ONLY contactless keywords AND one of these patterns
+ * should be rejected as false positives.
+ */
+const CONTACTLESS_PAYMENT_PATTERNS = [
+  /contactless\s+pay/i,
+  /contactless\s+card/i,
+  /contactless\s+transaction/i,
+  /contactless\s+tap/i,
+  /contactless\s+credit/i,
+  /contactless\s+debit/i,
+  /pay\s+contactless/i,
+  /tap\s+(?:to\s+)?pay/i,  // often co-occurs with contactless payment context
+  /contact-?free\s+pay/i,
+];
+
 // ---------------------------------------------------------------------------
 // AI Verification — use Claude Haiku to assess review context
 // ---------------------------------------------------------------------------
@@ -464,10 +481,24 @@ async function searchReviewsMultiKeyword(
 
 /**
  * Extract keyword matches from a review text.
+ * Filters out "contactless" when it only refers to payment, not wash type.
  */
 function extractKeywords(text: string): string[] {
   const lower = text.toLowerCase();
-  return REVIEW_TOUCHLESS_KEYWORDS.filter((kw) => lower.includes(kw));
+  const matches = REVIEW_TOUCHLESS_KEYWORDS.filter((kw) => lower.includes(kw));
+
+  // If the only matched keywords are contactless-family, check for payment context
+  const CONTACTLESS_FAMILY = ['contactless', 'contact-free', 'contact free'];
+  const hasOnlyContactless = matches.length > 0 && matches.every((kw) => CONTACTLESS_FAMILY.includes(kw));
+
+  if (hasOnlyContactless) {
+    const isPaymentContext = CONTACTLESS_PAYMENT_PATTERNS.some((p) => p.test(text));
+    if (isPaymentContext) {
+      return []; // "contactless payment" — not about wash type
+    }
+  }
+
+  return matches;
 }
 
 /**
