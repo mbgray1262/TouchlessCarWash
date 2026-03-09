@@ -135,12 +135,23 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
     getCityDescription(stateCode, cityName),
   ]);
 
+  const ratedListings = listings.filter(l => l.rating != null && l.rating > 0);
+  const avgRating = ratedListings.length > 0
+    ? (ratedListings.reduce((sum, l) => sum + l.rating, 0) / ratedListings.length).toFixed(1)
+    : null;
+  const totalReviews = listings.reduce((sum, l) => sum + (l.review_count ?? 0), 0);
+
+  const ratingSnippet = avgRating && totalReviews > 0
+    ? ` Avg ${avgRating}★ across ${totalReviews.toLocaleString()} reviews.`
+    : '';
+
   const metaDescription = cityDesc
     ? cityDesc.substring(0, 155) + (cityDesc.length > 155 ? '...' : '')
-    : `Find ${listings.length} touchless & touch-free car washes in ${cityName}, ${stateName}. Browse verified no-touch, scratch-free laser car wash locations with ratings and reviews.`;
+    : `Find ${listings.length} touchless & touch-free car washes in ${cityName}, ${stateName}.${ratingSnippet} Browse verified no-touch, scratch-free car wash locations with ratings and reviews.`;
 
   const canonicalUrl = `https://touchlesscarwashfinder.com/state/${params.state}/${params.city}`;
-  const title = `Best Touchless Car Wash in ${cityName}, ${stateCode} | ${listings.length} Verified`;
+  const year = new Date().getFullYear();
+  const title = `Best Touchless Car Wash in ${cityName}, ${stateCode} (${listings.length} Locations) | ${year}`;
 
   return {
     title,
@@ -285,23 +296,34 @@ export default async function CityPage({ params, searchParams }: CityPageProps) 
     ],
   };
 
-  const localBusinessJsonLd = allListings.map((listing) => ({
+  const itemListJsonLd = {
     '@context': 'https://schema.org',
-    '@type': 'AutoWash',
-    name: listing.name,
-    description: `Touchless, touch-free car wash in ${cityName}, ${stateCode}`,
-    url: listing.website ?? undefined,
-    telephone: listing.phone ?? undefined,
-    address: {
-      '@type': 'PostalAddress',
-      streetAddress: listing.address ?? undefined,
-      addressLocality: listing.city,
-      addressRegion: listing.state,
-      postalCode: listing.zip ?? undefined,
-      addressCountry: 'US',
-    },
-    ...(listing.rating != null && listing.rating > 0 && listing.review_count != null && listing.review_count > 0 ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: listing.rating, reviewCount: listing.review_count, bestRating: 5 } } : {}),
-  }));
+    '@type': 'ItemList',
+    name: `Touchless Car Washes in ${cityName}, ${stateCode}`,
+    numberOfItems: allListings.length,
+    itemListElement: allListings.map((listing, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      item: {
+        '@type': 'AutoWash',
+        name: listing.name,
+        description: `Touchless, touch-free car wash in ${cityName}, ${stateCode}`,
+        url: `https://touchlesscarwashfinder.com/state/${params.state}/${params.city}/${listing.slug}`,
+        telephone: listing.phone ?? undefined,
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: listing.address ?? undefined,
+          addressLocality: listing.city,
+          addressRegion: listing.state,
+          postalCode: listing.zip ?? undefined,
+          addressCountry: 'US',
+        },
+        ...(listing.rating != null && listing.rating > 0 && listing.review_count != null && listing.review_count > 0
+          ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: listing.rating, reviewCount: listing.review_count, bestRating: 5 } }
+          : {}),
+      },
+    })),
+  };
 
   const faqJsonLd = {
     '@context': 'https://schema.org',
@@ -386,7 +408,7 @@ export default async function CityPage({ params, searchParams }: CityPageProps) 
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
       />
       <script
         type="application/ld+json"

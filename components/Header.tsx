@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { Droplet, Menu, X } from 'lucide-react';
+import { Droplet, Menu, X, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { useFavorites } from '@/lib/useFavorites';
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -12,6 +13,8 @@ export function Header() {
   const searchParams = useSearchParams();
 
   const isAdmin = pathname.startsWith('/admin') || searchParams.get('admin') === 'true';
+  const { favorites } = useFavorites();
+  const favCount = favorites.length;
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
@@ -39,6 +42,14 @@ export function Header() {
             </Link>
             <Link href="/about" className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors">
               About
+            </Link>
+            <Link href="/favorites" className="relative text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors" aria-label="My saved washes">
+              <Heart className={`w-5 h-5 ${favCount > 0 ? 'fill-red-500 text-red-500' : ''}`} />
+              {favCount > 0 && (
+                <span className="absolute -top-1.5 -right-2 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                  {favCount > 9 ? '9+' : favCount}
+                </span>
+              )}
             </Link>
             {isAdmin && (
               <Link href="/admin" className="text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors">
@@ -100,6 +111,14 @@ export function Header() {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 About
+              </Link>
+              <Link
+                href="/favorites"
+                className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors flex items-center gap-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Heart className={`w-4 h-4 ${favCount > 0 ? 'fill-red-500 text-red-500' : ''}`} />
+                My Saved Washes{favCount > 0 && ` (${favCount})`}
               </Link>
               {isAdmin && (
                 <Link

@@ -67,11 +67,12 @@ export type Listing = {
     unique_selling_points?: string[];
   } | null;
   touchless_sentiment: 'positive' | 'negative' | 'neutral' | null;
+  is_claimed: boolean;
 };
 
 // Columns needed by ListingCard — avoids fetching heavy fields like description,
 // google_about, popular_times, reviews_per_score, wash_packages, photos, etc.
-export const LISTING_CARD_COLUMNS = 'id, name, slug, city, state, address, phone, rating, review_count, hero_image, google_photo_url, street_view_url, logo_photo, google_logo_url, amenities, touchless_wash_types, extracted_data, hours, is_touchless, is_featured' as const;
+export const LISTING_CARD_COLUMNS = 'id, name, slug, city, state, address, phone, rating, review_count, hero_image, google_photo_url, street_view_url, logo_photo, google_logo_url, amenities, touchless_wash_types, extracted_data, hours, is_touchless, is_featured, is_claimed' as const;
 
 export type Review = {
   id: string;

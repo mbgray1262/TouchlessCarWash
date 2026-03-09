@@ -189,6 +189,10 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     ...(post.featured_image_url ? { image: post.featured_image_url } : {}),
     keywords: post.tags?.join(', ') ?? '',
     url: `https://touchlesscarwashfinder.com/blog/${post.slug}`,
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `https://touchlesscarwashfinder.com/blog/${post.slug}`,
+    },
   };
 
   const renderedContent = renderMarkdown(post.content);

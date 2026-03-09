@@ -6,7 +6,7 @@ import { notFound, redirect } from 'next/navigation';
 import {
   Star, MapPin, Phone, Globe, Clock, CheckCircle, ArrowLeft,
   Sparkles, ExternalLink, ChevronRight, Navigation, HelpCircle,
-  CalendarCheck, ChevronDown, Droplet, CreditCard, Zap, MessageSquareQuote, Quote, Trophy
+  CalendarCheck, ChevronDown, Droplet, CreditCard, Zap, MessageSquareQuote, Quote, Trophy, ShieldCheck
 } from 'lucide-react';
 import LogoImage from '@/components/LogoImage';
 import HeroImageFallback from '@/components/HeroImageFallback';
@@ -843,6 +843,11 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                         <Badge className="bg-[#22C55E] text-white border-0 shadow-sm">
                           <CheckCircle className="w-3 h-3 mr-1" />Touchless Verified
                         </Badge>
+                        {listing.is_claimed && (
+                          <Badge className="bg-blue-500 text-white border-0 shadow-sm">
+                            <ShieldCheck className="w-3 h-3 mr-1" />Verified Owner
+                          </Badge>
+                        )}
                         {listing.is_featured && (
                           <Badge className="bg-amber-400 text-amber-900 border-0">Featured</Badge>
                         )}
