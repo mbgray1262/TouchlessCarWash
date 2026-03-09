@@ -12,10 +12,22 @@ function getRankAccent(rank: number): string {
   return '#D97706'; // Bronze
 }
 
-function getRankLabel(rank: number): string {
-  if (rank === 1) return '1st';
-  if (rank === 2) return '2nd';
-  return '3rd';
+function getRankGradient(rank: number): {
+  light: string;
+  mid: string;
+  dark: string;
+} {
+  if (rank === 1)
+    return { light: '#FDE68A', mid: '#FBBF24', dark: '#D97706' }; // Gold shimmer
+  if (rank === 2)
+    return { light: '#E2E8F0', mid: '#CBD5E1', dark: '#94A3B8' }; // Silver shimmer
+  return { light: '#FBBF24', mid: '#D97706', dark: '#B45309' }; // Bronze shimmer
+}
+
+function getOrdinalSuffix(rank: number): string {
+  if (rank === 1) return 'st';
+  if (rank === 2) return 'nd';
+  return 'rd';
 }
 
 function escapeXml(str: string): string {
@@ -28,7 +40,7 @@ function escapeXml(str: string): string {
 }
 
 const FONT_STACK =
-  'Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif';
+  'Inter,-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif';
 
 export function generateBadgeSvg(options: BadgeSvgOptions): string {
   const { rank, metroName, year, theme, size } = options;
@@ -91,56 +103,91 @@ interface SvgColors {
 
 function generateStandardSvg(c: SvgColors): string {
   const metro = escapeXml(c.metroName);
-  const rankLabel = `#${c.rank}`;
+  const ordinal = getOrdinalSuffix(c.rank);
+  const grad = getRankGradient(c.rank);
 
-  // Trophy SVG path (simplified)
-  const trophyPath = `M12,2 L12,4 L8,4 L8,2 L4,2 L4,6 C4,8 6,10 8,10 L8,12 L6,14 L10,14 L10,12 C12,12 14,10 14,8 L14,6 L16,6 L16,2 Z`;
+  // Rank circle positioning
+  const cx = 48;
+  const cy = 48;
+  const r = 23;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${c.w}" height="${c.h}" viewBox="0 0 ${c.w} ${c.h}" fill="none">
-  <rect width="${c.w}" height="${c.h}" rx="12" fill="${c.bg}" stroke="${c.borderColor}" stroke-width="1.5"/>
+  <defs>
+    <linearGradient id="rg" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="${grad.light}"/>
+      <stop offset="45%" stop-color="${grad.mid}"/>
+      <stop offset="100%" stop-color="${grad.dark}"/>
+    </linearGradient>
+  </defs>
 
-  <!-- Rank circle -->
-  <circle cx="48" cy="38" r="24" fill="${c.rankAccent}" opacity="0.15"/>
-  <circle cx="48" cy="38" r="20" fill="${c.rankAccent}"/>
+  <!-- Background card -->
+  <rect width="${c.w}" height="${c.h}" rx="12" fill="${c.bg}" stroke="${c.borderColor}" stroke-width="1"/>
 
-  <!-- Trophy icon inside circle -->
-  <g transform="translate(38, 28) scale(0.65)">
-    <path d="M7 3C7 2.44772 7.44772 2 8 2H16C16.5523 2 17 2.44772 17 3V4H19C19.5523 4 20 4.44772 20 5V7C20 8.65685 18.6569 10 17 10H16.874C16.4299 11.7252 14.8638 13 13 13V15H15C15.5523 15 16 15.4477 16 16V17C16 17.5523 15.5523 18 15 18H9C8.44772 18 8 17.5523 8 17V16C8 15.4477 8.44772 15 9 15H11V13C9.13616 13 7.57006 11.7252 7.12602 10H7C5.34315 10 4 8.65685 4 7V5C4 4.44772 4.44772 4 5 4H7V3Z" fill="${c.bg}" opacity="0.9"/>
-  </g>
+  <!-- Rank badge: soft outer glow -->
+  <circle cx="${cx}" cy="${cy}" r="${r + 5}" fill="${c.rankAccent}" opacity="0.1"/>
 
-  <!-- Rank number -->
-  <text x="48" y="44" text-anchor="middle" font-family="${FONT_STACK}" font-size="16" font-weight="800" fill="${c.bg}">${rankLabel}</text>
+  <!-- Rank badge: main gradient circle -->
+  <circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#rg)"/>
 
-  <!-- Main text -->
-  <text x="82" y="30" font-family="${FONT_STACK}" font-size="15" font-weight="700" fill="${c.textPrimary}">Best Touchless Car Wash</text>
-  <text x="82" y="50" font-family="${FONT_STACK}" font-size="13" fill="${c.textSecondary}">${metro} \u00B7 ${c.year}</text>
+  <!-- Rank badge: inner decorative ring -->
+  <circle cx="${cx}" cy="${cy}" r="${r - 3}" fill="none" stroke="white" stroke-width="0.75" opacity="0.35"/>
 
-  <!-- Brand footer -->
-  <text x="82" y="72" font-family="${FONT_STACK}" font-size="10" font-weight="600" fill="${c.brandColor}">touchlesscarwashfinder.com</text>
+  <!-- Rank number (clean, no # symbol) -->
+  <text x="${cx - 1}" y="${cy + 8}" text-anchor="middle" font-family="${FONT_STACK}" font-size="26" font-weight="700" fill="white">${c.rank}</text>
+
+  <!-- Ordinal suffix (superscript style) -->
+  <text x="${cx + 11}" y="${cy - 4}" font-family="${FONT_STACK}" font-size="10" font-weight="600" fill="white" opacity="0.9">${ordinal}</text>
+
+  <!-- Title -->
+  <text x="86" y="32" font-family="${FONT_STACK}" font-size="14" font-weight="700" fill="${c.textPrimary}" letter-spacing="0.2">Best Touchless Car Wash</text>
+
+  <!-- Metro + Year -->
+  <text x="86" y="50" font-family="${FONT_STACK}" font-size="12" fill="${c.textSecondary}">${metro} \u00B7 ${c.year}</text>
+
+  <!-- Brand URL -->
+  <text x="86" y="74" font-family="${FONT_STACK}" font-size="10" font-weight="500" fill="${c.brandColor}">touchlesscarwashfinder.com</text>
 
   <!-- Verified checkmark -->
-  <circle cx="${c.w - 24}" cy="38" r="12" fill="${c.brandColor}" opacity="0.12"/>
-  <circle cx="${c.w - 24}" cy="38" r="9" fill="${c.brandColor}"/>
-  <path d="M${c.w - 28} 38 l3 3 6-6" stroke="${c.bg}" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="${c.w - 22}" cy="${cy}" r="10" fill="${c.brandColor}" opacity="0.08"/>
+  <circle cx="${c.w - 22}" cy="${cy}" r="7.5" fill="${c.brandColor}"/>
+  <path d="M${c.w - 25.5} ${cy} l2.2 2.2 4.2-4.2" stroke="white" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`;
 }
 
 function generateCompactSvg(c: SvgColors): string {
   const metro = escapeXml(c.metroName);
-  const rankLabel = `#${c.rank}`;
+  const ordinal = getOrdinalSuffix(c.rank);
+  const grad = getRankGradient(c.rank);
+
+  const cx = 36;
+  const cy = 36;
+  const r = 17;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${c.w}" height="${c.h}" viewBox="0 0 ${c.w} ${c.h}" fill="none">
-  <rect width="${c.w}" height="${c.h}" rx="10" fill="${c.bg}" stroke="${c.borderColor}" stroke-width="1.5"/>
+  <defs>
+    <linearGradient id="rg" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="${grad.light}"/>
+      <stop offset="45%" stop-color="${grad.mid}"/>
+      <stop offset="100%" stop-color="${grad.dark}"/>
+    </linearGradient>
+  </defs>
 
-  <!-- Rank circle -->
-  <circle cx="36" cy="30" r="16" fill="${c.rankAccent}"/>
-  <text x="36" y="35" text-anchor="middle" font-family="${FONT_STACK}" font-size="13" font-weight="800" fill="${c.bg}">${rankLabel}</text>
+  <rect width="${c.w}" height="${c.h}" rx="10" fill="${c.bg}" stroke="${c.borderColor}" stroke-width="1"/>
 
-  <!-- Main text -->
-  <text x="62" y="24" font-family="${FONT_STACK}" font-size="12" font-weight="700" fill="${c.textPrimary}">Best Touchless Car Wash</text>
-  <text x="62" y="40" font-family="${FONT_STACK}" font-size="11" fill="${c.textSecondary}">${metro} \u00B7 ${c.year}</text>
+  <!-- Rank badge -->
+  <circle cx="${cx}" cy="${cy}" r="${r + 4}" fill="${c.rankAccent}" opacity="0.1"/>
+  <circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#rg)"/>
+  <circle cx="${cx}" cy="${cy}" r="${r - 2.5}" fill="none" stroke="white" stroke-width="0.6" opacity="0.3"/>
 
-  <!-- Brand -->
-  <text x="62" y="58" font-family="${FONT_STACK}" font-size="9" font-weight="600" fill="${c.brandColor}">touchlesscarwashfinder.com</text>
+  <!-- Rank number -->
+  <text x="${cx - 1}" y="${cy + 6}" text-anchor="middle" font-family="${FONT_STACK}" font-size="19" font-weight="700" fill="white">${c.rank}</text>
+
+  <!-- Ordinal suffix -->
+  <text x="${cx + 8}" y="${cy - 3}" font-family="${FONT_STACK}" font-size="8" font-weight="600" fill="white" opacity="0.9">${ordinal}</text>
+
+  <!-- Text -->
+  <text x="64" y="24" font-family="${FONT_STACK}" font-size="12" font-weight="700" fill="${c.textPrimary}">Best Touchless Car Wash</text>
+  <text x="64" y="40" font-family="${FONT_STACK}" font-size="11" fill="${c.textSecondary}">${metro} \u00B7 ${c.year}</text>
+  <text x="64" y="58" font-family="${FONT_STACK}" font-size="9" font-weight="500" fill="${c.brandColor}">touchlesscarwashfinder.com</text>
 </svg>`;
 }
