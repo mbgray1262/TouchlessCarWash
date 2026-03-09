@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { Droplet } from 'lucide-react';
-import { NewsletterForm } from '@/components/NewsletterForm';
 
 // Top 30 cities by touchless car wash listing count (data-driven, updated periodically)
 const TOP_CITIES: { name: string; stateSlug: string; citySlug: string; stateCode: string }[] = [
@@ -175,13 +174,12 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Newsletter */}
+          {/* About */}
           <div>
-            <h3 className="font-semibold text-white mb-4">Stay Updated</h3>
-            <p className="text-sm text-white/70 mb-4">
-              Get the latest listings and car care tips delivered to your inbox.
+            <h3 className="font-semibold text-white mb-4">About</h3>
+            <p className="text-sm text-white/70">
+              The only directory dedicated exclusively to touchless, touch-free, and brushless car washes across all 50 states. No brushes, no scratches — just clean.
             </p>
-            <NewsletterForm />
           </div>
         </div>
 
