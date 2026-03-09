@@ -6,22 +6,30 @@ export interface BadgeSvgOptions {
   size: 'standard' | 'compact';
 }
 
-function getRankAccent(rank: number): string {
-  if (rank === 1) return '#FBBF24'; // Gold
-  if (rank === 2) return '#94A3B8'; // Silver
-  return '#D97706'; // Bronze
-}
+/* ------------------------------------------------------------------ */
+/*  Lucide icon paths (24×24 viewBox, stroke-based)                   */
+/* ------------------------------------------------------------------ */
 
-function getRankGradient(rank: number): {
-  light: string;
-  mid: string;
-  dark: string;
-} {
-  if (rank === 1)
-    return { light: '#FDE68A', mid: '#FBBF24', dark: '#D97706' }; // Gold shimmer
-  if (rank === 2)
-    return { light: '#E2E8F0', mid: '#CBD5E1', dark: '#94A3B8' }; // Silver shimmer
-  return { light: '#FBBF24', mid: '#D97706', dark: '#B45309' }; // Bronze shimmer
+const TROPHY_PATHS = [
+  'M6 9H4.5a2.5 2.5 0 0 1 0-5H6',
+  'M18 9h1.5a2.5 2.5 0 0 0 0-5H18',
+  'M4 22h16',
+  'M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22',
+  'M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22',
+  'M18 2H6v7a6 6 0 0 0 12 0V2Z',
+];
+
+const DROPLET_PATH =
+  'M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5S5 13 5 15a7 7 0 0 0 7 7z';
+
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                           */
+/* ------------------------------------------------------------------ */
+
+function getRankAccent(rank: number, theme: 'light' | 'dark'): string {
+  if (rank === 1) return '#FBBF24'; // Gold — good contrast on both themes
+  if (rank === 2) return theme === 'light' ? '#64748B' : '#94A3B8'; // Silver — darkened for light bg
+  return '#D97706'; // Bronze — good on both
 }
 
 function getOrdinalSuffix(rank: number): string {
@@ -42,6 +50,35 @@ function escapeXml(str: string): string {
 const FONT_STACK =
   'Inter,-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif';
 
+/** Render the Lucide Trophy icon as a nested <svg> */
+function renderTrophy(
+  x: number,
+  y: number,
+  size: number,
+  color: string,
+  sw: number = 2,
+): string {
+  const paths = TROPHY_PATHS.map((d) => `<path d="${d}"/>`).join('');
+  return `<svg x="${x}" y="${y}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+}
+
+/** Render the Lucide Droplet icon as a nested <svg> */
+function renderDroplet(
+  x: number,
+  y: number,
+  size: number,
+  color: string,
+  sw: number = 2,
+  opacity: number = 1,
+): string {
+  const op = opacity < 1 ? ` opacity="${opacity}"` : '';
+  return `<svg x="${x}" y="${y}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"${op}><path d="${DROPLET_PATH}"/></svg>`;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Public API                                                        */
+/* ------------------------------------------------------------------ */
+
 export function generateBadgeSvg(options: BadgeSvgOptions): string {
   const { rank, metroName, year, theme, size } = options;
 
@@ -54,25 +91,10 @@ export function generateBadgeSvg(options: BadgeSvgOptions): string {
   const textSecondary = theme === 'dark' ? '#94A3B8' : '#6B7280';
   const borderColor = theme === 'dark' ? '#1E3A5F' : '#E2E8F0';
   const brandColor = '#22C55E';
-  const rankAccent = getRankAccent(rank);
+  const rankAccent = getRankAccent(rank, theme);
+  const isDark = theme === 'dark';
 
-  if (isCompact) {
-    return generateCompactSvg({
-      w,
-      h,
-      bg,
-      textPrimary,
-      textSecondary,
-      borderColor,
-      brandColor,
-      rankAccent,
-      rank,
-      metroName,
-      year,
-    });
-  }
-
-  return generateStandardSvg({
+  const c: SvgColors = {
     w,
     h,
     bg,
@@ -84,8 +106,15 @@ export function generateBadgeSvg(options: BadgeSvgOptions): string {
     rank,
     metroName,
     year,
-  });
+    isDark,
+  };
+
+  return isCompact ? generateCompactSvg(c) : generateStandardSvg(c);
 }
+
+/* ------------------------------------------------------------------ */
+/*  Internal types                                                    */
+/* ------------------------------------------------------------------ */
 
 interface SvgColors {
   w: number;
@@ -99,95 +128,82 @@ interface SvgColors {
   rank: number;
   metroName: string;
   year: number;
+  isDark: boolean;
 }
+
+/* ------------------------------------------------------------------ */
+/*  Standard badge — 320 × 96                                        */
+/* ------------------------------------------------------------------ */
 
 function generateStandardSvg(c: SvgColors): string {
   const metro = escapeXml(c.metroName);
-  const ordinal = getOrdinalSuffix(c.rank);
-  const grad = getRankGradient(c.rank);
-
-  // Rank circle positioning
-  const cx = 48;
-  const cy = 48;
-  const r = 23;
+  const rankText = `${c.rank}${getOrdinalSuffix(c.rank)}`;
+  const pillAlpha = c.isDark ? 0.12 : 0.08;
+  const wmAlpha = c.isDark ? 0.06 : 0.04;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${c.w}" height="${c.h}" viewBox="0 0 ${c.w} ${c.h}" fill="none">
   <defs>
-    <linearGradient id="rg" x1="0" y1="0" x2="0.3" y2="1">
-      <stop offset="0%" stop-color="${grad.light}"/>
-      <stop offset="45%" stop-color="${grad.mid}"/>
-      <stop offset="100%" stop-color="${grad.dark}"/>
-    </linearGradient>
+    <clipPath id="card"><rect width="${c.w}" height="${c.h}" rx="10"/></clipPath>
   </defs>
 
-  <!-- Background card -->
-  <rect width="${c.w}" height="${c.h}" rx="12" fill="${c.bg}" stroke="${c.borderColor}" stroke-width="1"/>
+  <!-- Card background -->
+  <rect width="${c.w}" height="${c.h}" rx="10" fill="${c.bg}" stroke="${c.borderColor}" stroke-width="1"/>
 
-  <!-- Rank badge: soft outer glow -->
-  <circle cx="${cx}" cy="${cy}" r="${r + 5}" fill="${c.rankAccent}" opacity="0.1"/>
+  <!-- Left accent strip (rank color) -->
+  <rect x="0" y="0" width="4" height="${c.h}" fill="${c.rankAccent}" clip-path="url(#card)"/>
 
-  <!-- Rank badge: main gradient circle -->
-  <circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#rg)"/>
+  <!-- Droplet watermark (faint, right side) -->
+  ${renderDroplet(c.w - 58, 24, 48, c.textPrimary, 1.5, wmAlpha)}
 
-  <!-- Rank badge: inner decorative ring -->
-  <circle cx="${cx}" cy="${cy}" r="${r - 3}" fill="none" stroke="white" stroke-width="0.75" opacity="0.35"/>
+  <!-- Trophy + rank pill -->
+  <rect x="16" y="18" width="58" height="24" rx="5" fill="${c.rankAccent}" opacity="${pillAlpha}"/>
+  ${renderTrophy(19, 20, 20, c.rankAccent)}
+  <text x="43" y="35" font-family="${FONT_STACK}" font-size="14" font-weight="800" fill="${c.rankAccent}">${rankText}</text>
 
-  <!-- Rank number (clean, no # symbol) -->
-  <text x="${cx - 1}" y="${cy + 8}" text-anchor="middle" font-family="${FONT_STACK}" font-size="26" font-weight="700" fill="white">${c.rank}</text>
-
-  <!-- Ordinal suffix (superscript style) -->
-  <text x="${cx + 11}" y="${cy - 4}" font-family="${FONT_STACK}" font-size="10" font-weight="600" fill="white" opacity="0.9">${ordinal}</text>
-
-  <!-- Title -->
-  <text x="86" y="32" font-family="${FONT_STACK}" font-size="14" font-weight="700" fill="${c.textPrimary}" letter-spacing="0.2">Best Touchless Car Wash</text>
+  <!-- Title (inline with pill) -->
+  <text x="82" y="35" font-family="${FONT_STACK}" font-size="13" font-weight="700" fill="${c.textPrimary}" letter-spacing="0.2">Best Touchless Car Wash</text>
 
   <!-- Metro + Year -->
-  <text x="86" y="50" font-family="${FONT_STACK}" font-size="12" fill="${c.textSecondary}">${metro} \u00B7 ${c.year}</text>
+  <text x="16" y="58" font-family="${FONT_STACK}" font-size="11" fill="${c.textSecondary}">${metro} \u00B7 ${c.year}</text>
 
-  <!-- Brand URL -->
-  <text x="86" y="74" font-family="${FONT_STACK}" font-size="10" font-weight="500" fill="${c.brandColor}">touchlesscarwashfinder.com</text>
-
-  <!-- Verified checkmark -->
-  <circle cx="${c.w - 22}" cy="${cy}" r="10" fill="${c.brandColor}" opacity="0.08"/>
-  <circle cx="${c.w - 22}" cy="${cy}" r="7.5" fill="${c.brandColor}"/>
-  <path d="M${c.w - 25.5} ${cy} l2.2 2.2 4.2-4.2" stroke="white" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Brand URL with droplet logo -->
+  ${renderDroplet(16, 68, 10, c.brandColor, 2.5)}
+  <text x="30" y="77" font-family="${FONT_STACK}" font-size="10" font-weight="500" fill="${c.brandColor}">touchlesscarwashfinder.com</text>
 </svg>`;
 }
 
+/* ------------------------------------------------------------------ */
+/*  Compact badge — 220 × 72                                         */
+/* ------------------------------------------------------------------ */
+
 function generateCompactSvg(c: SvgColors): string {
   const metro = escapeXml(c.metroName);
-  const ordinal = getOrdinalSuffix(c.rank);
-  const grad = getRankGradient(c.rank);
-
-  const cx = 36;
-  const cy = 36;
-  const r = 17;
+  const rankText = `${c.rank}${getOrdinalSuffix(c.rank)}`;
+  const pillAlpha = c.isDark ? 0.12 : 0.08;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${c.w}" height="${c.h}" viewBox="0 0 ${c.w} ${c.h}" fill="none">
   <defs>
-    <linearGradient id="rg" x1="0" y1="0" x2="0.3" y2="1">
-      <stop offset="0%" stop-color="${grad.light}"/>
-      <stop offset="45%" stop-color="${grad.mid}"/>
-      <stop offset="100%" stop-color="${grad.dark}"/>
-    </linearGradient>
+    <clipPath id="card"><rect width="${c.w}" height="${c.h}" rx="8"/></clipPath>
   </defs>
 
-  <rect width="${c.w}" height="${c.h}" rx="10" fill="${c.bg}" stroke="${c.borderColor}" stroke-width="1"/>
+  <!-- Card background -->
+  <rect width="${c.w}" height="${c.h}" rx="8" fill="${c.bg}" stroke="${c.borderColor}" stroke-width="1"/>
 
-  <!-- Rank badge -->
-  <circle cx="${cx}" cy="${cy}" r="${r + 4}" fill="${c.rankAccent}" opacity="0.1"/>
-  <circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#rg)"/>
-  <circle cx="${cx}" cy="${cy}" r="${r - 2.5}" fill="none" stroke="white" stroke-width="0.6" opacity="0.3"/>
+  <!-- Left accent strip -->
+  <rect x="0" y="0" width="3" height="${c.h}" fill="${c.rankAccent}" clip-path="url(#card)"/>
 
-  <!-- Rank number -->
-  <text x="${cx - 1}" y="${cy + 6}" text-anchor="middle" font-family="${FONT_STACK}" font-size="19" font-weight="700" fill="white">${c.rank}</text>
+  <!-- Trophy + rank pill -->
+  <rect x="12" y="8" width="48" height="20" rx="4" fill="${c.rankAccent}" opacity="${pillAlpha}"/>
+  ${renderTrophy(14, 10, 16, c.rankAccent, 2.5)}
+  <text x="33" y="23" font-family="${FONT_STACK}" font-size="11" font-weight="800" fill="${c.rankAccent}">${rankText}</text>
 
-  <!-- Ordinal suffix -->
-  <text x="${cx + 8}" y="${cy - 3}" font-family="${FONT_STACK}" font-size="8" font-weight="600" fill="white" opacity="0.9">${ordinal}</text>
+  <!-- Title -->
+  <text x="12" y="42" font-family="${FONT_STACK}" font-size="11" font-weight="700" fill="${c.textPrimary}">Best Touchless Car Wash</text>
 
-  <!-- Text -->
-  <text x="64" y="24" font-family="${FONT_STACK}" font-size="12" font-weight="700" fill="${c.textPrimary}">Best Touchless Car Wash</text>
-  <text x="64" y="40" font-family="${FONT_STACK}" font-size="11" fill="${c.textSecondary}">${metro} \u00B7 ${c.year}</text>
-  <text x="64" y="58" font-family="${FONT_STACK}" font-size="9" font-weight="500" fill="${c.brandColor}">touchlesscarwashfinder.com</text>
+  <!-- Metro + Year -->
+  <text x="12" y="55" font-family="${FONT_STACK}" font-size="9" fill="${c.textSecondary}">${metro} \u00B7 ${c.year}</text>
+
+  <!-- Brand URL -->
+  <text x="12" y="67" font-family="${FONT_STACK}" font-size="8" font-weight="500" fill="${c.brandColor}">touchlesscarwashfinder.com</text>
 </svg>`;
 }
