@@ -1025,12 +1025,12 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                 </div>
               )}
 
-              {/* Quality Highlights — AI-generated sentiment summary */}
+              {/* Touchless Quality Highlights — AI-generated sentiment summary */}
               {listing.sentiment_score != null && listing.sentiment_summary && (
                 <div className="bg-white rounded-2xl border border-gray-200 p-6">
                   <h2 className="text-lg font-bold text-[#0F2744] mb-1 flex items-center gap-2">
                     <Sparkles className="w-5 h-5 text-[#22C55E]" />
-                    Quality Highlights
+                    Touchless Quality Highlights
                   </h2>
                   <p className="text-xs text-gray-400 mb-3">
                     Based on analysis of recent customer reviews

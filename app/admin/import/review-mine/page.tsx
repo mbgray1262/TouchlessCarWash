@@ -248,6 +248,57 @@ export default function ReviewMinePage() {
     batchesRun: 0, totalAnalyzed: 0, totalApiCalls: 0,
   });
 
+  // Review rescan state
+  const [rescanRunning, setRescanRunning] = useState(false);
+  const [rescanResults, setRescanResults] = useState<Array<{
+    id: string; name: string; review_count: number; new_snippets: number;
+    total_snippets: number; sentiment_score: number | null;
+    sentiment_summary: string | null; api_calls: number; error?: string;
+  }>>([]);
+  const [rescanTotal, setRescanTotal] = useState<number | null>(null);
+  const [rescanOffset, setRescanOffset] = useState(0);
+  const [rescanError, setRescanError] = useState<string | null>(null);
+  const [rescanAutoRun, setRescanAutoRun] = useState(false);
+  const [rescanBatchSize, setRescanBatchSize] = useState(5);
+  const [rescanSessionStats, setRescanSessionStats] = useState({
+    batchesRun: 0, totalRescanned: 0, totalNewSnippets: 0, totalApiCalls: 0,
+  });
+
+  const runReviewRescan = useCallback(async () => {
+    setRescanRunning(true);
+    setRescanError(null);
+    try {
+      const data = await callEdgeFunction('review_rescan', {
+        batch_size: rescanBatchSize,
+        offset: rescanOffset,
+      });
+      setRescanResults(data.results || []);
+      setRescanTotal(data.total ?? null);
+      const nextOffset = data.next_offset;
+      setRescanOffset(nextOffset ?? data.offset + (data.results?.length || 0));
+      setRescanSessionStats((prev) => ({
+        batchesRun: prev.batchesRun + 1,
+        totalRescanned: prev.totalRescanned + data.rescanned,
+        totalNewSnippets: prev.totalNewSnippets + data.new_snippets,
+        totalApiCalls: prev.totalApiCalls + data.api_calls,
+      }));
+      if (!nextOffset) setRescanAutoRun(false);
+    } catch (err) {
+      setRescanError(err instanceof Error ? err.message : String(err));
+      setRescanAutoRun(false);
+    } finally {
+      setRescanRunning(false);
+    }
+  }, [rescanBatchSize, rescanOffset]);
+
+  // Auto-run review rescan
+  useEffect(() => {
+    if (rescanAutoRun && !rescanRunning) {
+      const timer = setTimeout(runReviewRescan, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [rescanAutoRun, rescanRunning, runReviewRescan]);
+
   const fetchProgress = useCallback(async () => {
     try {
       setLoadingProgress(true);
@@ -930,6 +981,116 @@ export default function ReviewMinePage() {
                       {!r.success && (
                         <Badge variant="outline" className="text-gray-400 ml-2 shrink-0">
                           Skipped
+                        </Badge>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Review Rescan Panel — visible in scanner view */}
+        {activeView === 'scanner' && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <RefreshCw className="w-5 h-5 text-blue-500" />
+                Review Rescan
+              </CardTitle>
+              <p className="text-sm text-gray-500">
+                Re-scan all touchless listings to capture every touchless review snippet and refresh quality scores.
+                {rescanTotal !== null && (
+                  <> <strong>{rescanTotal}</strong> total touchless listings. Processing from offset <strong>{rescanOffset}</strong>.</>
+                )}
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Controls */}
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-gray-600">Batch:</label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={15}
+                    value={rescanBatchSize}
+                    onChange={(e) => setRescanBatchSize(Math.min(15, Math.max(1, parseInt(e.target.value) || 5)))}
+                    className="w-20 h-8"
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  onClick={runReviewRescan}
+                  disabled={rescanRunning}
+                >
+                  {rescanRunning ? (
+                    <><Loader2 className="w-4 h-4 animate-spin mr-1" /> Rescanning...</>
+                  ) : (
+                    <><Play className="w-4 h-4 mr-1" /> Run Batch</>
+                  )}
+                </Button>
+                <Button
+                  size="sm"
+                  variant={rescanAutoRun ? 'destructive' : 'outline'}
+                  onClick={() => {
+                    if (!rescanAutoRun) runReviewRescan();
+                    setRescanAutoRun(!rescanAutoRun);
+                  }}
+                >
+                  {rescanAutoRun ? '⏹ Stop Auto-Run' : '▶▶ Auto-Run'}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setRescanOffset(0)}
+                  disabled={rescanRunning || rescanOffset === 0}
+                >
+                  Reset Offset
+                </Button>
+              </div>
+
+              {/* Session stats */}
+              {rescanSessionStats.batchesRun > 0 && (
+                <div className="flex gap-4 text-xs text-gray-500 flex-wrap">
+                  <span>Batches: <strong>{rescanSessionStats.batchesRun}</strong></span>
+                  <span>Rescanned: <strong>{rescanSessionStats.totalRescanned}</strong></span>
+                  <span>New snippets: <strong className="text-green-600">{rescanSessionStats.totalNewSnippets}</strong></span>
+                  <span>API calls: <strong>{rescanSessionStats.totalApiCalls}</strong></span>
+                </div>
+              )}
+
+              {rescanError && (
+                <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">{rescanError}</div>
+              )}
+
+              {/* Results */}
+              {rescanResults.length > 0 && (
+                <div className="space-y-2">
+                  {rescanResults.map((r) => (
+                    <div
+                      key={r.id}
+                      className="flex items-center justify-between p-3 rounded-lg text-sm bg-blue-50 border border-blue-200"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium truncate">{r.name}</div>
+                        <div className="text-xs text-gray-500 mt-0.5 flex gap-3 flex-wrap">
+                          <span>Reviews: {r.review_count}</span>
+                          <span className={r.new_snippets > 0 ? 'text-green-600 font-medium' : ''}>
+                            +{r.new_snippets} new snippets
+                          </span>
+                          <span>Total: {r.total_snippets} snippets</span>
+                          {r.error && <span className="text-red-500">{r.error}</span>}
+                        </div>
+                        {r.sentiment_summary && (
+                          <div className="text-xs text-gray-400 mt-0.5 line-clamp-1">{r.sentiment_summary}</div>
+                        )}
+                      </div>
+                      {r.sentiment_score !== null && (
+                        <Badge className="bg-blue-100 text-blue-800 border-blue-300 ml-2 shrink-0">
+                          <Star className="w-3 h-3 fill-yellow-500 text-yellow-500 mr-1" />
+                          {r.sentiment_score.toFixed(1)}
                         </Badge>
                       )}
                     </div>
