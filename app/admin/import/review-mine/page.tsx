@@ -214,6 +214,7 @@ export default function ReviewMinePage() {
   const [scanError, setScanError] = useState<string | null>(null);
   const [batchSize, setBatchSize] = useState(25);
   const [autoScan, setAutoScan] = useState(false);
+  const [consecutiveErrors, setConsecutiveErrors] = useState(0);
 
   // Prospect state
   const [prospectQuery, setProspectQuery] = useState('');
@@ -274,29 +275,49 @@ export default function ReviewMinePage() {
       // due to known edge function service-role key bug
       await fetchProgress();
 
-      if (data.complete) {
+      // Only stop auto-scan when the batch returned zero results,
+      // meaning there are genuinely no more listings to scan.
+      // Don't rely on data.complete — it uses getTotalScannedCount()
+      // which can return zeros due to the service-role key bug,
+      // causing auto-scan to stop prematurely.
+      if (data.scanned_this_batch === 0) {
         setAutoScan(false);
       }
+
+      // Reset error counter on success
+      setConsecutiveErrors(0);
 
       return data;
     } catch (err) {
       setScanError(err instanceof Error ? err.message : String(err));
-      setAutoScan(false);
+      // Don't stop auto-scan on errors — edge functions can timeout
+      // on large batches. The next batch will pick up where it left off.
+      // But stop after 5 consecutive errors to avoid infinite retries
+      // (e.g. SerpAPI out of credits, auth failure, etc.)
+      setConsecutiveErrors((prev) => {
+        const next = prev + 1;
+        if (next >= 5) {
+          setAutoScan(false);
+        }
+        return next;
+      });
       return null;
     } finally {
       setScanning(false);
     }
   }, [batchSize]);
 
-  // Auto-scan effect
+  // Auto-scan effect — keeps running batches until no listings remain
   useEffect(() => {
     if (autoScan && !scanning) {
+      // Wait longer after errors to give the server time to recover
+      const delay = consecutiveErrors > 0 ? 5000 : 1000;
       const timer = setTimeout(() => {
         runScanBatch();
-      }, 1000);
+      }, delay);
       return () => clearTimeout(timer);
     }
-  }, [autoScan, scanning, runScanBatch]);
+  }, [autoScan, scanning, runScanBatch, consecutiveErrors]);
 
   const rejectTouchless = async (listingId: string) => {
     setRejectingIds((prev) => new Set(prev).add(listingId));
