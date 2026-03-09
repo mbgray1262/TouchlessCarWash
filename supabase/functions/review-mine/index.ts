@@ -2082,10 +2082,141 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // -----------------------------------------------------------------------
+    // ACTION: review_rescan — Re-scan touchless listings with paginated
+    // keyword search to capture ALL touchless review snippets, and refresh
+    // sentiment scores with a larger review sample.
+    // -----------------------------------------------------------------------
+    if (action === 'review_rescan') {
+      const batchSize = Math.min(body.batch_size || 5, 15);
+
+      // Fetch touchless listings ordered by review_count desc (richest first).
+      // Use offset-based pagination so the admin panel can call repeatedly.
+      const offset = body.offset || 0;
+
+      const { data: listings, error: fetchError } = await supabase
+        .from('listings')
+        .select('id, name, slug, google_place_id, review_count')
+        .eq('is_touchless', true)
+        .not('google_place_id', 'is', null)
+        .order('review_count', { ascending: false })
+        .range(offset, offset + batchSize - 1);
+
+      if (fetchError) {
+        return new Response(
+          JSON.stringify({ error: 'Failed to fetch listings', details: fetchError.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      // Total count for progress tracking
+      const { count: totalTouchless } = await supabase
+        .from('listings')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_touchless', true)
+        .not('google_place_id', 'is', null);
+
+      if (!listings?.length) {
+        return new Response(
+          JSON.stringify({
+            message: 'All touchless listings have been rescanned',
+            rescanned: 0,
+            total: totalTouchless ?? 0,
+            offset,
+            api_calls: 0,
+            results: [],
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      const results: Array<{
+        id: string;
+        name: string;
+        review_count: number;
+        new_snippets: number;
+        total_snippets: number;
+        sentiment_score: number | null;
+        sentiment_summary: string | null;
+        api_calls: number;
+        error?: string;
+      }> = [];
+      let totalApiCalls = 0;
+      let totalNewSnippets = 0;
+
+      for (const listing of listings) {
+        let listingApiCalls = 0;
+        let newSnippets = 0;
+        let sentimentScore: number | null = null;
+        let sentimentSummary: string | null = null;
+        let listingError: string | undefined;
+
+        try {
+          // Step 1: Re-scan touchless reviews with pagination
+          const kwResult = await searchReviewsMultiKeyword(serpApiKey, listing.google_place_id);
+          listingApiCalls += kwResult.apiCalls;
+
+          if (kwResult.reviews.length > 0) {
+            newSnippets = await insertSerpApiReviewSnippets(supabase, listing.id, kwResult.reviews);
+          }
+
+          // Step 2: Refresh sentiment analysis with better sampling
+          const sentResult = await runSentimentAnalysis(supabase, serpApiKey, anthropicKey, listing);
+          listingApiCalls += sentResult.apiCalls;
+          sentimentScore = sentResult.sentiment?.score ?? null;
+          sentimentSummary = sentResult.sentiment?.summary ?? null;
+          if (!sentResult.success && sentResult.error) {
+            listingError = sentResult.error;
+          }
+        } catch (err) {
+          listingError = String(err).slice(0, 200);
+        }
+
+        // Get total snippet count for this listing
+        const { count: snippetCount } = await supabase
+          .from('review_snippets')
+          .select('id', { count: 'exact', head: true })
+          .eq('listing_id', listing.id)
+          .eq('is_touchless_evidence', true);
+
+        totalApiCalls += listingApiCalls;
+        totalNewSnippets += newSnippets;
+
+        results.push({
+          id: listing.id,
+          name: listing.name,
+          review_count: listing.review_count ?? 0,
+          new_snippets: newSnippets,
+          total_snippets: snippetCount ?? 0,
+          sentiment_score: sentimentScore,
+          sentiment_summary: sentimentSummary,
+          api_calls: listingApiCalls,
+          error: listingError,
+        });
+
+        console.log(`[rescan] ${listing.name}: +${newSnippets} snippets, sentiment=${sentimentScore}, ${listingApiCalls} API calls`);
+      }
+
+      const nextOffset = offset + listings.length;
+
+      return new Response(
+        JSON.stringify({
+          rescanned: listings.length,
+          total: totalTouchless ?? 0,
+          offset,
+          next_offset: nextOffset < (totalTouchless ?? 0) ? nextOffset : null,
+          new_snippets: totalNewSnippets,
+          api_calls: totalApiCalls,
+          results,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
     return new Response(
       JSON.stringify({
         error: 'Unknown action',
-        valid_actions: ['scan_batch', 'scan_single', 'progress', 'prospect', 'prospect_next', 'reject_touchless', 'reset', 'sentiment_backfill'],
+        valid_actions: ['scan_batch', 'scan_single', 'progress', 'prospect', 'prospect_next', 'reject_touchless', 'reset', 'sentiment_backfill', 'review_rescan'],
       }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
