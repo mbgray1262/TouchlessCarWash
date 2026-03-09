@@ -320,7 +320,7 @@ function buildLocalBusinessSchema(listing: Listing, canonicalUrl: string, hours:
 
   // Add individual reviews from snippets for rich results
   if (reviewSnippets.length > 0) {
-    schema.review = reviewSnippets.slice(0, 5).map((snippet) => ({
+    schema.review = reviewSnippets.slice(0, 10).map((snippet) => ({
       '@type': 'Review',
       author: { '@type': 'Person', name: snippet.reviewer_name || 'Anonymous' },
       reviewBody: snippet.review_text,
@@ -1095,7 +1095,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                     Real reviews from Google mentioning the touchless experience
                   </p>
                   <div className="space-y-3">
-                    {reviewSnippets.slice(0, 5).map((snippet) => (
+                    {reviewSnippets.slice(0, 10).map((snippet) => (
                       <ReviewSnippetCard key={snippet.id} snippet={snippet} />
                     ))}
                   </div>
