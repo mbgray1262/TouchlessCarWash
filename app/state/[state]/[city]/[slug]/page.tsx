@@ -1114,10 +1114,15 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
               {/* Customer Review Snippets — touchless evidence from Google Reviews */}
               {reviewSnippets.length > 0 && (
                 <div className="bg-white rounded-2xl border border-gray-200 p-6">
-                  <h2 className="text-lg font-bold text-[#0F2744] mb-1 flex items-center gap-2">
-                    <MessageSquareQuote className="w-5 h-5 text-[#22C55E]" />
-                    What Customers Say About the Touchless Wash
-                  </h2>
+                  <div className="flex items-center justify-between mb-1">
+                    <h2 className="text-lg font-bold text-[#0F2744] flex items-center gap-2">
+                      <MessageSquareQuote className="w-5 h-5 text-[#22C55E]" />
+                      What Customers Say About the Touchless Wash
+                    </h2>
+                    <span className="text-xs font-semibold text-[#22C55E] bg-green-50 border border-green-200 px-2.5 py-1 rounded-full whitespace-nowrap">
+                      {reviewSnippets.length} {reviewSnippets.length === 1 ? 'review' : 'reviews'}
+                    </span>
+                  </div>
                   <p className="text-xs text-gray-400 mb-4">
                     Real reviews from Google mentioning the touchless experience
                   </p>
