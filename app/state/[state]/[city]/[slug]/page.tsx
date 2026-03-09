@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import {
   Star, MapPin, Phone, Globe, Clock, CheckCircle, ArrowLeft,
   Sparkles, ExternalLink, ChevronRight, Navigation, HelpCircle,
@@ -56,6 +56,31 @@ async function getListing(slug: string): Promise<Listing | null> {
 
   if (error || !data) return null;
   return data as Listing;
+}
+
+/**
+ * Try to find a listing whose slug starts with the requested slug.
+ * Handles old short slugs (e.g. "rice-street-car-wash") that were later
+ * replaced with longer address-based slugs.
+ * Returns the canonical URL path for the matching listing, or null.
+ */
+async function findListingByPartialSlug(slug: string): Promise<string | null> {
+  const { data } = await supabase
+    .from('listings')
+    .select('slug, city, state')
+    .like('slug', `${slug}-%`)
+    .eq('is_touchless', true)
+    .limit(1);
+
+  if (!data || data.length === 0) return null;
+
+  const match = data[0];
+  const matchStateSlug = slugify(
+    US_STATES.find((s) => s.code === match.state)?.name ?? match.state,
+  );
+  const matchCitySlug = slugify(match.city);
+
+  return `/state/${matchStateSlug}/${matchCitySlug}/${match.slug}`;
 }
 
 async function getNearbyListings(listing: Listing, limit = 6): Promise<Listing[]> {
@@ -593,7 +618,14 @@ function NearbyListingCard({ nearby, stateSlug }: { nearby: Listing; stateSlug: 
 export default async function ListingDetailPage({ params }: ListingPageProps) {
   const [listing] = await Promise.all([getListing(params.slug)]);
 
-  if (!listing) notFound();
+  if (!listing) {
+    // Try to find a listing with a longer slug that starts with the requested slug.
+    // This handles old short slugs (e.g. "rice-street-car-wash") that were replaced
+    // with longer address-based slugs (e.g. "rice-street-car-wash-1736-rice-st-...").
+    const redirectUrl = await findListingByPartialSlug(params.slug);
+    if (redirectUrl) redirect(redirectUrl);
+    notFound();
+  }
 
   const [nearbyListings, reviewSnippets] = await Promise.all([
     getNearbyListings(listing),
