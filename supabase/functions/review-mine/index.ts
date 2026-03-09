@@ -384,16 +384,17 @@ async function getTotalScannedCount(
 
 /**
  * Call SerpAPI Google Maps Reviews with keyword query.
- * Supports pagination via next_page_token to fetch multiple pages of results.
- * Each page costs 1 SerpAPI credit; maxPages caps the total API calls.
+ * Fetches up to 20 results per page (SerpAPI max) to minimize API calls.
+ * Supports pagination via next_page_token; maxPages caps total API calls.
  */
 async function searchReviews(
   serpApiKey: string,
   placeId: string,
   query: string,
-  opts?: { sort_by?: string; maxPages?: number },
+  opts?: { sort_by?: string; maxPages?: number; num?: number },
 ): Promise<{ reviews: SerpApiReview[]; apiCalls: number; error?: string }> {
   const maxPages = opts?.maxPages ?? 1;
+  const num = opts?.num ?? 20; // Max 20 per page — get the most per API call
   const allReviews: SerpApiReview[] = [];
   let apiCalls = 0;
   let nextPageToken: string | undefined;
@@ -405,6 +406,8 @@ async function searchReviews(
       api_key: serpApiKey,
       hl: 'en',
     });
+    // num param only works when query, next_page_token, or topic_id is set
+    if (query || nextPageToken) params.set('num', String(num));
     if (query) params.set('q', query);
     if (opts?.sort_by) params.set('sort_by', opts.sort_by);
     if (nextPageToken) params.set('next_page_token', nextPageToken);
@@ -461,14 +464,12 @@ async function searchReviewsMultiKeyword(
   placeId: string,
 ): Promise<{ reviews: SerpApiReview[]; apiCalls: number; error?: string }> {
   // Single query using OR operator — searches for all touchless-related keywords.
-  // Paginate up to 2 pages (20 reviews) — enough for the vast majority of listings.
+  // 1 API call with num=20 captures up to 20 keyword-matched reviews.
   // "touch" catches: touchless, no-touch, touch-free, soft-touch, touch less
   // "brushless" catches: brushless, brush-free
   // "laser" catches: laser wash, laserwash
   // "contactless" catches: contactless, contact-free
-  const result = await searchReviews(serpApiKey, placeId, 'touch OR brushless OR laser OR contactless', {
-    maxPages: 2,
-  });
+  const result = await searchReviews(serpApiKey, placeId, 'touch OR brushless OR laser OR contactless');
 
   if (result.error) {
     return { reviews: [], apiCalls: result.apiCalls, error: result.error };
