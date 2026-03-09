@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
@@ -5,7 +6,7 @@ import { notFound, redirect } from 'next/navigation';
 import {
   Star, MapPin, Phone, Globe, Clock, CheckCircle, ArrowLeft,
   Sparkles, ExternalLink, ChevronRight, Navigation, HelpCircle,
-  CalendarCheck, ChevronDown, Droplet, CreditCard, Zap, MessageSquareQuote, Quote
+  CalendarCheck, ChevronDown, Droplet, CreditCard, Zap, MessageSquareQuote, Quote, Trophy
 } from 'lucide-react';
 import LogoImage from '@/components/LogoImage';
 import HeroImageFallback from '@/components/HeroImageFallback';
@@ -113,6 +114,25 @@ async function getReviewSnippets(listingId: string): Promise<ReviewSnippet[]> {
   return (data || []) as ReviewSnippet[];
 }
 
+// ── Best Of Rankings ──────────────────────────────────────────────────
+
+interface BestOfRanking {
+  metro_slug: string;
+  metro_name: string;
+  rank: number;
+  score: number;
+}
+
+const getBestOfRankings = cache(async (listingId: string): Promise<BestOfRanking[]> => {
+  const { data } = await supabase
+    .from('best_of_rankings')
+    .select('metro_slug, metro_name, rank, score')
+    .eq('listing_id', listingId)
+    .order('rank', { ascending: true });
+
+  return (data || []) as BestOfRanking[];
+});
+
 export async function generateMetadata({ params }: ListingPageProps): Promise<Metadata> {
   const listing = await getListing(params.slug);
   if (!listing) return { title: 'Listing Not Found' };
@@ -124,14 +144,24 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   const canonicalUrl = `${SITE_URL}/state/${params.state}/${params.city}/${params.slug}`;
   const heroImage = listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
 
-  const title = `${listing.name} | Touchless Car Wash in ${listing.city}, ${listing.state}`;
-  const ogTitle = `${listing.name} | Touchless Car Wash in ${listing.city}, ${stateName}`;
+  // Check for Best Of rankings (top 3 in a metro area)
+  const rankings = await getBestOfRankings(listing.id);
+  const topRanking = rankings.length > 0 ? rankings[0] : null; // Use the best (lowest) rank
+
+  // Enhanced title for ranked listings: "#1 Best Touchless Car Wash in Houston, TX | Name"
+  const title = topRanking
+    ? `#${topRanking.rank} Best Touchless Car Wash in ${topRanking.metro_name} | ${listing.name}`
+    : `${listing.name} | Touchless Car Wash in ${listing.city}, ${listing.state}`;
+  const ogTitle = topRanking
+    ? `#${topRanking.rank} Best Touchless Car Wash in ${topRanking.metro_name} | ${listing.name}`
+    : `${listing.name} | Touchless Car Wash in ${listing.city}, ${stateName}`;
 
   // Lead with star rating for CTR — Google often shows this in snippet
   const ratingPrefix = listing.rating > 0
     ? `★ ${Number(listing.rating).toFixed(1)}${listing.review_count > 0 ? ` (${listing.review_count} reviews)` : ''} — `
     : '';
-  const description = `${ratingPrefix}${listing.name} is a verified touchless car wash at ${listing.address}, ${listing.city}, ${listing.state}.${amenityPart} Hours, directions, photos & more.`;
+  const rankingPrefix = topRanking ? `#${topRanking.rank} Best Touchless Car Wash in ${topRanking.metro_name}. ` : '';
+  const description = `${ratingPrefix}${rankingPrefix}${listing.name} at ${listing.address}, ${listing.city}, ${listing.state}.${amenityPart} Hours, directions & more.`;
 
   return {
     title: { absolute: title },
@@ -262,7 +292,7 @@ const BRAND_LABELS: Record<string, string> = {
   ds: 'D&S',
 };
 
-function buildLocalBusinessSchema(listing: Listing, canonicalUrl: string, hours: Record<string, string> | null, reviewSnippets: ReviewSnippet[] = []): object {
+function buildLocalBusinessSchema(listing: Listing, canonicalUrl: string, hours: Record<string, string> | null, reviewSnippets: ReviewSnippet[] = [], rankings: BestOfRanking[] = []): object {
   const hoursSpec = hours
     ? DAY_ORDER.filter((d) => hours[d]).map((day) => {
         const val = hours[day];
@@ -327,6 +357,14 @@ function buildLocalBusinessSchema(listing: Listing, canonicalUrl: string, hours:
       ...(snippet.rating ? { reviewRating: { '@type': 'Rating', ratingValue: snippet.rating, bestRating: 5 } } : {}),
       ...(snippet.iso_date ? { datePublished: snippet.iso_date } : {}),
     }));
+  }
+
+  // Add awards from Best Of rankings
+  if (rankings.length > 0) {
+    const year = new Date().getFullYear();
+    schema.award = rankings.map(
+      (r) => `#${r.rank} Best Touchless Car Wash in ${r.metro_name} (${year})`,
+    );
   }
 
   return schema;
@@ -672,9 +710,10 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     notFound();
   }
 
-  const [nearbyListings, reviewSnippets] = await Promise.all([
+  const [nearbyListings, reviewSnippets, rankings] = await Promise.all([
     getNearbyListings(listing),
     getReviewSnippets(listing.id),
+    getBestOfRankings(listing.id),
   ]);
 
   const stateCode = getStateCode(params.state);
@@ -707,7 +746,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
 
   const canonicalUrl = `${SITE_URL}/state/${params.state}/${params.city}/${params.slug}`;
 
-  const localBusinessSchema = buildLocalBusinessSchema(listing, canonicalUrl, hours, reviewSnippets);
+  const localBusinessSchema = buildLocalBusinessSchema(listing, canonicalUrl, hours, reviewSnippets, rankings);
   const breadcrumbItems = [
     { name: 'Home', url: SITE_URL },
     { name: 'States', url: `${SITE_URL}/states` },
@@ -744,6 +783,8 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
       )}
     </span>
   ) : null;
+
+  const topRanking = rankings.length > 0 ? rankings[0] : null;
 
   return (
     <>
@@ -805,6 +846,13 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                         {listing.is_featured && (
                           <Badge className="bg-amber-400 text-amber-900 border-0">Featured</Badge>
                         )}
+                        {topRanking && (
+                          <Link href={`/best/${topRanking.metro_slug}`}>
+                            <Badge className="bg-yellow-400 text-yellow-900 border-0 shadow-sm hover:bg-yellow-300 transition-colors">
+                              <Trophy className="w-3 h-3 mr-1" />#{topRanking.rank} Best in {topRanking.metro_name}
+                            </Badge>
+                          </Link>
+                        )}
                       </div>
                       <h1 className="text-3xl md:text-4xl font-bold text-white leading-tight mb-2">{listing.name}</h1>
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-white/80 text-sm">
@@ -813,6 +861,12 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                           {listing.address}, {listing.city}, {listing.state}
                         </span>
                         {ratingStars}
+                        {topRanking && (
+                          <Link href={`/badge/${listing.slug}`} className="flex items-center gap-1 text-yellow-300 hover:text-yellow-200 transition-colors font-medium">
+                            <Trophy className="w-3.5 h-3.5" />
+                            Claim Your Badge
+                          </Link>
+                        )}
                       </div>
                       <p className="mt-2.5 text-sm text-white/80 max-w-2xl leading-relaxed line-clamp-2">{heroDescription}</p>
                     </div>
@@ -854,6 +908,13 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                       {listing.is_featured && (
                         <Badge className="bg-amber-400 text-amber-900 border-0">Featured</Badge>
                       )}
+                      {topRanking && (
+                        <Link href={`/best/${topRanking.metro_slug}`}>
+                          <Badge className="bg-yellow-400 text-yellow-900 border-0 shadow-sm hover:bg-yellow-300 transition-colors">
+                            <Trophy className="w-3 h-3 mr-1" />#{topRanking.rank} Best in {topRanking.metro_name}
+                          </Badge>
+                        </Link>
+                      )}
                     </div>
                     <h1 className="text-3xl md:text-4xl font-bold text-white leading-tight mb-2">{listing.name}</h1>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-white/80 text-sm">
@@ -862,6 +923,12 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                         {listing.address}, {listing.city}, {listing.state}
                       </span>
                       {ratingStars}
+                      {topRanking && (
+                        <Link href={`/badge/${listing.slug}`} className="flex items-center gap-1 text-yellow-300 hover:text-yellow-200 transition-colors font-medium">
+                          <Trophy className="w-3.5 h-3.5" />
+                          Claim Your Badge
+                        </Link>
+                      )}
                     </div>
                     <p className="mt-2.5 text-sm text-white/80 max-w-2xl leading-relaxed line-clamp-2">{heroDescription}</p>
                   </div>
@@ -1059,10 +1126,15 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
               {/* Customer Review Snippets — touchless evidence from Google Reviews */}
               {reviewSnippets.length > 0 && (
                 <div className="bg-white rounded-2xl border border-gray-200 p-6">
-                  <h2 className="text-lg font-bold text-[#0F2744] mb-1 flex items-center gap-2">
-                    <MessageSquareQuote className="w-5 h-5 text-[#22C55E]" />
-                    What Customers Say About the Touchless Wash
-                  </h2>
+                  <div className="flex items-center justify-between mb-1">
+                    <h2 className="text-lg font-bold text-[#0F2744] flex items-center gap-2">
+                      <MessageSquareQuote className="w-5 h-5 text-[#22C55E]" />
+                      What Customers Say About the Touchless Wash
+                    </h2>
+                    <span className="text-xs font-semibold text-[#22C55E] bg-green-50 border border-green-200 px-2.5 py-1 rounded-full whitespace-nowrap">
+                      {reviewSnippets.length} {reviewSnippets.length === 1 ? 'review' : 'reviews'}
+                    </span>
+                  </div>
                   <p className="text-xs text-gray-400 mb-4">
                     Real reviews from Google mentioning the touchless experience
                   </p>
