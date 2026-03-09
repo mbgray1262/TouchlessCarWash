@@ -184,6 +184,141 @@ REASON: [one brief sentence]`;
   }
 }
 
+// ---------------------------------------------------------------------------
+// Sentiment analysis
+// ---------------------------------------------------------------------------
+
+interface SentimentResult {
+  score: number;       // 1.0 – 5.0
+  positive: string[];  // e.g. ["clean facility", "fast service"]
+  negative: string[];  // e.g. ["poor drying", "expensive"]
+  summary: string;     // 1–2 sentence quality summary
+}
+
+/**
+ * Analyze customer review sentiment via Claude Haiku.
+ * Accepts a set of general (unfiltered) reviews and returns structured sentiment data.
+ */
+async function analyzeSentimentWithAI(
+  anthropicKey: string,
+  carWashName: string,
+  reviews: SerpApiReview[],
+): Promise<SentimentResult | null> {
+  if (!anthropicKey) return null;
+
+  const reviewTexts = reviews
+    .map((r, i) => {
+      const text = r.snippet || r.extracted_snippet?.original || '';
+      const rating = r.rating ? ` (${r.rating}/5 stars)` : '';
+      return text ? `Review ${i + 1}${rating}: "${text}"` : null;
+    })
+    .filter(Boolean)
+    .join('\n');
+
+  if (!reviewTexts) return null;
+
+  const prompt = `You are analyzing customer reviews for a car wash to determine overall quality and sentiment.
+
+Business name: "${carWashName}"
+
+Customer reviews:
+${reviewTexts}
+
+Analyze these reviews and provide:
+1. An overall quality score from 1.0 to 5.0 (matching Google's star scale)
+2. Up to 5 positive themes customers mention (short 2-4 word phrases)
+3. Up to 3 negative themes customers mention (short 2-4 word phrases), or empty if none
+4. A 1-2 sentence quality summary suitable for display on a website
+
+Respond ONLY with valid JSON in this exact format (no markdown, no extra text):
+{"score":4.2,"positive":["clean facility","fast service"],"negative":["poor drying"],"summary":"Customers praise the fast service and clean results. Some note the drying could be improved."}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 250,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!res.ok) {
+      console.error(`Sentiment AI error: ${res.status}`);
+      return null;
+    }
+
+    const data = await res.json();
+    const answer = (data.content?.[0]?.text || '').trim();
+
+    const parsed = JSON.parse(answer);
+    return {
+      score: Math.max(1, Math.min(5, Math.round(Number(parsed.score) * 100) / 100 || 3)),
+      positive: (Array.isArray(parsed.positive) ? parsed.positive : []).slice(0, 5),
+      negative: (Array.isArray(parsed.negative) ? parsed.negative : []).slice(0, 3),
+      summary: String(parsed.summary || '').slice(0, 300),
+    };
+  } catch (err) {
+    console.error('Sentiment analysis failed:', err);
+    return null;
+  }
+}
+
+/**
+ * Run the full sentiment analysis pipeline for a single listing:
+ * 1. Fetch general (unfiltered) reviews via SerpAPI
+ * 2. Analyze sentiment via Claude Haiku
+ * 3. Store results in the listings table
+ */
+async function runSentimentAnalysis(
+  supabase: ReturnType<typeof createClient>,
+  serpApiKey: string,
+  anthropicKey: string,
+  listing: { id: string; name: string; google_place_id: string },
+): Promise<{ success: boolean; apiCalls: number; sentiment?: SentimentResult; error?: string }> {
+  // Fetch general reviews (no keyword filter, sorted by newest)
+  const { reviews, error } = await searchReviews(
+    serpApiKey, listing.google_place_id, '', { sort_by: 'newestFirst' },
+  );
+
+  if (error) {
+    console.error(`[sentiment] SerpAPI error for ${listing.name}: ${error}`);
+    return { success: false, apiCalls: 1, error: `SerpAPI: ${error}` };
+  }
+
+  if (reviews.length === 0) {
+    console.log(`[sentiment] No reviews returned for ${listing.name} — marking as analyzed`);
+    await supabase.from('listings').update({
+      sentiment_analyzed_at: new Date().toISOString(),
+    }).eq('id', listing.id);
+    return { success: false, apiCalls: 1, error: 'No reviews available' };
+  }
+
+  console.log(`[sentiment] Got ${reviews.length} reviews for ${listing.name}, running AI analysis...`);
+
+  const sentiment = await analyzeSentimentWithAI(anthropicKey, listing.name, reviews);
+
+  if (!sentiment) {
+    console.error(`[sentiment] AI analysis returned null for ${listing.name}`);
+    return { success: false, apiCalls: 1, error: 'AI analysis failed' };
+  }
+
+  await supabase.from('listings').update({
+    sentiment_score: sentiment.score,
+    sentiment_themes: { positive: sentiment.positive, negative: sentiment.negative },
+    sentiment_summary: sentiment.summary,
+    sentiment_analyzed_at: new Date().toISOString(),
+  }).eq('id', listing.id);
+
+  return { success: true, apiCalls: 1, sentiment };
+}
+
 /**
  * Get total scanned counts via the review_mine_counts RPC.
  *
@@ -225,14 +360,16 @@ async function searchReviews(
   serpApiKey: string,
   placeId: string,
   query: string,
+  opts?: { sort_by?: string },
 ): Promise<{ reviews: SerpApiReview[]; error?: string }> {
   const params = new URLSearchParams({
     engine: 'google_maps_reviews',
     place_id: placeId,
-    q: query,
     api_key: serpApiKey,
     hl: 'en',
   });
+  if (query) params.set('q', query);
+  if (opts?.sort_by) params.set('sort_by', opts.sort_by);
 
   try {
     const res = await fetch(`https://serpapi.com/search.json?${params}`, {
@@ -1006,6 +1143,13 @@ Deno.serve(async (req: Request) => {
 
             await syncFiltersForListing(supabase, listing.id, true, [], filterMap);
 
+            // Run sentiment analysis for this newly confirmed touchless listing
+            const sentimentResult = await runSentimentAnalysis(
+              supabase, serpApiKey, anthropicKey,
+              { id: listing.id, name: listing.name, google_place_id: listing.google_place_id },
+            );
+            totalApiCalls += sentimentResult.apiCalls;
+
             results.push({
               id: listing.id,
               name: listing.name,
@@ -1016,9 +1160,11 @@ Deno.serve(async (req: Request) => {
               google_maps_url: listing.google_maps_url,
               status: 'touchless_found',
               reviewCount: snippetCount,
-              apiCalls,
+              apiCalls: apiCalls + sentimentResult.apiCalls,
               aiVerdict: `✅ ${aiResult.reasoning}`,
               reviews: reviewMapped,
+              sentimentScore: sentimentResult.sentiment?.score ?? null,
+              sentimentSummary: sentimentResult.sentiment?.summary ?? null,
             });
           } else {
             // AI rejected — keywords found but in negative context
@@ -1175,14 +1321,22 @@ Deno.serve(async (req: Request) => {
 
           await syncFiltersForListing(supabase, listing.id, true, [], filterMap);
 
+          // Run sentiment analysis for this newly confirmed touchless listing
+          const sentimentResult = await runSentimentAnalysis(
+            supabase, serpApiKey, anthropicKey,
+            { id: listing.id, name: listing.name, google_place_id: listing.google_place_id },
+          );
+
           return new Response(
             JSON.stringify({
               status: 'touchless_found',
               name: listing.name,
               review_count: snippetCount,
-              api_calls: apiCalls,
+              api_calls: apiCalls + sentimentResult.apiCalls,
               ai_verdict: `✅ ${aiResult.reasoning}`,
               reviews: reviewMapped,
+              sentiment_score: sentimentResult.sentiment?.score ?? null,
+              sentiment_summary: sentimentResult.sentiment?.summary ?? null,
             }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
           );
@@ -1629,6 +1783,15 @@ Deno.serve(async (req: Request) => {
           const amenities = (listingData.amenities as string[]) || [];
           await syncFiltersForListing(supabase, inserted.id, true, amenities, filterMap);
 
+          // Run sentiment analysis for newly imported touchless listing
+          const placeGooglePlaceId = (listingData.google_place_id as string) || place.id?.replace(/^places\//, '');
+          if (placeGooglePlaceId) {
+            await runSentimentAnalysis(
+              supabase, serpApiKey, anthropicKey,
+              { id: inserted.id, name: listingData.name as string, google_place_id: placeGooglePlaceId },
+            );
+          }
+
           touchlessImported++;
         }
 
@@ -1762,10 +1925,96 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // -----------------------------------------------------------------------
+    // ACTION: sentiment_backfill — analyze sentiment for touchless listings
+    // that were imported before sentiment analysis was added.
+    // -----------------------------------------------------------------------
+    if (action === 'sentiment_backfill') {
+      const batchSize = Math.min(body.batch_size || 10, 25);
+
+      // Get touchless listings that haven't been sentiment-analyzed yet
+      const { data: listings, error: fetchError } = await supabase
+        .from('listings')
+        .select('id, name, google_place_id')
+        .eq('is_touchless', true)
+        .is('sentiment_analyzed_at', null)
+        .not('google_place_id', 'is', null)
+        .order('review_count', { ascending: false }) // Prioritize high-review listings
+        .limit(batchSize);
+
+      if (fetchError) {
+        return new Response(
+          JSON.stringify({ error: 'Failed to fetch listings', details: fetchError.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      if (!listings?.length) {
+        return new Response(
+          JSON.stringify({
+            message: 'All touchless listings have been sentiment-analyzed',
+            analyzed: 0,
+            remaining: 0,
+            api_calls: 0,
+            results: [],
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      const results: Array<{
+        id: string;
+        name: string;
+        success: boolean;
+        score: number | null;
+        summary: string | null;
+        themes: { positive: string[]; negative: string[] } | null;
+        error?: string;
+      }> = [];
+      let analyzed = 0;
+      let totalApiCalls = 0;
+
+      for (const listing of listings) {
+        const result = await runSentimentAnalysis(supabase, serpApiKey, anthropicKey, listing);
+        totalApiCalls += result.apiCalls;
+        if (result.success) analyzed++;
+        results.push({
+          id: listing.id,
+          name: listing.name,
+          success: result.success,
+          score: result.sentiment?.score ?? null,
+          summary: result.sentiment?.summary ?? null,
+          themes: result.sentiment
+            ? { positive: result.sentiment.positive, negative: result.sentiment.negative }
+            : null,
+          error: result.error || (result.success ? undefined : 'Unknown error'),
+        });
+      }
+
+      // Count remaining
+      const { count } = await supabase
+        .from('listings')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_touchless', true)
+        .is('sentiment_analyzed_at', null)
+        .not('google_place_id', 'is', null);
+
+      return new Response(
+        JSON.stringify({
+          analyzed,
+          total_in_batch: listings.length,
+          remaining: count ?? 0,
+          api_calls: totalApiCalls,
+          results,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
     return new Response(
       JSON.stringify({
         error: 'Unknown action',
-        valid_actions: ['scan_batch', 'scan_single', 'progress', 'prospect', 'prospect_next', 'reject_touchless', 'reset'],
+        valid_actions: ['scan_batch', 'scan_single', 'progress', 'prospect', 'prospect_next', 'reject_touchless', 'reset', 'sentiment_backfill'],
       }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );

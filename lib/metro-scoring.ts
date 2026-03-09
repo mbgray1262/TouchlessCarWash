@@ -2,10 +2,11 @@
  * Scoring algorithm for ranking touchless car wash listings.
  *
  * Composite score (0–100) based on:
- *   - Google rating:        35%
+ *   - Google rating:        30%
  *   - Review volume:        25%  (log-scaled)
  *   - Touchless evidence:   15%  (has review snippets)
- *   - Data completeness:    15%  (photos, hours, phone, etc.)
+ *   - Sentiment quality:    10%  (AI-analyzed review sentiment)
+ *   - Data completeness:    10%  (photos, hours, phone, etc.)
  *   - Featured bonus:       10%
  */
 
@@ -25,9 +26,9 @@ export function scoreListing(
 ): number {
   let score = 0;
 
-  // ── Rating (35 points max) ──────────────────────────────────────────
+  // ── Rating (30 points max) ──────────────────────────────────────────
   const rating = listing.rating ?? 0;
-  score += (rating / 5) * 35;
+  score += (rating / 5) * 30;
 
   // ── Review volume (25 points max) ───────────────────────────────────
   // Log-scaled: a listing with ~500 reviews gets the full 25 points.
@@ -46,13 +47,20 @@ export function scoreListing(
   }
   // 0 points if no touchless review evidence
 
-  // ── Data completeness (15 points max) ───────────────────────────────
+  // ── Sentiment quality (10 points max) ───────────────────────────────
+  // AI-analyzed review sentiment score (1–5 scale). Listings without
+  // sentiment data get a neutral default (3.0/5 → 5/10 pts) so rankings
+  // aren't disrupted before backfill completes.
+  const sentimentScore = listing.sentiment_score ?? 3.0;
+  score += ((sentimentScore - 1) / 4) * 10;
+
+  // ── Data completeness (10 points max) ───────────────────────────────
   let completeness = 0;
-  if (listing.hero_image || listing.google_photo_url) completeness += 4; // Has photo
-  if (listing.hours && Object.keys(listing.hours).length > 0) completeness += 3; // Has hours
-  if (listing.phone) completeness += 3; // Has phone
-  if (listing.amenities && listing.amenities.length > 0) completeness += 3; // Has amenities
-  if (listing.website) completeness += 2; // Has website
+  if (listing.hero_image || listing.google_photo_url) completeness += 3; // Has photo
+  if (listing.hours && Object.keys(listing.hours).length > 0) completeness += 2; // Has hours
+  if (listing.phone) completeness += 2; // Has phone
+  if (listing.amenities && listing.amenities.length > 0) completeness += 2; // Has amenities
+  if (listing.website) completeness += 1; // Has website
   score += completeness;
 
   // ── Featured bonus (10 points max) ──────────────────────────────────

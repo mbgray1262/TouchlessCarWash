@@ -66,6 +66,10 @@ export type Listing = {
     review_highlights?: string[];
     unique_selling_points?: string[];
   } | null;
+  sentiment_score: number | null;
+  sentiment_themes: { positive: string[]; negative: string[] } | null;
+  sentiment_summary: string | null;
+  sentiment_analyzed_at: string | null;
 };
 
 // Columns needed by ListingCard — avoids fetching heavy fields like description,

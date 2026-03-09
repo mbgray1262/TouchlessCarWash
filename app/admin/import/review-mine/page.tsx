@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   ArrowLeft, Search, Loader2, CheckCircle2, XCircle,
   Star, ExternalLink, Play, BarChart3, MessageSquare,
-  RefreshCw, MapPin, ChevronDown, ChevronUp, Map, ThumbsDown,
+  RefreshCw, MapPin, ChevronDown, ChevronUp, Map, ThumbsDown, Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -235,6 +235,19 @@ export default function ReviewMinePage() {
     totalApiCalls: 0,
   });
 
+  // Sentiment backfill state
+  const [sentimentRunning, setSentimentRunning] = useState(false);
+  const [sentimentResults, setSentimentResults] = useState<Array<{
+    id: string; name: string; success: boolean; score: number | null; summary: string | null; error?: string;
+  }>>([]);
+  const [sentimentRemaining, setSentimentRemaining] = useState<number | null>(null);
+  const [sentimentError, setSentimentError] = useState<string | null>(null);
+  const [sentimentAutoRun, setSentimentAutoRun] = useState(false);
+  const [sentimentBatchSize, setSentimentBatchSize] = useState(10);
+  const [sentimentSessionStats, setSentimentSessionStats] = useState({
+    batchesRun: 0, totalAnalyzed: 0, totalApiCalls: 0,
+  });
+
   const fetchProgress = useCallback(async () => {
     try {
       setLoadingProgress(true);
@@ -250,6 +263,37 @@ export default function ReviewMinePage() {
   useEffect(() => {
     fetchProgress();
   }, [fetchProgress]);
+
+  const runSentimentBackfill = useCallback(async () => {
+    setSentimentRunning(true);
+    setSentimentError(null);
+    try {
+      const data = await callEdgeFunction('sentiment_backfill', {
+        batch_size: sentimentBatchSize,
+      });
+      setSentimentResults(data.results || []);
+      setSentimentRemaining(data.remaining);
+      setSentimentSessionStats((prev) => ({
+        batchesRun: prev.batchesRun + 1,
+        totalAnalyzed: prev.totalAnalyzed + data.analyzed,
+        totalApiCalls: prev.totalApiCalls + data.api_calls,
+      }));
+      if (data.remaining === 0) setSentimentAutoRun(false);
+    } catch (err) {
+      setSentimentError(err instanceof Error ? err.message : String(err));
+      setSentimentAutoRun(false);
+    } finally {
+      setSentimentRunning(false);
+    }
+  }, [sentimentBatchSize]);
+
+  // Auto-run sentiment backfill
+  useEffect(() => {
+    if (sentimentAutoRun && !sentimentRunning) {
+      const timer = setTimeout(runSentimentBackfill, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [sentimentAutoRun, sentimentRunning, runSentimentBackfill]);
 
   const runScanBatch = useCallback(async () => {
     setScanning(true);
@@ -791,6 +835,109 @@ export default function ReviewMinePage() {
               </Card>
             </div>
           </div>
+        )}
+
+        {/* Sentiment Analysis Backfill Panel — visible in scanner view */}
+        {activeView === 'scanner' && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-green-500" />
+                Sentiment Analysis
+              </CardTitle>
+              <p className="text-sm text-gray-500">
+                Analyze customer reviews to generate quality scores for touchless listings.
+                {sentimentRemaining !== null && (
+                  <> <strong>{sentimentRemaining}</strong> remaining.</>
+                )}
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Controls */}
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-gray-600">Batch:</label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={25}
+                    value={sentimentBatchSize}
+                    onChange={(e) => setSentimentBatchSize(Math.min(25, Math.max(1, parseInt(e.target.value) || 10)))}
+                    className="w-20 h-8"
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  onClick={runSentimentBackfill}
+                  disabled={sentimentRunning}
+                >
+                  {sentimentRunning ? (
+                    <><Loader2 className="w-4 h-4 animate-spin mr-1" /> Analyzing...</>
+                  ) : (
+                    <><Play className="w-4 h-4 mr-1" /> Run Batch</>
+                  )}
+                </Button>
+                <Button
+                  size="sm"
+                  variant={sentimentAutoRun ? 'destructive' : 'outline'}
+                  onClick={() => {
+                    if (!sentimentAutoRun) runSentimentBackfill();
+                    setSentimentAutoRun(!sentimentAutoRun);
+                  }}
+                >
+                  {sentimentAutoRun ? '⏹ Stop Auto-Run' : '▶▶ Auto-Run'}
+                </Button>
+              </div>
+
+              {/* Session stats */}
+              {sentimentSessionStats.batchesRun > 0 && (
+                <div className="flex gap-4 text-xs text-gray-500">
+                  <span>Batches: <strong>{sentimentSessionStats.batchesRun}</strong></span>
+                  <span>Analyzed: <strong>{sentimentSessionStats.totalAnalyzed}</strong></span>
+                  <span>API calls: <strong>{sentimentSessionStats.totalApiCalls}</strong></span>
+                </div>
+              )}
+
+              {sentimentError && (
+                <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">{sentimentError}</div>
+              )}
+
+              {/* Results */}
+              {sentimentResults.length > 0 && (
+                <div className="space-y-2">
+                  {sentimentResults.map((r) => (
+                    <div
+                      key={r.id}
+                      className={`flex items-center justify-between p-3 rounded-lg text-sm ${
+                        r.success ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">{r.name}</div>
+                        {r.success && r.summary && (
+                          <div className="text-xs text-gray-500 mt-0.5 line-clamp-1">{r.summary}</div>
+                        )}
+                        {!r.success && r.error && (
+                          <div className="text-xs text-red-500 mt-0.5">{r.error}</div>
+                        )}
+                      </div>
+                      {r.success && r.score !== null && (
+                        <Badge className="bg-green-100 text-green-800 border-green-300 ml-2 shrink-0">
+                          <Star className="w-3 h-3 fill-yellow-500 text-yellow-500 mr-1" />
+                          {r.score.toFixed(1)}
+                        </Badge>
+                      )}
+                      {!r.success && (
+                        <Badge variant="outline" className="text-gray-400 ml-2 shrink-0">
+                          Skipped
+                        </Badge>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         )}
 
         {/* ================================================================ */}
