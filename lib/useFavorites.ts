@@ -31,12 +31,18 @@ export function useFavorites() {
 
   const toggle = useCallback((listingId: string) => {
     setFavorites((prev) => {
-      const next = prev.includes(listingId)
+      const removing = prev.includes(listingId);
+      const next = removing
         ? prev.filter((id) => id !== listingId)
         : [...prev, listingId];
       writeFavorites(next);
-      // Dispatch storage event so other components react
       window.dispatchEvent(new Event('favorites-changed'));
+      // Fire analytics event (fire-and-forget)
+      fetch('/api/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listing_id: listingId, event_type: removing ? 'unfavorite' : 'favorite' }),
+      }).catch(() => {});
       return next;
     });
   }, []);

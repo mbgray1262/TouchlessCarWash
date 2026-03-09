@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, List, Building2, FileText, ArrowLeft, Upload, ShieldCheck, Link2, Database, Zap, Filter, Sparkles, PenLine, Eye, LogOut, LinkIcon, FlaskConical, Map } from 'lucide-react';
+import { LayoutDashboard, List, Building2, FileText, ArrowLeft, Upload, ShieldCheck, Link2, Database, Zap, Filter, Sparkles, PenLine, Eye, LogOut, LinkIcon, FlaskConical, Map, BarChart3 } from 'lucide-react';
 import { useAdminAuth } from './AdminAuthProvider';
 
 const navItems = [
@@ -22,6 +22,7 @@ const navItems = [
   { href: '/admin/filters', label: 'Filters', icon: Filter, exact: false },
   { href: '/admin/suggested-edits', label: 'Suggested Edits', icon: PenLine, exact: false },
   { href: '/admin/sitemap', label: 'Sitemap', icon: Map, exact: false },
+  { href: '/admin/stats', label: 'Stats', icon: BarChart3, exact: false },
 ];
 
 export function AdminNav() {
