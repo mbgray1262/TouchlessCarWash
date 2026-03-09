@@ -861,6 +861,12 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                           {listing.address}, {listing.city}, {listing.state}
                         </span>
                         {ratingStars}
+                        {topRanking && (
+                          <Link href={`/badge/${listing.slug}`} className="flex items-center gap-1 text-yellow-300 hover:text-yellow-200 transition-colors font-medium">
+                            <Trophy className="w-3.5 h-3.5" />
+                            Claim Your Badge
+                          </Link>
+                        )}
                       </div>
                       <p className="mt-2.5 text-sm text-white/80 max-w-2xl leading-relaxed line-clamp-2">{heroDescription}</p>
                     </div>
@@ -917,6 +923,12 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                         {listing.address}, {listing.city}, {listing.state}
                       </span>
                       {ratingStars}
+                      {topRanking && (
+                        <Link href={`/badge/${listing.slug}`} className="flex items-center gap-1 text-yellow-300 hover:text-yellow-200 transition-colors font-medium">
+                          <Trophy className="w-3.5 h-3.5" />
+                          Claim Your Badge
+                        </Link>
+                      )}
                     </div>
                     <p className="mt-2.5 text-sm text-white/80 max-w-2xl leading-relaxed line-clamp-2">{heroDescription}</p>
                   </div>
