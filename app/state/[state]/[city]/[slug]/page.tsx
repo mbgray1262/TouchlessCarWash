@@ -980,6 +980,65 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                 </div>
               )}
 
+              {/* Quality Highlights — AI-generated sentiment summary */}
+              {listing.sentiment_score != null && listing.sentiment_summary && (
+                <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                  <h2 className="text-lg font-bold text-[#0F2744] mb-1 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-[#22C55E]" />
+                    Quality Highlights
+                  </h2>
+                  <p className="text-xs text-gray-400 mb-3">
+                    Based on analysis of recent customer reviews
+                  </p>
+
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="text-3xl font-bold text-[#0F2744]">
+                      {listing.sentiment_score.toFixed(1)}
+                    </div>
+                    <div className="flex items-center gap-0.5">
+                      {Array.from({ length: 5 }, (_, i) => (
+                        <Star
+                          key={i}
+                          className={`w-4 h-4 ${
+                            i < Math.round(listing.sentiment_score!)
+                              ? 'text-yellow-400 fill-yellow-400'
+                              : 'text-gray-200'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-sm text-gray-500">Quality Score</span>
+                  </div>
+
+                  <p className="text-sm text-gray-700 leading-relaxed mb-4">
+                    {listing.sentiment_summary}
+                  </p>
+
+                  {listing.sentiment_themes && (
+                    <div className="space-y-2">
+                      {listing.sentiment_themes.positive?.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {listing.sentiment_themes.positive.map((theme) => (
+                            <span key={theme} className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                              {theme}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {listing.sentiment_themes.negative?.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {listing.sentiment_themes.negative.map((theme) => (
+                            <span key={theme} className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200">
+                              {theme}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Customer Review Snippets — touchless evidence from Google Reviews */}
               {reviewSnippets.length > 0 && (
                 <div className="bg-white rounded-2xl border border-gray-200 p-6">

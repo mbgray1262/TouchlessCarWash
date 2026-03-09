@@ -2,7 +2,7 @@ import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Star, MapPin, Phone, Award, CheckCircle, ChevronRight, Trophy, MessageSquareQuote } from 'lucide-react';
+import { Star, MapPin, Phone, Award, CheckCircle, ChevronRight, Trophy, MessageSquareQuote, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
 import { getStateSlug } from '@/lib/constants';
@@ -23,7 +23,7 @@ interface BestOfPageProps {
 
 // ── Columns we need for scoring + display ─────────────────────────────
 const BEST_OF_COLUMNS =
-  'id, name, slug, city, state, address, phone, website, rating, review_count, hero_image, google_photo_url, street_view_url, logo_photo, google_logo_url, amenities, touchless_wash_types, extracted_data, hours, is_touchless, is_featured, latitude, longitude';
+  'id, name, slug, city, state, address, phone, website, rating, review_count, hero_image, google_photo_url, street_view_url, logo_photo, google_logo_url, amenities, touchless_wash_types, extracted_data, hours, is_touchless, is_featured, latitude, longitude, sentiment_score, sentiment_themes, sentiment_summary';
 
 // ── Data fetching ─────────────────────────────────────────────────────
 
@@ -451,6 +451,14 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
                             </div>
                           )}
 
+                          {/* Sentiment summary */}
+                          {listing.sentiment_summary && (
+                            <p className="text-sm text-gray-500 italic mb-3 line-clamp-1 flex items-center gap-1">
+                              <Sparkles className="w-3 h-3 text-[#22C55E] flex-shrink-0" />
+                              {listing.sentiment_summary}
+                            </p>
+                          )}
+
                           {/* Review snippet */}
                           {snippet && (
                             <div className="mt-auto pt-3 border-t border-gray-100">
@@ -511,6 +519,13 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
                   <h3 className="font-semibold text-[#0F2744]">Touchless Confirmation</h3>
                 </div>
                 <p className="text-sm text-gray-600">Locations with customer reviews specifically mentioning touchless experience get a ranking boost.</p>
+              </div>
+              <div className="bg-white rounded-xl p-5 border border-gray-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="w-5 h-5 text-green-500" />
+                  <h3 className="font-semibold text-[#0F2744]">Customer Sentiment</h3>
+                </div>
+                <p className="text-sm text-gray-600">AI analysis of recent reviews identifies quality themes and generates a sentiment score that refines our rankings.</p>
               </div>
               <div className="bg-white rounded-xl p-5 border border-gray-200">
                 <div className="flex items-center gap-2 mb-2">
