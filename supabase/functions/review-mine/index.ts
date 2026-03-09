@@ -876,14 +876,16 @@ Deno.serve(async (req: Request) => {
     if (action === 'scan_batch') {
       const batchSize = Math.min(body.batch_size || 50, 100);
 
-      // Fetch unscanned non-touchless car wash listings
+      // Fetch unscanned car wash listings that haven't been scanned yet.
+      // Includes: is_touchless = false OR NULL (unclassified), all car wash categories,
+      // and uncategorized listings with "car wash" in the name.
       const { data: listings, error: fetchError } = await supabase
         .from('listings')
         .select('id, name, slug, google_place_id, google_maps_url, city, state, rating, review_count')
-        .eq('is_touchless', false)
         .is('review_mine_status', null)
+        .not('is_touchless', 'eq', true)
         .not('google_place_id', 'is', null)
-        .in('google_category', ['Car wash', 'car_wash'])
+        .or('google_category.in.("Car wash","car_wash","Self service car wash"),and(google_category.is.null,name.ilike.%car wash%),and(google_category.is.null,name.ilike.%carwash%)')
         .order('review_count', { ascending: false }) // Prioritize listings with more reviews
         .limit(batchSize);
 

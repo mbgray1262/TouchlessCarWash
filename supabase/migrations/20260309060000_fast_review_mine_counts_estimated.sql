@@ -2,7 +2,10 @@
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_listings_review_mine_status
   ON listings (review_mine_status);
 
--- Replace review_mine_counts with exact counts now that we have the index.
+-- Replace review_mine_counts with exact counts using a wider filter.
+-- Now includes: is_touchless = false OR NULL, all car wash categories
+-- (Car wash, car_wash, Self service car wash), and uncategorized listings
+-- with "car wash" in the name.
 -- SECURITY DEFINER bypasses RLS so the edge function can call this.
 CREATE OR REPLACE FUNCTION review_mine_counts()
 RETURNS JSON
@@ -25,13 +28,18 @@ BEGIN
 
   v_total_scanned := v_scanned_clean + v_touchless_found;
 
-  -- Count car washes eligible for scanning (not touchless, has place_id, is car wash category)
+  -- Count all car wash listings eligible for scanning:
+  -- Not yet scanned, not already marked touchless, has a Google Place ID,
+  -- and is a car wash by category OR by name (for uncategorized listings).
   SELECT count(*) INTO v_total_remaining
     FROM listings
-    WHERE is_touchless = false
-      AND review_mine_status IS NULL
+    WHERE review_mine_status IS NULL
+      AND (is_touchless = false OR is_touchless IS NULL)
       AND google_place_id IS NOT NULL
-      AND google_category IN ('Car wash', 'car_wash');
+      AND (
+        google_category IN ('Car wash', 'car_wash', 'Self service car wash')
+        OR (google_category IS NULL AND (lower(name) LIKE '%car wash%' OR lower(name) LIKE '%carwash%'))
+      );
 
   RETURN json_build_object(
     'scanned_clean', v_scanned_clean,
