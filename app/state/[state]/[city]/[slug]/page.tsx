@@ -108,7 +108,7 @@ async function getReviewSnippets(listingId: string): Promise<ReviewSnippet[]> {
     .eq('listing_id', listingId)
     .eq('is_touchless_evidence', true)
     .order('rating', { ascending: false, nullsFirst: false })
-    .limit(10);
+    .limit(50);
 
   return (data || []) as ReviewSnippet[];
 }
@@ -320,7 +320,7 @@ function buildLocalBusinessSchema(listing: Listing, canonicalUrl: string, hours:
 
   // Add individual reviews from snippets for rich results
   if (reviewSnippets.length > 0) {
-    schema.review = reviewSnippets.slice(0, 10).map((snippet) => ({
+    schema.review = reviewSnippets.map((snippet) => ({
       '@type': 'Review',
       author: { '@type': 'Person', name: snippet.reviewer_name || 'Anonymous' },
       reviewBody: snippet.review_text,
@@ -1094,8 +1094,8 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                   <p className="text-xs text-gray-400 mb-4">
                     Real reviews from Google mentioning the touchless experience
                   </p>
-                  <div className="space-y-3">
-                    {reviewSnippets.slice(0, 10).map((snippet) => (
+                  <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+                    {reviewSnippets.map((snippet) => (
                       <ReviewSnippetCard key={snippet.id} snippet={snippet} />
                     ))}
                   </div>
