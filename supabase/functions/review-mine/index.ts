@@ -194,33 +194,17 @@ REASON: [one brief sentence]`;
  * to return correct results both locally and from edge functions.
  */
 async function getTotalScannedCount(
-  supabaseUrl: string,
+  supabase: ReturnType<typeof createClient>,
 ): Promise<{ scannedClean: number; touchlessFound: number; totalScanned: number; totalRemaining: number }> {
   const zeros = { scannedClean: 0, touchlessFound: 0, totalScanned: 0, totalRemaining: 0 };
   try {
-    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const res = await fetch(`${supabaseUrl}/rest/v1/rpc/review_mine_counts`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': serviceKey,
-        'Authorization': `Bearer ${serviceKey}`,
-      },
-      body: '{}',
-    });
-
-    const responseText = await res.text();
-    console.log(`[counts] RPC status=${res.status} body=${responseText.slice(0, 500)}`);
-
-    if (!res.ok) {
-      console.error('[counts] RPC failed:', res.status, responseText);
+    const { data, error } = await supabase.rpc('review_mine_counts');
+    if (error) {
+      console.error('[counts] RPC error:', error.message);
       return zeros;
     }
 
-    const parsed = JSON.parse(responseText);
-    // Handle both object and array-wrapped responses from PostgREST
-    const counts = Array.isArray(parsed) ? parsed[0] : parsed;
-
+    const counts = data as Record<string, number> | null;
     return {
       scannedClean: counts?.scanned_clean ?? 0,
       touchlessFound: counts?.touchless_found ?? 0,
@@ -911,7 +895,7 @@ Deno.serve(async (req: Request) => {
       }
 
       if (!listings?.length) {
-        const counts = await getTotalScannedCount(supabaseUrl);
+        const counts = await getTotalScannedCount(supabase);
 
         return new Response(
           JSON.stringify({
@@ -1081,7 +1065,7 @@ Deno.serve(async (req: Request) => {
       }
 
       // Get total progress
-      const counts = await getTotalScannedCount(supabaseUrl);
+      const counts = await getTotalScannedCount(supabase);
 
       // Trigger full enrichment pipeline for newly reclassified listings
       // (crawl website → extract amenities/packages → generate AI description)
@@ -1241,7 +1225,7 @@ Deno.serve(async (req: Request) => {
     // -----------------------------------------------------------------------
     if (action === 'progress') {
       // Get scan progress counts
-      const counts = await getTotalScannedCount(supabaseUrl);
+      const counts = await getTotalScannedCount(supabase);
 
       // Get recently found listings for display (with google_maps_url for verification)
       const { data: recentFinds } = await supabase
