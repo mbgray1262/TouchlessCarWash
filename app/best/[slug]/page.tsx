@@ -23,7 +23,7 @@ interface BestOfPageProps {
 
 // ── Columns we need for scoring + display ─────────────────────────────
 const BEST_OF_COLUMNS =
-  'id, name, slug, city, state, address, phone, website, rating, review_count, hero_image, google_photo_url, street_view_url, logo_photo, google_logo_url, amenities, touchless_wash_types, extracted_data, hours, is_touchless, is_featured, latitude, longitude, sentiment_score, sentiment_themes, sentiment_summary';
+  'id, name, slug, city, state, address, phone, website, rating, review_count, hero_image, google_photo_url, street_view_url, logo_photo, google_logo_url, amenities, touchless_wash_types, extracted_data, hours, is_touchless, is_featured, latitude, longitude, touchless_sentiment';
 
 // ── Data fetching ─────────────────────────────────────────────────────
 
@@ -451,11 +451,13 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
                             </div>
                           )}
 
-                          {/* Sentiment summary */}
-                          {listing.sentiment_summary && (
-                            <p className="text-sm text-gray-500 italic mb-3 line-clamp-1 flex items-center gap-1">
-                              <Sparkles className="w-3 h-3 text-[#22C55E] flex-shrink-0" />
-                              {listing.sentiment_summary}
+                          {/* Touchless sentiment badge */}
+                          {listing.touchless_sentiment && listing.touchless_sentiment !== 'neutral' && (
+                            <p className={`text-xs font-medium mb-3 flex items-center gap-1 ${
+                              listing.touchless_sentiment === 'positive' ? 'text-green-600' : 'text-red-500'
+                            }`}>
+                              {listing.touchless_sentiment === 'positive' ? '👍' : '👎'}
+                              {listing.touchless_sentiment === 'positive' ? 'Positive touchless reviews' : 'Negative touchless reviews'}
                             </p>
                           )}
 
