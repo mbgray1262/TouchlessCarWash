@@ -25,12 +25,11 @@ export function BadgeClaimClient({
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [copied, setCopied] = useState(false);
 
-  const prodBadgeUrl = `https://touchlesscarwashfinder.com/api/badge/${listingSlug}?theme=${theme}`;
-  const previewBadgeUrl = `/api/badge/${listingSlug}?theme=${theme}`;
+  const badgeImgUrl = `https://touchlesscarwashfinder.com/api/badge/${listingSlug}?theme=${theme}`;
   const altText = `#${rank} Best Touchless Car Wash in ${metroName} (${year}) - Touchless Car Wash Finder`;
   const title = `${listingName} - #${rank} Best Touchless Car Wash in ${metroName} (${year})`;
 
-  const embedCode = `<a href="${listingUrl}" target="_blank" rel="noopener" title="${title}"><img src="${prodBadgeUrl}" alt="${altText}" width="320" height="96" style="border:0;max-width:100%;height:auto;" /></a>`;
+  const embedCode = `<a href="${listingUrl}" target="_blank" rel="noopener" title="${title}"><img src="${badgeImgUrl}" alt="${altText}" width="320" height="96" style="border:0;max-width:100%;height:auto;" /></a>`;
 
   const handleCopy = async () => {
     try {
@@ -82,7 +81,7 @@ export function BadgeClaimClient({
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={previewBadgeUrl}
+          src={badgeImgUrl}
           alt={altText}
           width={320}
           height={96}
