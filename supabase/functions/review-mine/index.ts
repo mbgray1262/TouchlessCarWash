@@ -198,13 +198,13 @@ async function getTotalScannedCount(
 ): Promise<{ scannedClean: number; touchlessFound: number; totalScanned: number; totalRemaining: number }> {
   const zeros = { scannedClean: 0, touchlessFound: 0, totalScanned: 0, totalRemaining: 0 };
   try {
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const res = await fetch(`${supabaseUrl}/rest/v1/rpc/review_mine_counts`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': anonKey,
-        'Authorization': `Bearer ${anonKey}`,
+        'apikey': serviceKey,
+        'Authorization': `Bearer ${serviceKey}`,
       },
       body: '{}',
     });
