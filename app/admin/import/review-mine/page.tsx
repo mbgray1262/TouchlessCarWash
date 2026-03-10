@@ -80,10 +80,10 @@ interface ProgressResponse {
   recent_finds: RecentFind[];
 }
 
-/** Fetch live count of all is_touchless=true listings (matches homepage counter) */
-async function fetchTotalTouchlessCount(): Promise<number> {
+/** Fetch count from Supabase with exact count header */
+async function fetchCount(query: string): Promise<number> {
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/listings?select=id&is_touchless=eq.true`,
+    `${SUPABASE_URL}/rest/v1/listings?select=id&${query}`,
     {
       headers: {
         apikey: SUPABASE_ANON_KEY,
@@ -99,6 +99,25 @@ async function fetchTotalTouchlessCount(): Promise<number> {
     if (match) return parseInt(match[1], 10);
   }
   return 0;
+}
+
+interface TouchlessBreakdown {
+  total: number;
+  nameMatch: number;
+  reviews: number;
+  website: number;
+}
+
+/** Fetch touchless breakdown by discovery source */
+async function fetchTouchlessBreakdown(): Promise<TouchlessBreakdown> {
+  const [total, nameMatch, nameMatchLikely, reviews] = await Promise.all([
+    fetchCount('is_touchless=eq.true'),
+    fetchCount('is_touchless=eq.true&classification_source=eq.name_match'),
+    fetchCount('is_touchless=eq.true&classification_source=eq.name_match_likely'),
+    fetchCount('is_touchless=eq.true&review_mine_status=eq.touchless_found'),
+  ]);
+  const nameCombined = nameMatch + nameMatchLikely;
+  return { total, nameMatch: nameCombined, reviews, website: total - nameCombined - reviews };
 }
 
 interface ProspectResult {
@@ -227,7 +246,7 @@ export default function ReviewMinePage() {
 
   // Progress state
   const [progress, setProgress] = useState<ProgressResponse | null>(null);
-  const [totalTouchless, setTotalTouchless] = useState<number>(0);
+  const [breakdown, setBreakdown] = useState<TouchlessBreakdown>({ total: 0, nameMatch: 0, reviews: 0, website: 0 });
   const [loadingProgress, setLoadingProgress] = useState(true);
 
   // Scan state
@@ -260,12 +279,12 @@ export default function ReviewMinePage() {
   const fetchProgress = useCallback(async () => {
     try {
       setLoadingProgress(true);
-      const [data, count] = await Promise.all([
+      const [data, bd] = await Promise.all([
         callEdgeFunction('progress'),
-        fetchTotalTouchlessCount(),
+        fetchTouchlessBreakdown(),
       ]);
       setProgress(data);
-      setTotalTouchless(count);
+      setBreakdown(bd);
     } catch (err) {
       console.error('Failed to fetch progress:', err);
     } finally {
@@ -440,17 +459,27 @@ export default function ReviewMinePage() {
           <CardContent>
             {progress ? (
               <>
-                {/* Total Touchless banner */}
-                <div className="rounded-lg p-3 mb-4 bg-emerald-600 text-white flex items-center justify-between">
-                  <div>
-                    <div className="text-3xl font-bold">
-                      {totalTouchless.toLocaleString()}
+                {/* Total Touchless banner with 3-way breakdown */}
+                <div className="rounded-lg p-4 mb-4 bg-emerald-600 text-white">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <div className="text-3xl font-bold">{breakdown.total.toLocaleString()}</div>
+                      <div className="text-sm text-emerald-100">Total Touchless Listings (matches homepage)</div>
                     </div>
-                    <div className="text-sm text-emerald-100">Total Touchless Listings (matches homepage)</div>
                   </div>
-                  <div className="text-right text-sm text-emerald-200">
-                    <div>{progress.total_touchless_found.toLocaleString()} confirmed via reviews</div>
-                    <div>{(totalTouchless - progress.total_touchless_found).toLocaleString()} confirmed via website</div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-emerald-700/50 rounded-lg p-2.5">
+                      <div className="text-lg font-bold">{breakdown.reviews.toLocaleString()}</div>
+                      <div className="text-xs text-emerald-200">Via Google Reviews</div>
+                    </div>
+                    <div className="bg-emerald-700/50 rounded-lg p-2.5">
+                      <div className="text-lg font-bold">{breakdown.website.toLocaleString()}</div>
+                      <div className="text-xs text-emerald-200">Via Website Crawl</div>
+                    </div>
+                    <div className="bg-emerald-700/50 rounded-lg p-2.5">
+                      <div className="text-lg font-bold">{breakdown.nameMatch.toLocaleString()}</div>
+                      <div className="text-xs text-emerald-200">Via Name Match</div>
+                    </div>
                   </div>
                 </div>
 
