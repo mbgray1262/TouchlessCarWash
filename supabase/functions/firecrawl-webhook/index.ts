@@ -55,7 +55,7 @@ async function classifyWithClaude(markdown: string, apiKey: string): Promise<{
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 500,
+      max_tokens: 1024,
       messages: [{
         role: 'user',
         content: `Analyze this car wash website content and return a JSON object.
@@ -68,7 +68,7 @@ Return ONLY a valid JSON object with these fields:
   "is_touchless": true/false/null,
   "touchless_evidence": "brief explanation",
   "amenities": ["list", "of", "amenities"],
-  "description": "1-2 sentence business description or null"
+  "description": "comprehensive 2-3 paragraph description based on the website content"
 }
 
 CLASSIFICATION RULES:
@@ -78,7 +78,15 @@ CLASSIFICATION RULES:
 - is_touchless = true if it offers BOTH automated touchless AND brush options (they have an automated touchless option)
 - is_touchless = null if there's no clear evidence either way
 - For amenities, look for: vacuum, air freshener, towels, tire shine, wax, ceramic, membership/unlimited club, detailing, pet wash, RV/truck wash, interior cleaning, underbody wash
-- Description should be a brief factual summary, not marketing copy`,
+
+DESCRIPTION RULES:
+- Write 2-3 paragraphs based on ACTUAL information from the website content above
+- Include specific details: wash packages/tiers, pricing if mentioned, membership plans, hours, unique features, technology used
+- Mention the location (city, state) and any specific services offered
+- Do NOT use generic filler phrases like "Visit for a scratch-free clean" or "protects your vehicle's finish"
+- Do NOT invent information not found in the website content
+- If the website has very little content, write 1 solid paragraph with what's available — never pad with generic text
+- Return null for description only if the website content is completely unrelated to a car wash`,
       }],
     }),
   });
