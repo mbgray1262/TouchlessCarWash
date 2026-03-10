@@ -3,6 +3,5 @@ Allow: /
 Disallow: /admin/
 Disallow: /api/
 Disallow: /search
-Disallow: /add-listing
 
 Sitemap: https://touchlesscarwashfinder.com/sitemap.xml

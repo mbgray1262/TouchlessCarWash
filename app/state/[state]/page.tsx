@@ -195,8 +195,9 @@ export default async function StatePage({ params, searchParams }: StatePageProps
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
   const page = Math.min(currentPage, totalPages);
 
+  const validStateCodes = new Set(US_STATES.map(s => s.code));
   const nearbyStates = statesWithListings
-    .filter(s => s !== stateCode)
+    .filter(s => s !== stateCode && validStateCodes.has(s))
     .map(s => ({ code: s, name: getStateName(s), slug: getStateSlug(s) }));
 
   const now = new Date();
