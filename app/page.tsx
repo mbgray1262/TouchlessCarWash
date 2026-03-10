@@ -165,6 +165,13 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen">
+      {/* Preload hero image so browser discovers it immediately — fixes LCP */}
+      <link
+        rel="preload"
+        as="image"
+        href="https://res.cloudinary.com/dret3qhyu/image/upload/f_auto,q_auto,w_1920/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png"
+        fetchPriority="high"
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}

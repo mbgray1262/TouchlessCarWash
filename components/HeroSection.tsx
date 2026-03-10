@@ -118,22 +118,40 @@ export default function HeroSection() {
   const placesService = useRef<google.maps.places.AutocompleteService | null>(null);
   const sessionToken = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
   const geocoder = useRef<google.maps.Geocoder | null>(null);
+  const mapsLoadRequested = useRef(false);
 
-  // ── Init Google Places ──────────────────────────────────────────────
-  useEffect(() => {
-    function initPlaces() {
-      if (typeof window !== 'undefined' && window.google?.maps?.places) {
-        if (!placesService.current) {
-          placesService.current = new google.maps.places.AutocompleteService();
-          sessionToken.current = new google.maps.places.AutocompleteSessionToken();
-          geocoder.current = new google.maps.Geocoder();
-        }
-        return true;
-      }
-      return false;
+  // ── Load Google Maps on demand (only when user interacts with search) ──
+  function loadGoogleMaps() {
+    if (mapsLoadRequested.current || typeof window === 'undefined') return;
+    if (window.google?.maps?.places) {
+      initPlaces();
+      return;
     }
+    const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (!key) return;
+    mapsLoadRequested.current = true;
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`;
+    script.async = true;
+    document.head.appendChild(script);
+  }
+
+  function initPlaces() {
+    if (typeof window !== 'undefined' && window.google?.maps?.places) {
+      if (!placesService.current) {
+        placesService.current = new google.maps.places.AutocompleteService();
+        sessionToken.current = new google.maps.places.AutocompleteSessionToken();
+        geocoder.current = new google.maps.Geocoder();
+      }
+      return true;
+    }
+    return false;
+  }
+
+  // ── Init Google Places (poll after script is requested) ──────────────
+  useEffect(() => {
     if (initPlaces()) return;
-    // Poll for API to load (it's loaded with strategy="lazyOnload")
+    // Poll for API to load (triggered by user interacting with search)
     const interval = setInterval(() => {
       if (initPlaces()) clearInterval(interval);
     }, 500);
@@ -369,14 +387,16 @@ export default function HeroSection() {
   return (
     <section
       id="search"
-      className="relative min-h-[70vh] md:min-h-[80vh] flex items-center"
-      style={{
-        backgroundImage: 'url(https://res.cloudinary.com/dret3qhyu/image/upload/f_auto,q_auto,w_1920/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-      }}
+      className="relative min-h-[70vh] md:min-h-[80vh] flex items-center overflow-hidden"
     >
+      {/* Real <img> replaces CSS background-image so browser can discover it immediately for LCP */}
+      <img
+        src="https://res.cloudinary.com/dret3qhyu/image/upload/f_auto,q_auto,w_1920/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png"
+        alt=""
+        fetchPriority="high"
+        decoding="async"
+        className="absolute inset-0 w-full h-full object-cover"
+      />
       <div
         className="absolute inset-0 bg-gradient-to-r from-[#0a1628]/95 via-[#0a1628]/75 via-40% to-transparent"
         aria-hidden="true"
@@ -409,6 +429,7 @@ export default function HeroSection() {
                   onChange={(e) => handleQueryChange(e.target.value)}
                   onKeyDown={handleKeyDown}
                   onFocus={() => {
+                    loadGoogleMaps();
                     if (results.metros.length > 0 || results.locations.length > 0 || results.listings.length > 0) setOpen(true);
                   }}
                   autoComplete="off"

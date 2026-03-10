@@ -52,9 +52,9 @@ export default function RootLayout({
           <>
             <Script
               src="https://www.googletagmanager.com/gtag/js?id=G-55HHXHEVFP"
-              strategy="afterInteractive"
+              strategy="lazyOnload"
             />
-            <Script id="google-analytics" strategy="afterInteractive">
+            <Script id="google-analytics" strategy="lazyOnload">
               {`
                 window.dataLayer = window.dataLayer || [];
                 function gtag(){dataLayer.push(arguments);}
@@ -64,12 +64,7 @@ export default function RootLayout({
             </Script>
           </>
         )}
-        {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
-          <Script
-            src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
-            strategy="lazyOnload"
-          />
-        )}
+        {/* Google Maps is loaded on-demand by HeroSection when user interacts with search */}
       </head>
       <body className={inter.className}>
         <PublicShell>
