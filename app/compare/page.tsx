@@ -6,7 +6,7 @@ import Image from 'next/image';
 import {
   ArrowLeft, Star, MapPin, Phone, Globe, Clock,
   Trash2, Droplet, ThumbsUp, ThumbsDown, Minus,
-  CreditCard, Building2,
+  CreditCard, Building2, ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -251,6 +251,27 @@ export default function ComparePage() {
                         <span className="text-xs text-green-600 font-medium">Most</span>
                       )}
                     </div>
+                    {l.review_count > 0 && (
+                      <div className="flex flex-col gap-1 mt-1.5">
+                        {l.google_place_id && (
+                          <a
+                            href={`https://search.google.com/local/reviews?placeid=${l.google_place_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
+                          >
+                            Google Reviews
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                        <Link
+                          href={`${getListingHref(l)}#reviews`}
+                          className="text-xs text-[#22C55E] hover:underline inline-flex items-center gap-1"
+                        >
+                          Our Reviews
+                        </Link>
+                      </div>
+                    )}
                   </td>
                 ))}
               </CompareRow>

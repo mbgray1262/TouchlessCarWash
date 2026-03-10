@@ -1132,7 +1132,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
 
               {/* Customer Review Snippets — touchless evidence from Google Reviews */}
               {reviewSnippets.length > 0 && (
-                <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                <div id="reviews" className="bg-white rounded-2xl border border-gray-200 p-6 scroll-mt-24">
                   <div className="flex items-center justify-between mb-1">
                     <h2 className="text-lg font-bold text-[#0F2744] flex items-center gap-2">
                       <MessageSquareQuote className="w-5 h-5 text-[#22C55E]" />
