@@ -1609,7 +1609,7 @@ Deno.serve(async (req: Request) => {
         normToIds.set(normalizeUrl(rawUrl), ids);
       }
 
-      type EnrichRow = { id: string; name: string; is_touchless: boolean | null; hero_image: string | null; logo_photo: string | null; google_logo_url: string | null; google_photo_url: string | null; street_view_url: string | null; website: string; amenities: string[] | null };
+      type EnrichRow = { id: string; name: string; is_touchless: boolean | null; hero_image: string | null; logo_photo: string | null; google_logo_url: string | null; google_photo_url: string | null; street_view_url: string | null; website: string; amenities: string[] | null; description: string | null };
       const listingById = new Map<string, EnrichRow>();
 
       const sourceURLs = items.map(i => i.metadata?.sourceURL ?? '').filter(Boolean);
@@ -1632,7 +1632,7 @@ Deno.serve(async (req: Request) => {
           .filter(Boolean) as EnrichRow[];
       };
 
-      type EnrichResult = { listings: EnrichRow[]; amenities: string[]; images: string[]; markdown: string; metadata: Record<string, unknown> };
+      type EnrichResult = { listings: EnrichRow[]; amenities: string[]; description: string | null; images: string[]; markdown: string; metadata: Record<string, unknown> };
       const processed: EnrichResult[] = [];
       for (const item of items) {
         const sourceURL = item.metadata?.sourceURL ?? '';
@@ -1645,16 +1645,18 @@ Deno.serve(async (req: Request) => {
         const images = item.images ?? [];
         if (statusCode >= 400 || !markdown || markdown.trim().length < 50) continue;
         let amenities: string[] = [];
+        let description: string | null = null;
         try {
           const classification = await classifyWithClaude(markdown, anthropicKey);
           amenities = classification.amenities ?? [];
+          description = classification.description ?? null;
         } catch { /* skip */ }
-        processed.push({ listings, amenities, images, markdown, metadata: item.metadata ?? {} });
+        processed.push({ listings, amenities, description, images, markdown, metadata: item.metadata ?? {} });
       }
 
       let totalProcessed = 0;
 
-      for (const { listings: rowListings, amenities, images, markdown: md, metadata: meta } of processed) {
+      for (const { listings: rowListings, amenities, description, images, markdown: md, metadata: meta } of processed) {
         const websiteImages = filterImages(images);
         totalProcessed += rowListings.length;
 
@@ -1670,6 +1672,11 @@ Deno.serve(async (req: Request) => {
               crawled_at: new Date().toISOString(),
               source: 'firecrawl-pipeline-enrich',
             };
+          }
+
+          // Save description if generated and listing doesn't already have one
+          if (description && !listing.description) {
+            updatePayload.description = description;
           }
 
           const knownLogoUrl = listing.google_logo_url ?? listing.logo_photo ?? null;
