@@ -549,7 +549,7 @@ Deno.serve(async (req: Request) => {
 
       // Build a normalized lookup: submittedUrlNorm -> listing IDs[]
       // This is the source of truth — keys are exactly what was submitted to Firecrawl
-      type ListingRow = { id: string; name: string; is_touchless: boolean | null; hero_image: string | null; logo_photo: string | null; google_logo_url: string | null; google_photo_url: string | null; street_view_url: string | null; website: string; amenities: string[] | null };
+      type ListingRow = { id: string; name: string; is_touchless: boolean | null; hero_image: string | null; logo_photo: string | null; google_logo_url: string | null; google_photo_url: string | null; street_view_url: string | null; website: string; amenities: string[] | null; description: string | null };
       const normToIds = new Map<string, string[]>();
       for (const [url, ids] of Object.entries(urlToIds)) {
         normToIds.set(normalizeUrl(url), ids);
@@ -570,7 +570,7 @@ Deno.serve(async (req: Request) => {
       if (pageIds.length > 0) {
         const uniquePageIds = [...new Set(pageIds)];
         const { data: rows, error: rowsErr } = await supabase.from('listings')
-          .select('id, name, is_touchless, hero_image, logo_photo, google_logo_url, google_photo_url, street_view_url, website, amenities')
+          .select('id, name, is_touchless, hero_image, logo_photo, google_logo_url, google_photo_url, street_view_url, website, amenities, description')
           .in('id', uniquePageIds);
         if (rowsErr) dbError = rowsErr.message;
         for (const l of (rows ?? [])) listingById.set(l.id, l);
@@ -586,7 +586,7 @@ Deno.serve(async (req: Request) => {
         ]);
         if (urlVariants.length > 0) {
           const { data: rows } = await supabase.from('listings')
-            .select('id, name, is_touchless, hero_image, logo_photo, google_logo_url, google_photo_url, street_view_url, website, amenities')
+            .select('id, name, is_touchless, hero_image, logo_photo, google_logo_url, google_photo_url, street_view_url, website, amenities, description')
             .in('website', urlVariants);
           for (const l of (rows ?? [])) listingById.set(l.id, l);
           for (const l of (rows ?? [])) {
@@ -618,6 +618,7 @@ Deno.serve(async (req: Request) => {
         is_touchless: boolean | null;
         touchless_evidence: string;
         amenities: string[];
+        description: string | null;
         images: string[];
         markdown: string;
         metadata: Record<string, unknown>;
@@ -641,6 +642,7 @@ Deno.serve(async (req: Request) => {
         let is_touchless: boolean | null = null;
         let touchless_evidence = '';
         let amenities: string[] = [];
+        let description: string | null = null;
 
         if (statusCode >= 400 || !markdown || markdown.trim().length < 50) {
           crawl_status = statusCode >= 400 ? 'fetch_failed' : 'no_content';
@@ -652,20 +654,21 @@ Deno.serve(async (req: Request) => {
             is_touchless = classification.is_touchless ?? null;
             touchless_evidence = classification.touchless_evidence ?? '';
             amenities = classification.amenities ?? [];
+            description = classification.description ?? null;
             crawl_status = 'classified';
           } catch {
             crawl_status = 'no_content';
           }
         }
 
-        return { listings, crawl_status, is_touchless, touchless_evidence, amenities, images, markdown, metadata: item.metadata ?? {} };
+        return { listings, crawl_status, is_touchless, touchless_evidence, amenities, description, images, markdown, metadata: item.metadata ?? {} };
       }));
 
       // Write all results to DB — apply each classification to ALL listings sharing that URL
       const processedItems = results.filter(Boolean) as ClassifiedResult[];
       let totalProcessed = 0;
 
-      await Promise.all(processedItems.map(async ({ listings, crawl_status, is_touchless, touchless_evidence, amenities, images, markdown: md, metadata: meta }) => {
+      await Promise.all(processedItems.map(async ({ listings, crawl_status, is_touchless, touchless_evidence, amenities, description, images, markdown: md, metadata: meta }) => {
         const filteredImages = filterImages(images);
         totalProcessed += listings.length;
 
@@ -689,6 +692,11 @@ Deno.serve(async (req: Request) => {
 
           if (listing.is_touchless === null && is_touchless !== null) {
             updatePayload.is_touchless = is_touchless;
+          }
+
+          // Save description if Claude generated one and listing doesn't already have one
+          if (description && !listing.description) {
+            updatePayload.description = description;
           }
 
           if (effectiveTouchless === true) {
@@ -1528,7 +1536,7 @@ Deno.serve(async (req: Request) => {
       const uniqueIds = [...new Set(allIds)];
       if (uniqueIds.length > 0) {
         const { data: matchedListings } = await supabase.from('listings')
-          .select('id, name, is_touchless, hero_image, logo_photo, google_logo_url, google_photo_url, street_view_url, website, amenities')
+          .select('id, name, is_touchless, hero_image, logo_photo, google_logo_url, google_photo_url, street_view_url, website, amenities, description')
           .in('id', uniqueIds);
         for (const l of (matchedListings ?? [])) listingById.set(l.id, l);
       }

@@ -216,6 +216,7 @@ Deno.serve(async (req: Request) => {
     let is_touchless: boolean | null = null;
     let touchless_evidence = '';
     let amenities: string[] = [];
+    let description: string | null = null;
 
     if (statusCode >= 400 || !markdown || markdown.trim().length < 50) {
       crawl_status = statusCode >= 400 ? 'fetch_failed' : 'no_content';
@@ -227,6 +228,7 @@ Deno.serve(async (req: Request) => {
         is_touchless = classification.is_touchless ?? null;
         touchless_evidence = classification.touchless_evidence ?? '';
         amenities = classification.amenities ?? [];
+        description = classification.description ?? null;
       } catch {
         crawl_status = 'classify_failed';
       }
@@ -248,6 +250,7 @@ Deno.serve(async (req: Request) => {
       }
       if (!listing.hero_image && filteredImages.length > 0) updatePayload.hero_image = filteredImages[0];
       if (amenities.length > 0) updatePayload.amenities = amenities;
+      if (description) updatePayload.description = description;
 
       await supabase.from('listings').update(updatePayload).eq('id', listing.id);
       await supabase.from('pipeline_runs').insert({
