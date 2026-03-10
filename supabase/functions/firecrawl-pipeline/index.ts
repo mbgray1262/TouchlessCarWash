@@ -893,6 +893,88 @@ Deno.serve(async (req: Request) => {
       }, { headers: corsHeaders });
     }
 
+    // --- BACKFILL DESCRIPTIONS ---
+    // Generates descriptions for touchless listings that have crawl_snapshot but no description.
+    // No re-crawling needed — reads stored markdown and calls Claude.
+    if (action === 'backfill_descriptions') {
+      if (!anthropicKey) return Response.json({ error: 'Anthropic API key not configured' }, { status: 500, headers: corsHeaders });
+
+      const pageSize: number = body.page_size ?? 10;
+      const offset: number = body.offset ?? 0;
+
+      // Fetch touchless listings with crawl_snapshot but no description
+      const { data: listings, error: listErr } = await supabase
+        .from('listings')
+        .select('id, name, crawl_snapshot')
+        .eq('is_touchless', true)
+        .is('description', null)
+        .not('crawl_snapshot', 'is', null)
+        .order('id')
+        .range(offset, offset + pageSize - 1);
+
+      if (listErr) return Response.json({ error: listErr.message }, { status: 500, headers: corsHeaders });
+
+      const rows = listings ?? [];
+      if (rows.length === 0) {
+        return Response.json({ done: true, processed: 0, message: 'No more listings to process' }, { headers: corsHeaders });
+      }
+
+      let processed = 0;
+      let failed = 0;
+
+      await Promise.all(rows.map(async (listing) => {
+        try {
+          const snapshot = listing.crawl_snapshot as { data?: { markdown?: string } } | null;
+          const markdown = snapshot?.data?.markdown ?? '';
+          if (markdown.trim().length < 50) { failed++; return; }
+
+          const classification = await classifyWithClaude(markdown, anthropicKey);
+          const desc = classification.description;
+          if (!desc) { failed++; return; }
+
+          await supabase.from('listings').update({ description: desc }).eq('id', listing.id);
+
+          // Also backfill amenities if they're currently empty
+          const amenities = classification.amenities ?? [];
+          if (amenities.length > 0) {
+            const { data: current } = await supabase.from('listings').select('amenities').eq('id', listing.id).single();
+            const existing = (current as { amenities: string[] | null } | null)?.amenities ?? [];
+            if (existing.length === 0) {
+              await supabase.from('listings').update({ amenities }).eq('id', listing.id);
+            }
+          }
+
+          processed++;
+        } catch {
+          failed++;
+        }
+      }));
+
+      const nextOffset = offset + pageSize;
+      const isDone = rows.length < pageSize;
+
+      // Self-chain if not done
+      if (!isDone) {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+        EdgeRuntime.waitUntil(
+          fetch(`${supabaseUrl}/functions/v1/firecrawl-pipeline`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anonKey}` },
+            body: JSON.stringify({ action: 'backfill_descriptions', offset: nextOffset, page_size: pageSize }),
+          }).catch(() => {})
+        );
+      }
+
+      return Response.json({
+        processed,
+        failed,
+        offset: nextOffset,
+        done: isDone,
+        page_size: rows.length,
+      }, { headers: corsHeaders });
+    }
+
     // --- RETRY CLASSIFY FAILURES WITH FIRECRAWL ---
     // Fetches ALL eligible listings and submits them in a single Firecrawl batch.
     // Firecrawl's batch/scrape endpoint has no documented URL limit.
