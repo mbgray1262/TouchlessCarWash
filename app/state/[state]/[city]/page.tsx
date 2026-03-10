@@ -1,16 +1,15 @@
-import { cache } from 'react';
+import { cache, Suspense } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { US_STATES, getStateName, slugify } from '@/lib/constants';
-import { ListingCard } from '@/components/ListingCard';
-import { Pagination, PAGE_SIZE } from '@/components/Pagination';
-import { SearchFilters } from '@/components/SearchFilters';
+import { CityListingsClient } from '@/components/CityListingsClient';
 import type { Metadata } from 'next';
 
-export const revalidate = 3600; // 1 hour — ISR for faster Googlebot response times
+// ISR — regenerate every hour. Now actually works because we removed searchParams!
+export const revalidate = 3600;
 
 interface Filter {
   id: number;
@@ -24,10 +23,6 @@ interface CityPageProps {
   params: {
     state: string;
     city: string;
-  };
-  searchParams: {
-    page?: string;
-    filters?: string;
   };
 }
 
@@ -75,42 +70,6 @@ const getFilters = cache(async (): Promise<Filter[]> => {
   return (data as Filter[]) ?? [];
 });
 
-/** Get listing IDs that match ALL of the given filter slugs */
-async function getFilteredListingIds(filterSlugs: string[], allFilters: Filter[]): Promise<Set<string> | null> {
-  if (filterSlugs.length === 0) return null;
-
-  const filterIds = filterSlugs
-    .map(slug => allFilters.find(f => f.slug === slug)?.id)
-    .filter((id): id is number => id != null);
-
-  if (filterIds.length === 0) return null;
-
-  const allRows: { listing_id: string }[] = [];
-  let offset = 0;
-  const BATCH = 1000;
-  while (true) {
-    const { data } = await supabase
-      .from('listing_filters')
-      .select('listing_id')
-      .in('filter_id', filterIds)
-      .range(offset, offset + BATCH - 1);
-    if (!data || data.length === 0) break;
-    allRows.push(...(data as { listing_id: string }[]));
-    if (data.length < BATCH) break;
-    offset += BATCH;
-  }
-
-  const idCounts: Record<string, number> = {};
-  for (const row of allRows) {
-    idCounts[row.listing_id] = (idCounts[row.listing_id] ?? 0) + 1;
-  }
-  return new Set(
-    Object.entries(idCounts)
-      .filter(([, count]) => count === filterIds.length)
-      .map(([id]) => id)
-  );
-}
-
 async function getCitiesInState(stateCode: string, excludeCitySlug: string): Promise<{ city: string; count: number; slug: string }[]> {
   const { data, error } = await supabase.rpc('cities_in_state_with_counts', { p_state: stateCode });
   if (error || !data) return [];
@@ -122,6 +81,27 @@ async function getCitiesInState(stateCode: string, excludeCitySlug: string): Pro
       slug: city.toLowerCase().replace(/\s+/g, '-'),
     }))
     .filter(c => c.slug !== excludeCitySlug);
+}
+
+/** Build filter→listingIds map for in-memory client-side filtering */
+async function getFilterMapForListings(listingIds: string[]): Promise<Record<number, string[]>> {
+  if (listingIds.length === 0) return {};
+  const CHUNK = 500;
+  const allRows: { filter_id: number; listing_id: string }[] = [];
+  for (let i = 0; i < listingIds.length; i += CHUNK) {
+    const chunk = listingIds.slice(i, i + CHUNK);
+    const { data } = await supabase
+      .from('listing_filters')
+      .select('filter_id, listing_id')
+      .in('listing_id', chunk);
+    if (data) allRows.push(...(data as { filter_id: number; listing_id: string }[]));
+  }
+  const map: Record<number, string[]> = {};
+  for (const row of allRows) {
+    if (!map[row.filter_id]) map[row.filter_id] = [];
+    map[row.filter_id].push(row.listing_id);
+  }
+  return map;
 }
 
 export async function generateMetadata({ params }: CityPageProps): Promise<Metadata> {
@@ -169,34 +149,20 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
   };
 }
 
-export default async function CityPage({ params, searchParams }: CityPageProps) {
+export default async function CityPage({ params }: CityPageProps) {
   const stateCode = getStateCode(params.state);
   if (!stateCode) notFound();
 
   const stateName = getStateName(stateCode!);
   const cityName = unslugCity(params.city);
-  const activeFilterSlugs = searchParams.filters
-    ? searchParams.filters.split(',').filter(Boolean)
-    : [];
 
+  // Fetch all base data in a single parallel stage — no waterfalls
   const [allListings, nearbyCities, cityDescription, allFilters] = await Promise.all([
     getCityListings(stateCode!, cityName),
     getCitiesInState(stateCode!, params.city),
     getCityDescription(stateCode!, cityName),
     getFilters(),
   ]);
-
-  // Apply filters client-side (city pages fetch all listings)
-  const qualifiedIds = await getFilteredListingIds(activeFilterSlugs, allFilters);
-  const hasActiveFilters = activeFilterSlugs.length > 0;
-  const listings = qualifiedIds !== null
-    ? allListings.filter(l => qualifiedIds.has(l.id))
-    : allListings;
-
-  const currentPage = Math.max(1, parseInt(searchParams.page ?? '1', 10) || 1);
-  const totalPages = Math.ceil(listings.length / PAGE_SIZE);
-  const page = Math.min(currentPage, Math.max(totalPages, 1));
-  const paginatedListings = listings.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   if (allListings.length === 0) {
     return (
@@ -220,6 +186,9 @@ export default async function CityPage({ params, searchParams }: CityPageProps) 
       </div>
     );
   }
+
+  // Build filter→listingIds map for client-side in-memory filtering
+  const filterMap = await getFilterMapForListings(allListings.map(l => l.id));
 
   // FAQ data always uses the full unfiltered listings
   const listingsWithRating = allListings.filter(l => l.rating != null && l.rating > 0);
@@ -452,45 +421,25 @@ export default async function CityPage({ params, searchParams }: CityPageProps) 
           </p>
         </div>
 
-        {allListings.length > 1 && (
-          <>
-            <h2 className="text-2xl font-bold text-foreground mb-4">
-              {hasActiveFilters
-                ? <>{listings.length} of {allListings.length} Location{allListings.length !== 1 ? 's' : ''}</>
-                : <>All Locations <span className="text-lg font-normal text-gray-400">({allListings.length})</span></>}
-              {totalPages > 1 && <span className="text-base font-normal text-gray-400 ml-2">· Page {page} of {totalPages}</span>}
-            </h2>
-            <SearchFilters
-              filters={allFilters}
-              activeFilterSlugs={activeFilterSlugs}
-              currentQuery=""
-              baseHref={`/state/${params.state}/${params.city}`}
-            />
-          </>
-        )}
-
-        {paginatedListings.length > 0 ? (
+        {/* Listings section — client component handles filter/pagination */}
+        <Suspense fallback={
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {paginatedListings.map((listing) => (
-              <ListingCard
-                key={listing.id}
-                listing={listing}
-                href={`/state/${params.state}/${params.city}/${listing.slug}`}
-              />
+            {Array.from({ length: Math.min(allListings.length, 12) }).map((_, i) => (
+              <div key={i} className="h-64 bg-gray-100 rounded-xl animate-pulse" />
             ))}
           </div>
-        ) : hasActiveFilters ? (
-          <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-200">
-            <p className="text-gray-500 text-lg mb-2">No listings match the selected filters in {cityName}.</p>
-            <p className="text-gray-400 text-sm">Try removing some filters to see more results.</p>
-          </div>
-        ) : null}
-
-        <Pagination
-          currentPage={page}
-          totalItems={listings.length}
-          baseHref={hasActiveFilters ? `/state/${params.state}/${params.city}?filters=${activeFilterSlugs.join(',')}` : `/state/${params.state}/${params.city}`}
-        />
+        }>
+          <CityListingsClient
+            stateSlug={params.state}
+            citySlug={params.city}
+            stateName={stateName}
+            cityName={cityName}
+            stateCode={stateCode!}
+            allListings={allListings}
+            allFilters={allFilters}
+            filterMap={filterMap}
+          />
+        </Suspense>
 
         <div className="mt-10 text-center">
           <Button asChild variant="outline">

@@ -1,32 +1,21 @@
-import { cache } from 'react';
+import { cache, Suspense } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { supabase } from '@/lib/supabase';
+import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants';
-import { ListingCard } from '@/components/ListingCard';
-import { Pagination, PAGE_SIZE } from '@/components/Pagination';
-import { SearchFilters } from '@/components/SearchFilters';
-import {
-  getFilters,
-  getStateListingIds,
-  filterByFilters,
-  getStateListingsPaginated,
-  getStateListingCountFiltered,
-} from '@/lib/listing-queries';
+import { StateListingsClient } from '@/components/StateListingsClient';
+import { getFilters, getStateListingsPaginated } from '@/lib/listing-queries';
 import { FEATURES } from '@/lib/features';
 import type { Metadata } from 'next';
 
-export const revalidate = 3600; // 1 hour — ISR for faster Googlebot response times
+// ISR — regenerate every hour. Now actually works because we removed searchParams!
+export const revalidate = 3600;
 
 interface StatePageProps {
   params: {
     state: string;
-  };
-  searchParams: {
-    page?: string;
-    filters?: string;
   };
 }
 
@@ -53,6 +42,11 @@ const STATE_NICKNAMES: Record<string, string> = {
 function getStateCode(stateSlug: string): string | null {
   const state = US_STATES.find(s => slugify(s.name) === stateSlug);
   return state ? state.code : null;
+}
+
+// Pre-render all 51 state pages at build time
+export function generateStaticParams() {
+  return US_STATES.map(s => ({ state: slugify(s.name) }));
 }
 
 // Cached so generateMetadata and component share the same result per request
@@ -126,7 +120,7 @@ export async function generateMetadata({ params }: StatePageProps): Promise<Meta
   };
 }
 
-export default async function StatePage({ params, searchParams }: StatePageProps) {
+export default async function StatePage({ params }: StatePageProps) {
   const stateCode = getStateCode(params.state);
 
   if (!stateCode) {
@@ -134,31 +128,29 @@ export default async function StatePage({ params, searchParams }: StatePageProps
   }
 
   const stateName = getStateName(stateCode);
-  const currentPage = Math.max(1, parseInt(searchParams.page ?? '1', 10) || 1);
-  const activeFilterSlugs = searchParams.filters
-    ? searchParams.filters.split(',').filter(Boolean)
-    : [];
 
-  // Fetch filters + base data in parallel
-  const [allFilters, totalCountUnfiltered, citiesData, statesWithListings, stateDescription, stateListingIds] = await Promise.all([
+  // Fetch ALL base data in a single parallel stage — no waterfalls
+  const [allFilters, totalCount, citiesData, statesWithListings, stateDescription, initialListings, featureCountsRaw] = await Promise.all([
     getFilters(),
     getStateListingCount(stateCode),
     getCitiesInState(stateCode),
     getStatesWithListings(),
     getStateDescription(stateCode),
-    activeFilterSlugs.length > 0 ? getStateListingIds(stateCode) : Promise.resolve([]),
+    // Fetch first page of listings (no filters) for the static render
+    getStateListingsPaginated(stateCode, 1, null),
+    // Fetch feature counts in a single parallel batch
+    Promise.all(
+      FEATURES.map(async (f) => {
+        const { data } = await supabase.rpc('feature_state_counts', { p_filter_slug: f.slug });
+        const match = (data as { state: string; count: number }[] | null)?.find((r) => r.state === stateCode);
+        return match ? { slug: f.slug, name: f.name, count: Number(match.count) } : null;
+      }),
+    ),
   ]);
 
-  // Scope filter matching to only this state's listings (avoids 414 Too Large)
-  const qualifiedIds = await filterByFilters(stateListingIds, activeFilterSlugs, allFilters);
-  const hasActiveFilters = activeFilterSlugs.length > 0;
+  const availableFeatures = featureCountsRaw.filter((f): f is { slug: string; name: string; count: number } => f !== null && f.count >= 3);
 
-  const [totalCount, paginatedListings] = await Promise.all([
-    hasActiveFilters ? getStateListingCountFiltered(stateCode, qualifiedIds) : Promise.resolve(totalCountUnfiltered),
-    getStateListingsPaginated(stateCode, currentPage, qualifiedIds),
-  ]);
-
-  if (totalCountUnfiltered === 0) {
+  if (totalCount === 0) {
     return (
       <div className="min-h-screen">
         <div className="bg-[#0F2744] py-10">
@@ -178,22 +170,9 @@ export default async function StatePage({ params, searchParams }: StatePageProps
     );
   }
 
-  // Fetch feature counts for cross-links (which features are available in this state?)
-  const featureCountsRaw = await Promise.all(
-    FEATURES.map(async (f) => {
-      const { data } = await supabase.rpc('feature_state_counts', { p_filter_slug: f.slug });
-      const match = (data as { state: string; count: number }[] | null)?.find((r) => r.state === stateCode);
-      return match ? { slug: f.slug, name: f.name, count: Number(match.count) } : null;
-    }),
-  );
-  const availableFeatures = featureCountsRaw.filter((f): f is { slug: string; name: string; count: number } => f !== null && f.count >= 3);
-
   // Sort cities alphabetically for display
   const cities = [...citiesData].sort((a, b) => a.city.localeCompare(b.city));
   const nickname = STATE_NICKNAMES[stateCode] ?? stateName;
-
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
-  const page = Math.min(currentPage, totalPages);
 
   const validStateCodes = new Set(US_STATES.map(s => s.code));
   const nearbyStates = statesWithListings
@@ -252,7 +231,7 @@ export default async function StatePage({ params, searchParams }: StatePageProps
             Touchless Car Washes in {stateName}
           </h1>
           <p className="text-white/70 text-lg">
-            {totalCountUnfiltered} verified touchless car wash{totalCountUnfiltered !== 1 ? 'es' : ''} across {cities.length} {cities.length === 1 ? 'city' : 'cities'}
+            {totalCount} verified touchless car wash{totalCount !== 1 ? 'es' : ''} across {cities.length} {cities.length === 1 ? 'city' : 'cities'}
           </p>
         </div>
       </div>
@@ -311,41 +290,28 @@ export default async function StatePage({ params, searchParams }: StatePageProps
             </div>
           )}
 
-          <div className="mt-12">
-            <h2 className="text-2xl font-bold text-foreground mb-6">
-              {hasActiveFilters
-                ? <>{totalCount} of {totalCountUnfiltered} Location{totalCountUnfiltered !== 1 ? 's' : ''}</>
-                : <>All Locations <span className="text-lg font-normal text-gray-400">({totalCountUnfiltered})</span></>}
-              {totalPages > 1 && <span className="text-base font-normal text-gray-400 ml-2">· Page {page} of {totalPages}</span>}
-            </h2>
-            <SearchFilters
-              filters={allFilters}
-              activeFilterSlugs={activeFilterSlugs}
-              currentQuery=""
-              baseHref={`/state/${params.state}`}
-            />
-            {paginatedListings.length > 0 ? (
+          {/* Listings section — client component handles filter/pagination */}
+          <Suspense fallback={
+            <div className="mt-12">
+              <h2 className="text-2xl font-bold text-foreground mb-6">
+                All Locations <span className="text-lg font-normal text-gray-400">({totalCount})</span>
+              </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {paginatedListings.map((listing) => (
-                  <ListingCard
-                    key={listing.id}
-                    listing={listing}
-                    href={`/state/${params.state}/${listing.city.toLowerCase().replace(/\s+/g, '-')}/${listing.slug}`}
-                  />
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <div key={i} className="h-64 bg-gray-100 rounded-xl animate-pulse" />
                 ))}
               </div>
-            ) : hasActiveFilters ? (
-              <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-200">
-                <p className="text-gray-500 text-lg mb-2">No listings match the selected filters in {stateName}.</p>
-                <p className="text-gray-400 text-sm">Try removing some filters to see more results.</p>
-              </div>
-            ) : null}
-            <Pagination
-              currentPage={page}
-              totalItems={totalCount}
-              baseHref={hasActiveFilters ? `/state/${params.state}?filters=${activeFilterSlugs.join(',')}` : `/state/${params.state}`}
+            </div>
+          }>
+            <StateListingsClient
+              stateCode={stateCode}
+              stateSlug={params.state}
+              stateName={stateName}
+              initialListings={initialListings}
+              totalCount={totalCount}
+              allFilters={allFilters}
             />
-          </div>
+          </Suspense>
 
           <section className="mt-14 pt-10 border-t border-gray-200">
             <h2 className="text-2xl font-bold text-foreground mb-6">
