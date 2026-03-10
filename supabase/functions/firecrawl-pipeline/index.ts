@@ -220,7 +220,10 @@ DESCRIPTION RULES:
     }),
   });
 
-  if (!res.ok) throw new Error(`Claude API error ${res.status}`);
+  if (!res.ok) {
+    const errBody = await res.text();
+    throw new Error(`Claude API error ${res.status}: ${errBody.slice(0, 200)}`);
+  }
   const data = await res.json() as { content: Array<{ text: string }> };
   const text = data.content?.[0]?.text ?? '';
   const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -908,79 +911,167 @@ Deno.serve(async (req: Request) => {
       if (!anthropicKey) return Response.json({ error: 'Anthropic API key not configured' }, { status: 500, headers: corsHeaders });
 
       const pageSize: number = body.page_size ?? 10;
-      const offset: number = body.offset ?? 0;
+      const mode: string = body.mode ?? 'snapshot'; // 'snapshot' or 'structured'
 
-      // Fetch touchless listings with crawl_snapshot but no description
-      const { data: listings, error: listErr } = await supabase
-        .from('listings')
-        .select('id, name, crawl_snapshot')
-        .eq('is_touchless', true)
-        .is('description', null)
-        .not('crawl_snapshot', 'is', null)
-        .order('id')
-        .range(offset, offset + pageSize - 1);
+      if (mode === 'snapshot') {
+        // Phase 1: Generate descriptions from crawl snapshots
+        const { data: listings, error: listErr } = await supabase
+          .from('listings')
+          .select('id, name, crawl_snapshot')
+          .eq('is_touchless', true)
+          .is('description', null)
+          .not('crawl_snapshot', 'is', null)
+          .order('id')
+          .range(0, pageSize - 1);
 
-      if (listErr) return Response.json({ error: listErr.message }, { status: 500, headers: corsHeaders });
+        if (listErr) return Response.json({ error: listErr.message }, { status: 500, headers: corsHeaders });
 
-      const rows = listings ?? [];
-      if (rows.length === 0) {
-        return Response.json({ done: true, processed: 0, message: 'No more listings to process' }, { headers: corsHeaders });
-      }
-
-      let processed = 0;
-      let failed = 0;
-
-      await Promise.all(rows.map(async (listing) => {
-        try {
-          const snapshot = listing.crawl_snapshot as { data?: { markdown?: string } } | null;
-          const markdown = snapshot?.data?.markdown ?? '';
-          if (markdown.trim().length < 50) { failed++; return; }
-
-          const classification = await classifyWithClaude(markdown, anthropicKey);
-          const desc = classification.description;
-          if (!desc) { failed++; return; }
-
-          await supabase.from('listings').update({ description: desc }).eq('id', listing.id);
-
-          // Also backfill amenities if they're currently empty
-          const amenities = classification.amenities ?? [];
-          if (amenities.length > 0) {
-            const { data: current } = await supabase.from('listings').select('amenities').eq('id', listing.id).single();
-            const existing = (current as { amenities: string[] | null } | null)?.amenities ?? [];
-            if (existing.length === 0) {
-              await supabase.from('listings').update({ amenities }).eq('id', listing.id);
-            }
-          }
-
-          processed++;
-        } catch {
-          failed++;
+        const rows = listings ?? [];
+        if (rows.length === 0) {
+          return Response.json({ done: true, processed: 0, message: 'No snapshot listings remaining' }, { headers: corsHeaders });
         }
-      }));
 
-      const nextOffset = offset + pageSize;
-      const isDone = rows.length < pageSize;
+        let processed = 0;
+        let skipped = 0;
+        const errors: string[] = [];
 
-      // Self-chain if not done
-      if (!isDone) {
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-        const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-        EdgeRuntime.waitUntil(
-          fetch(`${supabaseUrl}/functions/v1/firecrawl-pipeline`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anonKey}` },
-            body: JSON.stringify({ action: 'backfill_descriptions', offset: nextOffset, page_size: pageSize }),
-          }).catch(() => {})
-        );
+        for (const listing of rows) {
+          try {
+            const snapshot = listing.crawl_snapshot as { data?: { markdown?: string } } | null;
+            const markdown = snapshot?.data?.markdown ?? '';
+
+            // Check if snapshot has usable content (not login walls, thin content, etc.)
+            const isBadSnapshot = markdown.trim().length < 100 ||
+              markdown.includes('Log into Facebook') ||
+              markdown.includes('Create new account') ||
+              (markdown.includes('facebook.com') && markdown.includes('Email or mobile number')) ||
+              markdown.includes('Access Denied') ||
+              markdown.includes('403 Forbidden') ||
+              markdown.includes('404 Not Found') ||
+              markdown.includes('Page not found') ||
+              (markdown.includes('captcha') && markdown.trim().length < 500);
+
+            if (isBadSnapshot) {
+              // Clear useless snapshot so this listing won't appear in snapshot mode again
+              await supabase.from('listings').update({ crawl_snapshot: null }).eq('id', listing.id);
+              skipped++;
+              continue;
+            }
+
+            const classification = await classifyWithClaude(markdown, anthropicKey);
+            const desc = classification.description;
+            if (!desc) {
+              // Claude couldn't extract a description - clear bad snapshot
+              await supabase.from('listings').update({ crawl_snapshot: null }).eq('id', listing.id);
+              skipped++;
+              errors.push(`${listing.id}: null desc - cleared snapshot`);
+              continue;
+            }
+
+            const updatePayload: Record<string, unknown> = { description: desc };
+            const amenities = classification.amenities ?? [];
+            if (amenities.length > 0) {
+              const { data: current } = await supabase.from('listings').select('amenities').eq('id', listing.id).single();
+              const existing = (current as { amenities: string[] | null } | null)?.amenities ?? [];
+              if (existing.length === 0) {
+                updatePayload.amenities = amenities;
+              }
+            }
+
+            await supabase.from('listings').update(updatePayload).eq('id', listing.id);
+            processed++;
+          } catch (err) {
+            errors.push(`${listing.id}: ${(err as Error).message}`);
+          }
+        }
+
+        return Response.json({ processed, skipped, page_size: rows.length, errors: errors.slice(0, 10), mode: 'snapshot' }, { headers: corsHeaders });
       }
 
-      return Response.json({
-        processed,
-        failed,
-        offset: nextOffset,
-        done: isDone,
-        page_size: rows.length,
-      }, { headers: corsHeaders });
+      if (mode === 'structured') {
+        // Phase 2: Generate descriptions from structured data for listings with no usable snapshot
+        const { data: listings, error: listErr } = await supabase
+          .from('listings')
+          .select('id, name, city, state, amenities, rating, review_count, website, address, zip, hours, wash_packages, parent_chain')
+          .eq('is_touchless', true)
+          .is('description', null)
+          .order('id')
+          .range(0, pageSize - 1);
+
+        if (listErr) return Response.json({ error: listErr.message }, { status: 500, headers: corsHeaders });
+
+        const rows = listings ?? [];
+        if (rows.length === 0) {
+          return Response.json({ done: true, processed: 0, message: 'All descriptions complete!' }, { headers: corsHeaders });
+        }
+
+        let processed = 0;
+        const errors: string[] = [];
+
+        for (const listing of rows) {
+          try {
+            const amenitiesList = (listing.amenities ?? []).join(', ');
+            const rating = listing.rating ? `${listing.rating}/5 stars (${listing.review_count ?? 0} reviews)` : '';
+            const address = [listing.address, listing.city, listing.state, listing.zip].filter(Boolean).join(', ');
+            const chain = listing.parent_chain ?? '';
+            const packages = listing.wash_packages ? JSON.stringify(listing.wash_packages) : '';
+            const hours = listing.hours ? JSON.stringify(listing.hours) : '';
+
+            const prompt = `Generate a 2-3 paragraph description for this touchless car wash based on the structured data below. Write naturally, include specific details available, and don't invent facts not provided.
+
+BUSINESS DATA:
+Name: ${listing.name}
+${chain ? `Chain: ${chain}` : ''}
+Location: ${address}
+${rating ? `Rating: ${rating}` : ''}
+${amenitiesList ? `Amenities: ${amenitiesList}` : ''}
+${packages ? `Wash Packages: ${packages}` : ''}
+${hours ? `Hours: ${hours}` : ''}
+${listing.website ? `Website: ${listing.website}` : ''}
+
+RULES:
+- Focus on what makes this touchless car wash useful to visitors in ${listing.city}, ${listing.state}
+- Mention specific amenities, packages, and hours if available
+- Do NOT use generic filler like "protects your vehicle's finish" or "scratch-free clean"
+- If limited data is available, write 1 concise paragraph — never pad with generic text
+- Return ONLY the description text, no JSON or formatting`;
+
+            const res = await fetch('https://api.anthropic.com/v1/messages', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': anthropicKey,
+                'anthropic-version': '2023-06-01',
+              },
+              body: JSON.stringify({
+                model: 'claude-haiku-4-5',
+                max_tokens: 512,
+                messages: [{ role: 'user', content: prompt }],
+              }),
+            });
+
+            if (!res.ok) {
+              const errBody = await res.text();
+              throw new Error(`Claude API error ${res.status}: ${errBody.slice(0, 200)}`);
+            }
+            const data = await res.json() as { content: Array<{ text: string }> };
+            const desc = data.content?.[0]?.text?.trim() ?? '';
+
+            if (desc.length > 20) {
+              await supabase.from('listings').update({ description: desc }).eq('id', listing.id);
+              processed++;
+            } else {
+              errors.push(`${listing.id}: too short (${desc.length})`);
+            }
+          } catch (err) {
+            errors.push(`${listing.id}: ${(err as Error).message}`);
+          }
+        }
+
+        return Response.json({ processed, page_size: rows.length, errors: errors.slice(0, 10), mode: 'structured' }, { headers: corsHeaders });
+      }
+
+      return Response.json({ error: 'Invalid mode: use "snapshot" or "structured"' }, { status: 400, headers: corsHeaders });
     }
 
     // --- RETRY CLASSIFY FAILURES WITH FIRECRAWL ---
@@ -1522,7 +1613,7 @@ Deno.serve(async (req: Request) => {
 
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
       const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-      const ENRICH_PAGE_LIMIT = 5;
+      const ENRICH_PAGE_LIMIT = 3;
 
       const { data: batch } = await supabase
         .from('pipeline_batches')
@@ -1601,161 +1692,168 @@ Deno.serve(async (req: Request) => {
         return Response.json({ waiting: true, done: false }, { headers: corsHeaders });
       }
 
-      const { data: filterRows } = await supabase.from('filters').select('id, slug');
-      const filterMap: FilterMap = {};
-      for (const f of (filterRows ?? [])) filterMap[f.slug] = f.id;
-
-      const rawUrlToId = (batch as unknown as { url_to_id?: Record<string, unknown> })?.url_to_id ?? {};
-      const urlToIds: Record<string, string[]> = {};
-      for (const [rawUrl, val] of Object.entries(rawUrlToId)) {
-        if (Array.isArray(val)) urlToIds[rawUrl] = val as string[];
-        else if (typeof val === 'string' && val) urlToIds[rawUrl] = [val];
-      }
-
-      const normToIds = new Map<string, string[]>();
-      for (const [rawUrl, ids] of Object.entries(urlToIds)) {
-        normToIds.set(normalizeUrl(rawUrl), ids);
-      }
-
-      type EnrichRow = { id: string; name: string; is_touchless: boolean | null; hero_image: string | null; logo_photo: string | null; google_logo_url: string | null; google_photo_url: string | null; street_view_url: string | null; website: string; amenities: string[] | null; description: string | null };
-      const listingById = new Map<string, EnrichRow>();
-
-      const sourceURLs = items.map(i => i.metadata?.sourceURL ?? '').filter(Boolean);
-      const pageNorms = sourceURLs.map(u => normalizeUrl(u));
-      const allIds = pageNorms.flatMap(n => normToIds.get(n) ?? []);
-      const uniqueIds = [...new Set(allIds)];
-      if (uniqueIds.length > 0) {
-        const { data: matchedListings } = await supabase.from('listings')
-          .select('id, name, is_touchless, hero_image, logo_photo, google_logo_url, google_photo_url, street_view_url, website, amenities, description')
-          .in('id', uniqueIds);
-        for (const l of (matchedListings ?? [])) listingById.set(l.id, l);
-      }
-
-      const resolveEnrichListings = (sourceURL: string): EnrichRow[] => {
-        const ids = normToIds.get(normalizeUrl(sourceURL)) ?? [];
-        const seen = new Set<string>();
-        return ids
-          .filter(id => { if (seen.has(id)) return false; seen.add(id); return true; })
-          .map(id => listingById.get(id))
-          .filter(Boolean) as EnrichRow[];
-      };
-
-      type EnrichResult = { listings: EnrichRow[]; amenities: string[]; description: string | null; images: string[]; markdown: string; metadata: Record<string, unknown> };
-      const processed: EnrichResult[] = [];
-      for (const item of items) {
-        const sourceURL = item.metadata?.sourceURL ?? '';
-        const statusCode = item.metadata?.statusCode ?? 0;
-        const allListings = resolveEnrichListings(sourceURL);
-        if (allListings.length === 0) continue;
-        const listings = allListings.filter(l => l.is_touchless === true);
-        if (listings.length === 0) continue;
-        const markdown = item.markdown ?? '';
-        const images = item.images ?? [];
-        if (statusCode >= 400 || !markdown || markdown.trim().length < 50) continue;
-        let amenities: string[] = [];
-        let description: string | null = null;
-        try {
-          const classification = await classifyWithClaude(markdown, anthropicKey);
-          amenities = classification.amenities ?? [];
-          description = classification.description ?? null;
-        } catch { /* skip */ }
-        processed.push({ listings, amenities, description, images, markdown, metadata: item.metadata ?? {} });
-      }
-
-      let totalProcessed = 0;
-
-      for (const { listings: rowListings, amenities, description, images, markdown: md, metadata: meta } of processed) {
-        const websiteImages = filterImages(images);
-        totalProcessed += rowListings.length;
-
-        for (const listing of rowListings) {
-          const updatePayload: Record<string, unknown> = {
-            last_crawled_at: new Date().toISOString(),
-          };
-
-          // Save crawl snapshot for future rich data extraction
-          if (md && md.trim().length >= 50) {
-            updatePayload.crawl_snapshot = {
-              data: { markdown: md.slice(0, 100000), images: images.slice(0, 30), metadata: meta },
-              crawled_at: new Date().toISOString(),
-              source: 'firecrawl-pipeline-enrich',
-            };
-          }
-
-          // Save description if generated and listing doesn't already have one
-          if (description && !listing.description) {
-            updatePayload.description = description;
-          }
-
-          const knownLogoUrl = listing.google_logo_url ?? listing.logo_photo ?? null;
-          const extraPhotos = [
-            listing.google_photo_url,
-            listing.street_view_url,
-          ].filter(Boolean) as string[];
-
-          const allImages = [
-            ...(knownLogoUrl ? [knownLogoUrl] : []),
-            ...extraPhotos,
-            ...websiteImages,
-          ].filter((u, i, arr) => arr.indexOf(u) === i);
-
-          if (allImages.length > 0 && anthropicKey) {
-            try {
-              const sel = await selectPhotosWithClaude(
-                allImages,
-                knownLogoUrl,
-                listing.name ?? '',
-                listing.is_touchless ?? null,
-                anthropicKey,
-              );
-              if (!sel.no_good_photos) {
-                const galleryUrls = sel.gallery_indices
-                  .filter(i => i >= 0 && i < allImages.length)
-                  .map(i => allImages[i]);
-                if (galleryUrls.length > 0) updatePayload.website_photos = galleryUrls;
-                if (sel.hero_index >= 0 && sel.hero_index < allImages.length) {
-                  updatePayload.hero_image = allImages[sel.hero_index];
-                }
-                if (sel.logo_index >= 0 && sel.logo_index < allImages.length && !listing.logo_photo) {
-                  updatePayload.logo_photo = allImages[sel.logo_index];
-                }
-              } else if (websiteImages.length > 0) {
-                updatePayload.website_photos = websiteImages;
-                if (!listing.hero_image) updatePayload.hero_image = websiteImages[0];
-              }
-            } catch {
-              if (websiteImages.length > 0) {
-                updatePayload.website_photos = websiteImages;
-                if (!listing.hero_image) updatePayload.hero_image = websiteImages[0];
-              }
-            }
-          } else if (websiteImages.length > 0) {
-            updatePayload.website_photos = websiteImages;
-            if (!listing.hero_image) updatePayload.hero_image = websiteImages[0];
-          }
-
-          if (amenities.length > 0) {
-            const existing = listing.amenities ?? [];
-            const merged = [...existing, ...amenities.filter(a => !existing.includes(a))];
-            if (merged.length > existing.length) {
-              updatePayload.amenities = merged;
-            }
-          }
-
-          await Promise.all([
-            supabase.from('listings').update(updatePayload).eq('id', listing.id),
-            syncFilters(supabase, listing.id, true, amenities, filterMap),
-          ]);
-        }
-      }
-
+      // Determine pagination state BEFORE heavy processing
       const fcCompleted = pollData.completed ?? 0;
-      const newClassified = (batch.classified_count ?? 0) + totalProcessed;
       const hasNextPage = !!pollData.next;
-      const isDone = !hasNextPage && items.length > 0;
+
+      // Heavy processing: wrap in try-catch so self-chaining always fires
+      let totalProcessed = 0;
+      try {
+        const { data: filterRows } = await supabase.from('filters').select('id, slug');
+        const filterMap: FilterMap = {};
+        for (const f of (filterRows ?? [])) filterMap[f.slug] = f.id;
+
+        const rawUrlToId = (batch as unknown as { url_to_id?: Record<string, unknown> })?.url_to_id ?? {};
+        const urlToIds: Record<string, string[]> = {};
+        for (const [rawUrl, val] of Object.entries(rawUrlToId)) {
+          if (Array.isArray(val)) urlToIds[rawUrl] = val as string[];
+          else if (typeof val === 'string' && val) urlToIds[rawUrl] = [val];
+        }
+
+        const normToIds = new Map<string, string[]>();
+        for (const [rawUrl, ids] of Object.entries(urlToIds)) {
+          normToIds.set(normalizeUrl(rawUrl), ids);
+        }
+
+        type EnrichRow = { id: string; name: string; is_touchless: boolean | null; hero_image: string | null; logo_photo: string | null; google_logo_url: string | null; google_photo_url: string | null; street_view_url: string | null; website: string; amenities: string[] | null; description: string | null };
+        const listingById = new Map<string, EnrichRow>();
+
+        const sourceURLs = items.map(i => i.metadata?.sourceURL ?? '').filter(Boolean);
+        const pageNorms = sourceURLs.map(u => normalizeUrl(u));
+        const allIds = pageNorms.flatMap(n => normToIds.get(n) ?? []);
+        const uniqueIds = [...new Set(allIds)];
+        if (uniqueIds.length > 0) {
+          const { data: matchedListings } = await supabase.from('listings')
+            .select('id, name, is_touchless, hero_image, logo_photo, google_logo_url, google_photo_url, street_view_url, website, amenities, description')
+            .in('id', uniqueIds);
+          for (const l of (matchedListings ?? [])) listingById.set(l.id, l);
+        }
+
+        const resolveEnrichListings = (sourceURL: string): EnrichRow[] => {
+          const ids = normToIds.get(normalizeUrl(sourceURL)) ?? [];
+          const seen = new Set<string>();
+          return ids
+            .filter(id => { if (seen.has(id)) return false; seen.add(id); return true; })
+            .map(id => listingById.get(id))
+            .filter(Boolean) as EnrichRow[];
+        };
+
+        type EnrichResult = { listings: EnrichRow[]; amenities: string[]; description: string | null; images: string[]; markdown: string; metadata: Record<string, unknown> };
+        const processed: EnrichResult[] = [];
+        for (const item of items) {
+          const sourceURL = item.metadata?.sourceURL ?? '';
+          const statusCode = item.metadata?.statusCode ?? 0;
+          const allListings = resolveEnrichListings(sourceURL);
+          if (allListings.length === 0) continue;
+          const listings = allListings.filter(l => l.is_touchless === true);
+          if (listings.length === 0) continue;
+          const markdown = item.markdown ?? '';
+          const images = item.images ?? [];
+          if (statusCode >= 400 || !markdown || markdown.trim().length < 50) continue;
+          let amenities: string[] = [];
+          let description: string | null = null;
+          try {
+            const classification = await classifyWithClaude(markdown, anthropicKey);
+            amenities = classification.amenities ?? [];
+            description = classification.description ?? null;
+          } catch { /* skip */ }
+          processed.push({ listings, amenities, description, images, markdown, metadata: item.metadata ?? {} });
+        }
+
+        for (const { listings: rowListings, amenities, description, images, markdown: md, metadata: meta } of processed) {
+          const websiteImages = filterImages(images);
+          totalProcessed += rowListings.length;
+
+          for (const listing of rowListings) {
+            const updatePayload: Record<string, unknown> = {
+              last_crawled_at: new Date().toISOString(),
+            };
+
+            // Save crawl snapshot for future rich data extraction
+            if (md && md.trim().length >= 50) {
+              updatePayload.crawl_snapshot = {
+                data: { markdown: md.slice(0, 100000), images: images.slice(0, 30), metadata: meta },
+                crawled_at: new Date().toISOString(),
+                source: 'firecrawl-pipeline-enrich',
+              };
+            }
+
+            // Save description if generated and listing doesn't already have one
+            if (description && !listing.description) {
+              updatePayload.description = description;
+            }
+
+            const knownLogoUrl = listing.google_logo_url ?? listing.logo_photo ?? null;
+            const extraPhotos = [
+              listing.google_photo_url,
+              listing.street_view_url,
+            ].filter(Boolean) as string[];
+
+            const allImages = [
+              ...(knownLogoUrl ? [knownLogoUrl] : []),
+              ...extraPhotos,
+              ...websiteImages,
+            ].filter((u, i, arr) => arr.indexOf(u) === i);
+
+            if (allImages.length > 0 && anthropicKey) {
+              try {
+                const sel = await selectPhotosWithClaude(
+                  allImages,
+                  knownLogoUrl,
+                  listing.name ?? '',
+                  listing.is_touchless ?? null,
+                  anthropicKey,
+                );
+                if (!sel.no_good_photos) {
+                  const galleryUrls = sel.gallery_indices
+                    .filter(i => i >= 0 && i < allImages.length)
+                    .map(i => allImages[i]);
+                  if (galleryUrls.length > 0) updatePayload.website_photos = galleryUrls;
+                  if (sel.hero_index >= 0 && sel.hero_index < allImages.length) {
+                    updatePayload.hero_image = allImages[sel.hero_index];
+                  }
+                  if (sel.logo_index >= 0 && sel.logo_index < allImages.length && !listing.logo_photo) {
+                    updatePayload.logo_photo = allImages[sel.logo_index];
+                  }
+                } else if (websiteImages.length > 0) {
+                  updatePayload.website_photos = websiteImages;
+                  if (!listing.hero_image) updatePayload.hero_image = websiteImages[0];
+                }
+              } catch {
+                if (websiteImages.length > 0) {
+                  updatePayload.website_photos = websiteImages;
+                  if (!listing.hero_image) updatePayload.hero_image = websiteImages[0];
+                }
+              }
+            } else if (websiteImages.length > 0) {
+              updatePayload.website_photos = websiteImages;
+              if (!listing.hero_image) updatePayload.hero_image = websiteImages[0];
+            }
+
+            if (amenities.length > 0) {
+              const existing = listing.amenities ?? [];
+              const merged = [...existing, ...amenities.filter(a => !existing.includes(a))];
+              if (merged.length > existing.length) {
+                updatePayload.amenities = merged;
+              }
+            }
+
+            await Promise.all([
+              supabase.from('listings').update(updatePayload).eq('id', listing.id),
+              syncFilters(supabase, listing.id, true, amenities, filterMap),
+            ]);
+          }
+        }
+      } catch (processingErr) {
+        console.error('enrich_auto_poll processing error:', processingErr);
+      }
+
+      // Always update batch status and self-chain, even if processing errored
+      const newClassified = (batch.classified_count ?? 0) + totalProcessed;
+      const isDone = !hasNextPage && items.length > 0 && batchStatus === 'completed';
 
       await supabase.from('pipeline_batches').update({
-        status: isDone && batchStatus === 'completed' ? 'completed' : 'running',
+        status: isDone ? 'completed' : 'running',
         completed_count: fcCompleted,
         classified_count: newClassified,
         classify_status: isDone ? 'completed' : 'running',
