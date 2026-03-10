@@ -1,18 +1,30 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
   ArrowLeft, Star, MapPin, Phone, Globe, Clock,
   Trash2, Droplet, ThumbsUp, ThumbsDown, Minus,
-  CreditCard, Building2, ExternalLink,
+  CreditCard, Building2, ExternalLink, MessageSquareText, Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from '@/components/ui/dialog';
 import { useCompare } from '@/lib/useCompare';
 import { type Listing } from '@/lib/supabase';
 import { getStateSlug } from '@/lib/constants';
+
+type ReviewSnippet = {
+  id: string;
+  reviewer_name: string | null;
+  rating: number | null;
+  review_text: string;
+  review_date: string | null;
+  touchless_keywords: string[] | null;
+};
 
 function getListingHref(l: Listing) {
   return `/state/${getStateSlug(l.state)}/${l.city.toLowerCase().replace(/\s+/g, '-')}/${l.slug}`;
@@ -95,10 +107,119 @@ function SentimentBadge({ sentiment }: { sentiment: string | null }) {
   }
 }
 
+function highlightKeywords(text: string, keywords: string[] | null) {
+  if (!keywords || keywords.length === 0) return text;
+  const pattern = new RegExp(`(${keywords.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
+  const parts = text.split(pattern);
+  return parts.map((part, i) =>
+    pattern.test(part)
+      ? <mark key={i} className="bg-green-100 text-green-800 rounded px-0.5">{part}</mark>
+      : part
+  );
+}
+
+function StarRating({ rating }: { rating: number | null }) {
+  if (!rating) return null;
+  return (
+    <span className="inline-flex items-center gap-0.5">
+      {Array.from({ length: 5 }, (_, i) => (
+        <Star
+          key={i}
+          className={`w-3 h-3 ${i < rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'}`}
+        />
+      ))}
+    </span>
+  );
+}
+
+function ReviewSnippetsDialog({
+  listing,
+  open,
+  onOpenChange,
+}: {
+  listing: Listing | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const [snippets, setSnippets] = useState<ReviewSnippet[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open || !listing) return;
+    setLoading(true);
+    fetch(`/api/review-snippets?listing_id=${listing.id}`)
+      .then((r) => r.json())
+      .then((data) => setSnippets(data))
+      .catch(() => setSnippets([]))
+      .finally(() => setLoading(false));
+  }, [open, listing]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-[#0F2744]">
+            <MessageSquareText className="w-5 h-5 text-[#22C55E]" />
+            Touchless Reviews
+          </DialogTitle>
+          <DialogDescription>
+            {listing?.name} — reviews mentioning touchless, brushless, or touch-free features
+          </DialogDescription>
+        </DialogHeader>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-8 text-gray-400">
+            <Loader2 className="w-5 h-5 animate-spin mr-2" />
+            Loading reviews…
+          </div>
+        ) : snippets.length === 0 ? (
+          <p className="text-sm text-gray-500 py-6 text-center">
+            No touchless-specific reviews found for this location.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {snippets.map((s) => (
+              <div key={s.id} className="border border-gray-100 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-sm font-medium text-gray-700">
+                    {s.reviewer_name ?? 'Anonymous'}
+                  </span>
+                  <StarRating rating={s.rating} />
+                </div>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  {highlightKeywords(s.review_text, s.touchless_keywords)}
+                </p>
+                {s.review_date && (
+                  <span className="text-xs text-gray-400 mt-1.5 block">{s.review_date}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function ComparePage() {
   const { compareIds, toggle, clear } = useCompare();
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reviewDialogListing, setReviewDialogListing] = useState<Listing | null>(null);
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+
+  const openReviewDialog = useCallback((l: Listing) => {
+    setReviewDialogListing(l);
+    setReviewDialogOpen(true);
+  }, []);
+
+  const openGoogleReviews = useCallback((placeId: string) => {
+    window.open(
+      `https://search.google.com/local/reviews?placeid=${placeId}`,
+      'google-reviews',
+      'width=600,height=700,scrollbars=yes,resizable=yes'
+    );
+  }, []);
 
   useEffect(() => {
     if (compareIds.length === 0) {
@@ -254,22 +375,21 @@ export default function ComparePage() {
                     {l.review_count > 0 && (
                       <div className="flex flex-col gap-1 mt-1.5">
                         {l.google_place_id && (
-                          <a
-                            href={`https://search.google.com/local/reviews?placeid=${l.google_place_id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
+                          <button
+                            onClick={() => openGoogleReviews(l.google_place_id!)}
+                            className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 text-left"
                           >
                             Google Reviews
                             <ExternalLink className="w-3 h-3" />
-                          </a>
+                          </button>
                         )}
-                        <Link
-                          href={`${getListingHref(l)}#reviews`}
-                          className="text-xs text-[#22C55E] hover:underline inline-flex items-center gap-1"
+                        <button
+                          onClick={() => openReviewDialog(l)}
+                          className="text-xs text-[#22C55E] hover:underline inline-flex items-center gap-1 text-left"
                         >
-                          Our Reviews
-                        </Link>
+                          Touchless-only Reviews
+                          <MessageSquareText className="w-3 h-3" />
+                        </button>
                       </div>
                     )}
                   </td>
@@ -408,6 +528,12 @@ export default function ComparePage() {
           </Button>
         </div>
       </div>
+
+      <ReviewSnippetsDialog
+        listing={reviewDialogListing}
+        open={reviewDialogOpen}
+        onOpenChange={setReviewDialogOpen}
+      />
     </div>
   );
 }
