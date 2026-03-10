@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useCallback } from 'react';
-import { AdminNav } from '@/components/AdminNav';
 import { Search, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { US_STATES } from '@/lib/constants';
 import { FilterSource } from './types';
@@ -84,7 +83,6 @@ export default function HeroReviewPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AdminNav />
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="flex items-start justify-between mb-6">

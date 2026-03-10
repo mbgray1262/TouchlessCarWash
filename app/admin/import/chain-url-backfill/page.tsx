@@ -5,7 +5,6 @@ import { Link2, Loader2, CheckCircle2, AlertCircle, Play, Square, RefreshCw, Che
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { AdminNav } from '@/components/AdminNav';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -143,7 +142,6 @@ export default function ChainUrlBackfillPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AdminNav />
       <div className="container mx-auto px-4 max-w-4xl py-8">
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-1">

@@ -16,7 +16,13 @@ package = "@netlify/plugin-nextjs"
   to = "/blog/benefits-of-touchless-car-washes"
   status = 301
 
+# Deleted duplicate blog posts → redirect to surviving articles
 [[redirects]]
-  from = "/blog/how-often-should-you-wash-your-car"
-  to = "/blog/touchless-vs-automatic-car-wash"
+  from = "/blog/touchless-vs-automatic-car-wash"
+  to = "/blog/touchless-vs-brush-car-wash"
+  status = 301
+
+[[redirects]]
+  from = "/blog/why-touchless-car-washes-are-better"
+  to = "/blog/benefits-of-touchless-car-washes"
   status = 301

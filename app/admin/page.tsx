@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { List, Building2, FileText, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { AdminNav } from '@/components/AdminNav';
 
 async function getStats() {
   const [listingsRes, vendorsRes, blogRes] = await Promise.all([
@@ -49,7 +48,6 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AdminNav />
 
       <div className="container mx-auto px-4 max-w-7xl py-10">
         <div className="mb-8">

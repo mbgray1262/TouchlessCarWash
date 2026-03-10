@@ -7,7 +7,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { AdminNav } from '@/components/AdminNav';
 import { AdminAuthGate } from '@/components/AdminAuthGate';
 
 interface SitemapEntry {
@@ -123,7 +122,6 @@ function SitemapContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AdminNav />
       <div className="container mx-auto px-4 max-w-7xl py-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

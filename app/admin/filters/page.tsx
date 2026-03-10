@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { Sparkles, Clock, Wind, RefreshCw, Hand, Truck, IdCard, Car, ChevronRight, RefreshCcw, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { AdminNav } from '@/components/AdminNav';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -106,7 +105,6 @@ export default function FiltersPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AdminNav />
 
       <div className="container mx-auto px-4 max-w-7xl py-10">
         <div className="flex items-center gap-2 mb-1">

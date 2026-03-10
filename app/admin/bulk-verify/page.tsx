@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { AdminNav } from '@/components/AdminNav';
 import { PipelineStatusBar } from './PipelineStatusBar';
 import { PipelineStepper } from './PipelineStepper';
 import { ReviewPanel } from './ReviewPanel';
@@ -79,7 +78,6 @@ export default function BulkVerifyPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AdminNav />
 
       <div className="container mx-auto px-4 max-w-5xl py-8 space-y-6">
         <div>

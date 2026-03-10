@@ -9,7 +9,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { AdminNav } from '@/components/AdminNav';
 import { parseSpreadsheetFile } from '../enrich/parseSpreadsheet';
 
 type ImportStatus = 'idle' | 'parsing' | 'processing' | 'done' | 'error';
@@ -169,7 +168,6 @@ export default function BulkImportPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AdminNav />
 
       <div className="container mx-auto px-4 max-w-3xl py-10">
         <div className="flex items-center gap-2 mb-1">

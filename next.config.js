@@ -25,6 +25,17 @@ const nextConfig = {
         destination: '/state/:state/:city/:slug',
         permanent: true,
       },
+      // Deleted duplicate blog posts → redirect to surviving articles
+      {
+        source: '/blog/touchless-vs-automatic-car-wash',
+        destination: '/blog/touchless-vs-brush-car-wash',
+        permanent: true,
+      },
+      {
+        source: '/blog/why-touchless-car-washes-are-better',
+        destination: '/blog/benefits-of-touchless-car-washes',
+        permanent: true,
+      },
     ];
   },
   images: {

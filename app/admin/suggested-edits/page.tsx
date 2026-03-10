@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import { AdminNav } from '@/components/AdminNav';
 import SuggestedEditsClient from './SuggestedEditsClient';
 
 const supabaseAdmin = createClient(
@@ -34,7 +33,6 @@ export default async function SuggestedEditsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AdminNav />
       <div className="container mx-auto px-4 max-w-5xl py-8">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-[#0F2744]">Suggested Edits</h1>
