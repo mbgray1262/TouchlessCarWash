@@ -165,11 +165,12 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen">
-      {/* Preload hero image so browser discovers it immediately — fixes LCP */}
+      {/* Preload hero image with responsive AVIF — matches <picture> srcset in HeroSection */}
       <link
         rel="preload"
         as="image"
-        href="https://res.cloudinary.com/dret3qhyu/image/upload/f_auto,q_auto,w_1920/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png"
+        imageSrcSet="https://res.cloudinary.com/dret3qhyu/image/upload/f_avif,q_auto:low,w_640/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png 640w, https://res.cloudinary.com/dret3qhyu/image/upload/f_avif,q_auto:low,w_1024/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png 1024w, https://res.cloudinary.com/dret3qhyu/image/upload/f_avif,q_auto:low,w_1600/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png 1600w"
+        imageSizes="100vw"
         fetchPriority="high"
       />
       <script

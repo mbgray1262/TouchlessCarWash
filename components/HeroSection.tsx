@@ -148,15 +148,16 @@ export default function HeroSection() {
     return false;
   }
 
-  // ── Init Google Places (poll after script is requested) ──────────────
+  // ── Init Google Places (poll only after script load is requested) ────
   useEffect(() => {
     if (initPlaces()) return;
-    // Poll for API to load (triggered by user interacting with search)
+    // Only poll if we've actually requested the Maps script
+    if (!mapsLoadRequested.current) return;
     const interval = setInterval(() => {
       if (initPlaces()) clearInterval(interval);
-    }, 500);
+    }, 200);
     return () => clearInterval(interval);
-  }, []);
+  });
 
   // ── Geolocation for placeholder ─────────────────────────────────────
   useEffect(() => {
@@ -389,14 +390,26 @@ export default function HeroSection() {
       id="search"
       className="relative min-h-[70vh] md:min-h-[80vh] flex items-center overflow-hidden"
     >
-      {/* Real <img> replaces CSS background-image so browser can discover it immediately for LCP */}
-      <img
-        src="https://res.cloudinary.com/dret3qhyu/image/upload/f_auto,q_auto,w_1920/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png"
-        alt=""
-        fetchPriority="high"
-        decoding="async"
-        className="absolute inset-0 w-full h-full object-cover"
-      />
+      {/* <picture> with AVIF/WebP responsive srcset — serves 19-70 KB instead of 180 KB */}
+      <picture>
+        <source
+          type="image/avif"
+          srcSet="https://res.cloudinary.com/dret3qhyu/image/upload/f_avif,q_auto:low,w_640/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png 640w, https://res.cloudinary.com/dret3qhyu/image/upload/f_avif,q_auto:low,w_1024/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png 1024w, https://res.cloudinary.com/dret3qhyu/image/upload/f_avif,q_auto:low,w_1600/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png 1600w"
+          sizes="100vw"
+        />
+        <source
+          type="image/webp"
+          srcSet="https://res.cloudinary.com/dret3qhyu/image/upload/f_webp,q_auto:low,w_640/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png 640w, https://res.cloudinary.com/dret3qhyu/image/upload/f_webp,q_auto:low,w_1024/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png 1024w, https://res.cloudinary.com/dret3qhyu/image/upload/f_webp,q_auto:low,w_1600/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png 1600w"
+          sizes="100vw"
+        />
+        <img
+          src="https://res.cloudinary.com/dret3qhyu/image/upload/f_auto,q_auto:low,w_1600/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png"
+          alt=""
+          fetchPriority="high"
+          decoding="async"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      </picture>
       <div
         className="absolute inset-0 bg-gradient-to-r from-[#0a1628]/95 via-[#0a1628]/75 via-40% to-transparent"
         aria-hidden="true"
