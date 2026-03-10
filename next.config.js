@@ -6,6 +6,7 @@ const nextConfig = {
   experimental: {
     serverActions: true,
     serverActionsBodySizeLimit: '50mb',
+    browsersListForSwc: true,
   },
   async redirects() {
     return [

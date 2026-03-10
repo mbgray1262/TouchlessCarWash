@@ -12,7 +12,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       {!isAdmin && <Header />}
-      {children}
+      <main>{children}</main>
       {!isAdmin && <Footer />}
       {!isAdmin && <CompareBar />}
     </>

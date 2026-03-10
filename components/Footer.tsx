@@ -103,39 +103,39 @@ export function Footer() {
           {/* About + Quick Links */}
           <div>
             <h3 className="font-semibold text-white mb-4">Quick Links</h3>
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-0 text-sm">
               <li>
-                <Link href="/" className="text-white/70 hover:text-[#22C55E] transition-colors">
+                <Link href="/" className="text-white/70 hover:text-[#22C55E] transition-colors py-1.5 inline-block">
                   Home
                 </Link>
               </li>
               <li>
-                <Link href="/search" className="text-white/70 hover:text-[#22C55E] transition-colors">
+                <Link href="/search" className="text-white/70 hover:text-[#22C55E] transition-colors py-1.5 inline-block">
                   Find a Wash
                 </Link>
               </li>
               <li>
-                <Link href="/best" className="text-white/70 hover:text-[#22C55E] transition-colors">
+                <Link href="/best" className="text-white/70 hover:text-[#22C55E] transition-colors py-1.5 inline-block">
                   Best Of
                 </Link>
               </li>
               <li>
-                <Link href="/features" className="text-white/70 hover:text-[#22C55E] transition-colors">
+                <Link href="/features" className="text-white/70 hover:text-[#22C55E] transition-colors py-1.5 inline-block">
                   Features
                 </Link>
               </li>
               <li>
-                <Link href="/blog" className="text-white/70 hover:text-[#22C55E] transition-colors">
+                <Link href="/blog" className="text-white/70 hover:text-[#22C55E] transition-colors py-1.5 inline-block">
                   Blog
                 </Link>
               </li>
               <li>
-                <Link href="/about" className="text-white/70 hover:text-[#22C55E] transition-colors">
+                <Link href="/about" className="text-white/70 hover:text-[#22C55E] transition-colors py-1.5 inline-block">
                   About Us
                 </Link>
               </li>
               <li>
-                <Link href="/add-listing" className="text-white/70 hover:text-[#22C55E] transition-colors">
+                <Link href="/add-listing" className="text-white/70 hover:text-[#22C55E] transition-colors py-1.5 inline-block">
                   Add Your Business
                 </Link>
               </li>
@@ -145,12 +145,12 @@ export function Footer() {
           {/* Browse by State — all 50 + DC */}
           <div>
             <h3 className="font-semibold text-white mb-4">Browse by State</h3>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-0 text-xs">
               {ALL_STATES.map((s) => (
                 <Link
                   key={s.slug}
                   href={`/state/${s.slug}`}
-                  className="text-white/60 hover:text-[#22C55E] transition-colors truncate"
+                  className="text-white/60 hover:text-[#22C55E] transition-colors truncate py-1.5 inline-block"
                 >
                   {s.name}
                 </Link>
@@ -161,12 +161,12 @@ export function Footer() {
           {/* Top Cities */}
           <div>
             <h3 className="font-semibold text-white mb-4">Top Cities</h3>
-            <div className="grid grid-cols-1 gap-y-1 text-xs max-h-[400px] overflow-y-auto">
+            <div className="grid grid-cols-1 gap-y-0 text-xs max-h-[400px] overflow-y-auto">
               {TOP_CITIES.map((c) => (
                 <Link
                   key={`${c.stateSlug}-${c.citySlug}`}
                   href={`/state/${c.stateSlug}/${c.citySlug}`}
-                  className="text-white/60 hover:text-[#22C55E] transition-colors truncate"
+                  className="text-white/60 hover:text-[#22C55E] transition-colors truncate py-1.5 inline-block"
                 >
                   {c.name}, {c.stateCode}
                 </Link>
@@ -193,13 +193,13 @@ export function Footer() {
           </Link>
 
           <div className="flex gap-6 text-sm">
-            <Link href="/privacy-policy" className="text-white/70 hover:text-[#22C55E] transition-colors">
+            <Link href="/privacy-policy" className="text-white/70 hover:text-[#22C55E] transition-colors py-1.5 inline-block">
               Privacy Policy
             </Link>
-            <Link href="/terms-of-service" className="text-white/70 hover:text-[#22C55E] transition-colors">
+            <Link href="/terms-of-service" className="text-white/70 hover:text-[#22C55E] transition-colors py-1.5 inline-block">
               Terms of Service
             </Link>
-            <Link href="mailto:hello@touchlesscarwashfinder.com" className="text-white/70 hover:text-[#22C55E] transition-colors">
+            <Link href="mailto:hello@touchlesscarwashfinder.com" className="text-white/70 hover:text-[#22C55E] transition-colors py-1.5 inline-block">
               Contact
             </Link>
           </div>
