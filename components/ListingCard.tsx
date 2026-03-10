@@ -3,10 +3,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Star, MapPin, Phone, CheckCircle, Navigation } from 'lucide-react';
+import { Star, MapPin, Phone, CheckCircle, Navigation, ShieldCheck, Heart, GitCompareArrows } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { type Listing } from '@/lib/supabase';
 import { getStateSlug } from '@/lib/constants';
+import { useFavorites } from '@/lib/useFavorites';
+import { useCompare } from '@/lib/useCompare';
 import LogoImage from '@/components/LogoImage';
 import HeroImageFallback from '@/components/HeroImageFallback';
 import { OpenStatusBadge } from '@/components/OpenStatusBadge';
@@ -59,6 +61,10 @@ export function ListingCard({ listing, href, showVerifiedBadge = false, distance
   const cardImage = listing.hero_image ?? listing.google_photo_url ?? null;
   const cardLogo = listing.logo_photo ?? listing.google_logo_url ?? null;
   const [imgError, setImgError] = useState(false);
+  const { isFavorite, toggle } = useFavorites();
+  const saved = isFavorite(listing.id);
+  const { isComparing, toggle: toggleCompare, isFull } = useCompare();
+  const comparing = isComparing(listing.id);
 
   return (
     <Link href={linkHref} className="group block h-full">
@@ -83,6 +89,23 @@ export function ListingCard({ listing, href, showVerifiedBadge = false, distance
                 className="w-full h-full object-contain"
               />
             )}
+            <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!isFull || comparing) toggleCompare(listing.id); }}
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${comparing ? 'bg-blue-500 hover:bg-blue-600' : 'bg-black/40 hover:bg-black/60'} ${!comparing && isFull ? 'opacity-50 cursor-not-allowed' : ''}`}
+                aria-label={comparing ? 'Remove from comparison' : 'Add to comparison'}
+                title={comparing ? 'Remove from comparison' : isFull ? 'Compare limit reached (3)' : 'Compare'}
+              >
+                <GitCompareArrows className={`w-4 h-4 ${comparing ? 'text-white' : 'text-white'}`} />
+              </button>
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggle(listing.id); }}
+                className="w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center transition-colors"
+                aria-label={saved ? 'Remove from favorites' : 'Save to favorites'}
+              >
+                <Heart className={`w-4 h-4 transition-colors ${saved ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+              </button>
+            </div>
             <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between">
               {showVerifiedBadge ? (
                 <Badge className="bg-[#22C55E] text-white border-0 text-xs">
@@ -106,6 +129,23 @@ export function ListingCard({ listing, href, showVerifiedBadge = false, distance
           <div className="relative h-48 shrink-0">
             <HeroImageFallback variant="card" className="h-48" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+            <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!isFull || comparing) toggleCompare(listing.id); }}
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${comparing ? 'bg-blue-500 hover:bg-blue-600' : 'bg-black/40 hover:bg-black/60'} ${!comparing && isFull ? 'opacity-50 cursor-not-allowed' : ''}`}
+                aria-label={comparing ? 'Remove from comparison' : 'Add to comparison'}
+                title={comparing ? 'Remove from comparison' : isFull ? 'Compare limit reached (3)' : 'Compare'}
+              >
+                <GitCompareArrows className={`w-4 h-4 ${comparing ? 'text-white' : 'text-white'}`} />
+              </button>
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggle(listing.id); }}
+                className="w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center transition-colors"
+                aria-label={saved ? 'Remove from favorites' : 'Save to favorites'}
+              >
+                <Heart className={`w-4 h-4 transition-colors ${saved ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+              </button>
+            </div>
             <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between">
               {showVerifiedBadge ? (
                 <Badge className="bg-[#22C55E] text-white border-0 text-xs">
@@ -129,9 +169,17 @@ export function ListingCard({ listing, href, showVerifiedBadge = false, distance
 
         <div className="p-5 flex flex-col flex-1">
           <div className="flex items-start justify-between gap-2 mb-2">
-            <h2 className="text-base font-bold text-[#0F2744] group-hover:text-[#22C55E] transition-colors leading-tight">
-              {listing.name}
-            </h2>
+            <div>
+              <h2 className="text-base font-bold text-[#0F2744] group-hover:text-[#22C55E] transition-colors leading-tight">
+                {listing.name}
+              </h2>
+              {listing.is_claimed && (
+                <span className="inline-flex items-center gap-1 text-xs text-blue-600 font-medium mt-0.5">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  Verified Owner
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="flex items-start gap-1.5 text-sm text-gray-500 mb-1">

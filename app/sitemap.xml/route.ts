@@ -8,13 +8,13 @@ export async function GET() {
   const now = new Date().toISOString();
 
   // Paginate past Supabase's default 1000-row limit
-  const listings: Array<{ slug: string; city: string; state: string; created_at: string }> = [];
+  const listings: Array<{ slug: string; city: string; state: string; created_at: string; updated_at: string | null }> = [];
   const PAGE_SIZE = 1000;
   let offset = 0;
   while (true) {
     const { data: page } = await supabase
       .from('listings')
-      .select('slug, city, state, created_at')
+      .select('slug, city, state, created_at, updated_at')
       .eq('is_touchless', true)
       .range(offset, offset + PAGE_SIZE - 1);
     if (!page || page.length === 0) break;
@@ -36,15 +36,16 @@ export async function GET() {
     citySet.add(`${l.state}||${l.city}`);
   }
 
-  // Calculate most recent listing date per state and per city
+  // Calculate most recent listing date per state and per city (prefer updated_at)
   const stateLastmod = new Map<string, string>();
   const cityLastmod = new Map<string, string>();
   for (const l of listings) {
+    const ts = l.updated_at ?? l.created_at;
     const existing = stateLastmod.get(l.state);
-    if (!existing || l.created_at > existing) stateLastmod.set(l.state, l.created_at);
+    if (!existing || ts > existing) stateLastmod.set(l.state, ts);
     const cityKey = `${l.state}||${l.city}`;
     const existingCity = cityLastmod.get(cityKey);
-    if (!existingCity || l.created_at > existingCity) cityLastmod.set(cityKey, l.created_at);
+    if (!existingCity || ts > existingCity) cityLastmod.set(cityKey, ts);
   }
 
   const stateUrls = Array.from(stateSet).map((code) => {
@@ -73,7 +74,7 @@ export async function GET() {
     const citySlug = slugify(listing.city);
     return `  <url>
     <loc>${baseUrl}/state/${stateSlug}/${citySlug}/${listing.slug}</loc>
-    <lastmod>${listing.created_at}</lastmod>
+    <lastmod>${listing.updated_at ?? listing.created_at}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>`;

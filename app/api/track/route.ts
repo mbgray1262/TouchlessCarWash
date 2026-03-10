@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 
-const VALID_EVENTS = new Set(['directions', 'phone', 'website']);
+const VALID_EVENTS = new Set(['directions', 'phone', 'website', 'favorite', 'unfavorite']);
 
 export async function POST(request: Request) {
   try {

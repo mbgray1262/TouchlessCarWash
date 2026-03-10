@@ -80,6 +80,27 @@ interface ProgressResponse {
   recent_finds: RecentFind[];
 }
 
+/** Fetch live count of all is_touchless=true listings (matches homepage counter) */
+async function fetchTotalTouchlessCount(): Promise<number> {
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/listings?select=id&is_touchless=eq.true`,
+    {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        Prefer: 'count=exact',
+        Range: '0-0',
+      },
+    },
+  );
+  const range = res.headers.get('content-range');
+  if (range) {
+    const match = range.match(/\/(\d+)$/);
+    if (match) return parseInt(match[1], 10);
+  }
+  return 0;
+}
+
 interface ProspectResult {
   query: string;
   total_places_found: number;
@@ -206,6 +227,7 @@ export default function ReviewMinePage() {
 
   // Progress state
   const [progress, setProgress] = useState<ProgressResponse | null>(null);
+  const [totalTouchless, setTotalTouchless] = useState<number>(0);
   const [loadingProgress, setLoadingProgress] = useState(true);
 
   // Scan state
@@ -238,8 +260,12 @@ export default function ReviewMinePage() {
   const fetchProgress = useCallback(async () => {
     try {
       setLoadingProgress(true);
-      const data: ProgressResponse = await callEdgeFunction('progress');
+      const [data, count] = await Promise.all([
+        callEdgeFunction('progress'),
+        fetchTotalTouchlessCount(),
+      ]);
       setProgress(data);
+      setTotalTouchless(count);
     } catch (err) {
       console.error('Failed to fetch progress:', err);
     } finally {
@@ -414,6 +440,20 @@ export default function ReviewMinePage() {
           <CardContent>
             {progress ? (
               <>
+                {/* Total Touchless banner */}
+                <div className="rounded-lg p-3 mb-4 bg-emerald-600 text-white flex items-center justify-between">
+                  <div>
+                    <div className="text-3xl font-bold">
+                      {totalTouchless.toLocaleString()}
+                    </div>
+                    <div className="text-sm text-emerald-100">Total Touchless Listings (matches homepage)</div>
+                  </div>
+                  <div className="text-right text-sm text-emerald-200">
+                    <div>{progress.total_touchless_found.toLocaleString()} confirmed via reviews</div>
+                    <div>{(totalTouchless - progress.total_touchless_found).toLocaleString()} confirmed via website</div>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                   <button
                     onClick={() => setActiveView('scanner')}
@@ -449,7 +489,7 @@ export default function ReviewMinePage() {
                       {progress.total_touchless_found.toLocaleString()}
                     </div>
                     <div className="text-xs text-green-600">
-                      Touchless Found
+                      Confirmed via Reviews
                       {activeView !== 'found' && (
                         <span className="ml-1 text-green-500">&rarr; click to view</span>
                       )}
@@ -803,14 +843,14 @@ export default function ReviewMinePage() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5 text-green-600" />
-                  All Touchless Discoveries ({progress?.total_touchless_found || 0})
+                  Confirmed via Reviews ({progress?.total_touchless_found || 0})
                 </CardTitle>
                 <Button variant="ghost" size="sm" onClick={fetchProgress} disabled={loadingProgress}>
                   <RefreshCw className={`w-4 h-4 ${loadingProgress ? 'animate-spin' : ''}`} />
                 </Button>
               </div>
               <p className="text-sm text-gray-500">
-                Car washes reclassified as touchless based on Google review evidence.
+                Car washes confirmed as touchless based on Google review evidence. Includes both new discoveries and re-confirmations of previously classified listings.
                 Click links to verify on your site or Google Maps.
               </p>
             </CardHeader>
