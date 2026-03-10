@@ -1042,7 +1042,7 @@ export default function AdminListingsPage() {
           <Card
             className="cursor-pointer hover:border-gray-400 transition-colors"
             onClick={() => { setStatusFilter(statusFilter === 'no_website' ? 'all' : 'no_website'); setChainFilter('all'); }}
-          ><CardContent className="pt-6"><div className="text-2xl font-bold text-gray-600">{dbStats.noWebsite.toLocaleString()}</div><div className="text-sm text-gray-600">No Website</div><div className="text-xs text-gray-400 mt-0.5">can't classify</div>{statusFilter === 'no_website' && <div className="mt-2 h-0.5 bg-gray-400 rounded-full" />}</CardContent></Card>
+          ><CardContent className="pt-6"><div className="text-2xl font-bold text-gray-600">{dbStats.noWebsite.toLocaleString()}</div><div className="text-sm text-gray-600">No Website</div><div className="text-xs text-gray-400 mt-0.5">no site to crawl</div>{statusFilter === 'no_website' && <div className="mt-2 h-0.5 bg-gray-400 rounded-full" />}</CardContent></Card>
           <Card
             className="cursor-pointer hover:border-[#0F2744] transition-colors"
             onClick={() => { setChainFilter(chainFilter === 'chains_only' ? 'all' : 'chains_only'); setStatusFilter('all'); }}
