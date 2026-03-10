@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
-  ArrowLeft, Star, MapPin, Phone, Globe, Clock, DollarSign,
-  CheckCircle, XCircle, ShieldCheck, Trash2, Droplet,
+  ArrowLeft, Star, MapPin, Phone, Globe, Clock,
+  Trash2, Droplet, ThumbsUp, ThumbsDown, Minus,
+  CreditCard, Building2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -41,12 +42,57 @@ function CompareRow({ label, icon: Icon, children }: {
   );
 }
 
-function BoolCell({ value }: { value: boolean | null }) {
-  return value ? (
-    <CheckCircle className="w-4 h-4 text-green-500" />
-  ) : (
-    <XCircle className="w-4 h-4 text-gray-300" />
+/** Only render a row if at least one listing has data for it */
+function ConditionalRow({
+  label,
+  icon,
+  listings,
+  hasData,
+  renderCell,
+}: {
+  label: string;
+  icon?: React.ElementType;
+  listings: Listing[];
+  hasData: (l: Listing) => boolean;
+  renderCell: (l: Listing) => React.ReactNode;
+}) {
+  if (!listings.some(hasData)) return null;
+  return (
+    <CompareRow label={label} icon={icon}>
+      {listings.map((l) => (
+        <td key={l.id} className="py-3 px-4 align-top text-sm">
+          {hasData(l) ? renderCell(l) : <span className="text-gray-300">—</span>}
+        </td>
+      ))}
+    </CompareRow>
   );
+}
+
+function SentimentBadge({ sentiment }: { sentiment: string | null }) {
+  if (!sentiment) return <span className="text-gray-300">—</span>;
+  switch (sentiment) {
+    case 'positive':
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-50 text-green-700 text-xs font-medium border border-green-200">
+          <ThumbsUp className="w-3 h-3" />
+          Positive Reviews
+        </span>
+      );
+    case 'negative':
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-50 text-red-700 text-xs font-medium border border-red-200">
+          <ThumbsDown className="w-3 h-3" />
+          Negative Reviews
+        </span>
+      );
+    default:
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-50 text-gray-600 text-xs font-medium border border-gray-200">
+          <Minus className="w-3 h-3" />
+          Mixed Reviews
+        </span>
+      );
+  }
 }
 
 export default function ComparePage() {
@@ -66,7 +112,6 @@ export default function ComparePage() {
         const res = await fetch(`/api/compare?ids=${compareIds.join(',')}`);
         if (res.ok) {
           const data = await res.json();
-          // Preserve order from compareIds
           const ordered = compareIds
             .map((id) => data.find((d: Listing) => d.id === id))
             .filter(Boolean) as Listing[];
@@ -116,7 +161,7 @@ export default function ComparePage() {
     );
   }
 
-  // Best rating for highlighting
+  // Best values for winner highlighting
   const bestRating = Math.max(...listings.map((l) => l.rating ?? 0));
   const bestReviews = Math.max(...listings.map((l) => l.review_count ?? 0));
 
@@ -173,7 +218,7 @@ export default function ComparePage() {
               </tr>
             </thead>
             <tbody>
-              {/* Rating */}
+              {/* Rating — always shown */}
               <CompareRow label="Rating" icon={Star}>
                 {listings.map((l) => (
                   <td key={l.id} className="py-3 px-4 align-top">
@@ -183,6 +228,9 @@ export default function ComparePage() {
                         <span className={`font-semibold ${l.rating === bestRating ? 'text-[#0F2744]' : 'text-gray-500'}`}>
                           {Number(l.rating).toFixed(1)}
                         </span>
+                        {listings.length > 1 && l.rating === bestRating && l.rating > 0 && (
+                          <span className="text-xs text-green-600 font-medium ml-1">Best</span>
+                        )}
                       </div>
                     ) : (
                       <span className="text-gray-300 text-sm">No rating</span>
@@ -191,150 +239,73 @@ export default function ComparePage() {
                 ))}
               </CompareRow>
 
-              {/* Reviews */}
+              {/* Reviews — always shown */}
               <CompareRow label="Reviews">
                 {listings.map((l) => (
                   <td key={l.id} className="py-3 px-4 align-top">
-                    <span className={`text-sm ${l.review_count === bestReviews && l.review_count > 0 ? 'font-semibold text-[#0F2744]' : 'text-gray-500'}`}>
-                      {l.review_count > 0 ? l.review_count.toLocaleString() : '—'}
-                    </span>
-                  </td>
-                ))}
-              </CompareRow>
-
-              {/* Location */}
-              <CompareRow label="Location" icon={MapPin}>
-                {listings.map((l) => (
-                  <td key={l.id} className="py-3 px-4 align-top text-sm text-gray-600">
-                    {l.address}<br />
-                    <span className="text-gray-400">{l.city}, {l.state}</span>
-                  </td>
-                ))}
-              </CompareRow>
-
-              {/* Phone */}
-              <CompareRow label="Phone" icon={Phone}>
-                {listings.map((l) => (
-                  <td key={l.id} className="py-3 px-4 align-top text-sm text-gray-600">
-                    {l.phone ?? '—'}
-                  </td>
-                ))}
-              </CompareRow>
-
-              {/* Website */}
-              <CompareRow label="Website" icon={Globe}>
-                {listings.map((l) => (
-                  <td key={l.id} className="py-3 px-4 align-top text-sm">
-                    {l.website ? (
-                      <a href={l.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate block max-w-[200px]">
-                        {l.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}
-                      </a>
-                    ) : '—'}
-                  </td>
-                ))}
-              </CompareRow>
-
-              {/* Price Range */}
-              <CompareRow label="Price" icon={DollarSign}>
-                {listings.map((l) => (
-                  <td key={l.id} className="py-3 px-4 align-top text-sm text-gray-600">
-                    {l.price_range ?? '—'}
-                  </td>
-                ))}
-              </CompareRow>
-
-              {/* Verified Owner */}
-              <CompareRow label="Verified" icon={ShieldCheck}>
-                {listings.map((l) => (
-                  <td key={l.id} className="py-3 px-4 align-top">
-                    <BoolCell value={l.is_claimed} />
-                  </td>
-                ))}
-              </CompareRow>
-
-              {/* Wash Packages */}
-              <CompareRow label="Packages" icon={DollarSign}>
-                {listings.map((l) => {
-                  const pkgs = l.wash_packages?.length ? l.wash_packages : l.extracted_data?.wash_packages;
-                  return (
-                    <td key={l.id} className="py-3 px-4 align-top text-sm">
-                      {pkgs && pkgs.length > 0 ? (
-                        <div className="space-y-1.5">
-                          {pkgs.slice(0, 5).map((p, i) => (
-                            <div key={i} className="flex items-baseline justify-between gap-2">
-                              <span className="text-gray-700 truncate">{p.name}</span>
-                              {p.price && <span className="text-gray-500 font-medium shrink-0">{p.price}</span>}
-                            </div>
-                          ))}
-                          {pkgs.length > 5 && <span className="text-gray-400 text-xs">+{pkgs.length - 5} more</span>}
-                        </div>
-                      ) : (
-                        <span className="text-gray-300">—</span>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className={`text-sm ${l.review_count === bestReviews && l.review_count > 0 ? 'font-semibold text-[#0F2744]' : 'text-gray-500'}`}>
+                        {l.review_count > 0 ? l.review_count.toLocaleString() : '—'}
+                      </span>
+                      {listings.length > 1 && l.review_count === bestReviews && l.review_count > 0 && (
+                        <span className="text-xs text-green-600 font-medium">Most</span>
                       )}
-                    </td>
-                  );
-                })}
+                    </div>
+                  </td>
+                ))}
               </CompareRow>
 
-              {/* Membership */}
-              <CompareRow label="Membership">
-                {listings.map((l) => {
-                  const plans = l.extracted_data?.membership_plans;
-                  return (
-                    <td key={l.id} className="py-3 px-4 align-top text-sm">
-                      {plans && plans.length > 0 ? (
-                        <div className="space-y-1">
-                          {plans.slice(0, 3).map((p, i) => (
-                            <div key={i}>
-                              <span className="text-gray-700">{p.name}</span>
-                              {p.price && <span className="text-gray-400 ml-1">({p.price})</span>}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-gray-300">—</span>
-                      )}
-                    </td>
-                  );
-                })}
-              </CompareRow>
+              {/* Review Sentiment — 90% populated, very useful for comparison */}
+              <ConditionalRow
+                label="Sentiment"
+                icon={ThumbsUp}
+                listings={listings}
+                hasData={(l) => !!(l as any).touchless_sentiment}
+                renderCell={(l) => <SentimentBadge sentiment={(l as any).touchless_sentiment} />}
+              />
 
-              {/* Amenities */}
-              <CompareRow label="Amenities">
-                {listings.map((l) => (
-                  <td key={l.id} className="py-3 px-4 align-top">
-                    {l.amenities && l.amenities.length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {l.amenities.slice(0, 6).map((a) => (
-                          <Badge key={a} variant="outline" className="text-xs text-gray-600 border-gray-200">
-                            {a}
-                          </Badge>
-                        ))}
-                        {l.amenities.length > 6 && (
-                          <Badge variant="outline" className="text-xs text-gray-400 border-gray-200">
-                            +{l.amenities.length - 6}
-                          </Badge>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-sm text-gray-300">—</span>
+              {/* Amenities — 70% populated, only shown if at least one listing has data */}
+              <ConditionalRow
+                label="Amenities"
+                listings={listings}
+                hasData={(l) => !!(l.amenities && l.amenities.length > 0)}
+                renderCell={(l) => (
+                  <div className="flex flex-wrap gap-1">
+                    {l.amenities!.slice(0, 8).map((a) => (
+                      <Badge key={a} variant="outline" className="text-xs text-gray-600 border-gray-200">
+                        {a}
+                      </Badge>
+                    ))}
+                    {l.amenities!.length > 8 && (
+                      <Badge variant="outline" className="text-xs text-gray-400 border-gray-200">
+                        +{l.amenities!.length - 8}
+                      </Badge>
                     )}
-                  </td>
-                ))}
-              </CompareRow>
+                  </div>
+                )}
+              />
 
-              {/* Equipment */}
-              <CompareRow label="Equipment">
-                {listings.map((l) => (
-                  <td key={l.id} className="py-3 px-4 align-top text-sm text-gray-600">
-                    {l.equipment_brand || l.equipment_model ? (
-                      <>{l.equipment_brand}{l.equipment_model ? ` ${l.equipment_model}` : ''}</>
-                    ) : '—'}
-                  </td>
-                ))}
-              </CompareRow>
+              {/* Payment Methods — 35% populated, only shown if at least one listing has data */}
+              <ConditionalRow
+                label="Payment"
+                icon={CreditCard}
+                listings={listings}
+                hasData={(l) => {
+                  const methods = l.extracted_data?.payment_methods;
+                  return !!(methods && methods.length > 0);
+                }}
+                renderCell={(l) => (
+                  <div className="flex flex-wrap gap-1">
+                    {l.extracted_data!.payment_methods!.map((m) => (
+                      <Badge key={m} variant="outline" className="text-xs text-gray-600 border-gray-200">
+                        {m}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              />
 
-              {/* Hours */}
+              {/* Hours — always shown */}
               <CompareRow label="Hours" icon={Clock}>
                 {listings.map((l) => {
                   const hrs = formatHours(l.hours);
@@ -357,14 +328,52 @@ export default function ComparePage() {
                 })}
               </CompareRow>
 
-              {/* Chain */}
-              <CompareRow label="Chain">
+              {/* Location — always shown */}
+              <CompareRow label="Location" icon={MapPin}>
                 {listings.map((l) => (
                   <td key={l.id} className="py-3 px-4 align-top text-sm text-gray-600">
-                    {l.parent_chain ?? 'Independent'}
+                    {l.address}<br />
+                    <span className="text-gray-400">{l.city}, {l.state}</span>
                   </td>
                 ))}
               </CompareRow>
+
+              {/* Phone — always shown */}
+              <CompareRow label="Phone" icon={Phone}>
+                {listings.map((l) => (
+                  <td key={l.id} className="py-3 px-4 align-top text-sm text-gray-600">
+                    {l.phone ? (
+                      <a href={`tel:${l.phone}`} className="hover:text-[#0F2744] transition-colors">
+                        {l.phone}
+                      </a>
+                    ) : '—'}
+                  </td>
+                ))}
+              </CompareRow>
+
+              {/* Website — always shown */}
+              <CompareRow label="Website" icon={Globe}>
+                {listings.map((l) => (
+                  <td key={l.id} className="py-3 px-4 align-top text-sm">
+                    {l.website ? (
+                      <a href={l.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate block max-w-[200px]">
+                        {l.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}
+                      </a>
+                    ) : '—'}
+                  </td>
+                ))}
+              </CompareRow>
+
+              {/* Chain — only shown if at least one listing is part of a chain */}
+              <ConditionalRow
+                label="Chain"
+                icon={Building2}
+                listings={listings}
+                hasData={(l) => !!l.parent_chain}
+                renderCell={(l) => (
+                  <span className="text-gray-700 font-medium">{l.parent_chain}</span>
+                )}
+              />
             </tbody>
           </table>
         </div>
