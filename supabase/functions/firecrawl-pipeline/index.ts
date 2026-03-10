@@ -345,25 +345,48 @@ Deno.serve(async (req: Request) => {
       const retryFailed = body.retry_failed === true;
       const chunkIndex = body.chunk_index ?? 0;
       const appUrl = body.app_url ?? Deno.env.get('APP_URL') ?? '';
+      const listingIds: string[] | undefined = body.listing_ids;
 
-      let query = supabase.from('listings')
-        .select('id, website, name, google_subtypes')
-        .is('is_touchless', null)
-        .not('website', 'is', null)
-        .neq('website', '')
-        .order('id');
+      let listings: Array<{ id: string; website: string; name: string; google_subtypes?: string[] }> | null = null;
+      let listErr: any = null;
 
-      if (retryFailed) {
-        query = supabase.from('listings')
+      if (listingIds && listingIds.length > 0) {
+        // Targeted crawl: fetch specific listings by ID (chunked to avoid URL length limits)
+        const ID_CHUNK = 50;
+        const allResults: typeof listings = [];
+        for (let i = 0; i < listingIds.length; i += ID_CHUNK) {
+          const chunk = listingIds.slice(i, i + ID_CHUNK);
+          const { data, error: fetchErr } = await supabase.from('listings')
+            .select('id, website, name, google_subtypes')
+            .not('website', 'is', null)
+            .neq('website', '')
+            .in('id', chunk);
+          if (fetchErr) { listErr = fetchErr; break; }
+          if (data) allResults.push(...data);
+        }
+        listings = allResults.length > 0 ? allResults : null;
+      } else {
+        let query = supabase.from('listings')
           .select('id, website, name, google_subtypes')
-          .in('crawl_status', ['failed', 'timeout', 'no_content'])
+          .is('is_touchless', null)
           .not('website', 'is', null)
           .neq('website', '')
           .order('id');
-      }
 
-      const offset = chunkIndex * CHUNK_SIZE;
-      const { data: listings, error: listErr } = await query.range(offset, offset + CHUNK_SIZE - 1);
+        if (retryFailed) {
+          query = supabase.from('listings')
+            .select('id, website, name, google_subtypes')
+            .in('crawl_status', ['failed', 'timeout', 'no_content'])
+            .not('website', 'is', null)
+            .neq('website', '')
+            .order('id');
+        }
+
+        const offset = chunkIndex * CHUNK_SIZE;
+        const result = await query.range(offset, offset + CHUNK_SIZE - 1);
+        listings = result.data;
+        listErr = result.error;
+      }
 
       if (listErr) return Response.json({ error: listErr.message }, { status: 500, headers: corsHeaders });
       if (!listings || listings.length === 0) return Response.json({ message: 'No listings to process', done: true }, { headers: corsHeaders });
@@ -715,7 +738,7 @@ Deno.serve(async (req: Request) => {
               crawl_status,
               is_touchless,
               touchless_evidence,
-              raw_markdown: markdown.slice(0, 50000),
+              raw_markdown: md.slice(0, 50000),
               images_found: images.length,
             }),
             syncFilters(supabase, listing.id, is_touchless, amenities, filterMap),
@@ -1275,29 +1298,48 @@ Deno.serve(async (req: Request) => {
         }, { status: 409, headers: corsHeaders });
       }
 
+      // Optional: only crawl specific listing IDs (for targeted backfills)
+      const listingIds: string[] | undefined = body.listing_ids;
+
       const PAGE = 1000;
+      const ID_CHUNK = 50; // Keep .in() queries short to avoid URL length limits
       let allListings: Array<{ id: string; website: string }> = [];
-      let offset = 0;
-      while (true) {
-        let query = supabase
-          .from('listings')
-          .select('id, website')
-          .eq('is_touchless', true)
-          .not('website', 'is', null)
-          .neq('website', '')
-          .order('id')
-          .range(offset, offset + PAGE - 1);
 
-        const { data, error: fetchErr } = await query;
-        if (fetchErr) return Response.json({ error: fetchErr.message }, { status: 500, headers: corsHeaders });
-        const rows = (data ?? []) as Array<{ id: string; website: string }>;
-        allListings = allListings.concat(rows);
-        if (rows.length < PAGE) break;
-        offset += PAGE;
-        if (limit > 0 && allListings.length >= limit) break;
+      if (listingIds && listingIds.length > 0) {
+        // Targeted mode: fetch specified listing IDs in small chunks
+        for (let i = 0; i < listingIds.length; i += ID_CHUNK) {
+          const chunk = listingIds.slice(i, i + ID_CHUNK);
+          const { data, error: fetchErr } = await supabase
+            .from('listings')
+            .select('id, website')
+            .eq('is_touchless', true)
+            .not('website', 'is', null)
+            .neq('website', '')
+            .in('id', chunk);
+          if (fetchErr) return Response.json({ error: fetchErr.message }, { status: 500, headers: corsHeaders });
+          allListings = allListings.concat((data ?? []) as Array<{ id: string; website: string }>);
+        }
+      } else {
+        // Default mode: fetch all touchless listings with websites
+        let offset = 0;
+        while (true) {
+          const { data, error: fetchErr } = await supabase
+            .from('listings')
+            .select('id, website')
+            .eq('is_touchless', true)
+            .not('website', 'is', null)
+            .neq('website', '')
+            .order('id')
+            .range(offset, offset + PAGE - 1);
+          if (fetchErr) return Response.json({ error: fetchErr.message }, { status: 500, headers: corsHeaders });
+          const rows = (data ?? []) as Array<{ id: string; website: string }>;
+          allListings = allListings.concat(rows);
+          if (rows.length < PAGE) break;
+          offset += PAGE;
+          if (limit > 0 && allListings.length >= limit) break;
+        }
+        if (limit > 0) allListings = allListings.slice(0, limit);
       }
-
-      if (limit > 0) allListings = allListings.slice(0, limit);
 
       if (allListings.length === 0) {
         return Response.json({ message: 'No touchless listings with websites found', done: true }, { headers: corsHeaders });
