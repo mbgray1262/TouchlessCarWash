@@ -130,6 +130,11 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/dataset" className="text-white/70 hover:text-[#22C55E] transition-colors py-1.5 inline-block">
+                  Dataset
+                </Link>
+              </li>
+              <li>
                 <Link href="/about" className="text-white/70 hover:text-[#22C55E] transition-colors py-1.5 inline-block">
                   About Us
                 </Link>
