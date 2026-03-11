@@ -91,13 +91,17 @@ export function useHeroReview() {
 
   const getReplacements = (listing: HeroListing): ReplacementOption[] => {
     const opts: ReplacementOption[] = [];
-    const seen = new Set<string>();
+    const seenBases = new Set<string>();
+
+    // Normalize to catch same image at different resolutions (w800 vs w1600)
+    const normalize = (url: string) => url.replace(/=[whs]\d+(?:-[a-z0-9]+)*$/, '');
 
     const add = (url: string | null, label: string, source: string) => {
-      if (url && !seen.has(url) && url !== listing.hero_image) {
-        seen.add(url);
-        opts.push({ url, label, source });
-      }
+      if (!url) return;
+      const base = normalize(url);
+      if (seenBases.has(base) || url === listing.hero_image) return;
+      seenBases.add(base);
+      opts.push({ url, label, source });
     };
 
     add(listing.google_photo_url, 'Google', 'google');
