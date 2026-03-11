@@ -97,6 +97,7 @@ export type ReviewSnippet = {
   touchless_keywords: string[];
   is_touchless_evidence: boolean;
   source: string;
+  sentiment: 'positive' | 'negative' | 'neutral' | null;
   created_at: string;
 };
 

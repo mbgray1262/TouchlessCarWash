@@ -244,11 +244,14 @@ Business name: "${carWashName}"
 Reviews mentioning the touchless wash:
 ${reviewTexts}
 
-What is the overall sentiment about the TOUCHLESS wash experience specifically?
+What is the OVERALL sentiment about the TOUCHLESS wash experience specifically?
 
-- POSITIVE: Reviewers are happy with the touchless wash quality, recommend it, or describe good results
-- NEGATIVE: Reviewers complain about the touchless wash quality, describe damage, poor cleaning, or bad experience
-- NEUTRAL: Mixed opinions, purely factual mentions, or not enough context to judge quality
+Classification rules:
+- POSITIVE: The MAJORITY of reviews are happy with the touchless wash quality, recommend it, or describe good results. At most 1-2 minor complaints among mostly positive reviews.
+- NEGATIVE: The MAJORITY of reviews complain about the touchless wash quality, describe damage, poor cleaning, or bad experience. At most 1-2 positive mentions among mostly negative reviews.
+- NEUTRAL: There is a SIGNIFICANT MIX of both positive AND negative reviews. Use NEUTRAL whenever at least 30% of reviews are positive AND at least 30% are negative. Also use for purely factual mentions or not enough context.
+
+IMPORTANT: When reviews are split (some positive, some negative), ALWAYS classify as NEUTRAL. Only use POSITIVE or NEGATIVE when sentiment clearly leans one way.
 
 Respond in this exact format:
 SENTIMENT: POSITIVE, NEGATIVE, or NEUTRAL

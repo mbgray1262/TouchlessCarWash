@@ -6,7 +6,8 @@ import { notFound, redirect } from 'next/navigation';
 import {
   Star, MapPin, Phone, Globe, Clock, CheckCircle, ArrowLeft,
   Sparkles, ExternalLink, ChevronRight, Navigation, HelpCircle,
-  CalendarCheck, ChevronDown, Droplet, CreditCard, Zap, MessageSquareQuote, Quote, Trophy, ShieldCheck
+  CalendarCheck, ChevronDown, Droplet, CreditCard, Zap, MessageSquareQuote, Quote, Trophy, ShieldCheck,
+  ThumbsUp, ThumbsDown, Minus
 } from 'lucide-react';
 import LogoImage from '@/components/LogoImage';
 import HeroImageFallback from '@/components/HeroImageFallback';
@@ -639,17 +640,49 @@ function HighlightedReviewText({ text, keywords }: { text: string; keywords: str
   );
 }
 
+function SentimentBadge({ sentiment }: { sentiment: string | null }) {
+  if (!sentiment) return null;
+  if (sentiment === 'positive') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+        <ThumbsUp className="w-3 h-3" />
+        Positive
+      </span>
+    );
+  }
+  if (sentiment === 'negative') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200">
+        <ThumbsDown className="w-3 h-3" />
+        Negative
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 border border-gray-200">
+      <Minus className="w-3 h-3" />
+      Mixed
+    </span>
+  );
+}
+
 function ReviewSnippetCard({ snippet }: { snippet: ReviewSnippet }) {
   const displayText = smartTruncate(snippet.review_text, snippet.touchless_keywords);
+  const borderColor = snippet.sentiment === 'positive'
+    ? 'border-green-200 bg-green-50/30'
+    : snippet.sentiment === 'negative'
+    ? 'border-red-200 bg-red-50/30'
+    : 'border-gray-100 bg-gray-50';
   return (
-    <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
+    <div className={`p-4 rounded-xl border ${borderColor}`}>
       <div className="flex items-start gap-3">
         <Quote className="w-5 h-5 text-[#22C55E]/40 shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
           <p className="text-sm text-gray-700 leading-relaxed">
             <HighlightedReviewText text={displayText} keywords={snippet.touchless_keywords} />
           </p>
-          <div className="flex items-center gap-3 mt-2.5">
+          <div className="flex items-center gap-3 mt-2.5 flex-wrap">
+            {snippet.sentiment && <SentimentBadge sentiment={snippet.sentiment} />}
             {snippet.rating && snippet.rating > 0 && (
               <span className="flex items-center gap-0.5">
                 {Array.from({ length: snippet.rating }, (_, i) => (
