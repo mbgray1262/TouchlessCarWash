@@ -202,7 +202,7 @@ export function HeroCard({
   const heroBase = listing.hero_image ? normalizePhotoUrl(listing.hero_image) : null;
   const galleryPhotos = (listing.photos ?? []).filter(p => {
     const base = normalizePhotoUrl(p);
-    return base !== heroBase && !replacementBases.has(base);
+    return !replacementBases.has(base);
   });
 
   const externalFieldFor = (url: string): 'google_photo_url' | 'street_view_url' | null => {
