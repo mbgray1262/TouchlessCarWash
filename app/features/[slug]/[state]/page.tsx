@@ -80,6 +80,16 @@ export default async function FeatureStatePage({ params, searchParams }: Feature
   const stateName = getStateName(stateCode);
   const currentPage = Math.max(1, parseInt(searchParams.page ?? '1', 10) || 1);
 
+  // Start cross-link queries immediately (no dependency on qualifiedIds)
+  const otherFeaturesPromise = Promise.all(
+    FEATURES.filter((f) => f.slug !== feature.slug).map(async (f) => {
+      const { data } = await supabase.rpc('feature_state_counts', { p_filter_slug: f.slug });
+      const match = (data as { state: string; count: number }[] | null)?.find((r) => r.state === stateCode);
+      return match ? { slug: f.slug, name: f.name, count: Number(match.count) } : null;
+    }),
+  );
+  const otherStatesPromise = supabase.rpc('feature_state_counts', { p_filter_slug: feature.slug });
+
   // Get listings that match this feature in this state
   const [allFilters, stateListingIds] = await Promise.all([
     getFilters(),
@@ -88,18 +98,12 @@ export default async function FeatureStatePage({ params, searchParams }: Feature
 
   const qualifiedIds = await filterByFilters(stateListingIds, [feature.slug], allFilters);
 
-  // Run all independent queries in parallel after qualifiedIds is resolved
+  // Run remaining queries in parallel (otherFeatures/otherStates already started above)
   const [totalCount, paginatedListings, otherFeaturesRaw, { data: otherStatesData }] = await Promise.all([
     getStateListingCountFiltered(stateCode, qualifiedIds),
     getStateListingsPaginated(stateCode, currentPage, qualifiedIds),
-    Promise.all(
-      FEATURES.filter((f) => f.slug !== feature.slug).map(async (f) => {
-        const { data } = await supabase.rpc('feature_state_counts', { p_filter_slug: f.slug });
-        const match = (data as { state: string; count: number }[] | null)?.find((r) => r.state === stateCode);
-        return match ? { slug: f.slug, name: f.name, count: Number(match.count) } : null;
-      }),
-    ),
-    supabase.rpc('feature_state_counts', { p_filter_slug: feature.slug }),
+    otherFeaturesPromise,
+    otherStatesPromise,
   ]);
 
   if (totalCount < 3) notFound();
