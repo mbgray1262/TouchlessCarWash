@@ -13,7 +13,7 @@ export const revalidate = 86400; // Cache for 24 hours
 export async function GET() {
   try {
     // Fetch all touchless listings with only the fields we want to expose
-    const allRows: Array<{
+    type ListingRow = {
       name: string;
       city: string;
       state: string;
@@ -21,9 +21,9 @@ export async function GET() {
       rating: number | null;
       review_count: number | null;
       touchless_sentiment: string | null;
-    }>[] = [];
+    };
 
-    let allListings: typeof allRows[0][] = [];
+    let allListings: ListingRow[] = [];
 
     for (let offset = 0; offset < 50000; offset += 1000) {
       const { data, error } = await supabase
