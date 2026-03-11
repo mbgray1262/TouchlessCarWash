@@ -34,11 +34,13 @@ export const metadata: Metadata = {
 };
 
 async function getFeatureCounts(): Promise<Record<string, number>> {
+  const results = await Promise.all(
+    FEATURES.map((f) => supabase.rpc('feature_total_count', { p_filter_slug: f.slug }))
+  );
   const counts: Record<string, number> = {};
-  for (const feature of FEATURES) {
-    const { data } = await supabase.rpc('feature_total_count', { p_filter_slug: feature.slug });
-    counts[feature.slug] = typeof data === 'number' ? data : 0;
-  }
+  FEATURES.forEach((f, i) => {
+    counts[f.slug] = typeof results[i].data === 'number' ? results[i].data : 0;
+  });
   return counts;
 }
 

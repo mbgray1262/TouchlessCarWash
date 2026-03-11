@@ -31,12 +31,17 @@ function getStateCode(stateSlug: string): string | null {
 }
 
 export async function generateStaticParams() {
+  const allData = await Promise.all(
+    FEATURES.map((f) =>
+      supabase.rpc('feature_state_counts', { p_filter_slug: f.slug })
+        .then(({ data }) => ({ slug: f.slug, data }))
+    )
+  );
   const params: { slug: string; state: string }[] = [];
-  for (const feature of FEATURES) {
-    const { data } = await supabase.rpc('feature_state_counts', { p_filter_slug: feature.slug });
+  for (const { slug, data } of allData) {
     if (data) {
       for (const row of data as { state: string; count: number }[]) {
-        params.push({ slug: feature.slug, state: getStateSlug(row.state) });
+        params.push({ slug, state: getStateSlug(row.state) });
       }
     }
   }
@@ -75,6 +80,16 @@ export default async function FeatureStatePage({ params, searchParams }: Feature
   const stateName = getStateName(stateCode);
   const currentPage = Math.max(1, parseInt(searchParams.page ?? '1', 10) || 1);
 
+  // Start cross-link queries immediately (no dependency on qualifiedIds)
+  const otherFeaturesPromise = Promise.all(
+    FEATURES.filter((f) => f.slug !== feature.slug).map(async (f) => {
+      const { data } = await supabase.rpc('feature_state_counts', { p_filter_slug: f.slug });
+      const match = (data as { state: string; count: number }[] | null)?.find((r) => r.state === stateCode);
+      return match ? { slug: f.slug, name: f.name, count: Number(match.count) } : null;
+    }),
+  );
+  const otherStatesPromise = supabase.rpc('feature_state_counts', { p_filter_slug: feature.slug });
+
   // Get listings that match this feature in this state
   const [allFilters, stateListingIds] = await Promise.all([
     getFilters(),
@@ -82,26 +97,22 @@ export default async function FeatureStatePage({ params, searchParams }: Feature
   ]);
 
   const qualifiedIds = await filterByFilters(stateListingIds, [feature.slug], allFilters);
-  const totalCount = await getStateListingCountFiltered(stateCode, qualifiedIds);
+
+  // Run remaining queries in parallel
+  const [totalCount, paginatedListings, otherFeaturesRaw, { data: otherStatesData }] = await Promise.all([
+    getStateListingCountFiltered(stateCode, qualifiedIds),
+    getStateListingsPaginated(stateCode, currentPage, qualifiedIds),
+    otherFeaturesPromise,
+    otherStatesPromise,
+  ]);
 
   if (totalCount < 3) notFound();
 
-  const paginatedListings = await getStateListingsPaginated(stateCode, currentPage, qualifiedIds);
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
   const page = Math.min(currentPage, totalPages);
 
-  // Get other features available in this state for cross-links
-  const otherFeaturesRaw = await Promise.all(
-    FEATURES.filter((f) => f.slug !== feature.slug).map(async (f) => {
-      const { data } = await supabase.rpc('feature_state_counts', { p_filter_slug: f.slug });
-      const match = (data as { state: string; count: number }[] | null)?.find((r) => r.state === stateCode);
-      return match ? { slug: f.slug, name: f.name, count: Number(match.count) } : null;
-    }),
-  );
   const otherFeatures = otherFeaturesRaw.filter((f): f is { slug: string; name: string; count: number } => f !== null && f.count >= 3);
 
-  // Get other states for this feature for cross-links
-  const { data: otherStatesData } = await supabase.rpc('feature_state_counts', { p_filter_slug: feature.slug });
   const otherStates = ((otherStatesData as { state: string; count: number }[]) ?? [])
     .filter((r) => r.state !== stateCode)
     .slice(0, 20)
