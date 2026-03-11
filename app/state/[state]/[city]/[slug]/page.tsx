@@ -724,6 +724,8 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
 
   const heroImage = listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
   const logoImage = listing.logo_photo ?? listing.google_logo_url ?? null;
+  const heroFocalPoint = listing.hero_focal_point ?? 'center';
+  const heroObjectPosition = heroFocalPoint === 'top' ? 'center 20%' : heroFocalPoint === 'bottom' ? 'center 80%' : 'center';
 
   const seenUrls = new Set<string>();
   const allGalleryPhotos: string[] = [];
@@ -815,6 +817,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                   priority
                   sizes="100vw"
                   className="object-cover"
+                  style={{ objectPosition: heroObjectPosition }}
                   unoptimized={!isOptimizedImageHost(heroImage)}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0F2744] via-[#0F2744]/50 to-[#0F2744]/10" />

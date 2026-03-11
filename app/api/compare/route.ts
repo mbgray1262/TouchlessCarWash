@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
 // Columns needed for the comparison table — more than card columns but skip heavy blobs
-const COMPARE_COLUMNS = 'id, name, slug, city, state, address, phone, website, rating, review_count, hero_image, google_photo_url, logo_photo, google_logo_url, amenities, touchless_sentiment, extracted_data, hours, is_touchless, is_featured, is_claimed, parent_chain, business_status, google_place_id';
+const COMPARE_COLUMNS = 'id, name, slug, city, state, address, phone, website, rating, review_count, hero_image, hero_focal_point, google_photo_url, logo_photo, google_logo_url, amenities, touchless_sentiment, extracted_data, hours, is_touchless, is_featured, is_claimed, parent_chain, business_status, google_place_id';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

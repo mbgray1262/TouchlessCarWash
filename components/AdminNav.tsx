@@ -7,7 +7,7 @@ import {
   LayoutDashboard, List, Building2, FileText, ArrowLeft, Upload, ShieldCheck,
   Link2, Database, Zap, Filter, Sparkles, PenLine, Eye, LogOut, LinkIcon,
   FlaskConical, Map, BarChart3, ChevronDown, Menu, X, Search, Image,
-  Clock, MessageSquareText, Pickaxe, Package, Bug, FileEdit, Globe,
+  Clock, MessageSquareText, Pickaxe, Package, Bug, FileEdit, Globe, Camera,
 } from 'lucide-react';
 import { useAdminAuth } from './AdminAuthProvider';
 
@@ -39,6 +39,7 @@ const navigation: NavEntry[] = [
     items: [
       { href: '/admin/listings', label: 'Manage Listings', icon: List },
       { href: '/admin/hero-review', label: 'Hero Review', icon: Eye },
+      { href: '/admin/ai-photo-review', label: 'AI Photo QA', icon: Camera },
       { href: '/admin/bulk-verify', label: 'Bulk Verify', icon: ShieldCheck },
       { href: '/admin/filters', label: 'Filters', icon: Filter },
     ],

@@ -320,6 +320,7 @@ export default function ComparePage() {
                             fill
                             sizes="200px"
                             className="object-cover"
+                            style={{ objectPosition: l.hero_focal_point === 'top' ? 'center 20%' : l.hero_focal_point === 'bottom' ? 'center 80%' : 'center' }}
                             unoptimized
                           />
                         </div>

@@ -66,6 +66,10 @@ export function ListingCard({ listing, href, showVerifiedBadge = false, distance
   const { isComparing, toggle: toggleCompare, isFull } = useCompare();
   const comparing = isComparing(listing.id);
 
+  // Map focal point to CSS object-position for hero image cropping
+  const focalPoint = listing.hero_focal_point ?? 'center';
+  const objectPosition = focalPoint === 'top' ? 'center 20%' : focalPoint === 'bottom' ? 'center 80%' : 'center';
+
   return (
     <Link href={linkHref} className="group block h-full">
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-xl hover:border-[#22C55E] transition-all duration-200 h-full flex flex-col">
@@ -77,6 +81,7 @@ export function ListingCard({ listing, href, showVerifiedBadge = false, distance
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
               className="object-cover group-hover:scale-105 transition-transform duration-300"
+              style={{ objectPosition }}
               unoptimized={!isOptimizedImageHost(cardImage)}
               onError={() => setImgError(true)}
             />
