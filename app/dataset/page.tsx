@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ChevronRight, Database, MapPin, Star, ThumbsUp, ThumbsDown, Minus, MessageSquareQuote, Download, BarChart3, Globe, TrendingUp } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { US_STATES, getStateName, slugify } from '@/lib/constants';
+import { getStateName, getStateSlug } from '@/lib/constants';
 import type { Metadata } from 'next';
 
 export const revalidate = 86400; // 24 hours
@@ -117,9 +117,9 @@ async function getDatasetStats() {
 
   // Build sorted state array
   const states: StateStats[] = [];
-  for (const [abbr, data] of stateMap.entries()) {
+  for (const [abbr, data] of Array.from(stateMap.entries())) {
     const name = getStateName(abbr) || abbr;
-    const slug = Object.entries(US_STATES).find(([, v]) => v === name)?.[0] || slugify(name);
+    const slug = getStateSlug(abbr);
     states.push({
       state: abbr,
       stateName: name,
