@@ -854,10 +854,21 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                   unoptimized={!isOptimizedImageHost(heroImage)}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0F2744] via-[#0F2744]/50 to-[#0F2744]/10" />
+
+                {/* Claim Your Badge — floating button on hero */}
+                {topRanking && (
+                  <Link
+                    href={`/badge/${listing.slug}`}
+                    className="absolute bottom-4 right-4 md:bottom-6 md:right-6 z-10 flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-semibold text-sm px-4 py-2.5 rounded-lg shadow-lg hover:shadow-xl transition-all"
+                  >
+                    <Trophy className="w-4 h-4" />
+                    Claim Your Badge
+                  </Link>
+                )}
               </div>
 
-              <div className="absolute inset-0 flex flex-col justify-end">
-                <div className="container mx-auto px-4 max-w-5xl pb-8 pt-4">
+              <div className="absolute inset-0 flex flex-col justify-end pointer-events-none">
+                <div className="container mx-auto px-4 max-w-5xl pb-8 pt-4 pointer-events-auto">
                   <ListingBreadcrumb
                     listingName={listing.name}
                     stateSlug={params.state}
@@ -904,12 +915,6 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                           {listing.address}, {listing.city}, {listing.state}
                         </span>
                         {ratingStars}
-                        {topRanking && (
-                          <Link href={`/badge/${listing.slug}`} className="flex items-center gap-1 text-yellow-300 hover:text-yellow-200 transition-colors font-medium">
-                            <Trophy className="w-3.5 h-3.5" />
-                            Claim Your Badge
-                          </Link>
-                        )}
                       </div>
                       <p className="mt-2.5 text-sm text-white/80 max-w-2xl leading-relaxed line-clamp-2">{heroDescription}</p>
                     </div>
@@ -966,14 +971,17 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                         {listing.address}, {listing.city}, {listing.state}
                       </span>
                       {ratingStars}
-                      {topRanking && (
-                        <Link href={`/badge/${listing.slug}`} className="flex items-center gap-1 text-yellow-300 hover:text-yellow-200 transition-colors font-medium">
-                          <Trophy className="w-3.5 h-3.5" />
-                          Claim Your Badge
-                        </Link>
-                      )}
                     </div>
                     <p className="mt-2.5 text-sm text-white/80 max-w-2xl leading-relaxed line-clamp-2">{heroDescription}</p>
+                    {topRanking && (
+                      <Link
+                        href={`/badge/${listing.slug}`}
+                        className="inline-flex items-center gap-2 mt-4 bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-semibold text-sm px-4 py-2.5 rounded-lg shadow-lg hover:shadow-xl transition-all"
+                      >
+                        <Trophy className="w-4 h-4" />
+                        Claim Your Badge
+                      </Link>
+                    )}
                   </div>
                 </div>
               </div>
