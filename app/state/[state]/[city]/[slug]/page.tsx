@@ -1,7 +1,7 @@
 import { cache } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import dynamic from 'next/dynamic';
+import nextDynamic from 'next/dynamic';
 import { notFound, redirect } from 'next/navigation';
 import {
   Star, MapPin, Phone, Globe, Clock, CheckCircle, ArrowLeft,
@@ -23,9 +23,11 @@ import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
 import { US_STATES, getStateName, slugify } from '@/lib/constants';
 import type { Metadata } from 'next';
 
-const ListingMap = dynamic(() => import('@/components/ListingMap'), { ssr: false });
+const ListingMap = nextDynamic(() => import('@/components/ListingMap'), { ssr: false });
 
-export const revalidate = 60; // Short ISR so admin edits appear quickly (on-demand revalidation also fires)
+// Force dynamic rendering — no ISR cache layer. Netlify CDN handles edge caching
+// and purgeCache() reliably clears it when admins make edits.
+export const dynamic = 'force-dynamic';
 
 const SITE_URL = 'https://touchlesscarwashfinder.com';
 
