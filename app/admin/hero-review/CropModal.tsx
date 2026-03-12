@@ -8,6 +8,7 @@ import { X, Crop as CropIcon, RotateCw, Check } from 'lucide-react';
 interface Props {
   imageUrl: string;
   listingId: string;
+  uploadType?: 'hero' | 'gallery';
   onSave: (croppedUrl: string) => void;
   onClose: () => void;
 }
@@ -62,7 +63,7 @@ async function getCroppedBlob(
   });
 }
 
-export function CropModal({ imageUrl, listingId, onSave, onClose }: Props) {
+export function CropModal({ imageUrl, listingId, uploadType = 'hero', onSave, onClose }: Props) {
   const imgRef = useRef<HTMLImageElement>(null);
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
@@ -101,7 +102,7 @@ export function CropModal({ imageUrl, listingId, onSave, onClose }: Props) {
       const formData = new FormData();
       formData.append('file', blob, 'cropped-hero.jpg');
       formData.append('listingId', listingId);
-      formData.append('type', 'hero');
+      formData.append('type', uploadType);
 
       const res = await fetch('/api/upload-image', { method: 'POST', body: formData });
       if (!res.ok) throw new Error(await res.text());
