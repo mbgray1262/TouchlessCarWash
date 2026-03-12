@@ -5,10 +5,9 @@ import { revalidatePath } from 'next/cache';
  * On-demand revalidation endpoint for admin tools.
  * POST /api/revalidate { path: "/state/kansas/louisburg/xcel-car-wash-..." }
  *
- * Three-layer cache purge strategy:
- * 1. revalidatePath()  — tells Next.js to regenerate the page on the next request
- * 2. purgeCache()      — purges Netlify's CDN edge cache (all tags for this site)
- * 3. Self-fetch        — immediately triggers the regeneration so the next visitor sees fresh content
+ * Strategy: listing pages use `dynamic = 'force-dynamic'` (no ISR cache) with
+ * Netlify CDN caching via `Netlify-CDN-Cache-Control` headers. On admin edits
+ * we purge the Netlify CDN cache so the next visitor gets fresh content.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -18,38 +17,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing path' }, { status: 400 });
     }
 
-    // 1. Tell Next.js to invalidate the ISR cache for this path
+    // 1. Tell Next.js to invalidate any internal cache for this path
     revalidatePath(path);
 
-    // 2. Purge the Netlify CDN edge cache
-    //    Using no arguments purges ALL cached content for this site.
-    //    On a site this size that's fine — pages re-cache quickly on first visit.
+    // 2. Purge Netlify CDN edge cache (all pages — site is small enough)
     let netlifyPurged = false;
     try {
       const { purgeCache } = await import('@netlify/functions');
       await purgeCache();
       netlifyPurged = true;
     } catch {
-      // Not on Netlify (local dev) or purge failed — that's OK
+      // Not on Netlify (local dev) or purge failed
     }
 
-    // 3. Self-fetch the page to trigger an immediate ISR regeneration
-    //    so the NEXT visitor (or hard-refresh) gets the fresh version.
-    let prefetched = false;
+    // 3. Pre-warm the page so the next visitor gets a cached response instantly
+    let prewarmed = false;
     try {
       const origin = request.nextUrl.origin;
-      const fetchUrl = `${origin}${path}`;
-      // Fire-and-forget with a short timeout — don't block the response
-      fetch(fetchUrl, {
-        headers: { 'x-prerender': '1' },
-        signal: AbortSignal.timeout(8000),
-      }).catch(() => {});
-      prefetched = true;
+      await fetch(`${origin}${path}`, {
+        headers: { 'x-prewarm': '1', 'Purpose': 'prefetch' },
+        signal: AbortSignal.timeout(10000),
+      });
+      prewarmed = true;
     } catch {
-      // Best-effort
+      // Best-effort — page will be generated on next real visit
     }
 
-    return NextResponse.json({ revalidated: true, netlifyPurged, prefetched, path });
+    return NextResponse.json({ revalidated: true, netlifyPurged, prewarmed, path });
   } catch (err) {
     return NextResponse.json(
       { error: 'Revalidation failed', detail: String(err) },

@@ -10,6 +10,13 @@ SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
 [[plugins]]
 package = "@netlify/plugin-nextjs"
 
+# Listing detail pages: cache at CDN edge for 60s, serve stale up to 24h while revalidating.
+# purgeCache() in /api/revalidate instantly clears these when admins make edits.
+[[headers]]
+  for = "/state/*"
+  [headers.values]
+    Netlify-CDN-Cache-Control = "public, s-maxage=60, stale-while-revalidate=86400, durable"
+
 # Blog slug redirects (old generic posts rewritten for touchless focus)
 [[redirects]]
   from = "/blog/top-5-benefits-of-regular-car-washing"

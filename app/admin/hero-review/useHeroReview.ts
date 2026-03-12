@@ -7,16 +7,19 @@ import { HeroListing, FilterSource, ReplacementOption, SessionStats } from './ty
 
 const PAGE_SIZE = 20;
 
-/** Purge ISR cache for a listing's detail page so changes appear immediately. */
-function revalidateListing(listing: HeroListing | undefined) {
+/** Purge CDN cache for a listing's detail page so changes appear immediately. */
+async function revalidateListing(listing: HeroListing | undefined) {
   if (!listing?.slug) return;
   const path = `/state/${getStateSlug(listing.state)}/${slugify(listing.city)}/${listing.slug}`;
-  // Fire-and-forget — don't block the UI on revalidation
-  fetch('/api/revalidate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ path }),
-  }).catch(() => {}); // silently ignore errors
+  try {
+    await fetch('/api/revalidate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path }),
+    });
+  } catch {
+    // Revalidation failed — page will still update within 60s via CDN TTL
+  }
 }
 
 export function useHeroReview() {
