@@ -202,7 +202,7 @@ export function HeroCard({
   const heroBase = listing.hero_image ? normalizePhotoUrl(listing.hero_image) : null;
   const galleryPhotos = (listing.photos ?? []).filter(p => {
     const base = normalizePhotoUrl(p);
-    return !replacementBases.has(base);
+    return base !== heroBase && !replacementBases.has(base);
   });
 
   const externalFieldFor = (url: string): 'google_photo_url' | 'street_view_url' | null => {
@@ -404,8 +404,13 @@ export function HeroCard({
           )}
         </div>
         <p className="text-xs text-gray-500 mt-0.5">{listing.city}, {listing.state}</p>
-        <div className="mt-1.5">
+        <div className="mt-1.5 flex items-center gap-1.5">
           <SourceBadge source={listing.hero_image_source} />
+          {galleryPhotos.length > 0 && (
+            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 tabular-nums">
+              {galleryPhotos.length} <ImageIcon className="w-2.5 h-2.5 inline -mt-px" />
+            </span>
+          )}
         </div>
       </div>
 

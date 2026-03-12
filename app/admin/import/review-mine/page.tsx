@@ -108,7 +108,7 @@ interface TouchlessBreakdown {
   website: number;
 }
 
-/** Fetch touchless breakdown by discovery source */
+/** Fetch breakdown of touchless listings by discovery source */
 async function fetchTouchlessBreakdown(): Promise<TouchlessBreakdown> {
   const [total, nameMatch, nameMatchLikely, reviews] = await Promise.all([
     fetchCount('is_touchless=eq.true'),
@@ -117,7 +117,12 @@ async function fetchTouchlessBreakdown(): Promise<TouchlessBreakdown> {
     fetchCount('is_touchless=eq.true&review_mine_status=eq.touchless_found'),
   ]);
   const nameCombined = nameMatch + nameMatchLikely;
-  return { total, nameMatch: nameCombined, reviews, website: total - nameCombined - reviews };
+  return {
+    total,
+    nameMatch: nameCombined,
+    reviews,
+    website: total - nameCombined - reviews,
+  };
 }
 
 interface ProspectResult {
@@ -463,7 +468,9 @@ export default function ReviewMinePage() {
                 <div className="rounded-lg p-4 mb-4 bg-emerald-600 text-white">
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <div className="text-3xl font-bold">{breakdown.total.toLocaleString()}</div>
+                      <div className="text-3xl font-bold">
+                        {breakdown.total.toLocaleString()}
+                      </div>
                       <div className="text-sm text-emerald-100">Total Touchless Listings (matches homepage)</div>
                     </div>
                   </div>

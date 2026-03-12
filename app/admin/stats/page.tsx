@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { AdminNav } from '@/components/AdminNav';
 import {
   BarChart3, ShieldCheck, Heart, Star, MessageSquareQuote, Trophy,
   Globe, Phone, Navigation, TrendingUp, Users, MapPin,
@@ -191,6 +192,7 @@ export default async function AdminStatsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <AdminNav />
 
       <div className="container mx-auto px-4 max-w-7xl py-10">
         <div className="mb-8">
