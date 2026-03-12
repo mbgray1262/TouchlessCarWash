@@ -25,7 +25,7 @@ import type { Metadata } from 'next';
 
 const ListingMap = dynamic(() => import('@/components/ListingMap'), { ssr: false });
 
-export const revalidate = 86400; // Re-fetch listing data every 24 hours
+export const revalidate = 60; // Short ISR so admin edits appear quickly (on-demand revalidation also fires)
 
 const SITE_URL = 'https://touchlesscarwashfinder.com';
 
