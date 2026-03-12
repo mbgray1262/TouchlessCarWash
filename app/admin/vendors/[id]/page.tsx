@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { ArrowLeft, Save, Loader2, Plus, X, Check, CheckCircle2, XCircle, ExternalLink, MapPin, Trash2, Globe, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, Eye } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Plus, X, Check, CheckCircle2, XCircle, ExternalLink, MapPin, Trash2, Globe, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, Eye, Zap, RotateCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -93,6 +93,8 @@ export default function VendorDetailPage() {
   const [addingLocation, setAddingLocation] = useState(false);
   const [togglingTouchless, setTogglingTouchless] = useState<string | null>(null);
   const [deletingLocation, setDeletingLocation] = useState<string | null>(null);
+  const [enrichingLocation, setEnrichingLocation] = useState<string | null>(null);
+  const [enrichResults, setEnrichResults] = useState<Record<string, { success: boolean; steps: { name: string; status: string; detail?: string }[] }>>({});
 
   // Sort & filter state
   const [sortKey, setSortKey] = useState<SortKey>('state');
@@ -263,6 +265,61 @@ export default function VendorDetailPage() {
     }
   };
 
+  const handleEnrich = async (listing: VendorListing) => {
+    const mode = listing.website ? 'website' : 'google';
+    setEnrichingLocation(listing.id);
+    // Clear any previous result for this listing
+    setEnrichResults((prev) => { const n = { ...prev }; delete n[listing.id]; return n; });
+
+    try {
+      const res = await fetch('/api/enrich-listing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listingId: listing.id, mode }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast({ title: 'Enrichment failed', description: data.error ?? `HTTP ${res.status}`, variant: 'destructive' });
+        setEnrichResults((prev) => ({ ...prev, [listing.id]: { success: false, steps: [] } }));
+        return;
+      }
+
+      setEnrichResults((prev) => ({ ...prev, [listing.id]: { success: data.success, steps: data.steps ?? [] } }));
+
+      // Re-fetch the listing data to get updated fields
+      const { data: refreshed, error: refreshErr } = await supabase
+        .from('listings')
+        .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url')
+        .eq('id', listing.id)
+        .maybeSingle();
+
+      if (!refreshErr && refreshed) {
+        setListings((prev) => prev.map((l) => l.id === listing.id ? (refreshed as VendorListing) : l));
+      }
+
+      const failedSteps = (data.steps ?? []).filter((s: { status: string }) => s.status !== 'ok');
+      if (data.success) {
+        toast({
+          title: 'Enrichment complete',
+          description: `${listing.name} enriched via ${mode === 'website' ? 'website scrape' : 'Google Places'}. ${(data.steps ?? []).length} step(s) completed.`,
+        });
+      } else {
+        toast({
+          title: 'Partial enrichment',
+          description: `${failedSteps.length} step(s) had issues. Check results for details.`,
+          variant: 'destructive',
+        });
+      }
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Enrichment request failed', variant: 'destructive' });
+      setEnrichResults((prev) => ({ ...prev, [listing.id]: { success: false, steps: [] } }));
+    } finally {
+      setEnrichingLocation(null);
+    }
+  };
+
   const handleAddLocation = async () => {
     if (!listingForm.name.trim() || !listingForm.city.trim() || !listingForm.state.trim()) {
       toast({ title: 'Validation Error', description: 'Name, city, and state are required', variant: 'destructive' });
@@ -307,10 +364,14 @@ export default function VendorDetailPage() {
         .single();
 
       if (error) throw error;
-      setListings((prev) => [...prev, data as VendorListing]);
+      const newListing = data as VendorListing;
+      setListings((prev) => [...prev, newListing]);
       setListingForm(emptyListingForm);
       setShowAddLocation(false);
-      toast({ title: 'Location added', description: `${listingForm.name} created and linked to this vendor` });
+      toast({
+        title: 'Location added',
+        description: `${listingForm.name} created. ${newListing.website ? 'Click the ⚡ Website button to enrich it!' : 'Click the ⚡ Google button to pull Google Places data.'}`,
+      });
     } catch (err) {
       toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to add location', variant: 'destructive' });
     } finally {
@@ -520,6 +581,7 @@ export default function VendorDetailPage() {
                           <SortHeader label="ZIP" col="zip" />
                           <SortHeader label="Touchless" col="is_touchless" />
                           <th className="text-left px-4 py-2.5 font-medium text-gray-600">Links</th>
+                          <th className="text-left px-4 py-2.5 font-medium text-gray-600">Enrich</th>
                           <th className="px-4 py-2.5 w-10" />
                         </tr>
                       </thead>
@@ -567,6 +629,56 @@ export default function VendorDetailPage() {
                                   </a>
                                 )}
                               </div>
+                            </td>
+                            <td className="px-4 py-2.5">
+                              {enrichingLocation === listing.id ? (
+                                <Badge variant="outline" className="border-amber-200 text-amber-700 bg-amber-50 text-xs animate-pulse gap-1">
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                  Enriching…
+                                </Badge>
+                              ) : enrichResults[listing.id] ? (
+                                <button
+                                  onClick={() => handleEnrich(listing)}
+                                  title="Re-run enrichment"
+                                  className="inline-flex items-center"
+                                >
+                                  <Badge
+                                    variant="outline"
+                                    className={`text-xs cursor-pointer transition-colors gap-1 ${
+                                      enrichResults[listing.id].success
+                                        ? 'border-green-200 text-green-700 bg-green-50 hover:bg-green-100'
+                                        : 'border-red-200 text-red-600 bg-red-50 hover:bg-red-100'
+                                    }`}
+                                  >
+                                    {enrichResults[listing.id].success ? (
+                                      <><CheckCircle2 className="w-3 h-3" />Done</>
+                                    ) : (
+                                      <><RotateCw className="w-3 h-3" />Retry</>
+                                    )}
+                                  </Badge>
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleEnrich(listing)}
+                                  disabled={enrichingLocation !== null}
+                                  className="inline-flex items-center"
+                                  title={listing.website ? 'Enrich from website (scrape + classify + photos)' : 'Enrich from Google Places (photos + hours)'}
+                                >
+                                  <Badge
+                                    variant="outline"
+                                    className={`text-xs cursor-pointer transition-colors gap-1 ${
+                                      enrichingLocation !== null
+                                        ? 'opacity-40 cursor-not-allowed'
+                                        : listing.website
+                                          ? 'border-purple-200 text-purple-700 bg-purple-50 hover:bg-purple-100'
+                                          : 'border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100'
+                                    }`}
+                                  >
+                                    <Zap className="w-3 h-3" />
+                                    {listing.website ? 'Website' : 'Google'}
+                                  </Badge>
+                                </button>
+                              )}
                             </td>
                             <td className="px-4 py-2.5">
                               <button
