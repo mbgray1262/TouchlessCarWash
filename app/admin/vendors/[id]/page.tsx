@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { ArrowLeft, Save, Loader2, Plus, X, Check, CheckCircle2, XCircle, ExternalLink, MapPin, Trash2, Globe } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { ArrowLeft, Save, Loader2, Plus, X, Check, CheckCircle2, XCircle, ExternalLink, MapPin, Trash2, Globe, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
+import { getStateSlug, slugify as constantsSlugify } from '@/lib/constants';
 
 interface Vendor {
   id: number;
@@ -25,6 +26,7 @@ interface Vendor {
 interface VendorListing {
   id: string;
   name: string;
+  slug: string;
   address: string;
   city: string;
   state: string;
@@ -32,6 +34,7 @@ interface VendorListing {
   is_touchless: boolean | null;
   crawl_status: string | null;
   website: string | null;
+  location_page_url: string | null;
 }
 
 interface NewListingForm {
@@ -67,6 +70,13 @@ function slugify(text: string) {
     .replace(/-+/g, '-');
 }
 
+type SortKey = 'name' | 'address' | 'city' | 'state' | 'zip' | 'is_touchless';
+type SortDir = 'asc' | 'desc';
+
+function listingUrl(listing: VendorListing): string {
+  return `/state/${getStateSlug(listing.state)}/${constantsSlugify(listing.city)}/${listing.slug}`;
+}
+
 export default function VendorDetailPage() {
   const { toast } = useToast();
   const router = useRouter();
@@ -81,6 +91,13 @@ export default function VendorDetailPage() {
   const [showAddLocation, setShowAddLocation] = useState(false);
   const [listingForm, setListingForm] = useState<NewListingForm>(emptyListingForm);
   const [addingLocation, setAddingLocation] = useState(false);
+  const [togglingTouchless, setTogglingTouchless] = useState<string | null>(null);
+  const [deletingLocation, setDeletingLocation] = useState<string | null>(null);
+
+  // Sort & filter state
+  const [sortKey, setSortKey] = useState<SortKey>('state');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
+  const [stateFilter, setStateFilter] = useState<string>('');
 
   const [form, setForm] = useState({
     canonical_name: '',
@@ -90,6 +107,46 @@ export default function VendorDetailPage() {
     description: '',
     is_chain: false,
   });
+
+  // Derive unique states for filter dropdown
+  const uniqueStates = useMemo(() => {
+    const states = Array.from(new Set(listings.map((l) => l.state))).sort();
+    return states;
+  }, [listings]);
+
+  // Sorted & filtered listings
+  const displayListings = useMemo(() => {
+    let filtered = listings;
+    if (stateFilter) {
+      filtered = filtered.filter((l) => l.state === stateFilter);
+    }
+    return [...filtered].sort((a, b) => {
+      const dir = sortDir === 'asc' ? 1 : -1;
+      switch (sortKey) {
+        case 'name': return dir * a.name.localeCompare(b.name);
+        case 'address': return dir * (a.address || '').localeCompare(b.address || '');
+        case 'city': return dir * a.city.localeCompare(b.city);
+        case 'state': return dir * a.state.localeCompare(b.state) || a.city.localeCompare(b.city);
+        case 'zip': return dir * (a.zip || '').localeCompare(b.zip || '');
+        case 'is_touchless': {
+          const rank = (v: boolean | null) => v === true ? 0 : v === false ? 1 : 2;
+          return dir * (rank(a.is_touchless) - rank(b.is_touchless));
+        }
+        default: return 0;
+      }
+    });
+  }, [listings, stateFilter, sortKey, sortDir]);
+
+  const handleSort = useCallback((key: SortKey) => {
+    setSortKey((prev) => {
+      if (prev === key) {
+        setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+        return key;
+      }
+      setSortDir('asc');
+      return key;
+    });
+  }, []);
 
   useEffect(() => {
     if (!isNaN(vendorId)) fetchVendor();
@@ -102,7 +159,7 @@ export default function VendorDetailPage() {
         supabase.from('vendors').select('*').eq('id', vendorId).maybeSingle(),
         supabase
           .from('listings')
-          .select('id, name, address, city, state, zip, is_touchless, crawl_status, website')
+          .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url')
           .eq('vendor_id', vendorId)
           .order('state', { ascending: true })
           .order('city', { ascending: true }),
@@ -172,6 +229,40 @@ export default function VendorDetailPage() {
     }
   };
 
+  const handleToggleTouchless = async (listing: VendorListing) => {
+    const next = listing.is_touchless === true ? false : listing.is_touchless === false ? null : true;
+    setTogglingTouchless(listing.id);
+    try {
+      const { error } = await supabase
+        .from('listings')
+        .update({ is_touchless: next })
+        .eq('id', listing.id);
+      if (error) throw error;
+      setListings((prev) => prev.map((l) => l.id === listing.id ? { ...l, is_touchless: next } : l));
+      const label = next === true ? 'Touchless' : next === false ? 'Not Touchless' : 'Unknown';
+      toast({ title: 'Updated', description: `${listing.name} set to ${label}` });
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to update', variant: 'destructive' });
+    } finally {
+      setTogglingTouchless(null);
+    }
+  };
+
+  const handleDeleteLocation = async (listing: VendorListing) => {
+    if (!confirm(`Delete "${listing.name}" in ${listing.city}, ${listing.state}? This permanently removes the listing.`)) return;
+    setDeletingLocation(listing.id);
+    try {
+      const { error } = await supabase.from('listings').delete().eq('id', listing.id);
+      if (error) throw error;
+      setListings((prev) => prev.filter((l) => l.id !== listing.id));
+      toast({ title: 'Deleted', description: `${listing.name} removed` });
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to delete', variant: 'destructive' });
+    } finally {
+      setDeletingLocation(null);
+    }
+  };
+
   const handleAddLocation = async () => {
     if (!listingForm.name.trim() || !listingForm.city.trim() || !listingForm.state.trim()) {
       toast({ title: 'Validation Error', description: 'Name, city, and state are required', variant: 'destructive' });
@@ -212,11 +303,11 @@ export default function VendorDetailPage() {
           photos: [],
           crawl_status: listingForm.website ? 'pending' : 'no_website',
         })
-        .select('id, name, address, city, state, zip, is_touchless, crawl_status, website')
+        .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url')
         .single();
 
       if (error) throw error;
-      setListings((prev) => [...prev, data as VendorListing].sort((a, b) => `${a.state}${a.city}`.localeCompare(`${b.state}${b.city}`)));
+      setListings((prev) => [...prev, data as VendorListing]);
       setListingForm(emptyListingForm);
       setShowAddLocation(false);
       toast({ title: 'Location added', description: `${listingForm.name} created and linked to this vendor` });
@@ -227,18 +318,52 @@ export default function VendorDetailPage() {
     }
   };
 
-  const getTouchlessBadge = (is_touchless: boolean | null) => {
-    if (is_touchless === true) return <Badge variant="outline" className="border-green-300 text-green-700 bg-green-50 text-xs">Touchless</Badge>;
-    if (is_touchless === false) return <Badge variant="outline" className="border-red-300 text-red-700 bg-red-50 text-xs">Not Touchless</Badge>;
-    return <Badge variant="outline" className="border-gray-200 text-gray-500 text-xs">Unknown</Badge>;
+  const TouchlessBadge = ({ listing }: { listing: VendorListing }) => {
+    const isToggling = togglingTouchless === listing.id;
+    const label = listing.is_touchless === true ? 'Touchless' : listing.is_touchless === false ? 'Not Touchless' : 'Unknown';
+    const cls =
+      listing.is_touchless === true
+        ? 'border-green-300 text-green-700 bg-green-50 hover:bg-green-100'
+        : listing.is_touchless === false
+          ? 'border-red-300 text-red-700 bg-red-50 hover:bg-red-100'
+          : 'border-gray-200 text-gray-500 hover:bg-gray-100';
+    return (
+      <button
+        disabled={isToggling}
+        onClick={() => handleToggleTouchless(listing)}
+        title={`Click to cycle: Touchless → Not Touchless → Unknown`}
+        className="inline-flex items-center"
+      >
+        <Badge variant="outline" className={`${cls} text-xs cursor-pointer transition-colors select-none ${isToggling ? 'opacity-50' : ''}`}>
+          {isToggling ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+          {label}
+        </Badge>
+      </button>
+    );
   };
 
   const getStatusBadge = (status: string | null, website: string | null) => {
     if (!website) return <Badge variant="outline" className="border-gray-200 text-gray-500 text-xs">No Website</Badge>;
-    if (status === 'crawled') return <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50 text-xs"><CheckCircle2 className="w-3 h-3 mr-1" />Verified</Badge>;
-    if (status === 'failed') return <Badge variant="outline" className="border-red-200 text-red-600 bg-red-50 text-xs"><XCircle className="w-3 h-3 mr-1" />Failed</Badge>;
+    if (status === 'crawled' || status === 'classified') return <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50 text-xs"><CheckCircle2 className="w-3 h-3 mr-1" />Verified</Badge>;
+    if (status === 'failed' || status === 'fetch_failed' || status === 'classify_failed') return <Badge variant="outline" className="border-red-200 text-red-600 bg-red-50 text-xs"><XCircle className="w-3 h-3 mr-1" />Failed</Badge>;
     return <Badge variant="outline" className="border-yellow-200 text-yellow-700 bg-yellow-50 text-xs">Pending</Badge>;
   };
+
+  const SortHeader = ({ label, col, className }: { label: string; col: SortKey; className?: string }) => (
+    <th
+      className={`text-left px-4 py-2.5 font-medium text-gray-600 cursor-pointer select-none hover:text-gray-900 transition-colors ${className ?? ''}`}
+      onClick={() => handleSort(col)}
+    >
+      <span className="inline-flex items-center gap-1">
+        {label}
+        {sortKey === col ? (
+          sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+        ) : (
+          <ArrowUpDown className="w-3 h-3 opacity-30" />
+        )}
+      </span>
+    </th>
+  );
 
   if (loading) {
     return (
@@ -252,7 +377,7 @@ export default function VendorDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <div>
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
@@ -286,7 +411,7 @@ export default function VendorDetailPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-1 space-y-4">
             <Card>
               <CardHeader className="pb-3">
@@ -339,22 +464,41 @@ export default function VendorDetailPage() {
             </Card>
           </div>
 
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-3">
             <Card>
               <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-3">
                   <CardTitle className="text-base">
                     Locations
-                    <span className="ml-2 text-sm font-normal text-gray-400">({listings.length})</span>
+                    <span className="ml-2 text-sm font-normal text-gray-400">
+                      ({stateFilter ? `${displayListings.length} of ${listings.length}` : listings.length})
+                    </span>
                   </CardTitle>
-                  <Button
-                    onClick={() => { setListingForm(emptyListingForm); setShowAddLocation(true); }}
-                    size="sm"
-                    className="bg-[#0F2744] hover:bg-[#1a3a5c] text-white gap-1"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add Location
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {uniqueStates.length > 1 && (
+                      <div className="relative">
+                        <select
+                          value={stateFilter}
+                          onChange={(e) => setStateFilter(e.target.value)}
+                          className="appearance-none bg-white border border-gray-200 rounded-md pl-3 pr-8 py-1.5 text-sm text-gray-700 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-ring"
+                        >
+                          <option value="">All States</option>
+                          {uniqueStates.map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
+                    )}
+                    <Button
+                      onClick={() => { setListingForm(emptyListingForm); setShowAddLocation(true); }}
+                      size="sm"
+                      className="bg-[#0F2744] hover:bg-[#1a3a5c] text-white gap-1"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Location
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="p-0">
@@ -369,40 +513,74 @@ export default function VendorDetailPage() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b bg-gray-50">
-                          <th className="text-left px-4 py-2.5 font-medium text-gray-600">Name</th>
-                          <th className="text-left px-4 py-2.5 font-medium text-gray-600">Location</th>
-                          <th className="text-left px-4 py-2.5 font-medium text-gray-600 hidden sm:table-cell">Status</th>
-                          <th className="text-left px-4 py-2.5 font-medium text-gray-600 hidden md:table-cell">Touchless</th>
-                          <th className="px-4 py-2.5 w-8" />
+                          <SortHeader label="Name" col="name" />
+                          <SortHeader label="Address" col="address" />
+                          <SortHeader label="City" col="city" />
+                          <SortHeader label="State" col="state" />
+                          <SortHeader label="ZIP" col="zip" />
+                          <SortHeader label="Touchless" col="is_touchless" />
+                          <th className="text-left px-4 py-2.5 font-medium text-gray-600">Links</th>
+                          <th className="px-4 py-2.5 w-10" />
                         </tr>
                       </thead>
                       <tbody>
-                        {listings.map((listing) => (
-                          <tr key={listing.id} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
-                            <td className="px-4 py-3">
-                              <Link
-                                href={`/admin/listings`}
-                                className="font-medium text-[#0F2744] hover:underline"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                {listing.name}
-                              </Link>
+                        {displayListings.map((listing) => (
+                          <tr key={listing.id} className="border-b last:border-0 hover:bg-gray-50/80 transition-colors group">
+                            <td className="px-4 py-2.5 font-medium text-gray-900 whitespace-nowrap max-w-[200px] truncate" title={listing.name}>
+                              {listing.name}
                             </td>
-                            <td className="px-4 py-3 text-gray-600 text-xs">
-                              {listing.city}, {listing.state}
+                            <td className="px-4 py-2.5 text-gray-600 text-xs whitespace-nowrap max-w-[180px] truncate" title={listing.address || ''}>
+                              {listing.address || <span className="text-gray-300">—</span>}
                             </td>
-                            <td className="px-4 py-3 hidden sm:table-cell">
-                              {getStatusBadge(listing.crawl_status, listing.website)}
+                            <td className="px-4 py-2.5 text-gray-600 text-xs whitespace-nowrap">
+                              {listing.city}
                             </td>
-                            <td className="px-4 py-3 hidden md:table-cell">
-                              {getTouchlessBadge(listing.is_touchless)}
+                            <td className="px-4 py-2.5 text-gray-600 text-xs">
+                              {listing.state}
                             </td>
-                            <td className="px-4 py-3">
-                              {listing.website && (
-                                <a href={listing.website} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-600" onClick={(e) => e.stopPropagation()}>
-                                  <ExternalLink className="w-3.5 h-3.5" />
+                            <td className="px-4 py-2.5 text-gray-600 text-xs">
+                              {listing.zip || <span className="text-gray-300">—</span>}
+                            </td>
+                            <td className="px-4 py-2.5">
+                              <TouchlessBadge listing={listing} />
+                            </td>
+                            <td className="px-4 py-2.5">
+                              <div className="flex items-center gap-1.5">
+                                <a
+                                  href={listingUrl(listing)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-1 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                                  title="View our listing page"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
                                 </a>
-                              )}
+                                {(listing.website || listing.location_page_url) && (
+                                  <a
+                                    href={listing.location_page_url || listing.website || ''}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="p-1 rounded text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors"
+                                    title="View location website"
+                                  >
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                  </a>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-2.5">
+                              <button
+                                onClick={() => handleDeleteLocation(listing)}
+                                disabled={deletingLocation === listing.id}
+                                className="p-1 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                                title="Delete this location"
+                              >
+                                {deletingLocation === listing.id ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                )}
+                              </button>
                             </td>
                           </tr>
                         ))}
