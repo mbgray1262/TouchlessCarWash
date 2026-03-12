@@ -133,9 +133,14 @@ export function useHeroReview() {
     setConfirmMap(prev => ({ ...prev, [listingId]: optIdx }));
 
     const currentPhotos = listing?.photos ?? [];
-    const updatedPhotos = oldHero && !currentPhotos.includes(oldHero)
+    // Preserve the old hero in photos if not already there
+    let updatedPhotos = oldHero && !currentPhotos.includes(oldHero)
       ? [oldHero, ...currentPhotos]
-      : currentPhotos;
+      : [...currentPhotos];
+    // Also ensure the new hero is in photos (so it appears in gallery)
+    if (url && !updatedPhotos.includes(url)) {
+      updatedPhotos = [url, ...updatedPhotos];
+    }
 
     await supabase
       .from('listings')
@@ -303,9 +308,14 @@ export function useHeroReview() {
     const { url } = await res.json() as { url: string };
 
     const currentPhotos = listing?.photos ?? [];
-    const updatedPhotos = oldHero && !currentPhotos.includes(oldHero)
+    // Preserve the old hero in photos if not already there
+    let updatedPhotos = oldHero && !currentPhotos.includes(oldHero)
       ? [oldHero, ...currentPhotos]
-      : currentPhotos;
+      : [...currentPhotos];
+    // Also ensure the new uploaded image is in photos (so it appears in gallery)
+    if (!updatedPhotos.includes(url)) {
+      updatedPhotos = [url, ...updatedPhotos];
+    }
 
     await supabase
       .from('listings')
