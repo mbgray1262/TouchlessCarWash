@@ -82,10 +82,21 @@ async function forwardGeocode(query: string): Promise<{ lat: number; lng: number
 
 /** Fetch listing name matches from Supabase (for non-ZIP queries only). */
 async function fetchListingMatches(term: string): Promise<ListingResult[]> {
+  // Build alternate patterns to handle "&" variations:
+  // "K&D" should also match "K & D", "K and D", etc.
+  const patterns: string[] = [`%${term}%`];
+  if (term.includes('&')) {
+    patterns.push(`%${term.replace(/&/g, ' & ')}%`); // "K&D" → "K & D"
+    patterns.push(`%${term.replace(/&/g, ' and ')}%`); // "K&D" → "K and D"
+  } else if (term.includes(' & ')) {
+    patterns.push(`%${term.replace(/ & /g, '&')}%`); // "K & D" → "K&D"
+  }
+
+  const filter = patterns.map(p => `name.ilike.${p}`).join(',');
   const { data } = await supabase
     .from('listings')
     .select('id, name, slug, city, state')
-    .ilike('name', `%${term}%`)
+    .or(filter)
     .eq('is_touchless', true)
     .order('rating', { ascending: false })
     .limit(5);
@@ -326,10 +337,18 @@ export default function HeroSection() {
 
     try {
       // Check for direct listing name match first
+      // Handle "&" variations: "K&D" should match "K & D", etc.
+      const namePatterns: string[] = [`name.ilike.%${q}%`];
+      if (q.includes('&')) {
+        namePatterns.push(`name.ilike.%${q.replace(/&/g, ' & ')}%`);
+        namePatterns.push(`name.ilike.%${q.replace(/&/g, ' and ')}%`);
+      } else if (q.includes(' & ')) {
+        namePatterns.push(`name.ilike.%${q.replace(/ & /g, '&')}%`);
+      }
       const { data: nameMatch } = await supabase
         .from('listings')
         .select('id, name, slug, city, state')
-        .ilike('name', `%${q}%`)
+        .or(namePatterns.join(','))
         .eq('is_touchless', true)
         .order('rating', { ascending: false })
         .limit(1)

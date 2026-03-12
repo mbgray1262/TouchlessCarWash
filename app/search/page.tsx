@@ -36,6 +36,27 @@ async function getFilters(): Promise<Filter[]> {
   return data ?? [];
 }
 
+/** Build an OR filter string that matches city/zip/state/name, handling & variants. */
+function buildSearchFilter(query: string): string {
+  const base = `city.ilike.%${query}%,zip.ilike.%${query}%,state.ilike.%${query}%,name.ilike.%${query}%`;
+
+  const extras: string[] = [];
+  if (query.includes('&')) {
+    // "K&D" → also try "K & D" and "K and D"
+    extras.push(`name.ilike.%${query.replace(/&/g, ' & ')}%`);
+    extras.push(`name.ilike.%${query.replace(/&/g, ' and ')}%`);
+  } else if (query.includes(' & ')) {
+    // "K & D" → also try "K&D"
+    extras.push(`name.ilike.%${query.replace(/ & /g, '&')}%`);
+  } else if (query.toLowerCase().includes(' and ')) {
+    // "K and D" → also try "K&D" and "K & D"
+    extras.push(`name.ilike.%${query.replace(/ and /gi, '&')}%`);
+    extras.push(`name.ilike.%${query.replace(/ and /gi, ' & ')}%`);
+  }
+
+  return extras.length > 0 ? `${base},${extras.join(',')}` : base;
+}
+
 async function searchListings(
   query: string,
   activeFilterSlugs: string[],
@@ -71,7 +92,7 @@ async function searchListings(
       .order('rating', { ascending: false });
 
     if (query) {
-      q = q.or(`city.ilike.%${query}%,zip.ilike.%${query}%,state.ilike.%${query}%,name.ilike.%${query}%`);
+      q = q.or(buildSearchFilter(query));
     }
 
     const { data } = await q;
@@ -84,7 +105,7 @@ async function searchListings(
       .order('rating', { ascending: false });
 
     if (query) {
-      q = q.or(`city.ilike.%${query}%,zip.ilike.%${query}%,state.ilike.%${query}%,name.ilike.%${query}%`);
+      q = q.or(buildSearchFilter(query));
     }
 
     const { data } = await q;
