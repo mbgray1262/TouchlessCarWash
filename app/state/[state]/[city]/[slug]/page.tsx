@@ -6,7 +6,8 @@ import { notFound, redirect } from 'next/navigation';
 import {
   Star, MapPin, Phone, Globe, Clock, CheckCircle, ArrowLeft,
   Sparkles, ExternalLink, ChevronRight, Navigation, HelpCircle,
-  CalendarCheck, ChevronDown, Droplet, CreditCard, Zap, MessageSquareQuote, Quote, Trophy, ShieldCheck
+  CalendarCheck, ChevronDown, Droplet, CreditCard, Zap, MessageSquareQuote, Quote, Trophy, ShieldCheck,
+  ThumbsUp, ThumbsDown, Minus
 } from 'lucide-react';
 import LogoImage from '@/components/LogoImage';
 import HeroImageFallback from '@/components/HeroImageFallback';
@@ -639,17 +640,49 @@ function HighlightedReviewText({ text, keywords }: { text: string; keywords: str
   );
 }
 
+function SentimentBadge({ sentiment }: { sentiment: string | null }) {
+  if (!sentiment) return null;
+  if (sentiment === 'positive') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+        <ThumbsUp className="w-3 h-3" />
+        Positive
+      </span>
+    );
+  }
+  if (sentiment === 'negative') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200">
+        <ThumbsDown className="w-3 h-3" />
+        Negative
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 border border-gray-200">
+      <Minus className="w-3 h-3" />
+      Mixed
+    </span>
+  );
+}
+
 function ReviewSnippetCard({ snippet }: { snippet: ReviewSnippet }) {
   const displayText = smartTruncate(snippet.review_text, snippet.touchless_keywords);
+  const borderColor = snippet.sentiment === 'positive'
+    ? 'border-green-200 bg-green-50/30'
+    : snippet.sentiment === 'negative'
+    ? 'border-red-200 bg-red-50/30'
+    : 'border-gray-100 bg-gray-50';
   return (
-    <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
+    <div className={`p-4 rounded-xl border ${borderColor}`}>
       <div className="flex items-start gap-3">
         <Quote className="w-5 h-5 text-[#22C55E]/40 shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
           <p className="text-sm text-gray-700 leading-relaxed">
             <HighlightedReviewText text={displayText} keywords={snippet.touchless_keywords} />
           </p>
-          <div className="flex items-center gap-3 mt-2.5">
+          <div className="flex items-center gap-3 mt-2.5 flex-wrap">
+            {snippet.sentiment && <SentimentBadge sentiment={snippet.sentiment} />}
             {snippet.rating && snippet.rating > 0 && (
               <span className="flex items-center gap-0.5">
                 {Array.from({ length: snippet.rating }, (_, i) => (
@@ -724,6 +757,8 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
 
   const heroImage = listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
   const logoImage = listing.logo_photo ?? listing.google_logo_url ?? null;
+  const heroFocalPoint = listing.hero_focal_point ?? 'center';
+  const heroObjectPosition = heroFocalPoint === 'top' ? 'center 20%' : heroFocalPoint === 'bottom' ? 'center 80%' : 'center';
 
   const seenUrls = new Set<string>();
   const allGalleryPhotos: string[] = [];
@@ -815,13 +850,25 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                   priority
                   sizes="100vw"
                   className="object-cover"
+                  style={{ objectPosition: heroObjectPosition }}
                   unoptimized={!isOptimizedImageHost(heroImage)}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0F2744] via-[#0F2744]/50 to-[#0F2744]/10" />
+
+                {/* Claim Your Badge — floating button on hero */}
+                {topRanking && (
+                  <Link
+                    href={`/badge/${listing.slug}`}
+                    className="absolute bottom-4 right-4 md:bottom-6 md:right-6 z-10 flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-semibold text-sm px-4 py-2.5 rounded-lg shadow-lg hover:shadow-xl transition-all"
+                  >
+                    <Trophy className="w-4 h-4" />
+                    Claim Your Badge
+                  </Link>
+                )}
               </div>
 
-              <div className="absolute inset-0 flex flex-col justify-end">
-                <div className="container mx-auto px-4 max-w-5xl pb-8 pt-4">
+              <div className="absolute inset-0 flex flex-col justify-end pointer-events-none">
+                <div className="container mx-auto px-4 max-w-5xl pb-8 pt-4 pointer-events-auto">
                   <ListingBreadcrumb
                     listingName={listing.name}
                     stateSlug={params.state}
@@ -868,12 +915,6 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                           {listing.address}, {listing.city}, {listing.state}
                         </span>
                         {ratingStars}
-                        {topRanking && (
-                          <Link href={`/badge/${listing.slug}`} className="flex items-center gap-1 text-yellow-300 hover:text-yellow-200 transition-colors font-medium">
-                            <Trophy className="w-3.5 h-3.5" />
-                            Claim Your Badge
-                          </Link>
-                        )}
                       </div>
                       <p className="mt-2.5 text-sm text-white/80 max-w-2xl leading-relaxed line-clamp-2">{heroDescription}</p>
                     </div>
@@ -930,14 +971,17 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                         {listing.address}, {listing.city}, {listing.state}
                       </span>
                       {ratingStars}
-                      {topRanking && (
-                        <Link href={`/badge/${listing.slug}`} className="flex items-center gap-1 text-yellow-300 hover:text-yellow-200 transition-colors font-medium">
-                          <Trophy className="w-3.5 h-3.5" />
-                          Claim Your Badge
-                        </Link>
-                      )}
                     </div>
                     <p className="mt-2.5 text-sm text-white/80 max-w-2xl leading-relaxed line-clamp-2">{heroDescription}</p>
+                    {topRanking && (
+                      <Link
+                        href={`/badge/${listing.slug}`}
+                        className="inline-flex items-center gap-2 mt-4 bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-semibold text-sm px-4 py-2.5 rounded-lg shadow-lg hover:shadow-xl transition-all"
+                      >
+                        <Trophy className="w-4 h-4" />
+                        Claim Your Badge
+                      </Link>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1132,7 +1176,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
 
               {/* Customer Review Snippets — touchless evidence from Google Reviews */}
               {reviewSnippets.length > 0 && (
-                <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                <div id="reviews" className="bg-white rounded-2xl border border-gray-200 p-6 scroll-mt-24">
                   <div className="flex items-center justify-between mb-1">
                     <h2 className="text-lg font-bold text-[#0F2744] flex items-center gap-2">
                       <MessageSquareQuote className="w-5 h-5 text-[#22C55E]" />

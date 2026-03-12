@@ -1,11 +1,16 @@
 'use client';
 
 import { useRef, useEffect, useState } from 'react';
-import { X, Flag, ImageOff, ZoomIn, Crop, ExternalLink, CarFront, Star, Trash2, ChevronDown, ImageIcon, Upload } from 'lucide-react';
+import { X, Flag, ImageOff, ZoomIn, Crop, ExternalLink, CarFront, Star, Trash2, ChevronDown, ChevronLeft, ChevronRight, ImageIcon, Upload } from 'lucide-react';
 import { HeroListing, ReplacementOption } from './types';
 import HeroImageFallback from '@/components/HeroImageFallback';
 import { CropModal } from './CropModal';
 import { getStateSlug, slugify } from '@/lib/constants';
+
+/** Strip Google photo resolution params so we can compare base URLs. */
+function normalizePhotoUrl(url: string): string {
+  return url.replace(/=[whs]\d+(?:-[a-z0-9]+)*$/, '');
+}
 
 const SOURCE_COLORS: Record<string, string> = {
   gallery: 'bg-emerald-100 text-emerald-700',
@@ -35,24 +40,51 @@ interface LightboxProps {
   onClose: () => void;
   onUseAsHero: () => void;
   onDelete?: () => void;
+  onPrev?: () => void;
+  onNext?: () => void;
+  position?: string; // e.g. "3 / 8"
 }
 
-function PhotoLightbox({ url, label, onClose, onUseAsHero, onDelete }: LightboxProps) {
+function PhotoLightbox({ url, label, onClose, onUseAsHero, onDelete, onPrev, onNext, position }: LightboxProps) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
       if (e.key === 'Enter') { onUseAsHero(); onClose(); }
       if (e.key === 'Delete' && onDelete) { onDelete(); onClose(); }
+      if (e.key === 'ArrowLeft' && onPrev) { e.preventDefault(); onPrev(); }
+      if (e.key === 'ArrowRight' && onNext) { e.preventDefault(); onNext(); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [onClose, onUseAsHero, onDelete]);
+  }, [onClose, onUseAsHero, onDelete, onPrev, onNext]);
 
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm"
       onClick={onClose}
     >
+      {/* Prev arrow */}
+      {onPrev && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onPrev(); }}
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 text-white flex items-center justify-center transition-colors"
+          title="Previous (←)"
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+      )}
+
+      {/* Next arrow */}
+      {onNext && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onNext(); }}
+          className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 text-white flex items-center justify-center transition-colors"
+          title="Next (→)"
+        >
+          <ChevronRight className="w-6 h-6" />
+        </button>
+      )}
+
       <div
         className="flex flex-col items-center gap-4"
         onClick={(e) => e.stopPropagation()}
@@ -64,6 +96,12 @@ function PhotoLightbox({ url, label, onClose, onUseAsHero, onDelete }: LightboxP
         />
         <div className="flex items-center gap-2">
           <span className="text-white/50 text-xs">{label}</span>
+          {position && (
+            <>
+              <div className="w-px h-4 bg-white/20" />
+              <span className="text-white/40 text-xs">{position}</span>
+            </>
+          )}
           <div className="w-px h-4 bg-white/20" />
           <button
             onClick={() => { onUseAsHero(); onClose(); }}
@@ -147,7 +185,8 @@ export function HeroCard({
 }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
-  const [lightbox, setLightbox] = useState<{ url: string; label: string; onUseAsHero: () => void; onDelete?: () => void } | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null); // index into galleryItems (photos only)
+  const [heroLightbox, setHeroLightbox] = useState(false); // separate state for hero preview
   const [cropOpen, setCropOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
 
@@ -158,10 +197,13 @@ export function HeroCard({
   }, [isFocused]);
 
   const hasHero = !!listing.hero_image;
-  const replacementUrls = new Set(replacements.map(r => r.url));
-  const galleryPhotos = (listing.photos ?? []).filter(
-    p => p !== listing.hero_image && !replacementUrls.has(p)
-  );
+  // Use normalized URLs to catch same photo at different resolutions (w800 vs w1600)
+  const replacementBases = new Set(replacements.map(r => normalizePhotoUrl(r.url)));
+  const heroBase = listing.hero_image ? normalizePhotoUrl(listing.hero_image) : null;
+  const galleryPhotos = (listing.photos ?? []).filter(p => {
+    const base = normalizePhotoUrl(p);
+    return base !== heroBase && !replacementBases.has(base);
+  });
 
   const externalFieldFor = (url: string): 'google_photo_url' | 'street_view_url' | null => {
     if (url === listing.google_photo_url) return 'google_photo_url';
@@ -221,15 +263,32 @@ export function HeroCard({
       className="hidden"
       onChange={handleFileChange}
     />
-    {lightbox && (
+    {heroLightbox && listing.hero_image && (
       <PhotoLightbox
-        url={lightbox.url}
-        label={lightbox.label}
-        onClose={() => setLightbox(null)}
-        onUseAsHero={() => { lightbox.onUseAsHero(); setLightbox(null); }}
-        onDelete={lightbox.onDelete}
+        url={listing.hero_image}
+        label={`Hero — ${listing.hero_image_source ?? 'unknown'}`}
+        onClose={() => setHeroLightbox(false)}
+        onUseAsHero={() => {}}
+        onDelete={onDeleteHero}
       />
     )}
+    {lightboxIndex !== null && (() => {
+      const photoItems = galleryItems.filter(i => i.kind === 'photo');
+      const item = photoItems[lightboxIndex];
+      if (!item || !item.url) return null;
+      return (
+        <PhotoLightbox
+          url={item.url}
+          label={item.label}
+          onClose={() => setLightboxIndex(null)}
+          onUseAsHero={() => { item.onUseAsHero(); setLightboxIndex(null); }}
+          onDelete={item.onDelete}
+          onPrev={lightboxIndex > 0 ? () => setLightboxIndex(lightboxIndex - 1) : undefined}
+          onNext={lightboxIndex < photoItems.length - 1 ? () => setLightboxIndex(lightboxIndex + 1) : undefined}
+          position={`${lightboxIndex + 1} / ${photoItems.length}`}
+        />
+      );
+    })()}
     {cropOpen && listing.hero_image && (
       <CropModal
         imageUrl={listing.hero_image}
@@ -269,12 +328,7 @@ export function HeroCard({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                setLightbox({
-                  url: listing.hero_image!,
-                  label: `Hero — ${listing.hero_image_source ?? 'unknown'}`,
-                  onUseAsHero: () => {},
-                  onDelete: onDeleteHero,
-                });
+                setHeroLightbox(true);
               }}
               className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover/hero:bg-black/30 transition-colors"
               title="View full size"
@@ -350,8 +404,13 @@ export function HeroCard({
           )}
         </div>
         <p className="text-xs text-gray-500 mt-0.5">{listing.city}, {listing.state}</p>
-        <div className="mt-1.5">
+        <div className="mt-1.5 flex items-center gap-1.5">
           <SourceBadge source={listing.hero_image_source} />
+          {galleryPhotos.length > 0 && (
+            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 tabular-nums">
+              {galleryPhotos.length} <ImageIcon className="w-2.5 h-2.5 inline -mt-px" />
+            </span>
+          )}
         </div>
       </div>
 
@@ -405,14 +464,14 @@ export function HeroCard({
 
                     {item.kind === 'photo' && !isConfirmed && (
                       <button
-                        onClick={() => setLightbox({
-                          url: item.url!,
-                          label: item.label,
-                          onUseAsHero: item.onUseAsHero,
-                          onDelete: item.onDelete,
-                        })}
+                        onClick={() => {
+                          // Find this item's index among photo-only items
+                          const photoItems = galleryItems.filter(i => i.kind === 'photo');
+                          const photoIdx = photoItems.findIndex(i => i.url === item.url);
+                          setLightboxIndex(photoIdx >= 0 ? photoIdx : 0);
+                        }}
                         className="absolute inset-0 flex items-center justify-center rounded-md bg-black/0 group-hover/item:bg-black/25 transition-colors opacity-0 group-hover/item:opacity-100"
-                        title="View full size"
+                        title="View full size (← → to navigate)"
                       >
                         <ZoomIn className="w-5 h-5 text-white drop-shadow-lg" />
                       </button>

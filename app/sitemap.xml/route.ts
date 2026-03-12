@@ -1,27 +1,32 @@
 import { supabase } from '@/lib/supabase';
-import { getStateSlug, slugify } from '@/lib/constants';
-import { METRO_AREAS } from '@/lib/metro-areas';
+import { US_STATES, getStateSlug, slugify } from '@/lib/constants';
+import { METRO_AREAS, boundingBox, haversineDistance } from '@/lib/metro-areas';
 import { FEATURES } from '@/lib/features';
+
+const VALID_STATE_CODES = new Set(US_STATES.map(s => s.code));
 
 export async function GET() {
   const baseUrl = 'https://touchlesscarwashfinder.com';
   const now = new Date().toISOString();
 
   // Paginate past Supabase's default 1000-row limit
-  const listings: Array<{ slug: string; city: string; state: string; created_at: string; updated_at: string | null }> = [];
+  const allListings: Array<{ slug: string; city: string; state: string; created_at: string; updated_at: string | null; latitude: number | null; longitude: number | null }> = [];
   const PAGE_SIZE = 1000;
   let offset = 0;
   while (true) {
     const { data: page } = await supabase
       .from('listings')
-      .select('slug, city, state, created_at, updated_at')
+      .select('slug, city, state, created_at, updated_at, latitude, longitude')
       .eq('is_touchless', true)
       .range(offset, offset + PAGE_SIZE - 1);
     if (!page || page.length === 0) break;
-    listings.push(...page);
+    allListings.push(...page);
     if (page.length < PAGE_SIZE) break;
     offset += PAGE_SIZE;
   }
+
+  // Filter to only valid US states (prevents non-US listings from polluting sitemap)
+  const listings = allListings.filter(l => VALID_STATE_CODES.has(l.state));
 
   const { data: blogPosts } = await supabase
     .from('blog_posts')
@@ -89,15 +94,27 @@ export async function GET() {
   </url>`;
   });
 
-  // Best Of metro area pages
-  const bestOfUrls = METRO_AREAS.map((metro) => {
-    return `  <url>
+  // Best Of metro area pages — only include metros with 5+ listings (matching the page threshold)
+  const geoListings = listings.filter(l => l.latitude != null && l.longitude != null) as Array<typeof listings[number] & { latitude: number; longitude: number }>;
+  const bestOfUrls: string[] = [];
+  for (const metro of METRO_AREAS) {
+    const box = boundingBox(metro.lat, metro.lng, metro.radiusMiles);
+    let count = 0;
+    for (const l of geoListings) {
+      if (l.latitude >= box.minLat && l.latitude <= box.maxLat && l.longitude >= box.minLng && l.longitude <= box.maxLng) {
+        if (haversineDistance(metro.lat, metro.lng, l.latitude, l.longitude) <= metro.radiusMiles) count++;
+      }
+      if (count >= 5) break; // Early exit — we only need to know ≥5
+    }
+    if (count >= 5) {
+      bestOfUrls.push(`  <url>
     <loc>${baseUrl}/best/${metro.slug}</loc>
     <lastmod>${now}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
-  </url>`;
-  });
+  </url>`);
+    }
+  }
 
   // Feature pages
   const featureIndexUrl = `  <url>
@@ -160,6 +177,12 @@ export async function GET() {
     <lastmod>${now}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/dataset</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
   </url>
   <url>
     <loc>${baseUrl}/privacy-policy</loc>
