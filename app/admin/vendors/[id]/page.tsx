@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { ArrowLeft, Save, Loader2, Plus, X, Check, CheckCircle2, XCircle, ExternalLink, MapPin, Trash2, Globe, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, Eye, Zap, RotateCw } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Plus, X, Check, CheckCircle2, XCircle, ExternalLink, MapPin, Trash2, Globe, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, Eye, Zap, RotateCw, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { getStateSlug, slugify as constantsSlugify } from '@/lib/constants';
+import FullEditListingPanel, { type EditableFullListing } from '@/components/FullEditListingPanel';
 
 interface Vendor {
   id: number;
@@ -95,6 +96,8 @@ export default function VendorDetailPage() {
   const [deletingLocation, setDeletingLocation] = useState<string | null>(null);
   const [enrichingLocation, setEnrichingLocation] = useState<string | null>(null);
   const [enrichResults, setEnrichResults] = useState<Record<string, { success: boolean; steps: { name: string; status: string; detail?: string }[] }>>({});
+  const [editingListing, setEditingListing] = useState<EditableFullListing | null>(null);
+  const [loadingEditListing, setLoadingEditListing] = useState<string | null>(null);
 
   // Sort & filter state
   const [sortKey, setSortKey] = useState<SortKey>('state');
@@ -318,6 +321,39 @@ export default function VendorDetailPage() {
     } finally {
       setEnrichingLocation(null);
     }
+  };
+
+  const handleOpenEditListing = async (listing: VendorListing) => {
+    setLoadingEditListing(listing.id);
+    try {
+      const { data, error } = await supabase
+        .from('listings')
+        .select('*')
+        .eq('id', listing.id)
+        .single();
+      if (error) throw error;
+      setEditingListing(data as EditableFullListing);
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to load listing details', variant: 'destructive' });
+    } finally {
+      setLoadingEditListing(null);
+    }
+  };
+
+  const handleListingEdited = (updated: EditableFullListing) => {
+    setListings((prev) => prev.map((l) => l.id === updated.id ? {
+      ...l,
+      name: updated.name,
+      address: updated.address,
+      city: updated.city,
+      state: updated.state,
+      zip: updated.zip,
+      is_touchless: updated.is_touchless,
+      website: updated.website,
+      location_page_url: updated.location_page_url,
+      crawl_status: updated.crawl_status,
+    } : l));
+    setEditingListing(null);
   };
 
   const handleAddLocation = async () => {
@@ -589,7 +625,18 @@ export default function VendorDetailPage() {
                         {displayListings.map((listing) => (
                           <tr key={listing.id} className="border-b last:border-0 hover:bg-gray-50/80 transition-colors group">
                             <td className="px-4 py-2.5 font-medium text-gray-900 whitespace-nowrap max-w-[200px] truncate" title={listing.name}>
-                              {listing.name}
+                              <button
+                                onClick={() => handleOpenEditListing(listing)}
+                                disabled={loadingEditListing === listing.id}
+                                className="text-left hover:text-blue-600 transition-colors inline-flex items-center gap-1.5"
+                              >
+                                {loadingEditListing === listing.id ? (
+                                  <Loader2 className="w-3 h-3 animate-spin shrink-0" />
+                                ) : (
+                                  <Pencil className="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-40" />
+                                )}
+                                <span className="truncate">{listing.name}</span>
+                              </button>
                             </td>
                             <td className="px-4 py-2.5 text-gray-600 text-xs whitespace-nowrap max-w-[180px] truncate" title={listing.address || ''}>
                               {listing.address || <span className="text-gray-300">—</span>}
@@ -705,6 +752,15 @@ export default function VendorDetailPage() {
           </div>
         </div>
       </div>
+
+      {editingListing && (
+        <FullEditListingPanel
+          listing={editingListing}
+          open={!!editingListing}
+          onClose={() => setEditingListing(null)}
+          onSaved={handleListingEdited}
+        />
+      )}
 
       {showAddLocation && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
