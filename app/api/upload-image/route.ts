@@ -42,6 +42,9 @@ export async function POST(request: NextRequest) {
     if (type === 'hero' && listingId) {
       bucket = 'listing-photos';
       filename = `${listingId}/hero-cropped-${timestamp}.${ext}`;
+    } else if (type === 'gallery' && listingId) {
+      bucket = 'listing-photos';
+      filename = `${listingId}/upload-${timestamp}.${ext}`;
     } else if (type === 'submission') {
       bucket = 'listing-photos';
       filename = `submissions/${timestamp}-${base}.${ext}`;

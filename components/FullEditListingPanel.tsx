@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Save, Loader2, Plus, X, Trash2, Clock, Wifi, Building2, MapPin, Camera, Shield, FileText } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Save, Loader2, Plus, X, Trash2, Clock, Wifi, Building2, MapPin, Camera, Shield, FileText, Star, Upload, Crop as CropIcon } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { CropModal } from '@/app/admin/hero-review/CropModal';
 
 const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const DAY_LABELS: Record<string, string> = {
@@ -118,7 +119,10 @@ export default function FullEditListingPanel({ listing, open, onClose, onSaved }
     listing.wash_packages || []
   );
   const [photos, setPhotos] = useState<string[]>(listing.photos || []);
-  const [newPhotoUrl, setNewPhotoUrl] = useState('');
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
+  const [croppingPhoto, setCroppingPhoto] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [touchlessWashTypes, setTouchlessWashTypes] = useState<string[]>(listing.touchless_wash_types || []);
   const [newWashType, setNewWashType] = useState('');
   const [showExtractedData, setShowExtractedData] = useState(false);
@@ -160,7 +164,9 @@ export default function FullEditListingPanel({ listing, open, onClose, onSaved }
     setNewAmenity('');
     setPackages(listing.wash_packages || []);
     setPhotos(listing.photos || []);
-    setNewPhotoUrl('');
+    setUploadingPhotos(false);
+    setUploadProgress(null);
+    setCroppingPhoto(null);
     setTouchlessWashTypes(listing.touchless_wash_types || []);
     setNewWashType('');
     setShowExtractedData(false);
@@ -205,12 +211,77 @@ export default function FullEditListingPanel({ listing, open, onClose, onSaved }
   const removePackage = (idx: number) => setPackages((prev) => prev.filter((_, i) => i !== idx));
 
   // Photos helpers
-  const addPhoto = () => {
-    const val = newPhotoUrl.trim();
-    if (val && !photos.includes(val)) setPhotos((prev) => [...prev, val]);
-    setNewPhotoUrl('');
+  const removePhoto = (url: string) => {
+    setPhotos((prev) => prev.filter((p) => p !== url));
+    if (form.hero_image === url) updateField('hero_image', '');
   };
-  const removePhoto = (url: string) => setPhotos((prev) => prev.filter((p) => p !== url));
+
+  const compressImage = (file: File): Promise<Blob> => {
+    return new Promise((resolve) => {
+      const img = new window.Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        const MAX_WIDTH = 1920;
+        const MAX_HEIGHT = 1080;
+        let { width, height } = img;
+        if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+          const ratio = Math.min(MAX_WIDTH / width, MAX_HEIGHT / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => resolve(blob || file), 'image/jpeg', 0.85);
+      };
+      img.onerror = () => { URL.revokeObjectURL(objectUrl); resolve(file); };
+      img.src = objectUrl;
+    });
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setUploadingPhotos(true);
+    const newUrls: string[] = [];
+    try {
+      for (let i = 0; i < files.length; i++) {
+        setUploadProgress(`Uploading ${i + 1}/${files.length}...`);
+        const compressed = await compressImage(files[i]);
+        const fd = new FormData();
+        fd.append('file', compressed, `upload-${Date.now()}-${i}.jpg`);
+        fd.append('listingId', listing.id);
+        fd.append('type', 'gallery');
+        const res = await fetch('/api/upload-image', { method: 'POST', body: fd });
+        if (res.ok) {
+          const { url } = await res.json();
+          newUrls.push(url);
+        }
+      }
+      if (newUrls.length > 0) setPhotos((prev) => [...prev, ...newUrls]);
+    } catch {
+      toast({ title: 'Upload failed', description: 'One or more images failed to upload.', variant: 'destructive' });
+    } finally {
+      setUploadingPhotos(false);
+      setUploadProgress(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleSetHero = (url: string) => {
+    updateField('hero_image', form.hero_image === url ? '' : url);
+  };
+
+  const handleCropSave = (croppedUrl: string) => {
+    if (croppingPhoto) {
+      setPhotos((prev) => prev.map((p) => (p === croppingPhoto ? croppedUrl : p)));
+      if (form.hero_image === croppingPhoto) updateField('hero_image', croppedUrl);
+    }
+    setCroppingPhoto(null);
+  };
 
   // Touchless tri-state
   const cycleTouchless = () => {
@@ -574,13 +645,30 @@ export default function FullEditListingPanel({ listing, open, onClose, onSaved }
             </AccordionTrigger>
             <AccordionContent>
               <div className="space-y-4">
-                <div>
-                  <Label className="text-xs text-gray-500">Hero Image URL</Label>
-                  <Input value={form.hero_image} onChange={(e) => updateField('hero_image', e.target.value)} className="mt-1" placeholder="https://..." />
-                  {form.hero_image && (
-                    <img src={form.hero_image} alt="Hero preview" className="mt-2 w-full h-32 object-cover rounded-lg border" />
-                  )}
-                </div>
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
+
+                {/* Current hero preview */}
+                {form.hero_image && (
+                  <div>
+                    <Label className="text-xs text-gray-500">Current Hero Image</Label>
+                    <div className="mt-1 relative">
+                      <img src={form.hero_image} alt="Hero" className="w-full h-32 object-cover rounded-lg border" />
+                      <span className="absolute top-2 left-2 inline-flex items-center gap-1 bg-yellow-500 text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
+                        <Star className="w-2.5 h-2.5 fill-current" />Hero
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Hero focal point */}
                 <div>
                   <Label className="text-xs text-gray-500">Hero Focal Point</Label>
                   <select
@@ -594,6 +682,106 @@ export default function FullEditListingPanel({ listing, open, onClose, onSaved }
                     <option value="bottom">Bottom</option>
                   </select>
                 </div>
+
+                {/* Gallery Photos */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
+                      Gallery Photos ({photos.length})
+                    </Label>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingPhotos}
+                      className="h-7 text-xs"
+                    >
+                      {uploadingPhotos ? (
+                        <><Loader2 className="w-3 h-3 mr-1 animate-spin" />{uploadProgress || 'Uploading...'}</>
+                      ) : (
+                        <><Upload className="w-3 h-3 mr-1" />Upload</>
+                      )}
+                    </Button>
+                  </div>
+
+                  {photos.length === 0 && (
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingPhotos}
+                      className="w-full flex flex-col items-center py-8 text-gray-400 border-2 border-dashed rounded-lg hover:border-blue-300 hover:text-blue-500 transition-colors"
+                    >
+                      <Camera className="w-8 h-8 mb-2" />
+                      <span className="text-xs">No photos yet &mdash; click to upload</span>
+                    </button>
+                  )}
+
+                  <div className="grid grid-cols-3 gap-2">
+                    {photos.map((url, idx) => {
+                      const isHero = form.hero_image === url;
+                      return (
+                        <div
+                          key={idx}
+                          className={`relative group aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                            isHero ? 'border-yellow-400 shadow-md shadow-yellow-100' : 'border-gray-200 hover:border-gray-400'
+                          }`}
+                        >
+                          <img
+                            src={url}
+                            alt={`Photo ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              target.style.display = 'none';
+                              const parent = target.parentElement;
+                              if (parent && !parent.querySelector('.broken-ph')) {
+                                const ph = document.createElement('div');
+                                ph.className = 'broken-ph w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-xs';
+                                ph.textContent = 'Image unavailable';
+                                parent.prepend(ph);
+                              }
+                            }}
+                          />
+                          {isHero && (
+                            <span className="absolute top-1 left-1 inline-flex items-center gap-0.5 bg-yellow-500 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full pointer-events-none">
+                              <Star className="w-2.5 h-2.5 fill-current" />Hero
+                            </span>
+                          )}
+                          {/* Hover action buttons */}
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100">
+                            <button
+                              onClick={() => handleSetHero(url)}
+                              title={isHero ? 'Unset hero' : 'Set as hero'}
+                              className={`p-1.5 rounded-full transition-colors shadow ${
+                                isHero
+                                  ? 'bg-yellow-500 text-white hover:bg-yellow-600'
+                                  : 'bg-white/90 text-yellow-600 hover:bg-yellow-50'
+                              }`}
+                            >
+                              <Star className={`w-3.5 h-3.5 ${isHero ? 'fill-current' : ''}`} />
+                            </button>
+                            <button
+                              onClick={() => setCroppingPhoto(url)}
+                              title="Crop"
+                              className="p-1.5 rounded-full bg-white/90 text-blue-600 hover:bg-blue-50 transition-colors shadow"
+                            >
+                              <CropIcon className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => removePhoto(url)}
+                              title="Remove"
+                              className="p-1.5 rounded-full bg-white/90 text-red-600 hover:bg-red-50 transition-colors shadow"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Logo photo */}
                 <div>
                   <Label className="text-xs text-gray-500">Logo Photo URL</Label>
                   <Input value={form.logo_photo} onChange={(e) => updateField('logo_photo', e.target.value)} className="mt-1" placeholder="https://..." />
@@ -601,6 +789,8 @@ export default function FullEditListingPanel({ listing, open, onClose, onSaved }
                     <img src={form.logo_photo} alt="Logo preview" className="mt-2 w-16 h-16 object-contain rounded border bg-gray-50" />
                   )}
                 </div>
+
+                {/* Street view */}
                 <div>
                   <Label className="text-xs text-gray-500">Street View URL</Label>
                   <Input value={form.street_view_url} onChange={(e) => updateField('street_view_url', e.target.value)} className="mt-1" placeholder="https://..." />
@@ -608,43 +798,18 @@ export default function FullEditListingPanel({ listing, open, onClose, onSaved }
                     <img src={form.street_view_url} alt="Street view preview" className="mt-2 w-full h-24 object-cover rounded-lg border" />
                   )}
                 </div>
-
-                {/* Photos array */}
-                <div>
-                  <Label className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Gallery Photos ({photos.length})</Label>
-                  <div className="space-y-2 mt-2">
-                    {photos.map((url, idx) => (
-                      <div key={idx} className="flex items-center gap-2 group">
-                        <img
-                          src={url}
-                          alt={`Photo ${idx + 1}`}
-                          className="w-12 h-12 object-cover rounded border shrink-0"
-                          onError={(e) => { (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><rect fill="%23f3f4f6" width="48" height="48"/><text x="12" y="28" fill="%239ca3af" font-size="10">N/A</text></svg>'; }}
-                        />
-                        <span className="text-xs text-gray-500 truncate flex-1" title={url}>{url}</span>
-                        <button
-                          onClick={() => removePhoto(url)}
-                          className="p-1 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex gap-2 mt-2">
-                    <Input
-                      value={newPhotoUrl}
-                      onChange={(e) => setNewPhotoUrl(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addPhoto(); } }}
-                      placeholder="Add photo URL..."
-                      className="text-sm h-8"
-                    />
-                    <Button size="sm" variant="outline" onClick={addPhoto} className="h-8">
-                      <Plus className="w-3.5 h-3.5 mr-1" />Add
-                    </Button>
-                  </div>
-                </div>
               </div>
+
+              {/* Crop Modal */}
+              {croppingPhoto && (
+                <CropModal
+                  imageUrl={croppingPhoto}
+                  listingId={listing.id}
+                  uploadType="gallery"
+                  onSave={handleCropSave}
+                  onClose={() => setCroppingPhoto(null)}
+                />
+              )}
             </AccordionContent>
           </AccordionItem>
 
