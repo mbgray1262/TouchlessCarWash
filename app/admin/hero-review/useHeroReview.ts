@@ -2,9 +2,22 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { getStateSlug, slugify } from '@/lib/constants';
 import { HeroListing, FilterSource, ReplacementOption, SessionStats } from './types';
 
 const PAGE_SIZE = 20;
+
+/** Purge ISR cache for a listing's detail page so changes appear immediately. */
+function revalidateListing(listing: HeroListing | undefined) {
+  if (!listing?.slug) return;
+  const path = `/state/${getStateSlug(listing.state)}/${slugify(listing.city)}/${listing.slug}`;
+  // Fire-and-forget — don't block the UI on revalidation
+  fetch('/api/revalidate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path }),
+  }).catch(() => {}); // silently ignore errors
+}
 
 export function useHeroReview() {
   const [listings, setListings] = useState<HeroListing[]>([]);
@@ -151,6 +164,7 @@ export function useHeroReview() {
     );
 
     setStats(prev => ({ ...prev, replacements: prev.replacements + 1 }));
+    revalidateListing(listing);
 
     setTimeout(() => {
       setConfirmMap(prev => { const n = { ...prev }; delete n[listingId]; return n; });
@@ -180,11 +194,14 @@ export function useHeroReview() {
         : l
       )
     );
+    revalidateListing(listing);
   };
 
   const handleDeleteExternalPhoto = async (listingId: string, field: 'google_photo_url' | 'street_view_url') => {
+    const listing = listings.find(l => l.id === listingId);
     await supabase.from('listings').update({ [field]: null }).eq('id', listingId);
     setListings(prev => prev.map(l => l.id === listingId ? { ...l, [field]: null } : l));
+    revalidateListing(listing);
   };
 
   const handleDeleteHeroPhoto = async (listingId: string) => {
@@ -218,6 +235,7 @@ export function useHeroReview() {
         street_view_url: l.street_view_url === heroUrl ? null : l.street_view_url,
       };
     }));
+    revalidateListing(listing);
   };
 
   const handleRemoveGalleryPhoto = async (listingId: string, photoUrl: string) => {
@@ -249,9 +267,11 @@ export function useHeroReview() {
         : l
       )
     );
+    revalidateListing(listing);
   };
 
   const handleCropSave = async (listingId: string, croppedUrl: string) => {
+    const listing = listings.find(l => l.id === listingId);
     await supabase
       .from('listings')
       .update({ hero_image: croppedUrl, hero_image_source: 'gallery' })
@@ -263,6 +283,7 @@ export function useHeroReview() {
         : l
       )
     );
+    revalidateListing(listing);
   };
 
   const handleUploadHero = async (listingId: string, file: File) => {
@@ -313,15 +334,18 @@ export function useHeroReview() {
     );
 
     setStats(prev => ({ ...prev, replacements: prev.replacements + 1 }));
+    revalidateListing(listing);
   };
 
   const handleMarkNotTouchless = async (listingId: string) => {
+    const listing = listings.find(l => l.id === listingId);
     await supabase
       .from('listings')
       .update({ is_touchless: false })
       .eq('id', listingId);
 
     setListings(prev => prev.filter(l => l.id !== listingId));
+    revalidateListing(listing);
   };
 
   const handleFlag = async (listingId: string) => {
