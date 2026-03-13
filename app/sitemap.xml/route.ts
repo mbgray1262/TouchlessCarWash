@@ -138,17 +138,20 @@ export async function GET() {
     <priority>0.8</priority>
   </url>`);
 
+  // Only include feature/state pages with 3+ listings (matching the page's notFound() threshold)
   const featureStateUrls: string[] = [];
   for (const feature of FEATURES) {
     const { data } = await supabase.rpc('feature_state_counts', { p_filter_slug: feature.slug });
     if (data) {
       for (const row of data as { state: string; count: number }[]) {
-        featureStateUrls.push(`  <url>
+        if (row.count >= 3) {
+          featureStateUrls.push(`  <url>
     <loc>${baseUrl}/features/${feature.slug}/${getStateSlug(row.state)}</loc>
     <lastmod>${now}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>`);
+        }
       }
     }
   }

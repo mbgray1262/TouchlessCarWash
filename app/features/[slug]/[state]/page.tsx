@@ -42,7 +42,9 @@ export async function generateStaticParams() {
   for (const { slug, data } of allData) {
     if (data) {
       for (const row of data as { state: string; count: number }[]) {
-        params.push({ slug, state: getStateSlug(row.state) });
+        if (row.count >= 3) {
+          params.push({ slug, state: getStateSlug(row.state) });
+        }
       }
     }
   }
