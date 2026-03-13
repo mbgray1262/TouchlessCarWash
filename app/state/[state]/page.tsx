@@ -9,6 +9,7 @@ import { StateListingsClient } from '@/components/StateListingsClient';
 import { getFilters, getStateListingsPaginated } from '@/lib/listing-queries';
 import { FEATURES } from '@/lib/features';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
+import { AdUnit } from '@/components/AdUnit';
 import type { Metadata } from 'next';
 
 // ISR — regenerate every hour. Now actually works because we removed searchParams!
@@ -349,6 +350,8 @@ export default async function StatePage({ params }: StatePageProps) {
               </details>
             </div>
           </section>
+
+          <AdUnit className="mt-10" format="horizontal" />
 
           {nearbyStates.length > 0 && (
             <div className="mt-14 pt-10 border-t border-gray-200">

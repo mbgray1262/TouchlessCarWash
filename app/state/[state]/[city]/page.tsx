@@ -7,6 +7,7 @@ import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { US_STATES, getStateName, slugify } from '@/lib/constants';
 import { CityListingsClient } from '@/components/CityListingsClient';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
+import { AdUnit } from '@/components/AdUnit';
 import type { Metadata } from 'next';
 
 // ISR — regenerate every hour. Now actually works because we removed searchParams!
@@ -449,6 +450,8 @@ export default async function CityPage({ params }: CityPageProps) {
             </Link>
           </Button>
         </div>
+
+        <AdUnit className="mt-10" format="horizontal" />
 
         {nearbyCities.length > 0 && (
           <div className="mt-14 pt-10 border-t border-gray-200">
