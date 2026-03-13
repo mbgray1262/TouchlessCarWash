@@ -403,6 +403,9 @@ export function HeroCard({
             </a>
           )}
         </div>
+        {listing.address && (
+          <p className="text-xs text-gray-400 mt-0.5 truncate" title={listing.address}>{listing.address}</p>
+        )}
         <p className="text-xs text-gray-500 mt-0.5">{listing.city}, {listing.state}</p>
         <div className="mt-1.5 flex items-center gap-1.5">
           <SourceBadge source={listing.hero_image_source} />

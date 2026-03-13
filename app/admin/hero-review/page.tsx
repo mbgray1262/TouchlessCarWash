@@ -230,8 +230,25 @@ export default function HeroReviewPage() {
               Prev
             </button>
 
-            <span className="text-sm text-gray-600">
-              Page {page + 1} of {totalPages}
+            <span className="text-sm text-gray-600 flex items-center gap-1.5">
+              Page
+              <input
+                type="number"
+                min={1}
+                max={totalPages}
+                value={page + 1}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  if (!isNaN(val) && val >= 1 && val <= totalPages) {
+                    setPage(val - 1);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  e.stopPropagation();
+                }}
+                className="w-16 px-2 py-1 text-sm text-center rounded-md border border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none"
+              />
+              of {totalPages}
             </span>
 
             <button
