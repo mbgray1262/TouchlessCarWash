@@ -1314,8 +1314,8 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                 {listing.latitude && listing.longitude && (
                   <TrackableLink
                     href={listing.google_place_id
-                      ? `https://www.google.com/maps/place/?q=place_id:${listing.google_place_id}`
-                      : `https://www.google.com/maps/search/?api=1&query=${listing.latitude},${listing.longitude}`
+                      ? `https://www.google.com/maps/dir/?api=1&destination=&destination_place_id=${listing.google_place_id}`
+                      : `https://www.google.com/maps/dir/?api=1&destination=${listing.latitude},${listing.longitude}`
                     }
                     listingId={listing.id}
                     eventType="directions"
