@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { ArrowLeft, Save, Loader2, Plus, X, Check, CheckCircle2, XCircle, ExternalLink, MapPin, Trash2, Globe, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, Eye, Zap, RotateCw, Pencil } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Plus, X, Check, CheckCircle2, XCircle, ExternalLink, MapPin, Trash2, Globe, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, Eye, Zap, RotateCw, Pencil, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -98,6 +98,8 @@ export default function VendorDetailPage() {
   const [enrichResults, setEnrichResults] = useState<Record<string, { success: boolean; steps: { name: string; status: string; detail?: string }[] }>>({});
   const [editingListing, setEditingListing] = useState<EditableFullListing | null>(null);
   const [loadingEditListing, setLoadingEditListing] = useState<string | null>(null);
+  const [fullEnrichingAll, setFullEnrichingAll] = useState(false);
+  const [fullEnrichProgress, setFullEnrichProgress] = useState<{ steps: { name: string; status: string; detail?: string }[]; listingCount?: number } | null>(null);
 
   // Sort & filter state
   const [sortKey, setSortKey] = useState<SortKey>('state');
@@ -337,6 +339,98 @@ export default function VendorDetailPage() {
       toast({ title: 'Error', description: 'Failed to load listing details', variant: 'destructive' });
     } finally {
       setLoadingEditListing(null);
+    }
+  };
+
+  const handleFullEnrichAll = async () => {
+    if (!listings.length) return;
+    if (!confirm(`Run Full Enrich on all ${listings.length} locations? This will fetch Google data, photos, and regenerate descriptions.`)) return;
+
+    setFullEnrichingAll(true);
+    setFullEnrichProgress(null);
+
+    try {
+      const listingIds = listings.map((l) => l.id);
+      const res = await fetch('/api/enrich-listing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listingIds, mode: 'full' }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast({ title: 'Full Enrich failed', description: data.error ?? `HTTP ${res.status}`, variant: 'destructive' });
+        return;
+      }
+
+      setFullEnrichProgress({ steps: data.steps ?? [], listingCount: data.listingCount });
+
+      const failedSteps = (data.steps ?? []).filter((s: { status: string }) => s.status !== 'ok');
+      if (data.success) {
+        toast({
+          title: 'Full Enrich started',
+          description: `Google data fetched for ${data.listingCount} listings. Photo enrichment and description generation running in background.`,
+        });
+      } else {
+        toast({
+          title: 'Partial success',
+          description: `${failedSteps.length} step(s) had issues. Check the progress banner for details.`,
+          variant: 'destructive',
+        });
+      }
+
+      // Refresh listings to show updated data
+      fetchVendor();
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Full enrich request failed', variant: 'destructive' });
+    } finally {
+      setFullEnrichingAll(false);
+    }
+  };
+
+  const handleFullEnrichSingle = async (listing: VendorListing) => {
+    setEnrichingLocation(listing.id);
+    setEnrichResults((prev) => { const n = { ...prev }; delete n[listing.id]; return n; });
+
+    try {
+      const res = await fetch('/api/enrich-listing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listingId: listing.id, listingIds: [listing.id], mode: 'full' }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast({ title: 'Full Enrich failed', description: data.error ?? `HTTP ${res.status}`, variant: 'destructive' });
+        setEnrichResults((prev) => ({ ...prev, [listing.id]: { success: false, steps: [] } }));
+        return;
+      }
+
+      setEnrichResults((prev) => ({ ...prev, [listing.id]: { success: data.success, steps: data.steps ?? [] } }));
+
+      // Re-fetch the listing data
+      const { data: refreshed, error: refreshErr } = await supabase
+        .from('listings')
+        .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url')
+        .eq('id', listing.id)
+        .maybeSingle();
+
+      if (!refreshErr && refreshed) {
+        setListings((prev) => prev.map((l) => l.id === listing.id ? (refreshed as VendorListing) : l));
+      }
+
+      if (data.success) {
+        toast({ title: 'Full Enrich complete', description: `${listing.name} fully enriched. Photos & descriptions running in background.` });
+      } else {
+        toast({ title: 'Partial enrichment', description: 'Some steps had issues. Check results for details.', variant: 'destructive' });
+      }
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Full enrich failed', variant: 'destructive' });
+      setEnrichResults((prev) => ({ ...prev, [listing.id]: { success: false, steps: [] } }));
+    } finally {
+      setEnrichingLocation(null);
     }
   };
 
@@ -588,6 +682,16 @@ export default function VendorDetailPage() {
                       </div>
                     )}
                     <Button
+                      onClick={handleFullEnrichAll}
+                      disabled={fullEnrichingAll || listings.length === 0}
+                      size="sm"
+                      variant="outline"
+                      className="gap-1 border-amber-200 text-amber-700 hover:bg-amber-50"
+                    >
+                      {fullEnrichingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                      {fullEnrichingAll ? 'Enriching...' : 'Full Enrich All'}
+                    </Button>
+                    <Button
                       onClick={() => { setListingForm(emptyListingForm); setShowAddLocation(true); }}
                       size="sm"
                       className="bg-[#0F2744] hover:bg-[#1a3a5c] text-white gap-1"
@@ -598,6 +702,34 @@ export default function VendorDetailPage() {
                   </div>
                 </div>
               </CardHeader>
+              {fullEnrichProgress && (
+                <div className="mx-4 mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-amber-800">
+                      Full Enrich Results — {fullEnrichProgress.listingCount} listing(s)
+                    </span>
+                    <button
+                      onClick={() => setFullEnrichProgress(null)}
+                      className="text-amber-400 hover:text-amber-600 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="space-y-1">
+                    {fullEnrichProgress.steps.map((step, i) => (
+                      <div key={i} className="flex items-center gap-2 text-xs">
+                        {step.status === 'ok' ? (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                        ) : (
+                          <XCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                        )}
+                        <span className="font-medium text-amber-900">{step.name}</span>
+                        <span className="text-amber-700 truncate">{step.detail}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <CardContent className="p-0">
                 {listings.length === 0 ? (
                   <div className="py-12 text-center text-gray-400 px-4">
@@ -705,26 +837,46 @@ export default function VendorDetailPage() {
                                   </Badge>
                                 </button>
                               ) : (
-                                <button
-                                  onClick={() => handleEnrich(listing)}
-                                  disabled={enrichingLocation !== null}
-                                  className="inline-flex items-center"
-                                  title={listing.website ? 'Enrich from website (scrape + classify + photos)' : 'Enrich from Google Places (photos + hours)'}
-                                >
-                                  <Badge
-                                    variant="outline"
-                                    className={`text-xs cursor-pointer transition-colors gap-1 ${
-                                      enrichingLocation !== null
-                                        ? 'opacity-40 cursor-not-allowed'
-                                        : listing.website
-                                          ? 'border-purple-200 text-purple-700 bg-purple-50 hover:bg-purple-100'
-                                          : 'border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100'
-                                    }`}
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => handleEnrich(listing)}
+                                    disabled={enrichingLocation !== null}
+                                    className="inline-flex items-center"
+                                    title={listing.website ? 'Enrich from website (scrape + classify + photos)' : 'Enrich from Google Places (photos + hours)'}
                                   >
-                                    <Zap className="w-3 h-3" />
-                                    {listing.website ? 'Website' : 'Google'}
-                                  </Badge>
-                                </button>
+                                    <Badge
+                                      variant="outline"
+                                      className={`text-xs cursor-pointer transition-colors gap-1 ${
+                                        enrichingLocation !== null
+                                          ? 'opacity-40 cursor-not-allowed'
+                                          : listing.website
+                                            ? 'border-purple-200 text-purple-700 bg-purple-50 hover:bg-purple-100'
+                                            : 'border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100'
+                                      }`}
+                                    >
+                                      <Zap className="w-3 h-3" />
+                                      {listing.website ? 'Website' : 'Google'}
+                                    </Badge>
+                                  </button>
+                                  <button
+                                    onClick={() => handleFullEnrichSingle(listing)}
+                                    disabled={enrichingLocation !== null}
+                                    className="inline-flex items-center"
+                                    title="Full Enrich: Google data + photos + description"
+                                  >
+                                    <Badge
+                                      variant="outline"
+                                      className={`text-xs cursor-pointer transition-colors gap-1 ${
+                                        enrichingLocation !== null
+                                          ? 'opacity-40 cursor-not-allowed'
+                                          : 'border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100'
+                                      }`}
+                                    >
+                                      <Sparkles className="w-3 h-3" />
+                                      Full
+                                    </Badge>
+                                  </button>
+                                </div>
                               )}
                             </td>
                             <td className="px-4 py-2.5">

@@ -23,18 +23,85 @@ async function callEdgeFunction(name: string, body: Record<string, unknown>) {
 /**
  * POST /api/enrich-listing
  *
- * Enriches a single listing by calling Supabase edge functions:
+ * Enriches listing(s) by calling Supabase edge functions:
  *
  * { listingId, mode: "website" }  — classify + photos + rich data from website
  * { listingId, mode: "google" }   — enrich from Google Places (photos, hours)
  * { listingId, mode: "classify" } — just classify touchless status
+ * { listingIds, mode: "full" }    — full pipeline: google-enrich + photo-enrich + generate-descriptions
  */
 export async function POST(request: NextRequest) {
   try {
-    const { listingId, mode } = (await request.json()) as {
+    const body = (await request.json()) as {
       listingId?: string;
-      mode?: 'website' | 'google' | 'classify';
+      listingIds?: string[];
+      mode?: 'website' | 'google' | 'classify' | 'full';
+      force?: boolean;
     };
+
+    const { mode } = body;
+
+    // ── FULL enrichment mode (batch) ──
+    if (mode === 'full') {
+      const listingIds = body.listingIds ?? (body.listingId ? [body.listingId] : []);
+      const force = body.force ?? false;
+
+      if (listingIds.length === 0) {
+        return NextResponse.json(
+          { error: 'listingIds array (or listingId) is required for mode "full"' },
+          { status: 400 },
+        );
+      }
+
+      const steps: { name: string; status: string; detail?: string }[] = [];
+
+      // Step 1: Google Places enrichment (synchronous — we wait for this)
+      const googleEnrich = await callEdgeFunction('google-enrich', {
+        action: 'enrich_batch',
+        listing_ids: listingIds,
+        force,
+      });
+      steps.push({
+        name: 'google-enrich',
+        status: googleEnrich.ok ? 'ok' : 'error',
+        detail: googleEnrich.ok
+          ? `ok=${googleEnrich.data.ok ?? 0}, no_match=${googleEnrich.data.no_match ?? 0}, errors=${googleEnrich.data.errors ?? 0}`
+          : googleEnrich.data.error ?? `HTTP ${googleEnrich.status}`,
+      });
+
+      // Step 2: Photo enrichment (creates a background job)
+      const photoEnrich = await callEdgeFunction('photo-enrich', {
+        action: 'start',
+        listing_ids: listingIds,
+      });
+      steps.push({
+        name: 'photo-enrich',
+        status: photoEnrich.ok ? 'ok' : 'error',
+        detail: photoEnrich.ok
+          ? `job_id=${photoEnrich.data.job_id ?? 'n/a'}, tasks=${photoEnrich.data.total ?? '?'}`
+          : photoEnrich.data.error ?? `HTTP ${photoEnrich.status}`,
+      });
+
+      // Step 3: Generate descriptions (creates a background job)
+      const descriptions = await callEdgeFunction('generate-descriptions', {
+        action: 'start',
+        listing_ids: listingIds,
+        regenerate: true,
+      });
+      steps.push({
+        name: 'generate-descriptions',
+        status: descriptions.ok ? 'ok' : 'error',
+        detail: descriptions.ok
+          ? `job_id=${descriptions.data.job_id ?? 'n/a'}`
+          : descriptions.data.error ?? `HTTP ${descriptions.status}`,
+      });
+
+      const allOk = steps.every((s) => s.status === 'ok');
+      return NextResponse.json({ success: allOk, steps, listingCount: listingIds.length });
+    }
+
+    // ── Single listing modes (existing) ──
+    const { listingId } = body;
 
     if (!listingId || !mode) {
       return NextResponse.json(
