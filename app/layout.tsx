@@ -64,6 +64,12 @@ export default function RootLayout({
                 gtag('config', 'G-55HHXHEVFP');
               `}
             </Script>
+            <Script
+              async
+              src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2012332157653110"
+              crossOrigin="anonymous"
+              strategy="lazyOnload"
+            />
           </>
         )}
         {/* Google Maps is loaded on-demand by HeroSection when user interacts with search */}
