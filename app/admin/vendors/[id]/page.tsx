@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { ArrowLeft, Save, Loader2, Plus, X, Check, CheckCircle2, XCircle, ExternalLink, MapPin, Trash2, Globe, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, Eye, Zap, RotateCw, Pencil, Sparkles } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Plus, X, Check, CheckCircle2, XCircle, ExternalLink, MapPin, Trash2, Globe, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, Eye, Zap, RotateCw, Pencil, Sparkles, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -100,6 +100,8 @@ export default function VendorDetailPage() {
   const [loadingEditListing, setLoadingEditListing] = useState<string | null>(null);
   const [fullEnrichingAll, setFullEnrichingAll] = useState(false);
   const [fullEnrichProgress, setFullEnrichProgress] = useState<{ steps: { name: string; status: string; detail?: string }[]; listingCount?: number } | null>(null);
+  const [streetViewReplacing, setStreetViewReplacing] = useState(false);
+  const [streetViewResult, setStreetViewResult] = useState<{ total: number; replaced: number; no_coverage: number } | null>(null);
 
   // Sort & filter state
   const [sortKey, setSortKey] = useState<SortKey>('state');
@@ -386,6 +388,36 @@ export default function VendorDetailPage() {
       toast({ title: 'Error', description: err instanceof Error ? err.message : 'Full enrich request failed', variant: 'destructive' });
     } finally {
       setFullEnrichingAll(false);
+    }
+  };
+
+  const handleStreetViewReplace = async () => {
+    if (!vendor) return;
+    if (!confirm(`Replace generic hero images with unique Street View photos for all ${vendor.canonical_name} locations that share the same hero?`)) return;
+
+    setStreetViewReplacing(true);
+    setStreetViewResult(null);
+
+    try {
+      const { data: fnData, error: fnErr } = await supabase.functions.invoke('streetview-hero', {
+        body: { action: 'replace_vendor', vendor_id: vendor.id },
+      });
+
+      if (fnErr) {
+        toast({ title: 'Street View replace failed', description: fnErr.message, variant: 'destructive' });
+        return;
+      }
+
+      setStreetViewResult({ total: fnData.total, replaced: fnData.replaced, no_coverage: fnData.no_coverage });
+      toast({
+        title: 'Street View heroes updated',
+        description: `${fnData.replaced}/${fnData.total} locations updated with unique Street View photos.`,
+      });
+      fetchVendor();
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Street View request failed', variant: 'destructive' });
+    } finally {
+      setStreetViewReplacing(false);
     }
   };
 
@@ -682,6 +714,16 @@ export default function VendorDetailPage() {
                       </div>
                     )}
                     <Button
+                      onClick={handleStreetViewReplace}
+                      disabled={streetViewReplacing || listings.length === 0}
+                      size="sm"
+                      variant="outline"
+                      className="gap-1 border-blue-200 text-blue-700 hover:bg-blue-50"
+                    >
+                      {streetViewReplacing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                      {streetViewReplacing ? 'Replacing...' : 'Street View Heroes'}
+                    </Button>
+                    <Button
                       onClick={handleFullEnrichAll}
                       disabled={fullEnrichingAll || listings.length === 0}
                       size="sm"
@@ -727,6 +769,23 @@ export default function VendorDetailPage() {
                         <span className="text-amber-700 truncate">{step.detail}</span>
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+              {streetViewResult && (
+                <div className="mx-4 mb-3 p-3 rounded-lg bg-blue-50 border border-blue-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-blue-800">
+                      <Camera className="w-4 h-4 inline mr-1.5" />
+                      Street View Heroes — {streetViewResult.replaced}/{streetViewResult.total} replaced
+                      {streetViewResult.no_coverage > 0 && ` (${streetViewResult.no_coverage} no coverage)`}
+                    </span>
+                    <button
+                      onClick={() => setStreetViewResult(null)}
+                      className="text-blue-400 hover:text-blue-600 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               )}
