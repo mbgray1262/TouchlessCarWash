@@ -31,6 +31,8 @@ export function useHeroReview() {
 
   const [filterSource, setFilterSource] = useState<FilterSource>('all');
   const [filterState, setFilterState] = useState('');
+  const [filterVendorId, setFilterVendorId] = useState('');
+  const [vendors, setVendors] = useState<{ id: number; name: string }[]>([]);
   const [searchName, setSearchName] = useState('');
   const [showFlaggedOnly, setShowFlaggedOnly] = useState(false);
 
@@ -50,6 +52,19 @@ export function useHeroReview() {
     }
   }, []);
 
+  // Load vendor list for dropdown
+  useEffect(() => {
+    supabase
+      .from('vendors')
+      .select('id, canonical_name')
+      .order('canonical_name')
+      .then(({ data }) => {
+        if (data) {
+          setVendors(data.map(v => ({ id: v.id, name: v.canonical_name })));
+        }
+      });
+  }, []);
+
   const buildQuery = useCallback(() => {
     let q = supabase
       .from('listings')
@@ -64,10 +79,11 @@ export function useHeroReview() {
     }
 
     if (filterState) q = q.eq('state', filterState);
+    if (filterVendorId) q = q.eq('vendor_id', parseInt(filterVendorId, 10));
     if (searchName) q = q.ilike('name', `%${searchName}%`);
 
     return q;
-  }, [filterSource, filterState, searchName]);
+  }, [filterSource, filterState, filterVendorId, searchName]);
 
   const loadListings = useCallback(async () => {
     setLoading(true);
@@ -408,6 +424,8 @@ export function useHeroReview() {
     setPage,
     filterSource, setFilterSource,
     filterState, setFilterState,
+    filterVendorId, setFilterVendorId,
+    vendors,
     searchName, setSearchName,
     showFlaggedOnly, setShowFlaggedOnly,
     expandedId, setExpandedId,

@@ -28,6 +28,8 @@ export default function HeroReviewPage() {
     setPage,
     filterSource, setFilterSource,
     filterState, setFilterState,
+    filterVendorId, setFilterVendorId,
+    vendors,
     searchName, setSearchName,
     showFlaggedOnly, setShowFlaggedOnly,
     expandedId, setExpandedId,
@@ -80,6 +82,11 @@ export default function HeroReviewPage() {
     setFilterState(val);
     setPage(0);
   }, [setFilterState, setPage]);
+
+  const handleVendorChange = useCallback((val: string) => {
+    setFilterVendorId(val);
+    setPage(0);
+  }, [setFilterVendorId, setPage]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -144,6 +151,17 @@ export default function HeroReviewPage() {
             <option value="">All States</option>
             {US_STATES.map(s => (
               <option key={s.code} value={s.code}>{s.name}</option>
+            ))}
+          </select>
+
+          <select
+            value={filterVendorId}
+            onChange={(e) => handleVendorChange(e.target.value)}
+            className="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white max-w-48"
+          >
+            <option value="">All Vendors</option>
+            {vendors.map(v => (
+              <option key={v.id} value={v.id}>{v.name}</option>
             ))}
           </select>
 
