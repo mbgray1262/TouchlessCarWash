@@ -96,6 +96,19 @@ export async function POST(request: NextRequest) {
           : descriptions.data.error ?? `HTTP ${descriptions.status}`,
       });
 
+      // Step 4: Amenity backfill (scrape website → extract amenities via Claude)
+      const amenities = await callEdgeFunction('amenity-backfill', {
+        action: 'start',
+        listing_ids: listingIds,
+      });
+      steps.push({
+        name: 'amenity-backfill',
+        status: amenities.ok ? 'ok' : 'error',
+        detail: amenities.ok
+          ? `job_id=${amenities.data.job_id ?? 'n/a'}, tasks=${amenities.data.total ?? '?'}`
+          : amenities.data.error ?? `HTTP ${amenities.status}`,
+      });
+
       const allOk = steps.every((s) => s.status === 'ok');
       return NextResponse.json({ success: allOk, steps, listingCount: listingIds.length });
     }
