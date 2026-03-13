@@ -408,10 +408,15 @@ export default function VendorDetailPage() {
         return;
       }
 
-      setStreetViewResult({ total: fnData.total, replaced: fnData.replaced, no_coverage: fnData.no_coverage });
+      if (fnData.message) {
+        toast({ title: 'No generic heroes found', description: 'All locations already have unique hero images.' });
+        return;
+      }
+
+      setStreetViewResult({ total: fnData.total ?? 0, replaced: fnData.replaced ?? 0, no_coverage: fnData.no_coverage ?? 0 });
       toast({
         title: 'Street View heroes updated',
-        description: `${fnData.replaced}/${fnData.total} locations updated with unique Street View photos.`,
+        description: `${fnData.replaced ?? 0}/${fnData.total ?? 0} locations updated with unique Street View photos.`,
       });
       fetchVendor();
     } catch (err) {
