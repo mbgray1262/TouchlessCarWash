@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
+import { streetAddress } from '@/lib/utils';
 import PhotoGalleryModal from '@/components/PhotoGalleryModal';
 
 type Step = 'idle' | 'scraping' | 'extracting' | 'saving' | 'done' | 'error';
@@ -300,7 +301,7 @@ export default function ImportPage() {
                       {(listing.address || listing.city) && (
                         <div className="col-span-2 flex items-start gap-1.5">
                           <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                          <span>{[listing.address, listing.city, listing.state, listing.zip].filter(Boolean).join(', ')}</span>
+                          <span>{[streetAddress(listing.address, listing.city, listing.state, listing.zip), listing.city, listing.state, listing.zip].filter(Boolean).join(', ')}</span>
                         </div>
                       )}
                       {listing.phone && (

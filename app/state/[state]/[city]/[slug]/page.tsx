@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
 import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants';
+import { streetAddress } from '@/lib/utils';
 import type { Metadata } from 'next';
 
 const ListingMap = nextDynamic(() => import('@/components/ListingMap'), { ssr: false });
@@ -189,7 +190,7 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
     ? `★ ${Number(listing.rating).toFixed(1)}${listing.review_count > 0 ? ` (${listing.review_count} reviews)` : ''} — `
     : '';
   const rankingPrefix = topRanking ? `#${topRanking.rank} Best Touchless Car Wash in ${topRanking.metro_name}. ` : '';
-  const description = `${ratingPrefix}${rankingPrefix}${listing.name} at ${listing.address}, ${listing.city}, ${listing.state}.${amenityPart} Hours, directions & more.`;
+  const description = `${ratingPrefix}${rankingPrefix}${listing.name} at ${streetAddress(listing.address, listing.city, listing.state, listing.zip)}, ${listing.city}, ${listing.state}.${amenityPart} Hours, directions & more.`;
 
   return {
     title: { absolute: title },
@@ -536,7 +537,7 @@ function buildFAQs(listing: Listing, hours: Record<string, string> | null): { q:
   // 10. Location (always shown)
   faqs.push({
     q: `Where is ${listing.name} located?`,
-    a: `${listing.name} is located at ${listing.address}, ${listing.city}, ${listing.state} ${listing.zip}.${listing.phone ? ` Call them at ${listing.phone}.` : ''} Get directions via Google Maps.`,
+    a: `${listing.name} is located at ${streetAddress(listing.address, listing.city, listing.state, listing.zip)}, ${listing.city}, ${listing.state} ${listing.zip}.${listing.phone ? ` Call them at ${listing.phone}.` : ''} Get directions via Google Maps.`,
   });
 
   return faqs;
@@ -939,7 +940,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-white/80 text-sm">
                         <span className="flex items-center gap-1.5">
                           <MapPin className="w-4 h-4 shrink-0" />
-                          {listing.address}, {listing.city}, {listing.state}
+                          {streetAddress(listing.address, listing.city, listing.state, listing.zip)}, {listing.city}, {listing.state}
                         </span>
                         {ratingStars}
                       </div>
@@ -995,7 +996,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-white/80 text-sm">
                       <span className="flex items-center gap-1.5">
                         <MapPin className="w-4 h-4 shrink-0" />
-                        {listing.address}, {listing.city}, {listing.state}
+                        {streetAddress(listing.address, listing.city, listing.state, listing.zip)}, {listing.city}, {listing.state}
                       </span>
                       {ratingStars}
                     </div>
@@ -1275,7 +1276,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                   <div className="flex items-start gap-3">
                     <MapPin className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
                     <div className="text-sm text-gray-700">
-                      <div>{listing.address}</div>
+                      <div>{streetAddress(listing.address, listing.city, listing.state, listing.zip)}</div>
                       <div>{listing.city}, {listing.state} {listing.zip}</div>
                     </div>
                   </div>
@@ -1335,7 +1336,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                     lat={parseFloat(String(listing.latitude))}
                     lng={parseFloat(String(listing.longitude))}
                     name={listing.name}
-                    address={`${listing.address}, ${listing.city}, ${listing.state}`}
+                    address={`${streetAddress(listing.address, listing.city, listing.state, listing.zip)}, ${listing.city}, ${listing.state}`}
                   />
                 </div>
               )}
