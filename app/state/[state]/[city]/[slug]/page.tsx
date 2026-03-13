@@ -1312,20 +1312,41 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                 </div>
 
                 {listing.latitude && listing.longitude && (
-                  <TrackableLink
-                    href={listing.google_place_id
-                      ? `https://www.google.com/maps/dir/?api=1&destination=&destination_place_id=${listing.google_place_id}`
-                      : `https://www.google.com/maps/dir/?api=1&destination=${listing.latitude},${listing.longitude}`
-                    }
-                    listingId={listing.id}
-                    eventType="directions"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-4 flex items-center justify-center gap-2 w-full bg-[#22C55E] text-white text-sm font-semibold py-3 rounded-xl hover:bg-[#16A34A] transition-colors shadow-sm"
-                  >
-                    <Navigation className="w-4 h-4" />
-                    Get Directions
-                  </TrackableLink>
+                  <div className="mt-4 flex flex-col gap-2">
+                    <TrackableLink
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${streetAddress(listing.address, listing.city, listing.state, listing.zip)}, ${listing.city}, ${listing.state} ${listing.zip}`)}`}
+                      listingId={listing.id}
+                      eventType="directions"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 w-full bg-[#22C55E] text-white text-sm font-semibold py-3 rounded-xl hover:bg-[#16A34A] transition-colors shadow-sm"
+                    >
+                      <Navigation className="w-4 h-4" />
+                      Get Directions
+                    </TrackableLink>
+                    <div className="flex gap-2">
+                      {listing.google_place_id && (
+                        <a
+                          href={`https://www.google.com/maps/place/?q=place_id:${listing.google_place_id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 py-2 rounded-lg transition-colors"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          View on Google
+                        </a>
+                      )}
+                      <a
+                        href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${listing.latitude},${listing.longitude}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 py-2 rounded-lg transition-colors"
+                      >
+                        <MapPin className="w-3 h-3" />
+                        Street View
+                      </a>
+                    </div>
+                  </div>
                 )}
                 <SuggestEditModal listingId={listing.id} listingName={listing.name} />
               </div>
