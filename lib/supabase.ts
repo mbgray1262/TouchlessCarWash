@@ -70,6 +70,7 @@ export type Listing = {
   touchless_sentiment: 'positive' | 'negative' | 'neutral' | null;
   is_claimed: boolean;
   hero_focal_point: 'top' | 'center' | 'bottom' | null;
+  vendor_id: number | null;
 };
 
 // Columns needed by ListingCard — avoids fetching heavy fields like description,

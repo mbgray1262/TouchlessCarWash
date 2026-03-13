@@ -20,7 +20,7 @@ import { WhyVisitSection } from '@/components/WhyVisitSection';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
-import { US_STATES, getStateName, slugify } from '@/lib/constants';
+import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants';
 import type { Metadata } from 'next';
 
 const ListingMap = nextDynamic(() => import('@/components/ListingMap'), { ssr: false });
@@ -104,6 +104,30 @@ async function getNearbyListings(listing: Listing, limit = 6): Promise<Listing[]
   const otherCity = data.filter((l) => l.city !== listing.city);
   const combined = [...cityMatches, ...otherCity].slice(0, limit);
   return combined as Listing[];
+}
+
+async function getChainListings(listing: Listing, limit = 6): Promise<{ chainName: string | null; listings: Listing[] }> {
+  if (!listing.vendor_id) return { chainName: null, listings: [] };
+
+  const [vendorResult, listingsResult] = await Promise.all([
+    supabase.from('vendors').select('canonical_name').eq('id', listing.vendor_id).single(),
+    supabase
+      .from('listings')
+      .select('id, name, slug, city, state, rating, review_count, address, hero_image, google_photo_url, street_view_url')
+      .eq('is_touchless', true)
+      .eq('vendor_id', listing.vendor_id)
+      .neq('id', listing.id)
+      .order('review_count', { ascending: false })
+      .limit(limit * 3),
+  ]);
+
+  const chainName = vendorResult.data?.canonical_name ?? null;
+  const data = listingsResult.data ?? [];
+
+  // Prioritize same state, then other states
+  const sameState = data.filter((l) => l.state === listing.state);
+  const otherState = data.filter((l) => l.state !== listing.state);
+  return { chainName, listings: [...sameState, ...otherState].slice(0, limit) as Listing[] };
 }
 
 async function getReviewSnippets(listingId: string): Promise<ReviewSnippet[]> {
@@ -746,10 +770,11 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     notFound();
   }
 
-  const [nearbyListings, reviewSnippets, rankings] = await Promise.all([
+  const [nearbyListings, reviewSnippets, rankings, chainResult] = await Promise.all([
     getNearbyListings(listing),
     getReviewSnippets(listing.id),
     getBestOfRankings(listing.id),
+    getChainListings(listing),
   ]);
 
   const stateCode = getStateCode(params.state);
@@ -1344,6 +1369,19 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
               </Button>
             </div>
           </div>
+
+          {chainResult.listings.length > 0 && chainResult.chainName && (
+            <div className="mt-10">
+              <h2 className="text-xl font-bold text-[#0F2744] mb-5">
+                More {chainResult.chainName} Locations
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {chainResult.listings.map((cl) => (
+                  <NearbyListingCard key={cl.id} nearby={cl} stateSlug={getStateSlug(cl.state)} />
+                ))}
+              </div>
+            </div>
+          )}
 
           {nearbyListings.length > 0 && (
             <div className="mt-10">
