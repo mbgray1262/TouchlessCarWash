@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { US_STATES, getStateName, slugify } from '@/lib/constants';
 import { CityListingsClient } from '@/components/CityListingsClient';
+import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import type { Metadata } from 'next';
 
 // ISR — regenerate every hour. Now actually works because we removed searchParams!
@@ -127,11 +128,10 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
 
   const metaDescription = cityDesc
     ? cityDesc.substring(0, 155) + (cityDesc.length > 155 ? '...' : '')
-    : `Find ${listings.length} touchless & touch-free car washes in ${cityName}, ${stateName}.${ratingSnippet} Browse verified no-touch, scratch-free car wash locations with ratings and reviews.`;
+    : `Find ${listings.length} touchless car washes in ${cityName}, ${stateName}.${ratingSnippet} Verified locations with ratings and reviews.`;
 
   const canonicalUrl = `https://touchlesscarwashfinder.com/state/${params.state}/${params.city}`;
-  const year = new Date().getFullYear();
-  const title = `Best Touchless Car Wash in ${cityName}, ${stateCode} (${listings.length} Locations) | ${year}`;
+  const title = `Best Touchless Car Wash in ${cityName}, ${stateCode}`;
 
   return {
     title,
@@ -140,11 +140,12 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
       canonical: canonicalUrl,
     },
     openGraph: {
-      title: `${title} | Touchless Car Wash Finder`,
+      title,
       description: metaDescription,
       url: canonicalUrl,
       siteName: 'Touchless Car Wash Finder',
       type: 'website',
+      images: [DEFAULT_OG_IMAGE],
     },
   };
 }

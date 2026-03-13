@@ -12,6 +12,7 @@ import { METRO_CONTENT, buildExpertGuide } from '@/lib/metro-content';
 import { OpenStatusBadge } from '@/components/OpenStatusBadge';
 import LogoImage from '@/components/LogoImage';
 import HeroImageFallback from '@/components/HeroImageFallback';
+import { DEFAULT_OG_IMAGE, ensureHttps } from '@/lib/seo';
 import type { Metadata } from 'next';
 
 // Revalidate every 24 hours — pages are pre-rendered (SSG) but refresh daily for updated rankings
@@ -129,8 +130,8 @@ export async function generateMetadata({ params }: BestOfPageProps): Promise<Met
 
   if (count < 5) return { title: 'Not Found' };
 
-  const title = `${count} Best Touchless Car Washes in ${metro.displayName} (${year})`;
-  const description = `Discover the ${count} best-rated touchless car washes in the ${metro.name} metro area. Ranked by Google ratings, customer reviews, and verified touchless confirmation.`;
+  const title = `${count} Best Touchless Car Washes in ${metro.displayName}`;
+  const description = `Discover the ${count} best-rated touchless car washes in ${metro.name}. Ranked by Google ratings, reviews, and verified touchless confirmation.`;
 
   return {
     title,
@@ -139,10 +140,11 @@ export async function generateMetadata({ params }: BestOfPageProps): Promise<Met
       canonical: `https://touchlesscarwashfinder.com/best/${metro.slug}`,
     },
     openGraph: {
-      title: `${title} | Touchless Car Wash Finder`,
+      title,
       description,
       url: `https://touchlesscarwashfinder.com/best/${metro.slug}`,
       type: 'website',
+      images: [DEFAULT_OG_IMAGE],
     },
   };
 }
@@ -356,8 +358,10 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
               {topListings.map((listing, idx) => {
                 const rank = idx + 1;
                 const snippet = reviewSnippets.get(listing.id);
-                const cardImage = listing.hero_image ?? listing.google_photo_url ?? null;
-                const cardLogo = listing.logo_photo ?? listing.google_logo_url ?? null;
+                const rawCardImage = listing.hero_image ?? listing.google_photo_url ?? null;
+                const cardImage = rawCardImage ? ensureHttps(rawCardImage) : null;
+                const rawCardLogo = listing.logo_photo ?? listing.google_logo_url ?? null;
+                const cardLogo = rawCardLogo ? ensureHttps(rawCardLogo) : null;
                 const listingHref = `/state/${getStateSlug(listing.state)}/${listing.city.toLowerCase().replace(/\s+/g, '-')}/${listing.slug}`;
 
                 return (
@@ -391,7 +395,7 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
                           {cardLogo && (
                             <LogoImage
                               src={cardLogo}
-                              alt=""
+                              alt={`${listing.name} logo`}
                               wrapperClassName="absolute top-3 right-3 w-8 h-8 rounded-lg overflow-hidden bg-white/90 p-0.5 shadow"
                               className="w-full h-full object-contain"
                             />

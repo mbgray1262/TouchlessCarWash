@@ -8,6 +8,7 @@ import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants'
 import { StateListingsClient } from '@/components/StateListingsClient';
 import { getFilters, getStateListingsPaginated } from '@/lib/listing-queries';
 import { FEATURES } from '@/lib/features';
+import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import type { Metadata } from 'next';
 
 // ISR — regenerate every hour. Now actually works because we removed searchParams!
@@ -99,10 +100,10 @@ export async function generateMetadata({ params }: StatePageProps): Promise<Meta
 
   const metaDescription = stateDesc
     ? stateDesc.substring(0, 155) + (stateDesc.length > 155 ? '...' : '')
-    : `Find ${totalCount} verified touchless & touch-free car washes in ${stateName}. Browse laser car wash and no-touch locations by city with ratings, hours, and contact info. Updated ${month} ${year}.`;
+    : `Find ${totalCount} verified touchless car washes in ${stateName}. Browse by city with ratings, hours, and contact info.`;
 
   const canonicalUrl = `https://touchlesscarwashfinder.com/state/${params.state}`;
-  const title = `Best Touchless Car Washes in ${stateName} (${totalCount} Locations) | ${year}`;
+  const title = `Best Touchless Car Washes in ${stateName}`;
 
   return {
     title,
@@ -111,11 +112,12 @@ export async function generateMetadata({ params }: StatePageProps): Promise<Meta
       canonical: canonicalUrl,
     },
     openGraph: {
-      title: `${title} | Touchless Car Wash Finder`,
+      title,
       description: metaDescription,
       url: canonicalUrl,
       siteName: 'Touchless Car Wash Finder',
       type: 'website',
+      images: [DEFAULT_OG_IMAGE],
     },
   };
 }

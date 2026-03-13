@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/supabase';
 import { getStateName, getStateSlug } from '@/lib/constants';
 import { FEATURES, getFeatureBySlug } from '@/lib/features';
+import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import type { Metadata } from 'next';
 
 export const revalidate = 86400; // 24 hours
@@ -39,11 +40,12 @@ export async function generateMetadata({ params }: FeatureHubPageProps): Promise
     description: feature.seoDescription,
     alternates: { canonical: `${SITE_URL}/features/${feature.slug}` },
     openGraph: {
-      title: `${feature.seoTitle} | Touchless Car Wash Finder`,
+      title: feature.seoTitle,
       description: feature.seoDescription,
       url: `${SITE_URL}/features/${feature.slug}`,
       siteName: 'Touchless Car Wash Finder',
       type: 'website',
+      images: [DEFAULT_OG_IMAGE],
     },
   };
 }

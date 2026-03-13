@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
 import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants';
 import { streetAddress } from '@/lib/utils';
+import { DEFAULT_OG_IMAGE, ensureHttps, truncateDescription } from '@/lib/seo';
 import type { Metadata } from 'next';
 
 const ListingMap = nextDynamic(() => import('@/components/ListingMap'), { ssr: false });
@@ -171,7 +172,11 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   const topAmenities = (listing.amenities || []).slice(0, 3).join(', ');
   const amenityPart = topAmenities ? ` Touch-free, brushless car wash offering ${topAmenities}.` : '';
   const canonicalUrl = `${SITE_URL}/state/${params.state}/${params.city}/${params.slug}`;
-  const heroImage = listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
+  const rawHeroImage = listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
+  const heroImage = rawHeroImage ? ensureHttps(rawHeroImage) : null;
+  const ogImages = heroImage
+    ? [{ url: heroImage, width: 1200, height: 630, alt: listing.name }]
+    : [DEFAULT_OG_IMAGE];
 
   // Check for Best Of rankings (top 3 in a metro area)
   const rankings = await getBestOfRankings(listing.id);
@@ -190,7 +195,9 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
     ? `★ ${Number(listing.rating).toFixed(1)}${listing.review_count > 0 ? ` (${listing.review_count} reviews)` : ''} — `
     : '';
   const rankingPrefix = topRanking ? `#${topRanking.rank} Best Touchless Car Wash in ${topRanking.metro_name}. ` : '';
-  const description = `${ratingPrefix}${rankingPrefix}${listing.name} at ${streetAddress(listing.address, listing.city, listing.state, listing.zip)}, ${listing.city}, ${listing.state}.${amenityPart} Hours, directions & more.`;
+  const description = truncateDescription(
+    `${ratingPrefix}${rankingPrefix}${listing.name} at ${streetAddress(listing.address, listing.city, listing.state, listing.zip)}, ${listing.city}, ${listing.state}.${amenityPart} Hours, directions & more.`
+  );
 
   return {
     title: { absolute: title },
@@ -201,7 +208,7 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
       description,
       url: canonicalUrl,
       type: 'website',
-      ...(heroImage ? { images: [{ url: heroImage, width: 1200, height: 630, alt: listing.name }] } : {}),
+      images: ogImages,
     },
     twitter: {
       card: 'summary_large_image',
