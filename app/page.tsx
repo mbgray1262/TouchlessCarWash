@@ -56,7 +56,7 @@ const faqItems = [
   },
   {
     question: 'Are touchless car washes better for your car?',
-    answer: 'Yes — touchless (brushless) car washes are widely considered the safest option for your paint. Because touch-free washes use only water pressure and chemistry with no physical contact, they eliminate brush-induced scratches and swirl marks, preserve ceramic coatings and paint protection film (PPF), and are safe for all paint types including matte finishes.',
+    answer: 'Yes — touchless (brushless) car washes are widely considered the safest option for your paint. Because touch-free washes use only water pressure and chemistry with no physical contact, they eliminate brush-induced scratches and swirl marks, preserve ceramic coatings and paint protection film (PPF), and are safe for all paint types including matte finishes. This is why owners of Tesla, BMW, Mercedes-Benz, Lexus, Audi, Porsche, and other luxury vehicles prefer touchless washes.',
   },
   {
     question: 'How do I find a touchless car wash near me?',
@@ -69,6 +69,10 @@ const faqItems = [
   {
     question: 'Are touchless car washes safe for new cars?',
     answer: 'Touchless car washes are the safest type of car wash for new vehicles. New paint is especially vulnerable to micro-scratches caused by brushes and cloth friction. Touch-free, no-touch washes rely entirely on water pressure and chemistry, making them ideal for new cars, vehicles with ceramic coatings, paint protection film (PPF), or any paint-sensitive finish.',
+  },
+  {
+    question: 'Are touchless car washes safe for Tesla, BMW, and luxury vehicles?',
+    answer: 'Absolutely. Touchless car washes are the preferred wash method for luxury and high-end vehicles including Tesla Model 3, Model Y, and Model S, BMW 3/5/X Series, Mercedes-Benz C/E/S-Class, Lexus, Audi, Porsche, Range Rover, and Genesis. Because no brushes or cloth contact the vehicle, there is zero risk of scratching delicate paint, clear coats, ceramic coatings, or paint protection film (PPF). Auto detailing professionals consistently recommend touch-free washes for preserving showroom-quality finishes on premium vehicles.',
   },
 ];
 

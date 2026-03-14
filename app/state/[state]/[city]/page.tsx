@@ -333,7 +333,7 @@ export default async function CityPage({ params }: CityPageProps) {
         name: 'Are touchless car washes safe for my car?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Yes. Touchless car washes use high-pressure water jets and specialized detergents instead of physical brushes or cloth. This eliminates the risk of swirl marks, micro-scratches, and paint damage that can occur with traditional brush-based washes, making them the safest automated wash option for all paint types, clear coats, and finishes.',
+          text: 'Yes. Touchless car washes use high-pressure water jets and specialized detergents instead of physical brushes or cloth. This eliminates the risk of swirl marks, micro-scratches, and paint damage that can occur with traditional brush-based washes, making them the safest automated wash option for all paint types, clear coats, ceramic coatings, and PPF. Owners of Tesla, BMW, Mercedes-Benz, Lexus, Audi, and other luxury vehicles choose touchless washes to protect their finish.',
         },
       },
       {
@@ -357,7 +357,7 @@ export default async function CityPage({ params }: CityPageProps) {
         name: 'Are touchless car washes scratch-free?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Yes. Because touchless (also called brushless or contactless) car washes never physically touch your vehicle, they eliminate the risk of scratches and swirl marks that brush-based washes can leave behind. High-pressure water and specially formulated detergents do all the cleaning, making them the safest automated option for any paint type or finish.',
+          text: 'Yes. Because touchless (also called brushless or contactless) car washes never physically touch your vehicle, they eliminate the risk of scratches and swirl marks that brush-based washes can leave behind. High-pressure water and specially formulated detergents do all the cleaning, making them the safest automated option for any paint type or finish — from everyday vehicles to luxury brands like Tesla, BMW, Mercedes-Benz, Lexus, and Porsche.',
         },
       },
       {
@@ -509,7 +509,8 @@ export default async function CityPage({ params }: CityPageProps) {
                 Yes. Touchless car washes use high-pressure water jets and specialized detergents instead of physical
                 brushes or cloth. This eliminates the risk of swirl marks, micro-scratches, and paint damage that can
                 occur with traditional brush-based washes — making them the safest automated wash option for all paint
-                types, clear coats, and finishes.
+                types, clear coats, ceramic coatings, and PPF. Owners of Tesla, BMW, Mercedes-Benz, Lexus, Audi, and
+                other high-end vehicles choose touchless washes specifically to protect their finish.
               </p>
             </div>
 
@@ -546,7 +547,8 @@ export default async function CityPage({ params }: CityPageProps) {
                 Yes. Because touchless (also called brushless or contactless) car washes never physically touch your
                 vehicle, they eliminate the risk of scratches and swirl marks that brush-based washes can leave behind.
                 High-pressure water and specially formulated detergents do all the cleaning, making them the safest
-                automated option for any paint type or finish.
+                automated option for any paint type or finish — from everyday vehicles to luxury brands like Tesla,
+                BMW, Mercedes-Benz, Lexus, and Porsche.
               </p>
             </div>
 

@@ -542,7 +542,13 @@ function buildFAQs(listing: Listing, hours: Record<string, string> | null): { q:
     });
   }
 
-  // 10. Location (always shown)
+  // 10. Safe for luxury vehicles (always shown — high-value ad keyword content)
+  faqs.push({
+    q: `Is ${listing.name} safe for Tesla, BMW, and luxury vehicles?`,
+    a: `Yes. ${listing.name} is a touchless car wash, meaning no brushes or cloth ever contact your vehicle. This makes it the safest automated wash option for luxury and high-end vehicles including Tesla Model 3, Model Y, and Model S, BMW, Mercedes-Benz, Lexus, Audi, Porsche, Range Rover, and Genesis. Touchless washes are also recommended by auto detailing professionals for cars with ceramic coatings, paint protection film (PPF), vinyl wraps, or any premium paint finish.`,
+  });
+
+  // 11. Location (always shown)
   faqs.push({
     q: `Where is ${listing.name} located?`,
     a: `${listing.name} is located at ${streetAddress(listing.address, listing.city, listing.state, listing.zip)}, ${listing.city}, ${listing.state} ${listing.zip}.${listing.phone ? ` Call them at ${listing.phone}.` : ''} Get directions via Google Maps.`,
