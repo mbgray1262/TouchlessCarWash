@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getStateSlug, slugify } from '@/lib/constants';
-import { HeroListing, FilterSource, ReplacementOption, SessionStats } from './types';
+import { HeroListing, FilterSource, ReplacementOption, SessionStats, EQUIPMENT_MODELS } from './types';
 import { autoEnhanceImage } from './autoEnhance';
 
 const PAGE_SIZE = 20;
@@ -53,6 +53,45 @@ export function useHeroReview() {
     }
   }, []);
 
+  // Dynamic model list: hardcoded defaults merged with any custom models from DB
+  const [customModels, setCustomModels] = useState<Record<string, string[]>>({});
+
+  const loadCustomModels = useCallback(async () => {
+    const { data } = await supabase
+      .from('listings')
+      .select('equipment_brand, equipment_model')
+      .not('equipment_brand', 'is', null)
+      .not('equipment_model', 'is', null)
+      .neq('equipment_model', '__other__');
+    if (!data) return;
+
+    // Group distinct models by brand
+    const byBrand: Record<string, Set<string>> = {};
+    for (const row of data) {
+      const b = row.equipment_brand;
+      const m = row.equipment_model;
+      if (!b || !m) continue;
+      if (!byBrand[b]) byBrand[b] = new Set();
+      byBrand[b].add(m);
+    }
+
+    // Only keep models not already in the hardcoded list
+    const extras: Record<string, string[]> = {};
+    for (const [brand, models] of Object.entries(byBrand)) {
+      const hardcoded = new Set(EQUIPMENT_MODELS[brand] ?? []);
+      const novel = Array.from(models).filter(m => !hardcoded.has(m)).sort();
+      if (novel.length > 0) extras[brand] = novel;
+    }
+    setCustomModels(extras);
+  }, []);
+
+  /** Merged model list for a brand: hardcoded defaults + any custom models from DB */
+  const getModelsForBrand = useCallback((brand: string): string[] => {
+    const hardcoded = EQUIPMENT_MODELS[brand] ?? [];
+    const custom = customModels[brand] ?? [];
+    return [...hardcoded, ...custom];
+  }, [customModels]);
+
   // Load vendor list for dropdown
   useEffect(() => {
     supabase
@@ -65,6 +104,11 @@ export function useHeroReview() {
         }
       });
   }, []);
+
+  // Load custom models on mount
+  useEffect(() => {
+    loadCustomModels();
+  }, [loadCustomModels]);
 
   const buildQuery = useCallback(() => {
     let q = supabase
@@ -491,6 +535,14 @@ export function useHeroReview() {
       )
     );
     revalidateListing(listing);
+
+    // If a custom model was entered, refresh the model list so it appears in dropdowns
+    if (model && model !== '__other__' && brand) {
+      const hardcoded = EQUIPMENT_MODELS[brand] ?? [];
+      if (!hardcoded.includes(model)) {
+        loadCustomModels();
+      }
+    }
   };
 
   const handleFlag = async (listingId: string) => {
@@ -562,6 +614,7 @@ export function useHeroReview() {
     handleUploadHero,
     handleMarkNotTouchless,
     handleSetEquipment,
+    getModelsForBrand,
     handleFlag,
     navigateFocus,
     reload: loadListings,

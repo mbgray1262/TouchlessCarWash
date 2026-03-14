@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState } from 'react';
 import { X, Flag, ImageOff, ZoomIn, Crop, ExternalLink, CarFront, Star, Trash2, ChevronDown, ChevronLeft, ChevronRight, ImageIcon, Upload, Wand2 } from 'lucide-react';
-import { HeroListing, ReplacementOption, EQUIPMENT_BRANDS, EQUIPMENT_MODELS } from './types';
+import { HeroListing, ReplacementOption, EQUIPMENT_BRANDS } from './types';
 import HeroImageFallback from '@/components/HeroImageFallback';
 import { CropModal } from './CropModal';
 import { getStateSlug, slugify } from '@/lib/constants';
@@ -184,6 +184,7 @@ interface Props {
   onUploadHero: (file: File) => void;
   onMarkNotTouchless: () => void;
   onSetEquipment: (brand: string | null, model: string | null) => void;
+  getModelsForBrand: (brand: string) => string[];
   onFlag: () => void;
   onFocus: () => void;
   confirmIndex: number | null;
@@ -208,6 +209,7 @@ export function HeroCard({
   onUploadHero,
   onMarkNotTouchless,
   onSetEquipment,
+  getModelsForBrand,
   onFlag,
   onFocus,
   confirmIndex,
@@ -639,7 +641,7 @@ export function HeroCard({
               ))}
             </select>
             {listing.equipment_brand && (() => {
-              const models = EQUIPMENT_MODELS[listing.equipment_brand] ?? [];
+              const models = getModelsForBrand(listing.equipment_brand);
               const currentModel = listing.equipment_model ?? '';
               const isKnownModel = models.includes(currentModel);
               const showCustomInput = currentModel === '__other__' || (currentModel && !isKnownModel);
