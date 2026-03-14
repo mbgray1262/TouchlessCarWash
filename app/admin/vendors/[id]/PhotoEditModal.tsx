@@ -345,9 +345,15 @@ export default function PhotoEditModal({ listing, open, onClose, onUpdate }: Pho
       if (!res.ok) throw new Error(await res.text());
       const { url } = await res.json();
 
-      const newPhotos = [...photos, url];
-      setPhotos(newPhotos);
-      await persistUpdate(heroImage, newPhotos);
+      // If no hero image exists, set the uploaded photo as the hero
+      if (!heroImage) {
+        setHeroImage(url);
+        await persistUpdate(url, photos);
+      } else {
+        const newPhotos = [...photos, url];
+        setPhotos(newPhotos);
+        await persistUpdate(heroImage, newPhotos);
+      }
     } catch (err) {
       alert(`Upload failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
