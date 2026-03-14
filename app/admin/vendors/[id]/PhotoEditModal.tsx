@@ -468,6 +468,7 @@ export default function PhotoEditModal({ listing, open, onClose, onUpdate }: Pho
         type="file"
         accept="image/jpeg,image/png,image/webp"
         className="hidden"
+        onClick={(e) => e.stopPropagation()}
         onChange={handleFileUpload}
       />
 
