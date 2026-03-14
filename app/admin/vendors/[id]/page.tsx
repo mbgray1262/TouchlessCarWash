@@ -104,6 +104,19 @@ export default function VendorDetailPage() {
   const [streetViewReplacing, setStreetViewReplacing] = useState(false);
   const [streetViewResult, setStreetViewResult] = useState<{ total: number; replaced: number; no_coverage: number } | null>(null);
 
+  // Checkbox selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // Batch Street View progress
+  const [svProgress, setSvProgress] = useState<{
+    current: number;
+    total: number;
+    replaced: number;
+    noCoverage: number;
+    errors: number;
+    done: boolean;
+    results: { id: string; name: string; status: string; detail?: string }[];
+  } | null>(null);
+
   // Sort & filter state
   const [sortKey, setSortKey] = useState<SortKey>('state');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
@@ -392,39 +405,106 @@ export default function VendorDetailPage() {
     }
   };
 
-  const handleStreetViewReplace = async () => {
-    if (!vendor) return;
-    if (!confirm(`Replace generic hero images with unique Street View photos for all ${vendor.canonical_name} locations that share the same hero?`)) return;
+  // ── Checkbox selection helpers ──
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback(() => {
+    setSelectedIds(prev => {
+      if (prev.size === displayListings.length && displayListings.length > 0) {
+        return new Set();
+      }
+      return new Set(displayListings.map(l => l.id));
+    });
+  }, [displayListings]);
+
+  // ── Batch Street View Heroes ──
+  // Processes selected listings in small batches to avoid Edge Function timeouts.
+  // The old `replace_vendor` action processed ALL listings in one go, which caused
+  // timeout + retry storms for large vendors ("runaway process").
+  const handleBatchStreetView = async () => {
+    const hasSelection = selectedIds.size > 0;
+    const targetIds = hasSelection ? Array.from(selectedIds) : displayListings.map(l => l.id);
+
+    if (targetIds.length === 0) {
+      toast({ title: 'No listings', description: 'No listings to process.', variant: 'destructive' });
+      return;
+    }
+
+    const msg = hasSelection
+      ? `Fetch Street View hero images for ${targetIds.length} selected location(s)?`
+      : `Fetch Street View hero images for all ${targetIds.length} displayed location(s)?`;
+    if (!confirm(msg)) return;
 
     setStreetViewReplacing(true);
     setStreetViewResult(null);
+    setSvProgress({ current: 0, total: targetIds.length, replaced: 0, noCoverage: 0, errors: 0, done: false, results: [] });
 
-    try {
-      const { data: fnData, error: fnErr } = await supabase.functions.invoke('streetview-hero', {
-        body: { action: 'replace_vendor', vendor_id: vendor.id },
-      });
+    const BATCH_SIZE = 5;
+    let replaced = 0;
+    let noCoverage = 0;
+    let errors = 0;
+    const allResults: { id: string; name: string; status: string; detail?: string }[] = [];
 
-      if (fnErr) {
-        toast({ title: 'Street View replace failed', description: fnErr.message, variant: 'destructive' });
-        return;
+    for (let i = 0; i < targetIds.length; i += BATCH_SIZE) {
+      const batchIds = targetIds.slice(i, i + BATCH_SIZE);
+
+      try {
+        const { data: fnData, error: fnErr } = await supabase.functions.invoke('streetview-hero', {
+          body: { action: 'replace_listings', listing_ids: batchIds },
+        });
+
+        if (fnErr) {
+          for (const id of batchIds) {
+            const name = listings.find(l => l.id === id)?.name ?? id;
+            allResults.push({ id, name, status: 'error', detail: fnErr.message });
+            errors++;
+          }
+        } else if (fnData.results) {
+          for (const r of fnData.results) {
+            const name = listings.find(l => l.id === r.id)?.name ?? r.id;
+            allResults.push({ id: r.id, name, status: r.status, detail: r.detail });
+            if (r.status === 'ok') replaced++;
+            else if (r.status === 'no_coverage') noCoverage++;
+            else errors++;
+          }
+        }
+      } catch (err) {
+        for (const id of batchIds) {
+          const name = listings.find(l => l.id === id)?.name ?? id;
+          allResults.push({ id, name, status: 'error', detail: err instanceof Error ? err.message : 'Unknown error' });
+          errors++;
+        }
       }
 
-      if (fnData.message) {
-        toast({ title: 'No generic heroes found', description: 'All locations already have unique hero images.' });
-        return;
-      }
-
-      setStreetViewResult({ total: fnData.total ?? 0, replaced: fnData.replaced ?? 0, no_coverage: fnData.no_coverage ?? 0 });
-      toast({
-        title: 'Street View heroes updated',
-        description: `${fnData.replaced ?? 0}/${fnData.total ?? 0} locations updated with unique Street View photos.`,
+      setSvProgress({
+        current: Math.min(i + BATCH_SIZE, targetIds.length),
+        total: targetIds.length,
+        replaced,
+        noCoverage,
+        errors,
+        done: false,
+        results: [...allResults],
       });
-      fetchVendor();
-    } catch (err) {
-      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Street View request failed', variant: 'destructive' });
-    } finally {
-      setStreetViewReplacing(false);
     }
+
+    setSvProgress(prev => prev ? { ...prev, done: true } : prev);
+    setStreetViewReplacing(false);
+    setSelectedIds(new Set());
+
+    toast({
+      title: 'Street View Heroes Complete',
+      description: `${replaced} replaced, ${noCoverage} no coverage${errors > 0 ? `, ${errors} errors` : ''} out of ${targetIds.length} total.`,
+      variant: errors > 0 ? 'destructive' : undefined,
+    });
+
+    fetchVendor();
   };
 
   const handleFullEnrichSingle = async (listing: VendorListing) => {
@@ -720,14 +800,18 @@ export default function VendorDetailPage() {
                       </div>
                     )}
                     <Button
-                      onClick={handleStreetViewReplace}
+                      onClick={handleBatchStreetView}
                       disabled={streetViewReplacing || listings.length === 0}
                       size="sm"
                       variant="outline"
                       className="gap-1 border-blue-200 text-blue-700 hover:bg-blue-50"
                     >
                       {streetViewReplacing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
-                      {streetViewReplacing ? 'Replacing...' : 'Street View Heroes'}
+                      {streetViewReplacing
+                        ? 'Replacing...'
+                        : selectedIds.size > 0
+                          ? `Street View (${selectedIds.size})`
+                          : 'Street View Heroes'}
                     </Button>
                     <Button
                       onClick={handleFullEnrichAll}
@@ -778,21 +862,65 @@ export default function VendorDetailPage() {
                   </div>
                 </div>
               )}
-              {streetViewResult && (
+              {svProgress && (
                 <div className="mx-4 mb-3 p-3 rounded-lg bg-blue-50 border border-blue-200">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-blue-800">
                       <Camera className="w-4 h-4 inline mr-1.5" />
-                      Street View Heroes — {streetViewResult.replaced}/{streetViewResult.total} replaced
-                      {streetViewResult.no_coverage > 0 && ` (${streetViewResult.no_coverage} no coverage)`}
+                      Street View Heroes — {svProgress.done ? 'Complete' : `${svProgress.current}/${svProgress.total} processed`}
                     </span>
-                    <button
-                      onClick={() => setStreetViewResult(null)}
-                      className="text-blue-400 hover:text-blue-600 transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                    {svProgress.done && (
+                      <button
+                        onClick={() => setSvProgress(null)}
+                        className="text-blue-400 hover:text-blue-600 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
+                  <div className="w-full bg-blue-200 rounded-full h-2 mb-2">
+                    <div
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${svProgress.total > 0 ? (svProgress.current / svProgress.total) * 100 : 0}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center gap-4 text-xs text-blue-700">
+                    <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-green-600" />{svProgress.replaced} replaced</span>
+                    <span className="flex items-center gap-1"><XCircle className="w-3 h-3 text-yellow-500" />{svProgress.noCoverage} no coverage</span>
+                    {svProgress.errors > 0 && (
+                      <span className="flex items-center gap-1 text-red-600"><XCircle className="w-3 h-3" />{svProgress.errors} errors</span>
+                    )}
+                  </div>
+                  {svProgress.done && svProgress.results.length > 0 && (
+                    <div className="mt-2 max-h-40 overflow-y-auto space-y-0.5 border-t border-blue-200 pt-2">
+                      {svProgress.results.map((r, i) => (
+                        <div key={i} className="flex items-center gap-2 text-xs">
+                          {r.status === 'ok' ? (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                          ) : r.status === 'no_coverage' ? (
+                            <XCircle className="w-3.5 h-3.5 text-yellow-500 shrink-0" />
+                          ) : (
+                            <XCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                          )}
+                          <span className="font-medium text-blue-900 truncate max-w-[200px]">{r.name}</span>
+                          <span className="text-blue-600 truncate">{r.status === 'ok' ? 'Updated' : r.detail}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {selectedIds.size > 0 && (
+                <div className="mx-4 mb-3 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-between">
+                  <span className="text-sm text-blue-800 font-medium">
+                    {selectedIds.size} location{selectedIds.size !== 1 ? 's' : ''} selected
+                  </span>
+                  <button
+                    onClick={() => setSelectedIds(new Set())}
+                    className="text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                  >
+                    Clear selection
+                  </button>
                 </div>
               )}
               <CardContent className="p-0">
@@ -807,6 +935,14 @@ export default function VendorDetailPage() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b bg-gray-50">
+                          <th className="px-2 py-2.5 w-10">
+                            <input
+                              type="checkbox"
+                              checked={displayListings.length > 0 && selectedIds.size === displayListings.length}
+                              onChange={toggleSelectAll}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                            />
+                          </th>
                           <th className="px-2 py-2.5 w-12" />
                           <SortHeader label="Name" col="name" />
                           <SortHeader label="Address" col="address" />
@@ -821,15 +957,22 @@ export default function VendorDetailPage() {
                       </thead>
                       <tbody>
                         {displayListings.map((listing) => (
-                          <tr key={listing.id} className="border-b last:border-0 hover:bg-gray-50/80 transition-colors group">
+                          <tr key={listing.id} className={`border-b last:border-0 hover:bg-gray-50/80 transition-colors group ${selectedIds.has(listing.id) ? 'bg-blue-50/50' : ''}`}>
+                            <td className="px-2 py-1.5">
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.has(listing.id)}
+                                onChange={() => toggleSelect(listing.id)}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                              />
+                            </td>
                             <td className="px-2 py-1.5 w-12">
-                              {listing.hero_image ? (
-                                <img src={listing.hero_image} alt="" className="w-10 h-7 rounded object-cover border border-gray-200" loading="lazy" />
-                              ) : (
-                                <div className="w-10 h-7 rounded bg-gray-100 border border-gray-200 flex items-center justify-center">
-                                  <Camera className="w-3.5 h-3.5 text-gray-300" />
-                                </div>
-                              )}
+                              <img
+                                src={listing.hero_image || '/images/card-fallback.svg'}
+                                alt=""
+                                className="w-10 h-7 rounded object-cover border border-gray-200"
+                                loading="lazy"
+                              />
                             </td>
                             <td className="px-4 py-2.5 font-medium text-gray-900 whitespace-nowrap max-w-[200px] truncate" title={listing.name}>
                               <button
