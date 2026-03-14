@@ -692,6 +692,7 @@ export function HeroCard({
                         }
                       }}
                       onKeyDown={(e) => {
+                        e.stopPropagation(); // Prevent card-level shortcuts (e.g. 'x' to close)
                         if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
                       }}
                       onClick={(e) => e.stopPropagation()}

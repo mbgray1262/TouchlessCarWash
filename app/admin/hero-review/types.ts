@@ -36,6 +36,7 @@ export const EQUIPMENT_BRANDS = [
   { value: 'saber', label: 'Saber' },
   { value: 'broadway', label: 'Broadway' },
   { value: 'hydrospray', label: 'Hydro-Spray' },
+  { value: 'dencar', label: 'Dencar Technology' },
   { value: 'other', label: 'Other' },
 ] as const;
 
@@ -55,6 +56,7 @@ export const EQUIPMENT_MODELS: Record<string, string[]> = {
   saber: [],
   broadway: [],
   hydrospray: ['In Bay Automatic (IBA)'],
+  dencar: ['Dynawash Express'],
   other: [],
 };
 
