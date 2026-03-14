@@ -359,6 +359,8 @@ export function HeroCard({
       onClick={onFocus}
       tabIndex={0}
       onKeyDown={(e) => {
+        const tag = (e.target as HTMLElement).tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
         if (e.key === 'x' || e.key === 'X') {
           e.preventDefault();
           isExpanded ? onCollapse() : onExpand();
