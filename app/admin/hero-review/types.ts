@@ -38,6 +38,24 @@ export const EQUIPMENT_BRANDS = [
   { value: 'other', label: 'Other' },
 ] as const;
 
+/** Common models per brand — shown as dropdown options. "Other" allows free-text entry. */
+export const EQUIPMENT_MODELS: Record<string, string[]> = {
+  pdq: ['LaserWash 360', 'LaserWash 360 Plus', 'LaserWash 4000', 'LaserWash Sentry', 'ProTouch', 'Access'],
+  washworld: ['Razor', 'Razor Touch', 'Razor XR', 'Profile'],
+  belanger: ['Kondor', 'FreeStyler', 'SpinLite', 'Vector'],
+  ryko: ['SoftGloss', 'SoftGloss Maxx', 'Radius'],
+  istobal: ['M\'NEX 22', 'M\'NEX 25', 'M\'NEX 32', 'ISTOBAL 1900'],
+  ds: ['Carwash Systems'],
+  petit: ['Accutrac 360i', 'Accutrac 360t', 'Accutrac Mini'],
+  oasis: ['Typhoon', 'XR-1000'],
+  mark_vii: ['ChoiceWash XT', 'ChoiceWash CT', 'AquaJet', 'SoftLine'],
+  karcher: ['CWB 3', 'CB 1/28', 'CB 2/28', 'CB 3/32'],
+  autec: ['Evolution', 'EV-1 Evolution', 'AES-425', 'Express Automatic'],
+  saber: [],
+  broadway: [],
+  other: [],
+};
+
 export type ReplacementSpecial = 'use_placeholder' | 'remove_hero';
 
 export interface ReplacementOption {

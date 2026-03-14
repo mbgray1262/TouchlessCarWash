@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState } from 'react';
 import { X, Flag, ImageOff, ZoomIn, Crop, ExternalLink, CarFront, Star, Trash2, ChevronDown, ChevronLeft, ChevronRight, ImageIcon, Upload, Wand2 } from 'lucide-react';
-import { HeroListing, ReplacementOption, EQUIPMENT_BRANDS } from './types';
+import { HeroListing, ReplacementOption, EQUIPMENT_BRANDS, EQUIPMENT_MODELS } from './types';
 import HeroImageFallback from '@/components/HeroImageFallback';
 import { CropModal } from './CropModal';
 import { getStateSlug, slugify } from '@/lib/constants';
@@ -223,9 +223,10 @@ export function HeroCard({
   /** Stores the original (pre-enhance) hero URL + source so we can toggle back. */
   const [preEnhance, setPreEnhance] = useState<{ url: string; source: string | null } | null>(null);
 
-  // Sync model draft when listing changes
+  // Sync model draft when listing changes (skip sentinel values)
   useEffect(() => {
-    setModelDraft(listing.equipment_model ?? '');
+    const m = listing.equipment_model ?? '';
+    if (m !== '__other__') setModelDraft(m);
   }, [listing.equipment_model]);
 
   useEffect(() => {
@@ -493,8 +494,11 @@ export function HeroCard({
         <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
           <SourceBadge source={listing.hero_image_source} />
           {listing.equipment_brand && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 font-medium" title={listing.equipment_model ? `${listing.equipment_brand} — ${listing.equipment_model}` : listing.equipment_brand}>
+            <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 font-medium" title={listing.equipment_model && listing.equipment_model !== '__other__' ? `${listing.equipment_brand} — ${listing.equipment_model}` : listing.equipment_brand}>
               🔧 {EQUIPMENT_BRANDS.find(b => b.value === listing.equipment_brand)?.label ?? listing.equipment_brand}
+              {listing.equipment_model && listing.equipment_model !== '__other__' && (
+                <span className="text-indigo-500 font-normal"> · {listing.equipment_model}</span>
+              )}
             </span>
           )}
           {galleryPhotos.length > 0 && (
@@ -634,26 +638,66 @@ export function HeroCard({
                 <option key={b.value} value={b.value}>{b.label}</option>
               ))}
             </select>
-            {listing.equipment_brand && (
-              <input
-                type="text"
-                placeholder="Model (optional)"
-                value={modelDraft}
-                onChange={(e) => setModelDraft(e.target.value)}
-                onBlur={() => {
-                  const val = modelDraft.trim() || null;
-                  if (val !== listing.equipment_model) {
-                    onSetEquipment(listing.equipment_brand, val);
-                  }
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-                }}
-                onClick={(e) => e.stopPropagation()}
-                className="text-xs px-2 py-1 rounded-md border border-gray-300 text-gray-700 w-28 bg-white focus:border-indigo-400 focus:outline-none"
-                title="Equipment model (e.g. LaserWash 360, Razor)"
-              />
-            )}
+            {listing.equipment_brand && (() => {
+              const models = EQUIPMENT_MODELS[listing.equipment_brand] ?? [];
+              const currentModel = listing.equipment_model ?? '';
+              const isKnownModel = models.includes(currentModel);
+              const showCustomInput = currentModel === '__other__' || (currentModel && !isKnownModel);
+              const selectValue = isKnownModel ? currentModel : (currentModel ? '__other__' : '');
+
+              return (
+                <>
+                  {models.length > 0 && (
+                    <select
+                      value={selectValue}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '__other__') {
+                          // Set a sentinel so the text input appears; don't save yet
+                          onSetEquipment(listing.equipment_brand, '__other__');
+                        } else {
+                          onSetEquipment(listing.equipment_brand, val || null);
+                          setModelDraft('');
+                        }
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className={`text-xs px-2 py-1 rounded-md border transition-colors cursor-pointer ${
+                        listing.equipment_model && listing.equipment_model !== '__other__'
+                          ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+                          : 'bg-white border-gray-300 text-gray-500'
+                      }`}
+                      title="Equipment model"
+                    >
+                      <option value="">Model…</option>
+                      {models.map(m => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                      <option value="__other__">Other…</option>
+                    </select>
+                  )}
+                  {(showCustomInput || models.length === 0) && (
+                    <input
+                      type="text"
+                      placeholder="Enter model…"
+                      value={modelDraft}
+                      onChange={(e) => setModelDraft(e.target.value)}
+                      onBlur={() => {
+                        const val = modelDraft.trim() || null;
+                        if (val !== listing.equipment_model) {
+                          onSetEquipment(listing.equipment_brand, val);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-xs px-2 py-1 rounded-md border border-gray-300 text-gray-700 w-28 bg-white focus:border-indigo-400 focus:outline-none"
+                      title="Type a custom model name"
+                    />
+                  )}
+                </>
+              );
+            })()}
             <button
               onClick={onFlag}
               className={`flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors ${
