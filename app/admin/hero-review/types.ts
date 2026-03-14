@@ -35,6 +35,7 @@ export const EQUIPMENT_BRANDS = [
   { value: 'autec', label: 'Autec' },
   { value: 'saber', label: 'Saber' },
   { value: 'broadway', label: 'Broadway' },
+  { value: 'hydrospray', label: 'Hydro-Spray' },
   { value: 'other', label: 'Other' },
 ] as const;
 
@@ -53,6 +54,7 @@ export const EQUIPMENT_MODELS: Record<string, string[]> = {
   autec: ['Evolution', 'EV-1 Evolution', 'AES-425', 'Express Automatic'],
   saber: [],
   broadway: [],
+  hydrospray: ['In Bay Automatic (IBA)'],
   other: [],
 };
 
