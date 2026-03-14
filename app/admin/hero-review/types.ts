@@ -46,7 +46,7 @@ export const EQUIPMENT_MODELS: Record<string, string[]> = {
   belanger: ['Kondor', 'Eclipse', 'FreeStyler', 'SpinLite', 'Vector'],
   ryko: ['SoftGloss', 'SoftGloss Maxx', 'Radius'],
   istobal: ['M\'NEX 22', 'M\'NEX 25', 'M\'NEX 32', 'ISTOBAL 1900'],
-  ds: ['Carwash Systems'],
+  ds: ['IQ 2.0 Touch Free', 'Carwash Systems'],
   petit: ['Accutrac 360i', 'Accutrac 360t', 'Accutrac Mini'],
   oasis: ['Typhoon', 'XR-1000'],
   mark_vii: ['ChoiceWash XT', 'ChoiceWash CT', 'AquaJet', 'SoftLine'],
