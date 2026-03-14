@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { getStateSlug, slugify as constantsSlugify } from '@/lib/constants';
 import FullEditListingPanel, { type EditableFullListing } from '@/components/FullEditListingPanel';
+import PhotoEditModal from './PhotoEditModal';
 
 interface Vendor {
   id: number;
@@ -37,6 +38,7 @@ interface VendorListing {
   website: string | null;
   location_page_url: string | null;
   hero_image: string | null;
+  photos: string[] | null;
 }
 
 interface NewListingForm {
@@ -99,6 +101,7 @@ export default function VendorDetailPage() {
   const [enrichResults, setEnrichResults] = useState<Record<string, { success: boolean; steps: { name: string; status: string; detail?: string }[] }>>({});
   const [editingListing, setEditingListing] = useState<EditableFullListing | null>(null);
   const [loadingEditListing, setLoadingEditListing] = useState<string | null>(null);
+  const [photoEditListingId, setPhotoEditListingId] = useState<string | null>(null);
   const [fullEnrichingAll, setFullEnrichingAll] = useState(false);
   const [fullEnrichProgress, setFullEnrichProgress] = useState<{ steps: { name: string; status: string; detail?: string }[]; listingCount?: number } | null>(null);
   const [streetViewReplacing, setStreetViewReplacing] = useState(false);
@@ -184,7 +187,7 @@ export default function VendorDetailPage() {
         supabase.from('vendors').select('*').eq('id', vendorId).maybeSingle(),
         supabase
           .from('listings')
-          .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url, hero_image')
+          .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url, hero_image, photos')
           .eq('vendor_id', vendorId)
           .order('state', { ascending: true })
           .order('city', { ascending: true }),
@@ -314,7 +317,7 @@ export default function VendorDetailPage() {
       // Re-fetch the listing data to get updated fields
       const { data: refreshed, error: refreshErr } = await supabase
         .from('listings')
-        .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url, hero_image')
+        .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url, hero_image, photos')
         .eq('id', listing.id)
         .maybeSingle();
 
@@ -533,7 +536,7 @@ export default function VendorDetailPage() {
       // Re-fetch the listing data
       const { data: refreshed, error: refreshErr } = await supabase
         .from('listings')
-        .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url, hero_image')
+        .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url, hero_image, photos')
         .eq('id', listing.id)
         .maybeSingle();
 
@@ -569,6 +572,17 @@ export default function VendorDetailPage() {
     } : l));
     setEditingListing(null);
   };
+
+  const handlePhotoUpdate = useCallback((listingId: string, updated: { hero_image: string | null; photos: string[] | null }) => {
+    setListings((prev) => prev.map((l) =>
+      l.id === listingId ? { ...l, hero_image: updated.hero_image, photos: updated.photos } : l
+    ));
+  }, []);
+
+  const photoEditListing = useMemo(() => {
+    if (!photoEditListingId) return null;
+    return listings.find((l) => l.id === photoEditListingId) ?? null;
+  }, [photoEditListingId, listings]);
 
   const handleAddLocation = async () => {
     if (!listingForm.name.trim() || !listingForm.city.trim() || !listingForm.state.trim()) {
@@ -610,7 +624,7 @@ export default function VendorDetailPage() {
           photos: [],
           crawl_status: listingForm.website ? 'pending' : 'no_website',
         })
-        .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url, hero_image')
+        .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url, hero_image, photos')
         .single();
 
       if (error) throw error;
@@ -1015,12 +1029,23 @@ export default function VendorDetailPage() {
                               />
                             </td>
                             <td className="px-2 py-1.5 w-16">
-                              <img
-                                src={listing.hero_image || '/images/card-fallback.svg'}
-                                alt=""
-                                className="w-14 h-10 rounded object-cover border border-gray-200"
-                                loading="lazy"
-                              />
+                              <button
+                                onClick={() => setPhotoEditListingId(listing.id)}
+                                className="group/thumb relative cursor-pointer"
+                                title="Click to edit photos"
+                              >
+                                <img
+                                  src={listing.hero_image || '/images/card-fallback.svg'}
+                                  alt=""
+                                  className="w-14 h-10 rounded object-cover border border-gray-200 group-hover/thumb:border-blue-400 transition-colors"
+                                  loading="lazy"
+                                />
+                                {(listing.photos?.length ?? 0) > 0 && (
+                                  <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[8px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center shadow-sm">
+                                    {listing.photos!.length}
+                                  </span>
+                                )}
+                              </button>
                             </td>
                             <td className="px-4 py-2.5 font-medium text-gray-900 whitespace-nowrap max-w-[200px] truncate" title={listing.name}>
                               <button
@@ -1241,6 +1266,14 @@ export default function VendorDetailPage() {
             </div>
           </div>
         </div>
+      )}
+      {photoEditListing && (
+        <PhotoEditModal
+          listing={photoEditListing}
+          open={!!photoEditListing}
+          onClose={() => setPhotoEditListingId(null)}
+          onUpdate={(updated) => handlePhotoUpdate(photoEditListing.id, updated)}
+        />
       )}
     </div>
   );
