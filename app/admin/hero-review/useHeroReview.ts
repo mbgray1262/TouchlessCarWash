@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getStateSlug, slugify } from '@/lib/constants';
 import { HeroListing, FilterSource, ReplacementOption, SessionStats } from './types';
+import { autoEnhanceImage } from './autoEnhance';
 
 const PAGE_SIZE = 20;
 
@@ -310,6 +311,41 @@ export function useHeroReview() {
     revalidateListing(listing);
   };
 
+  const handleEnhanceHero = async (listingId: string, imageUrl: string) => {
+    const listing = listings.find(l => l.id === listingId);
+
+    const blob = await autoEnhanceImage(imageUrl);
+    const formData = new FormData();
+    formData.append('file', blob, 'enhanced-hero.jpg');
+    formData.append('listingId', listingId);
+    formData.append('type', 'hero');
+
+    const res = await fetch('/api/upload-image', { method: 'POST', body: formData });
+    if (!res.ok) throw new Error(await res.text());
+    const { url } = await res.json() as { url: string };
+
+    await supabase
+      .from('listings')
+      .update({ hero_image: url, hero_image_source: 'gallery' })
+      .eq('id', listingId);
+
+    await supabase.from('hero_reviews').insert({
+      listing_id: listingId,
+      action: 'replaced',
+      old_hero_url: imageUrl,
+      new_hero_url: url,
+      new_source: 'gallery',
+    });
+
+    setListings(prev =>
+      prev.map(l => l.id === listingId
+        ? { ...l, hero_image: url, hero_image_source: 'gallery' as HeroListing['hero_image_source'] }
+        : l
+      )
+    );
+    revalidateListing(listing);
+  };
+
   const handleUploadHero = async (listingId: string, file: File) => {
     const listing = listings.find(l => l.id === listingId);
     const oldHero = listing?.hero_image ?? null;
@@ -440,6 +476,7 @@ export function useHeroReview() {
     handleDeleteExternalPhoto,
     handleRemoveGalleryPhoto,
     handleCropSave,
+    handleEnhanceHero,
     handleUploadHero,
     handleMarkNotTouchless,
     handleFlag,

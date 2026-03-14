@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useState } from 'react';
-import { X, Flag, ImageOff, ZoomIn, Crop, ExternalLink, CarFront, Star, Trash2, ChevronDown, ChevronLeft, ChevronRight, ImageIcon, Upload } from 'lucide-react';
+import { X, Flag, ImageOff, ZoomIn, Crop, ExternalLink, CarFront, Star, Trash2, ChevronDown, ChevronLeft, ChevronRight, ImageIcon, Upload, Wand2 } from 'lucide-react';
 import { HeroListing, ReplacementOption } from './types';
 import HeroImageFallback from '@/components/HeroImageFallback';
 import { CropModal } from './CropModal';
@@ -39,13 +39,15 @@ interface LightboxProps {
   label: string;
   onClose: () => void;
   onUseAsHero: () => void;
+  onEnhance?: (imageUrl: string) => Promise<void>;
   onDelete?: () => void;
   onPrev?: () => void;
   onNext?: () => void;
   position?: string; // e.g. "3 / 8"
 }
 
-function PhotoLightbox({ url, label, onClose, onUseAsHero, onDelete, onPrev, onNext, position }: LightboxProps) {
+function PhotoLightbox({ url, label, onClose, onUseAsHero, onEnhance, onDelete, onPrev, onNext, position }: LightboxProps) {
+  const [lbEnhancing, setLbEnhancing] = useState(false);
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -111,6 +113,23 @@ function PhotoLightbox({ url, label, onClose, onUseAsHero, onDelete, onPrev, onN
             <Star className="w-3.5 h-3.5" />
             Use as hero
           </button>
+          {onEnhance && (
+            <button
+              onClick={async () => {
+                if (lbEnhancing) return;
+                setLbEnhancing(true);
+                try { await onEnhance(url); onClose(); } catch {} finally { setLbEnhancing(false); }
+              }}
+              disabled={lbEnhancing}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-white text-sm font-semibold transition-colors shadow-lg ${
+                lbEnhancing ? 'bg-purple-500 animate-pulse' : 'bg-purple-500 hover:bg-purple-600'
+              }`}
+              title="Auto-enhance & use as hero"
+            >
+              <Wand2 className="w-3.5 h-3.5" />
+              {lbEnhancing ? 'Enhancing…' : 'Enhance & use'}
+            </button>
+          )}
           {onDelete && (
             <button
               onClick={() => { onDelete(); onClose(); }}
@@ -157,6 +176,7 @@ interface Props {
   onDeleteExternalPhoto: (field: 'google_photo_url' | 'street_view_url') => void;
   onRemoveGalleryPhoto: (url: string) => void;
   onCropSave: (url: string) => void;
+  onEnhance: (imageUrl: string) => Promise<void>;
   onUploadHero: (file: File) => void;
   onMarkNotTouchless: () => void;
   onFlag: () => void;
@@ -177,6 +197,7 @@ export function HeroCard({
   onDeleteExternalPhoto,
   onRemoveGalleryPhoto,
   onCropSave,
+  onEnhance,
   onUploadHero,
   onMarkNotTouchless,
   onFlag,
@@ -189,6 +210,7 @@ export function HeroCard({
   const [heroLightbox, setHeroLightbox] = useState(false); // separate state for hero preview
   const [cropOpen, setCropOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
 
   useEffect(() => {
     if (isFocused && cardRef.current) {
@@ -269,6 +291,7 @@ export function HeroCard({
         label={`Hero — ${listing.hero_image_source ?? 'unknown'}`}
         onClose={() => setHeroLightbox(false)}
         onUseAsHero={() => {}}
+        onEnhance={onEnhance}
         onDelete={onDeleteHero}
       />
     )}
@@ -282,6 +305,7 @@ export function HeroCard({
           label={item.label}
           onClose={() => setLightboxIndex(null)}
           onUseAsHero={() => { item.onUseAsHero(); setLightboxIndex(null); }}
+          onEnhance={async (imageUrl) => { await onEnhance(imageUrl); setLightboxIndex(null); }}
           onDelete={item.onDelete}
           onPrev={lightboxIndex > 0 ? () => setLightboxIndex(lightboxIndex - 1) : undefined}
           onNext={lightboxIndex < photoItems.length - 1 ? () => setLightboxIndex(lightboxIndex + 1) : undefined}
@@ -343,6 +367,21 @@ export function HeroCard({
         <div className="absolute top-2 right-2 flex gap-1 z-10">
           {hasHero && (
             <>
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  if (enhancing || !listing.hero_image) return;
+                  setEnhancing(true);
+                  try { await onEnhance(listing.hero_image); } catch {} finally { setEnhancing(false); }
+                }}
+                disabled={enhancing}
+                className={`w-7 h-7 rounded-full text-white flex items-center justify-center shadow-md transition-colors ${
+                  enhancing ? 'bg-purple-500 animate-pulse' : 'bg-gray-700/80 hover:bg-purple-600'
+                }`}
+                title="Auto-enhance (brightness, contrast, color)"
+              >
+                <Wand2 className="w-3.5 h-3.5" />
+              </button>
               <button
                 onClick={(e) => { e.stopPropagation(); setCropOpen(true); }}
                 className="w-7 h-7 rounded-full bg-gray-700/80 hover:bg-blue-600 text-white flex items-center justify-center shadow-md transition-colors"

@@ -43,6 +43,7 @@ export default function HeroReviewPage() {
     handleDeleteExternalPhoto,
     handleRemoveGalleryPhoto,
     handleCropSave,
+    handleEnhanceHero,
     handleUploadHero,
     handleMarkNotTouchless,
     handleFlag,
@@ -226,6 +227,7 @@ export default function HeroReviewPage() {
                   onDeleteExternalPhoto={(field) => handleDeleteExternalPhoto(listing.id, field)}
                   onRemoveGalleryPhoto={(url) => handleRemoveGalleryPhoto(listing.id, url)}
                   onCropSave={(url) => handleCropSave(listing.id, url)}
+                  onEnhance={(imageUrl) => handleEnhanceHero(listing.id, imageUrl)}
                   onUploadHero={(file) => handleUploadHero(listing.id, file)}
                   onMarkNotTouchless={() => handleMarkNotTouchless(listing.id)}
                   onFlag={() => handleFlag(listing.id)}
