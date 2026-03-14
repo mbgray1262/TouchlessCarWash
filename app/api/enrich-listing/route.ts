@@ -88,7 +88,31 @@ export async function POST(request: NextRequest) {
     }
 
     if (mode === 'google') {
-      // Enrich from Google Places via the photo-enrich function
+      // Step 1: Geocode — find Google Place ID, lat/lng if missing
+      // First check if the listing already has a google_place_id
+      const listingCheck = await fetch(
+        `${SUPABASE_URL}/rest/v1/listings?select=google_place_id&id=eq.${listingId}`,
+        { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } },
+      );
+      const listingRows = await listingCheck.json().catch(() => []);
+      const needsGeocode = !listingRows?.[0]?.google_place_id;
+
+      if (needsGeocode) {
+        const geocode = await callEdgeFunction('discover-touchless', {
+          action: 'geocode',
+          listing_ids: [listingId],
+        });
+        const geocodeResult = geocode.data?.results?.[0];
+        steps.push({
+          name: 'geocode',
+          status: geocodeResult?.status === 'matched' ? 'ok' : 'warning',
+          detail: geocodeResult?.status === 'matched'
+            ? `place_id=${geocodeResult.google_place_id}, matched="${geocodeResult.matched_name}"`
+            : geocodeResult?.error ?? 'No Google Place match found',
+        });
+      }
+
+      // Step 2: Enrich from Google Places via the photo-enrich function
       // (it already checks Google as a photo source)
       const photos = await callEdgeFunction('photo-enrich', {
         listing_id: listingId,

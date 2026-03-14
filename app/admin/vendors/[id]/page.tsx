@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { ArrowLeft, Save, Loader2, Plus, X, Check, CheckCircle2, XCircle, ExternalLink, MapPin, Trash2, Globe, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, Eye, Zap, RotateCw, Pencil } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Plus, X, Check, CheckCircle2, XCircle, ExternalLink, MapPin, Trash2, Globe, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, Eye, Zap, RotateCw, Pencil, Camera, ZoomIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,8 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { getStateSlug, slugify as constantsSlugify } from '@/lib/constants';
 import FullEditListingPanel, { type EditableFullListing } from '@/components/FullEditListingPanel';
+import { Checkbox } from '@/components/ui/checkbox';
+import PhotoEditModal from './PhotoEditModal';
 
 interface Vendor {
   id: number;
@@ -36,6 +38,9 @@ interface VendorListing {
   crawl_status: string | null;
   website: string | null;
   location_page_url: string | null;
+  hero_image: string | null;
+  street_view_url: string | null;
+  photos: string[] | null;
 }
 
 interface NewListingForm {
@@ -98,6 +103,9 @@ export default function VendorDetailPage() {
   const [enrichResults, setEnrichResults] = useState<Record<string, { success: boolean; steps: { name: string; status: string; detail?: string }[] }>>({});
   const [editingListing, setEditingListing] = useState<EditableFullListing | null>(null);
   const [loadingEditListing, setLoadingEditListing] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [streetViewHeroesRunning, setStreetViewHeroesRunning] = useState(false);
+  const [photoEditListingId, setPhotoEditListingId] = useState<string | null>(null);
 
   // Sort & filter state
   const [sortKey, setSortKey] = useState<SortKey>('state');
@@ -164,7 +172,7 @@ export default function VendorDetailPage() {
         supabase.from('vendors').select('*').eq('id', vendorId).maybeSingle(),
         supabase
           .from('listings')
-          .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url')
+          .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url, hero_image, street_view_url, photos')
           .eq('vendor_id', vendorId)
           .order('state', { ascending: true })
           .order('city', { ascending: true }),
@@ -294,7 +302,7 @@ export default function VendorDetailPage() {
       // Re-fetch the listing data to get updated fields
       const { data: refreshed, error: refreshErr } = await supabase
         .from('listings')
-        .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url')
+        .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url, hero_image, street_view_url, photos')
         .eq('id', listing.id)
         .maybeSingle();
 
@@ -352,8 +360,88 @@ export default function VendorDetailPage() {
       website: updated.website,
       location_page_url: updated.location_page_url,
       crawl_status: updated.crawl_status,
+      hero_image: (updated as unknown as Record<string, unknown>).hero_image as string | null,
+      street_view_url: (updated as unknown as Record<string, unknown>).street_view_url as string | null,
+      photos: (updated as unknown as Record<string, unknown>).photos as string[] | null,
     } : l));
     setEditingListing(null);
+  };
+
+  const handlePhotoUpdate = useCallback((listingId: string, updated: { hero_image: string | null; photos: string[] | null }) => {
+    setListings((prev) => prev.map((l) =>
+      l.id === listingId ? { ...l, hero_image: updated.hero_image, photos: updated.photos } : l
+    ));
+  }, []);
+
+  const photoEditListing = useMemo(() => {
+    if (!photoEditListingId) return null;
+    return listings.find((l) => l.id === photoEditListingId) ?? null;
+  }, [photoEditListingId, listings]);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback(() => {
+    setSelectedIds(prev => {
+      if (prev.size === displayListings.length && displayListings.length > 0) return new Set();
+      return new Set(displayListings.map(l => l.id));
+    });
+  }, [displayListings]);
+
+  const handleStreetViewHeroes = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Set street view as hero for ${selectedIds.size} selected location(s)? This will replace existing heroes.`)) return;
+
+    setStreetViewHeroesRunning(true);
+    try {
+      const res = await fetch('/api/street-view-heroes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listing_ids: Array.from(selectedIds) }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast({ title: 'Error', description: data.error ?? `HTTP ${res.status}`, variant: 'destructive' });
+        return;
+      }
+
+      // Refresh listings data
+      const { data: refreshed } = await supabase
+        .from('listings')
+        .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url, hero_image, street_view_url, photos')
+        .eq('vendor_id', vendorId)
+        .order('state', { ascending: true })
+        .order('city', { ascending: true });
+
+      if (refreshed) {
+        setListings(refreshed as VendorListing[]);
+      }
+
+      setSelectedIds(new Set());
+
+      const parts: string[] = [];
+      if (data.updated > 0) parts.push(`${data.updated} updated`);
+      if (data.skipped > 0) parts.push(`${data.skipped} skipped (no street view)`);
+      if (data.errors > 0) parts.push(`${data.errors} errors`);
+
+      toast({
+        title: data.errors === 0 ? 'Street View Heroes Updated' : 'Partial Update',
+        description: parts.join(', '),
+        variant: data.errors > 0 ? 'destructive' : undefined,
+      });
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to update heroes', variant: 'destructive' });
+    } finally {
+      setStreetViewHeroesRunning(false);
+    }
   };
 
   const handleAddLocation = async () => {
@@ -396,7 +484,7 @@ export default function VendorDetailPage() {
           photos: [],
           crawl_status: listingForm.website ? 'pending' : 'no_website',
         })
-        .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url')
+        .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url, hero_image, street_view_url, photos')
         .single();
 
       if (error) throw error;
@@ -406,8 +494,32 @@ export default function VendorDetailPage() {
       setShowAddLocation(false);
       toast({
         title: 'Location added',
-        description: `${listingForm.name} created. ${newListing.website ? 'Click the ⚡ Website button to enrich it!' : 'Click the ⚡ Google button to pull Google Places data.'}`,
+        description: `${listingForm.name} created. Geocoding via Google Places…`,
       });
+
+      // Auto-geocode: find Google Place ID, lat/lng for the new listing
+      try {
+        const geoRes = await fetch(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/discover-touchless`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({ action: 'geocode', listing_ids: [newListing.id] }),
+          },
+        );
+        const geoData = await geoRes.json();
+        const matched = geoData?.results?.find(
+          (r: { id: string; status: string }) => r.id === newListing.id && r.status === 'matched',
+        );
+        if (matched) {
+          toast({ title: 'Geocoded', description: `Found Google Place for ${listingForm.name.trim()}` });
+        }
+      } catch {
+        // Geocoding failure is non-fatal — listing is still created
+      }
     } catch (err) {
       toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to add location', variant: 'destructive' });
     } finally {
@@ -572,6 +684,21 @@ export default function VendorDetailPage() {
                     </span>
                   </CardTitle>
                   <div className="flex items-center gap-2">
+                    {selectedIds.size > 0 && (
+                      <Button
+                        onClick={handleStreetViewHeroes}
+                        disabled={streetViewHeroesRunning}
+                        size="sm"
+                        variant="outline"
+                        className="gap-1 border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100"
+                      >
+                        {streetViewHeroesRunning ? (
+                          <><Loader2 className="w-4 h-4 animate-spin" />Processing...</>
+                        ) : (
+                          <><Camera className="w-4 h-4" />Street View Heroes ({selectedIds.size})</>
+                        )}
+                      </Button>
+                    )}
                     {uniqueStates.length > 1 && (
                       <div className="relative">
                         <select
@@ -610,6 +737,13 @@ export default function VendorDetailPage() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b bg-gray-50">
+                          <th className="px-4 py-2.5 w-10">
+                            <Checkbox
+                              checked={selectedIds.size === displayListings.length && displayListings.length > 0 ? true : selectedIds.size > 0 ? 'indeterminate' : false}
+                              onCheckedChange={toggleSelectAll}
+                            />
+                          </th>
+                          <th className="px-2 py-2.5 w-14 font-medium text-gray-600 text-xs">Hero</th>
                           <SortHeader label="Name" col="name" />
                           <SortHeader label="Address" col="address" />
                           <SortHeader label="City" col="city" />
@@ -623,7 +757,43 @@ export default function VendorDetailPage() {
                       </thead>
                       <tbody>
                         {displayListings.map((listing) => (
-                          <tr key={listing.id} className="border-b last:border-0 hover:bg-gray-50/80 transition-colors group">
+                          <tr key={listing.id} className={`border-b last:border-0 hover:bg-gray-50/80 transition-colors group ${selectedIds.has(listing.id) ? 'bg-blue-50/50' : ''}`}>
+                            <td className="px-4 py-2.5 w-10">
+                              <Checkbox
+                                checked={selectedIds.has(listing.id)}
+                                onCheckedChange={() => toggleSelect(listing.id)}
+                              />
+                            </td>
+                            <td className="px-2 py-2.5 w-14">
+                              <button
+                                onClick={() => setPhotoEditListingId(listing.id)}
+                                className="group/thumb relative cursor-pointer"
+                                title="Click to edit photos"
+                              >
+                                {listing.hero_image ? (
+                                  <div className="relative">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                      src={listing.hero_image}
+                                      alt={`${listing.name} hero`}
+                                      className="w-14 h-10 rounded object-cover border border-gray-200 group-hover/thumb:border-blue-400 transition-colors"
+                                    />
+                                    <div className="absolute inset-0 rounded bg-black/0 group-hover/thumb:bg-black/30 flex items-center justify-center transition-colors">
+                                      <ZoomIn className="w-3.5 h-3.5 text-white opacity-0 group-hover/thumb:opacity-100 transition-opacity drop-shadow" />
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="w-14 h-10 rounded bg-gray-100 border border-gray-200 group-hover/thumb:border-blue-400 flex items-center justify-center transition-colors">
+                                    <Camera className="w-3.5 h-3.5 text-gray-300 group-hover/thumb:text-blue-400 transition-colors" />
+                                  </div>
+                                )}
+                                {(listing.photos?.length ?? 0) > 0 && (
+                                  <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[8px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center shadow-sm">
+                                    {listing.photos!.length}
+                                  </span>
+                                )}
+                              </button>
+                            </td>
                             <td className="px-4 py-2.5 font-medium text-gray-900 whitespace-nowrap max-w-[200px] truncate" title={listing.name}>
                               <button
                                 onClick={() => handleOpenEditListing(listing)}
@@ -823,6 +993,15 @@ export default function VendorDetailPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {photoEditListing && (
+        <PhotoEditModal
+          listing={photoEditListing}
+          open={!!photoEditListing}
+          onClose={() => setPhotoEditListingId(null)}
+          onUpdate={(updated) => handlePhotoUpdate(photoEditListing.id, updated)}
+        />
       )}
     </div>
   );

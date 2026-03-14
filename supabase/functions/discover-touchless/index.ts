@@ -1722,6 +1722,173 @@ Deno.serve(async (req: Request) => {
     }
 
     // -----------------------------------------------------------------------
+    // ACTION: geocode — find & link Google Place data for existing listings
+    //   that are missing google_place_id / latitude / longitude.
+    //   Handles chain businesses by trying multiple search results and
+    //   skipping place IDs that already exist in the database.
+    // -----------------------------------------------------------------------
+    if (action === 'geocode') {
+      const listingIds = body.listing_ids as string[];
+      if (!listingIds?.length) {
+        return new Response(
+          JSON.stringify({ error: 'Missing listing_ids array' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      const { data: listings } = await supabase
+        .from('listings')
+        .select('id, name, address, city, state')
+        .in('id', listingIds);
+
+      if (!listings?.length) {
+        return new Response(
+          JSON.stringify({ error: 'No listings found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      // Pre-fetch all existing google_place_ids to avoid constraint violations
+      const { data: existingPlaces } = await supabase
+        .from('listings')
+        .select('google_place_id')
+        .not('google_place_id', 'is', null);
+      const usedPlaceIds = new Set(
+        (existingPlaces || []).map((r: { google_place_id: string }) => r.google_place_id),
+      );
+
+      const results: Array<{
+        id: string;
+        name: string;
+        status: 'matched' | 'no_match' | 'error';
+        google_place_id?: string;
+        latitude?: number;
+        longitude?: number;
+        matched_name?: string;
+        error?: string;
+      }> = [];
+
+      const fieldMask = [
+        'places.id',
+        'places.displayName',
+        'places.formattedAddress',
+        'places.location',
+        'places.googleMapsUri',
+        'places.businessStatus',
+      ].join(',');
+
+      for (const listing of listings) {
+        try {
+          // Try multiple search strategies for better address-specific matching
+          const address = listing.address || '';
+          const searchQueries = [
+            // Strategy 1: Address only (most precise for chain businesses)
+            [address, listing.city, listing.state].filter(Boolean).join(', '),
+            // Strategy 2: Name + address + city + state
+            [listing.name, address, listing.city, listing.state].filter(Boolean).join(', '),
+            // Strategy 3: "car wash" + address (in case name differs on Google)
+            ['car wash', address, listing.city, listing.state].filter(Boolean).join(', '),
+          ];
+
+          let matched = false;
+
+          for (const searchQuery of searchQueries) {
+            if (matched) break;
+
+            const searchRes = await fetch('https://places.googleapis.com/v1/places:searchText', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Goog-Api-Key': googleApiKey,
+                'X-Goog-FieldMask': fieldMask,
+              },
+              body: JSON.stringify({
+                textQuery: searchQuery,
+                maxResultCount: 10,
+                languageCode: 'en',
+              }),
+            });
+
+            if (!searchRes.ok) continue;
+
+            const searchData = await searchRes.json();
+            const places = searchData.places || [];
+
+            // Try each result, skipping those with already-used place IDs
+            for (const place of places) {
+              const placeId = place.id?.replace(/^places\//, '') || null;
+              if (!placeId) continue;
+              if (usedPlaceIds.has(placeId)) continue; // Skip duplicates
+
+              const lat = place.location?.latitude || null;
+              const lng = place.location?.longitude || null;
+              if (lat == null || lng == null) continue;
+
+              const mapsUrl = place.googleMapsUri || null;
+              const matchedName = place.displayName?.text || 'Unknown';
+
+              // Update the listing
+              const { error: updateError } = await supabase
+                .from('listings')
+                .update({
+                  google_place_id: placeId,
+                  google_id: place.id,
+                  latitude: lat,
+                  longitude: lng,
+                  google_maps_url: mapsUrl,
+                })
+                .eq('id', listing.id);
+
+              if (!updateError) {
+                usedPlaceIds.add(placeId); // Track newly used ID
+                results.push({
+                  id: listing.id,
+                  name: listing.name,
+                  status: 'matched',
+                  google_place_id: placeId,
+                  latitude: lat,
+                  longitude: lng,
+                  matched_name: matchedName,
+                });
+                matched = true;
+                break;
+              }
+            }
+          }
+
+          if (!matched) {
+            results.push({
+              id: listing.id,
+              name: listing.name,
+              status: 'no_match',
+              error: `No unique Google Place found after trying ${searchQueries.length} search strategies`,
+            });
+          }
+        } catch (err) {
+          results.push({
+            id: listing.id,
+            name: listing.name,
+            status: 'error',
+            error: err instanceof Error ? err.message : 'Unknown error',
+          });
+        }
+      }
+
+      const matchedCount = results.filter((r) => r.status === 'matched').length;
+      const noMatch = results.filter((r) => r.status === 'no_match').length;
+      const errored = results.filter((r) => r.status === 'error').length;
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          summary: { total: results.length, matched: matchedCount, no_match: noMatch, errors: errored },
+          results,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // -----------------------------------------------------------------------
     // ACTION: reject — mark a discovery as "not touchless" so it won't reappear
     // -----------------------------------------------------------------------
     if (action === 'reject') {
