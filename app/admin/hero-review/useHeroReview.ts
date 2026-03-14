@@ -69,7 +69,7 @@ export function useHeroReview() {
   const buildQuery = useCallback(() => {
     let q = supabase
       .from('listings')
-      .select('id, name, address, city, state, slug, hero_image, hero_image_source, photos, google_photo_url, street_view_url, website, photo_enrichment_attempted_at', { count: 'exact' })
+      .select('id, name, address, city, state, slug, hero_image, hero_image_source, photos, google_photo_url, street_view_url, website, photo_enrichment_attempted_at, equipment_brand, equipment_model', { count: 'exact' })
       .eq('is_touchless', true)
       .order('photo_enrichment_attempted_at', { ascending: false, nullsFirst: false });
 
@@ -477,6 +477,22 @@ export function useHeroReview() {
     revalidateListing(listing);
   };
 
+  const handleSetEquipment = async (listingId: string, brand: string | null, model: string | null) => {
+    const listing = listings.find(l => l.id === listingId);
+    await supabase
+      .from('listings')
+      .update({ equipment_brand: brand, equipment_model: model })
+      .eq('id', listingId);
+
+    setListings(prev =>
+      prev.map(l => l.id === listingId
+        ? { ...l, equipment_brand: brand, equipment_model: model }
+        : l
+      )
+    );
+    revalidateListing(listing);
+  };
+
   const handleFlag = async (listingId: string) => {
     const listing = listings.find(l => l.id === listingId);
     const alreadyFlagged = listing?.flagged;
@@ -545,6 +561,7 @@ export function useHeroReview() {
     handleRevertEnhance,
     handleUploadHero,
     handleMarkNotTouchless,
+    handleSetEquipment,
     handleFlag,
     navigateFocus,
     reload: loadListings,

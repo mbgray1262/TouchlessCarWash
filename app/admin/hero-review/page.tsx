@@ -48,6 +48,7 @@ export default function HeroReviewPage() {
     handleRevertEnhance,
     handleUploadHero,
     handleMarkNotTouchless,
+    handleSetEquipment,
     handleFlag,
     navigateFocus,
     reload,
@@ -234,6 +235,7 @@ export default function HeroReviewPage() {
                   onRevertEnhance={(originalUrl, originalSource) => handleRevertEnhance(listing.id, originalUrl, originalSource)}
                   onUploadHero={(file) => handleUploadHero(listing.id, file)}
                   onMarkNotTouchless={() => handleMarkNotTouchless(listing.id)}
+                  onSetEquipment={(brand, model) => handleSetEquipment(listing.id, brand, model)}
                   onFlag={() => handleFlag(listing.id)}
                   onFocus={() => setFocusedId(listing.id)}
                   confirmIndex={confirmIndex}

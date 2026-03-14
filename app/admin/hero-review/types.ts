@@ -16,8 +16,27 @@ export interface HeroListing {
   street_view_url: string | null;
   website: string | null;
   photo_enrichment_attempted_at: string | null;
+  equipment_brand: string | null;
+  equipment_model: string | null;
   flagged?: boolean;
 }
+
+export const EQUIPMENT_BRANDS = [
+  { value: 'pdq', label: 'PDQ (LaserWash)' },
+  { value: 'washworld', label: 'WashWorld' },
+  { value: 'belanger', label: 'Belanger' },
+  { value: 'ryko', label: 'Ryko' },
+  { value: 'istobal', label: 'Istobal' },
+  { value: 'ds', label: 'D&S' },
+  { value: 'petit', label: 'Petit AutoWash' },
+  { value: 'oasis', label: 'Oasis' },
+  { value: 'mark_vii', label: 'Mark VII' },
+  { value: 'karcher', label: 'Kärcher' },
+  { value: 'autec', label: 'Autec' },
+  { value: 'saber', label: 'Saber' },
+  { value: 'broadway', label: 'Broadway' },
+  { value: 'other', label: 'Other' },
+] as const;
 
 export type ReplacementSpecial = 'use_placeholder' | 'remove_hero';
 

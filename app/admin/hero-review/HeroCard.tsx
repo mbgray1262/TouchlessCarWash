@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState } from 'react';
 import { X, Flag, ImageOff, ZoomIn, Crop, ExternalLink, CarFront, Star, Trash2, ChevronDown, ChevronLeft, ChevronRight, ImageIcon, Upload, Wand2 } from 'lucide-react';
-import { HeroListing, ReplacementOption } from './types';
+import { HeroListing, ReplacementOption, EQUIPMENT_BRANDS } from './types';
 import HeroImageFallback from '@/components/HeroImageFallback';
 import { CropModal } from './CropModal';
 import { getStateSlug, slugify } from '@/lib/constants';
@@ -183,6 +183,7 @@ interface Props {
   onRevertEnhance: (originalUrl: string, originalSource: string | null) => Promise<void>;
   onUploadHero: (file: File) => void;
   onMarkNotTouchless: () => void;
+  onSetEquipment: (brand: string | null, model: string | null) => void;
   onFlag: () => void;
   onFocus: () => void;
   confirmIndex: number | null;
@@ -206,6 +207,7 @@ export function HeroCard({
   onRevertEnhance,
   onUploadHero,
   onMarkNotTouchless,
+  onSetEquipment,
   onFlag,
   onFocus,
   confirmIndex,
@@ -217,8 +219,14 @@ export function HeroCard({
   const [cropOpen, setCropOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
+  const [modelDraft, setModelDraft] = useState(listing.equipment_model ?? '');
   /** Stores the original (pre-enhance) hero URL + source so we can toggle back. */
   const [preEnhance, setPreEnhance] = useState<{ url: string; source: string | null } | null>(null);
+
+  // Sync model draft when listing changes
+  useEffect(() => {
+    setModelDraft(listing.equipment_model ?? '');
+  }, [listing.equipment_model]);
 
   useEffect(() => {
     if (isFocused && cardRef.current) {
@@ -482,8 +490,13 @@ export function HeroCard({
           <p className="text-xs text-gray-400 mt-0.5 truncate" title={listing.address}>{listing.address}</p>
         )}
         <p className="text-xs text-gray-500 mt-0.5">{listing.city}, {listing.state}</p>
-        <div className="mt-1.5 flex items-center gap-1.5">
+        <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
           <SourceBadge source={listing.hero_image_source} />
+          {listing.equipment_brand && (
+            <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 font-medium" title={listing.equipment_model ? `${listing.equipment_brand} — ${listing.equipment_model}` : listing.equipment_brand}>
+              🔧 {EQUIPMENT_BRANDS.find(b => b.value === listing.equipment_brand)?.label ?? listing.equipment_brand}
+            </span>
+          )}
           {galleryPhotos.length > 0 && (
             <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 tabular-nums">
               {galleryPhotos.length} <ImageIcon className="w-2.5 h-2.5 inline -mt-px" />
@@ -602,6 +615,45 @@ export function HeroCard({
               <Upload className="w-3 h-3" />
               {uploading ? 'Uploading…' : 'Upload'}
             </button>
+            <select
+              value={listing.equipment_brand ?? ''}
+              onChange={(e) => {
+                const val = e.target.value || null;
+                onSetEquipment(val, listing.equipment_model);
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className={`text-xs px-2 py-1 rounded-md border transition-colors cursor-pointer ${
+                listing.equipment_brand
+                  ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+                  : 'bg-white border-gray-300 text-gray-500'
+              }`}
+              title="Equipment manufacturer"
+            >
+              <option value="">🔧 Equipment…</option>
+              {EQUIPMENT_BRANDS.map(b => (
+                <option key={b.value} value={b.value}>{b.label}</option>
+              ))}
+            </select>
+            {listing.equipment_brand && (
+              <input
+                type="text"
+                placeholder="Model (optional)"
+                value={modelDraft}
+                onChange={(e) => setModelDraft(e.target.value)}
+                onBlur={() => {
+                  const val = modelDraft.trim() || null;
+                  if (val !== listing.equipment_model) {
+                    onSetEquipment(listing.equipment_brand, val);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                }}
+                onClick={(e) => e.stopPropagation()}
+                className="text-xs px-2 py-1 rounded-md border border-gray-300 text-gray-700 w-28 bg-white focus:border-indigo-400 focus:outline-none"
+                title="Equipment model (e.g. LaserWash 360, Razor)"
+              />
+            )}
             <button
               onClick={onFlag}
               className={`flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors ${
