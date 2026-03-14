@@ -286,8 +286,8 @@ Deno.serve(async (req: Request) => {
 
               if (!currentListing?.equipment_brand) {
                 const knownBrands: Record<string, string> = {
-                  'laserwash': 'laserwash',
-                  'laser wash': 'laserwash',
+                  'laserwash': 'pdq',
+                  'laser wash': 'pdq',
                   'pdq': 'pdq',
                   'washworld': 'washworld',
                   'wash world': 'washworld',
@@ -298,6 +298,13 @@ Deno.serve(async (req: Request) => {
                   'istobal': 'istobal',
                   'ryko': 'ryko',
                   'd&s': 'ds',
+                  'mark vii': 'mark_vii',
+                  'autec': 'autec',
+                  'oasis': 'oasis',
+                  'karcher': 'karcher',
+                  'hydro-spray': 'hydrospray',
+                  'hydrospray': 'hydrospray',
+                  'saber': 'saber',
                 };
 
                 for (const tech of equipTech) {
@@ -305,7 +312,7 @@ Deno.serve(async (req: Request) => {
                   for (const [keyword, brand] of Object.entries(knownBrands)) {
                     if (techLower.includes(keyword)) {
                       updatePayload.equipment_brand = brand;
-                      updatePayload.equipment_model = tech.trim();
+                      // Don't store raw AI text as model — leave model null for manual tagging
                       break;
                     }
                   }
