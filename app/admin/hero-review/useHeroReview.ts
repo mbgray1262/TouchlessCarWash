@@ -346,6 +346,70 @@ export function useHeroReview() {
     revalidateListing(listing);
   };
 
+  /** Enhance a photo in-place without changing which image is the hero. */
+  const handleEnhancePhoto = async (listingId: string, imageUrl: string) => {
+    const listing = listings.find(l => l.id === listingId);
+
+    const blob = await autoEnhanceImage(imageUrl);
+    const formData = new FormData();
+    formData.append('file', blob, 'enhanced-photo.jpg');
+    formData.append('listingId', listingId);
+    formData.append('type', 'hero');
+
+    const res = await fetch('/api/upload-image', { method: 'POST', body: formData });
+    if (!res.ok) throw new Error(await res.text());
+    const { url: newUrl } = await res.json() as { url: string };
+
+    // Build DB updates: swap the old URL for the new one everywhere it appears
+    const updates: Record<string, unknown> = {};
+    const currentPhotos = listing?.photos ?? [];
+    if (currentPhotos.includes(imageUrl)) {
+      updates.photos = currentPhotos.map(p => p === imageUrl ? newUrl : p);
+    }
+    if (listing?.google_photo_url === imageUrl) updates.google_photo_url = newUrl;
+    if (listing?.street_view_url === imageUrl) updates.street_view_url = newUrl;
+    if (listing?.hero_image === imageUrl) {
+      updates.hero_image = newUrl;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await supabase.from('listings').update(updates).eq('id', listingId);
+    }
+
+    // Update local state
+    setListings(prev =>
+      prev.map(l => {
+        if (l.id !== listingId) return l;
+        const patched = { ...l };
+        if (updates.photos) patched.photos = updates.photos as string[];
+        if (updates.google_photo_url !== undefined) patched.google_photo_url = newUrl;
+        if (updates.street_view_url !== undefined) patched.street_view_url = newUrl;
+        if (updates.hero_image !== undefined) patched.hero_image = newUrl;
+        return patched;
+      })
+    );
+
+    if (listing?.hero_image === imageUrl) revalidateListing(listing);
+  };
+
+  /** Revert a hero image back to a previous URL (used for enhance toggle-off). */
+  const handleRevertEnhance = async (listingId: string, originalUrl: string, originalSource: string | null) => {
+    const listing = listings.find(l => l.id === listingId);
+
+    await supabase
+      .from('listings')
+      .update({ hero_image: originalUrl, hero_image_source: originalSource })
+      .eq('id', listingId);
+
+    setListings(prev =>
+      prev.map(l => l.id === listingId
+        ? { ...l, hero_image: originalUrl, hero_image_source: (originalSource ?? null) as HeroListing['hero_image_source'] }
+        : l
+      )
+    );
+    revalidateListing(listing);
+  };
+
   const handleUploadHero = async (listingId: string, file: File) => {
     const listing = listings.find(l => l.id === listingId);
     const oldHero = listing?.hero_image ?? null;
@@ -477,6 +541,8 @@ export function useHeroReview() {
     handleRemoveGalleryPhoto,
     handleCropSave,
     handleEnhanceHero,
+    handleEnhancePhoto,
+    handleRevertEnhance,
     handleUploadHero,
     handleMarkNotTouchless,
     handleFlag,

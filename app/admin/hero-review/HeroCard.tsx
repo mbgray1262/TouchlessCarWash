@@ -31,6 +31,7 @@ interface GalleryItem {
   label: string;
   source?: string;
   onUseAsHero: () => void;
+  onEnhance?: () => Promise<void>;
   onDelete?: () => void;
 }
 
@@ -40,13 +41,14 @@ interface LightboxProps {
   onClose: () => void;
   onUseAsHero: () => void;
   onEnhance?: (imageUrl: string) => Promise<void>;
+  enhanceLabel?: string; // Override the button text (e.g. "Revert" for toggle-off)
   onDelete?: () => void;
   onPrev?: () => void;
   onNext?: () => void;
   position?: string; // e.g. "3 / 8"
 }
 
-function PhotoLightbox({ url, label, onClose, onUseAsHero, onEnhance, onDelete, onPrev, onNext, position }: LightboxProps) {
+function PhotoLightbox({ url, label, onClose, onUseAsHero, onEnhance, enhanceLabel, onDelete, onPrev, onNext, position }: LightboxProps) {
   const [lbEnhancing, setLbEnhancing] = useState(false);
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -124,10 +126,10 @@ function PhotoLightbox({ url, label, onClose, onUseAsHero, onEnhance, onDelete, 
               className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-white text-sm font-semibold transition-colors shadow-lg ${
                 lbEnhancing ? 'bg-purple-500 animate-pulse' : 'bg-purple-500 hover:bg-purple-600'
               }`}
-              title="Auto-enhance & use as hero"
+              title={enhanceLabel === 'Revert' ? 'Revert to original' : 'Auto-enhance & use as hero'}
             >
               <Wand2 className="w-3.5 h-3.5" />
-              {lbEnhancing ? 'Enhancing…' : 'Enhance & use'}
+              {lbEnhancing ? 'Processing…' : enhanceLabel ?? 'Enhance & use'}
             </button>
           )}
           {onDelete && (
@@ -177,6 +179,8 @@ interface Props {
   onRemoveGalleryPhoto: (url: string) => void;
   onCropSave: (url: string) => void;
   onEnhance: (imageUrl: string) => Promise<void>;
+  onEnhancePhoto: (imageUrl: string) => Promise<void>;
+  onRevertEnhance: (originalUrl: string, originalSource: string | null) => Promise<void>;
   onUploadHero: (file: File) => void;
   onMarkNotTouchless: () => void;
   onFlag: () => void;
@@ -198,6 +202,8 @@ export function HeroCard({
   onRemoveGalleryPhoto,
   onCropSave,
   onEnhance,
+  onEnhancePhoto,
+  onRevertEnhance,
   onUploadHero,
   onMarkNotTouchless,
   onFlag,
@@ -211,7 +217,8 @@ export function HeroCard({
   const [cropOpen, setCropOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
-  const [enhanced, setEnhanced] = useState(false);
+  /** Stores the original (pre-enhance) hero URL + source so we can toggle back. */
+  const [preEnhance, setPreEnhance] = useState<{ url: string; source: string | null } | null>(null);
 
   useEffect(() => {
     if (isFocused && cardRef.current) {
@@ -247,6 +254,7 @@ export function HeroCard({
           onReplace(opt.url, opt.source);
           void idx;
         },
+        onEnhance: () => onEnhancePhoto(opt.url),
         onDelete: field ? () => onDeleteExternalPhoto(field) : undefined,
       };
     }),
@@ -256,6 +264,7 @@ export function HeroCard({
       label: 'Gallery',
       source: 'gallery',
       onUseAsHero: () => onReplace(url, 'gallery'),
+      onEnhance: () => onEnhancePhoto(url),
       onDelete: () => onRemoveGalleryPhoto(url),
     })),
     {
@@ -292,7 +301,19 @@ export function HeroCard({
         label={`Hero — ${listing.hero_image_source ?? 'unknown'}`}
         onClose={() => setHeroLightbox(false)}
         onUseAsHero={() => {}}
-        onEnhance={onEnhance}
+        onEnhance={preEnhance
+          ? async () => {
+              await onRevertEnhance(preEnhance.url, preEnhance.source);
+              setPreEnhance(null);
+            }
+          : async (imageUrl) => {
+              const originalUrl = listing.hero_image!;
+              const originalSource = listing.hero_image_source ?? null;
+              await onEnhance(imageUrl);
+              setPreEnhance({ url: originalUrl, source: originalSource });
+            }
+        }
+        enhanceLabel={preEnhance ? 'Revert' : undefined}
         onDelete={onDeleteHero}
       />
     )}
@@ -373,15 +394,27 @@ export function HeroCard({
                   e.stopPropagation();
                   if (enhancing || !listing.hero_image) return;
                   setEnhancing(true);
-                  try { await onEnhance(listing.hero_image); setEnhanced(true); } catch {} finally { setEnhancing(false); }
+                  try {
+                    if (preEnhance) {
+                      // Toggle OFF — revert to original
+                      await onRevertEnhance(preEnhance.url, preEnhance.source);
+                      setPreEnhance(null);
+                    } else {
+                      // Toggle ON — enhance and remember original
+                      const originalUrl = listing.hero_image;
+                      const originalSource = listing.hero_image_source ?? null;
+                      await onEnhance(listing.hero_image);
+                      setPreEnhance({ url: originalUrl, source: originalSource });
+                    }
+                  } catch {} finally { setEnhancing(false); }
                 }}
                 disabled={enhancing}
                 className={`w-7 h-7 rounded-full text-white flex items-center justify-center shadow-md transition-colors ${
                   enhancing ? 'bg-purple-500 animate-pulse'
-                    : enhanced ? 'bg-purple-500 hover:bg-purple-600'
+                    : preEnhance ? 'bg-purple-500 hover:bg-purple-600'
                     : 'bg-gray-700/80 hover:bg-purple-600'
                 }`}
-                title={enhanced ? 'Enhanced ✓ — click to enhance again' : 'Auto-enhance (brightness, contrast, color)'}
+                title={preEnhance ? 'Revert to original (enhanced ✓)' : 'Auto-enhance (brightness, contrast, color)'}
               >
                 <Wand2 className="w-3.5 h-3.5" />
               </button>
@@ -531,6 +564,15 @@ export function HeroCard({
                     >
                       <Star className="w-2.5 h-2.5" />
                     </button>
+                    {item.onEnhance && (
+                      <button
+                        onClick={item.onEnhance}
+                        className="flex-1 h-5 rounded flex items-center justify-center bg-purple-100 hover:bg-purple-500 text-purple-500 hover:text-white transition-colors"
+                        title="Auto-enhance this photo"
+                      >
+                        <Wand2 className="w-2.5 h-2.5" />
+                      </button>
+                    )}
                     {item.onDelete && (
                       <button
                         onClick={item.onDelete}
