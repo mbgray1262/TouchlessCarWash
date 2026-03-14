@@ -61,20 +61,21 @@ async function selectBestCarWashImage(
     type: 'text',
     text: `You are selecting the best Street View photo for a car wash directory listing. I've shown you ${images.length} photo(s) taken at different headings from the same location.
 
-Pick the image that BEST shows a car wash facility. Look for:
-- Car wash tunnel entrance or exit
-- Wash bay structures, canopies, or roll-up doors
-- Car wash signage (even partially visible)
-- Automated wash equipment or conveyor tracks
-- A building that is clearly identifiable as a car wash
+IMPORTANT: Many car washes are attached to gas stations or convenience stores. The car wash bay is often a separate structure behind, beside, or attached to the main building. Look carefully in the BACKGROUND and SIDES of each image — the car wash may not be the dominant subject.
 
-REJECT images that primarily show:
-- Trucks, trailers, or parked vehicles blocking the view
-- Other businesses (restaurants, gas stations, convenience stores) without a visible car wash
-- Empty roads, parking lots, or generic street scenes
-- Residential areas or unrelated commercial buildings
+Pick the image that BEST shows a car wash facility. Look for ANY of these, even partially visible or in the background:
+- Car wash tunnel entrance or exit (large rectangular opening in a building)
+- Wash bay structures with canopies, roll-up doors, or overhead clearance bars
+- "CAR WASH" or "WASH" text on signage or buildings
+- Automated wash equipment, conveyor tracks, or guide rails
+- Self-serve wash bays (open-sided structures with pressure wash equipment)
+- Tall blow-dryer arches or foam applicator arches
+- Vehicles entering or exiting a wash tunnel
+- A building with the characteristic shape of a car wash (long, narrow, with large openings)
 
-Reply with ONLY the image number (1, 2, 3, or 4) or NONE if no image shows a car wash.`,
+REJECT images ONLY if they show absolutely NO car wash structures — not even partially visible in the background. A gas station with a car wash bay visible behind it is ACCEPTABLE.
+
+Reply with ONLY the image number (1-${images.length}) or NONE if absolutely no image shows any car wash structure.`,
   });
 
   for (let attempt = 1; attempt <= 3; attempt++) {
@@ -87,7 +88,7 @@ Reply with ONLY the image number (1, 2, 3, or 4) or NONE if no image shows a car
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'claude-haiku-4-5',
+          model: 'claude-sonnet-4-5-20250929',
           max_tokens: 10,
           messages: [{ role: 'user', content }],
         }),
@@ -205,52 +206,18 @@ async function detectGenericHeroes(
 }
 
 /**
- * Download a Street View image for a listing using AI-powered camera selection.
- *
- * 1. Checks metadata for coverage (full address, then coordinate fallback)
- * 2. Fetches images at 4 headings (0°, 90°, 180°, 270°) from the same panorama
- * 3. Uses Claude AI to pick the image that best shows a car wash facility
- * 4. Uploads the winning image to Supabase Storage
+ * Fetch Street View images at 8 headings from a given panorama and use AI to pick the best.
+ * Returns the best image buffer or null if AI rejects all images.
  */
-async function downloadStreetView(
-  supabase: ReturnType<typeof createClient>,
-  listing: { id: string; address: string; city: string; state: string; zip: string; latitude: number | null; longitude: number | null },
+async function tryPanorama(
+  panoId: string,
   googleApiKey: string,
-  anthropicKey?: string,
-): Promise<{ success: boolean; imageUrl?: string; error?: string }> {
-  // Use full address for better geocoding (previously only used street address)
-  const fullAddress = `${listing.address}, ${listing.city}, ${listing.state} ${listing.zip}`.trim();
-
-  // Check metadata — also captures pano_id so all heading images come from the same spot
-  const metaUrl = `https://maps.googleapis.com/maps/api/streetview/metadata?location=${encodeURIComponent(fullAddress)}&source=outdoor&key=${googleApiKey}`;
-  const metaRes = await fetch(metaUrl);
-  const meta = await metaRes.json();
-
-  let panoId: string | null = meta.status === 'OK' ? (meta.pano_id ?? null) : null;
-
-  if (meta.status !== 'OK') {
-    if (listing.latitude && listing.longitude) {
-      const coordMetaUrl = `https://maps.googleapis.com/maps/api/streetview/metadata?location=${listing.latitude},${listing.longitude}&source=outdoor&key=${googleApiKey}`;
-      const coordMetaRes = await fetch(coordMetaUrl);
-      const coordMeta = await coordMetaRes.json();
-      if (coordMeta.status !== 'OK') {
-        return { success: false, error: `No Street View coverage (status: ${meta.status})` };
-      }
-      panoId = coordMeta.pano_id ?? null;
-    } else {
-      return { success: false, error: `No Street View coverage (status: ${meta.status})` };
-    }
-  }
-
-  // Build location param — prefer pano_id (locks all headings to same panorama)
-  const locationPart = panoId
-    ? `pano=${encodeURIComponent(panoId)}`
-    : `location=${encodeURIComponent(fullAddress)}`;
-
-  // Fetch images at 4 headings in parallel
-  const headings = [0, 90, 180, 270];
+  anthropicKey: string | undefined,
+): Promise<{ buffer: ArrayBuffer; heading: number } | null> {
+  // Fetch images at 8 headings (every 45°) for thorough coverage
+  const headings = [0, 45, 90, 135, 180, 225, 270, 315];
   const imagePromises = headings.map(async (heading) => {
-    const url = `https://maps.googleapis.com/maps/api/streetview?size=1200x800&${locationPart}&heading=${heading}&source=outdoor&key=${googleApiKey}`;
+    const url = `https://maps.googleapis.com/maps/api/streetview?size=1200x800&pano=${encodeURIComponent(panoId)}&heading=${heading}&source=outdoor&key=${googleApiKey}`;
     try {
       const res = await fetch(url);
       if (!res.ok) return null;
@@ -264,10 +231,7 @@ async function downloadStreetView(
 
   const results = await Promise.all(imagePromises);
   const validImages = results.filter((r): r is { heading: number; buffer: ArrayBuffer } => r !== null);
-
-  if (validImages.length === 0) {
-    return { success: false, error: 'No valid Street View images at any heading' };
-  }
+  if (validImages.length === 0) return null;
 
   // Use Claude AI to pick the best car wash image
   let bestIdx = 0;
@@ -276,16 +240,114 @@ async function downloadStreetView(
       heading: img.heading,
       base64: bufferToBase64(img.buffer),
     }));
-
     bestIdx = await selectBestCarWashImage(imagesForAI, anthropicKey);
-    if (bestIdx === -1) {
-      return { success: false, error: 'AI: no street view angle shows a car wash facility' };
+    if (bestIdx === -1) return null; // AI says no car wash visible
+  }
+
+  return validImages[bestIdx];
+}
+
+/**
+ * Generate offset coordinates ~40m in cardinal + diagonal directions from a center point.
+ * Returns array of {lat, lng} pairs for nearby panorama searches.
+ */
+function getNearbyCoordinates(lat: number, lng: number): { lat: number; lng: number }[] {
+  const offsetM = 40; // meters
+  const latOffset = offsetM / 111320; // ~0.00036° per 40m
+  const lngOffset = offsetM / (111320 * Math.cos(lat * Math.PI / 180));
+
+  return [
+    { lat: lat + latOffset, lng },                    // North
+    { lat: lat - latOffset, lng },                    // South
+    { lat, lng: lng + lngOffset },                    // East
+    { lat, lng: lng - lngOffset },                    // West
+    { lat: lat + latOffset, lng: lng + lngOffset },   // NE
+    { lat: lat - latOffset, lng: lng - lngOffset },   // SW
+  ];
+}
+
+/**
+ * Download a Street View image for a listing using AI-powered camera selection.
+ *
+ * 1. Checks metadata for coverage (full address, then coordinate fallback)
+ * 2. Fetches images at 8 headings (every 45°) from the panorama
+ * 3. Uses Claude Sonnet to pick the image that best shows a car wash facility
+ * 4. If no car wash found, tries nearby panoramas (~40m offsets) for different vantage points
+ * 5. Uploads the winning image to Supabase Storage
+ */
+async function downloadStreetView(
+  supabase: ReturnType<typeof createClient>,
+  listing: { id: string; address: string; city: string; state: string; zip: string; latitude: number | null; longitude: number | null },
+  googleApiKey: string,
+  anthropicKey?: string,
+): Promise<{ success: boolean; imageUrl?: string; error?: string }> {
+  const fullAddress = `${listing.address}, ${listing.city}, ${listing.state} ${listing.zip}`.trim();
+
+  // ── Step 1: Find primary panorama (address-based, then coordinate fallback) ──
+  const metaUrl = `https://maps.googleapis.com/maps/api/streetview/metadata?location=${encodeURIComponent(fullAddress)}&source=outdoor&key=${googleApiKey}`;
+  const metaRes = await fetch(metaUrl);
+  const meta = await metaRes.json();
+
+  let primaryPanoId: string | null = meta.status === 'OK' ? (meta.pano_id ?? null) : null;
+  let primaryLat = meta.status === 'OK' ? meta.location?.lat : null;
+  let primaryLng = meta.status === 'OK' ? meta.location?.lng : null;
+
+  if (meta.status !== 'OK') {
+    if (listing.latitude && listing.longitude) {
+      const coordMetaUrl = `https://maps.googleapis.com/maps/api/streetview/metadata?location=${listing.latitude},${listing.longitude}&source=outdoor&key=${googleApiKey}`;
+      const coordMetaRes = await fetch(coordMetaUrl);
+      const coordMeta = await coordMetaRes.json();
+      if (coordMeta.status !== 'OK') {
+        return { success: false, error: `No Street View coverage (status: ${meta.status})` };
+      }
+      primaryPanoId = coordMeta.pano_id ?? null;
+      primaryLat = coordMeta.location?.lat ?? listing.latitude;
+      primaryLng = coordMeta.location?.lng ?? listing.longitude;
+    } else {
+      return { success: false, error: `No Street View coverage (status: ${meta.status})` };
     }
   }
 
-  const bestImage = validImages[bestIdx];
+  if (!primaryPanoId) {
+    return { success: false, error: 'No panorama ID available' };
+  }
 
-  // Upload to Supabase Storage
+  // ── Step 2: Try primary panorama with 8 headings ──
+  let bestImage = await tryPanorama(primaryPanoId, googleApiKey, anthropicKey);
+
+  // ── Step 3: If AI rejected all angles, try nearby panoramas ──
+  if (!bestImage && anthropicKey) {
+    const centerLat = primaryLat ?? listing.latitude;
+    const centerLng = primaryLng ?? listing.longitude;
+
+    if (centerLat && centerLng) {
+      const nearbyCoords = getNearbyCoordinates(centerLat, centerLng);
+      const triedPanoIds = new Set<string>([primaryPanoId]);
+
+      for (const coord of nearbyCoords) {
+        // Look up panorama at offset location
+        const nearbyMetaUrl = `https://maps.googleapis.com/maps/api/streetview/metadata?location=${coord.lat},${coord.lng}&source=outdoor&key=${googleApiKey}`;
+        try {
+          const nearbyMetaRes = await fetch(nearbyMetaUrl);
+          const nearbyMeta = await nearbyMetaRes.json();
+          if (nearbyMeta.status !== 'OK' || !nearbyMeta.pano_id) continue;
+          if (triedPanoIds.has(nearbyMeta.pano_id)) continue; // Skip duplicate panorama
+          triedPanoIds.add(nearbyMeta.pano_id);
+
+          bestImage = await tryPanorama(nearbyMeta.pano_id, googleApiKey, anthropicKey);
+          if (bestImage) break; // Found a car wash!
+        } catch {
+          continue;
+        }
+      }
+    }
+  }
+
+  if (!bestImage) {
+    return { success: false, error: 'AI: no street view angle from any nearby panorama shows a car wash facility' };
+  }
+
+  // ── Step 4: Upload to Supabase Storage ──
   const storagePath = `listings/${listing.id}/streetview_${Date.now()}.jpg`;
   const { error: uploadErr } = await supabase.storage
     .from('listing-photos')
