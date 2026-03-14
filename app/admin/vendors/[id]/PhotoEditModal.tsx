@@ -199,7 +199,6 @@ export default function PhotoEditModal({ listing, open, onClose, onUpdate }: Pho
 
   const handleDeleteHero = async () => {
     if (!heroImage) return;
-    if (!confirm('Delete the hero image? This will remove it from this listing.')) return;
     setSaving(true);
     try {
       const newPhotos = photos.filter((p) => p !== heroImage);
@@ -216,7 +215,6 @@ export default function PhotoEditModal({ listing, open, onClose, onUpdate }: Pho
   };
 
   const handleDeleteGalleryPhoto = async (url: string) => {
-    if (!confirm('Delete this photo from the gallery?')) return;
     setDeleting(url);
     try {
       const newPhotos = photos.filter((p) => p !== url);

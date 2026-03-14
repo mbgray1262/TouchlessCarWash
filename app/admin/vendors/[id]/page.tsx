@@ -365,7 +365,6 @@ export default function VendorDetailPage() {
 
   const handleFullEnrichAll = async () => {
     if (!listings.length) return;
-    if (!confirm(`Run Full Enrich on all ${listings.length} locations? This will fetch Google data, photos, and regenerate descriptions.`)) return;
 
     setFullEnrichingAll(true);
     setFullEnrichProgress(null);
@@ -442,10 +441,6 @@ export default function VendorDetailPage() {
       return;
     }
 
-    const msg = hasSelection
-      ? `Fetch Street View hero images for ${targetIds.length} selected location(s)?`
-      : `Fetch Street View hero images for all ${targetIds.length} displayed location(s)?`;
-    if (!confirm(msg)) return;
 
     setStreetViewReplacing(true);
     setStreetViewResult(null);
