@@ -28,6 +28,8 @@ export default function HeroReviewPage() {
     setPage,
     filterSource, setFilterSource,
     filterState, setFilterState,
+    filterVendorId, setFilterVendorId,
+    vendors,
     searchName, setSearchName,
     showFlaggedOnly, setShowFlaggedOnly,
     expandedId, setExpandedId,
@@ -41,6 +43,9 @@ export default function HeroReviewPage() {
     handleDeleteExternalPhoto,
     handleRemoveGalleryPhoto,
     handleCropSave,
+    handleEnhanceHero,
+    handleEnhancePhoto,
+    handleRevertEnhance,
     handleUploadHero,
     handleMarkNotTouchless,
     handleFlag,
@@ -80,6 +85,11 @@ export default function HeroReviewPage() {
     setFilterState(val);
     setPage(0);
   }, [setFilterState, setPage]);
+
+  const handleVendorChange = useCallback((val: string) => {
+    setFilterVendorId(val);
+    setPage(0);
+  }, [setFilterVendorId, setPage]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -147,6 +157,17 @@ export default function HeroReviewPage() {
             ))}
           </select>
 
+          <select
+            value={filterVendorId}
+            onChange={(e) => handleVendorChange(e.target.value)}
+            className="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white max-w-48"
+          >
+            <option value="">All Vendors</option>
+            {vendors.map(v => (
+              <option key={v.id} value={v.id}>{v.name}</option>
+            ))}
+          </select>
+
           <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
             <input
               type="checkbox"
@@ -208,6 +229,9 @@ export default function HeroReviewPage() {
                   onDeleteExternalPhoto={(field) => handleDeleteExternalPhoto(listing.id, field)}
                   onRemoveGalleryPhoto={(url) => handleRemoveGalleryPhoto(listing.id, url)}
                   onCropSave={(url) => handleCropSave(listing.id, url)}
+                  onEnhance={(imageUrl) => handleEnhanceHero(listing.id, imageUrl)}
+                  onEnhancePhoto={(imageUrl) => handleEnhancePhoto(listing.id, imageUrl)}
+                  onRevertEnhance={(originalUrl, originalSource) => handleRevertEnhance(listing.id, originalUrl, originalSource)}
                   onUploadHero={(file) => handleUploadHero(listing.id, file)}
                   onMarkNotTouchless={() => handleMarkNotTouchless(listing.id)}
                   onFlag={() => handleFlag(listing.id)}
@@ -230,8 +254,25 @@ export default function HeroReviewPage() {
               Prev
             </button>
 
-            <span className="text-sm text-gray-600">
-              Page {page + 1} of {totalPages}
+            <span className="text-sm text-gray-600 flex items-center gap-1.5">
+              Page
+              <input
+                type="number"
+                min={1}
+                max={totalPages}
+                value={page + 1}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  if (!isNaN(val) && val >= 1 && val <= totalPages) {
+                    setPage(val - 1);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  e.stopPropagation();
+                }}
+                className="w-16 px-2 py-1 text-sm text-center rounded-md border border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none"
+              />
+              of {totalPages}
             </span>
 
             <button

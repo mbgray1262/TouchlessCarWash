@@ -7,7 +7,7 @@ import {
   LayoutDashboard, List, Building2, FileText, ArrowLeft, Upload, ShieldCheck,
   Link2, Database, Zap, Filter, Sparkles, PenLine, Eye, LogOut, LinkIcon,
   FlaskConical, Map, BarChart3, ChevronDown, Menu, X, Search, Image,
-  Clock, MessageSquareText, Pickaxe, Package, Bug, FileEdit, Globe, Camera,
+  Clock, MessageSquareText, Pickaxe, Package, Bug, FileEdit, Globe, Camera, Merge,
 } from 'lucide-react';
 import { useAdminAuth } from './AdminAuthProvider';
 
@@ -79,6 +79,7 @@ const navigation: NavEntry[] = [
       { href: '/admin/import/gallery-backfill', label: 'Gallery Backfill', icon: Image },
       { href: '/admin/import/hero-audit', label: 'Hero Audit', icon: Bug },
       { href: '/admin/import/hours', label: 'Hours Import', icon: Clock },
+      { href: '/admin/import/dedup-listings', label: 'Dedup Listings', icon: Merge },
     ],
   },
   { href: '/admin/sitemap', label: 'Sitemap', icon: Map },

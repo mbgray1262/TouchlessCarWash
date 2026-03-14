@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getStateSlug, slugify } from '@/lib/constants';
 import { HeroListing, FilterSource, ReplacementOption, SessionStats } from './types';
+import { autoEnhanceImage } from './autoEnhance';
 
 const PAGE_SIZE = 20;
 
@@ -31,6 +32,8 @@ export function useHeroReview() {
 
   const [filterSource, setFilterSource] = useState<FilterSource>('all');
   const [filterState, setFilterState] = useState('');
+  const [filterVendorId, setFilterVendorId] = useState('');
+  const [vendors, setVendors] = useState<{ id: number; name: string }[]>([]);
   const [searchName, setSearchName] = useState('');
   const [showFlaggedOnly, setShowFlaggedOnly] = useState(false);
 
@@ -50,10 +53,23 @@ export function useHeroReview() {
     }
   }, []);
 
+  // Load vendor list for dropdown
+  useEffect(() => {
+    supabase
+      .from('vendors')
+      .select('id, canonical_name')
+      .order('canonical_name')
+      .then(({ data }) => {
+        if (data) {
+          setVendors(data.map(v => ({ id: v.id, name: v.canonical_name })));
+        }
+      });
+  }, []);
+
   const buildQuery = useCallback(() => {
     let q = supabase
       .from('listings')
-      .select('id, name, city, state, slug, hero_image, hero_image_source, photos, google_photo_url, street_view_url, website, photo_enrichment_attempted_at', { count: 'exact' })
+      .select('id, name, address, city, state, slug, hero_image, hero_image_source, photos, google_photo_url, street_view_url, website, photo_enrichment_attempted_at', { count: 'exact' })
       .eq('is_touchless', true)
       .order('photo_enrichment_attempted_at', { ascending: false, nullsFirst: false });
 
@@ -64,10 +80,11 @@ export function useHeroReview() {
     }
 
     if (filterState) q = q.eq('state', filterState);
+    if (filterVendorId) q = q.eq('vendor_id', parseInt(filterVendorId, 10));
     if (searchName) q = q.ilike('name', `%${searchName}%`);
 
     return q;
-  }, [filterSource, filterState, searchName]);
+  }, [filterSource, filterState, filterVendorId, searchName]);
 
   const loadListings = useCallback(async () => {
     setLoading(true);
@@ -294,6 +311,105 @@ export function useHeroReview() {
     revalidateListing(listing);
   };
 
+  const handleEnhanceHero = async (listingId: string, imageUrl: string) => {
+    const listing = listings.find(l => l.id === listingId);
+
+    const blob = await autoEnhanceImage(imageUrl);
+    const formData = new FormData();
+    formData.append('file', blob, 'enhanced-hero.jpg');
+    formData.append('listingId', listingId);
+    formData.append('type', 'hero');
+
+    const res = await fetch('/api/upload-image', { method: 'POST', body: formData });
+    if (!res.ok) throw new Error(await res.text());
+    const { url } = await res.json() as { url: string };
+
+    await supabase
+      .from('listings')
+      .update({ hero_image: url, hero_image_source: 'gallery' })
+      .eq('id', listingId);
+
+    await supabase.from('hero_reviews').insert({
+      listing_id: listingId,
+      action: 'replaced',
+      old_hero_url: imageUrl,
+      new_hero_url: url,
+      new_source: 'gallery',
+    });
+
+    setListings(prev =>
+      prev.map(l => l.id === listingId
+        ? { ...l, hero_image: url, hero_image_source: 'gallery' as HeroListing['hero_image_source'] }
+        : l
+      )
+    );
+    revalidateListing(listing);
+  };
+
+  /** Enhance a photo in-place without changing which image is the hero. */
+  const handleEnhancePhoto = async (listingId: string, imageUrl: string) => {
+    const listing = listings.find(l => l.id === listingId);
+
+    const blob = await autoEnhanceImage(imageUrl);
+    const formData = new FormData();
+    formData.append('file', blob, 'enhanced-photo.jpg');
+    formData.append('listingId', listingId);
+    formData.append('type', 'hero');
+
+    const res = await fetch('/api/upload-image', { method: 'POST', body: formData });
+    if (!res.ok) throw new Error(await res.text());
+    const { url: newUrl } = await res.json() as { url: string };
+
+    // Build DB updates: swap the old URL for the new one everywhere it appears
+    const updates: Record<string, unknown> = {};
+    const currentPhotos = listing?.photos ?? [];
+    if (currentPhotos.includes(imageUrl)) {
+      updates.photos = currentPhotos.map(p => p === imageUrl ? newUrl : p);
+    }
+    if (listing?.google_photo_url === imageUrl) updates.google_photo_url = newUrl;
+    if (listing?.street_view_url === imageUrl) updates.street_view_url = newUrl;
+    if (listing?.hero_image === imageUrl) {
+      updates.hero_image = newUrl;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await supabase.from('listings').update(updates).eq('id', listingId);
+    }
+
+    // Update local state
+    setListings(prev =>
+      prev.map(l => {
+        if (l.id !== listingId) return l;
+        const patched = { ...l };
+        if (updates.photos) patched.photos = updates.photos as string[];
+        if (updates.google_photo_url !== undefined) patched.google_photo_url = newUrl;
+        if (updates.street_view_url !== undefined) patched.street_view_url = newUrl;
+        if (updates.hero_image !== undefined) patched.hero_image = newUrl;
+        return patched;
+      })
+    );
+
+    if (listing?.hero_image === imageUrl) revalidateListing(listing);
+  };
+
+  /** Revert a hero image back to a previous URL (used for enhance toggle-off). */
+  const handleRevertEnhance = async (listingId: string, originalUrl: string, originalSource: string | null) => {
+    const listing = listings.find(l => l.id === listingId);
+
+    await supabase
+      .from('listings')
+      .update({ hero_image: originalUrl, hero_image_source: originalSource })
+      .eq('id', listingId);
+
+    setListings(prev =>
+      prev.map(l => l.id === listingId
+        ? { ...l, hero_image: originalUrl, hero_image_source: (originalSource ?? null) as HeroListing['hero_image_source'] }
+        : l
+      )
+    );
+    revalidateListing(listing);
+  };
+
   const handleUploadHero = async (listingId: string, file: File) => {
     const listing = listings.find(l => l.id === listingId);
     const oldHero = listing?.hero_image ?? null;
@@ -408,6 +524,8 @@ export function useHeroReview() {
     setPage,
     filterSource, setFilterSource,
     filterState, setFilterState,
+    filterVendorId, setFilterVendorId,
+    vendors,
     searchName, setSearchName,
     showFlaggedOnly, setShowFlaggedOnly,
     expandedId, setExpandedId,
@@ -422,6 +540,9 @@ export function useHeroReview() {
     handleDeleteExternalPhoto,
     handleRemoveGalleryPhoto,
     handleCropSave,
+    handleEnhanceHero,
+    handleEnhancePhoto,
+    handleRevertEnhance,
     handleUploadHero,
     handleMarkNotTouchless,
     handleFlag,

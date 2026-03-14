@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { ArrowLeft, Save, Loader2, Plus, X, Check, CheckCircle2, XCircle, ExternalLink, MapPin, Trash2, Globe, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, Eye, Zap, RotateCw, Pencil, Camera, ZoomIn } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Plus, X, Check, CheckCircle2, XCircle, ExternalLink, MapPin, Trash2, Globe, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, Eye, Zap, RotateCw, Pencil, Sparkles, Camera, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -12,8 +12,6 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { getStateSlug, slugify as constantsSlugify } from '@/lib/constants';
 import FullEditListingPanel, { type EditableFullListing } from '@/components/FullEditListingPanel';
-import { Checkbox } from '@/components/ui/checkbox';
-import PhotoEditModal from './PhotoEditModal';
 
 interface Vendor {
   id: number;
@@ -39,8 +37,6 @@ interface VendorListing {
   website: string | null;
   location_page_url: string | null;
   hero_image: string | null;
-  street_view_url: string | null;
-  photos: string[] | null;
 }
 
 interface NewListingForm {
@@ -103,9 +99,25 @@ export default function VendorDetailPage() {
   const [enrichResults, setEnrichResults] = useState<Record<string, { success: boolean; steps: { name: string; status: string; detail?: string }[] }>>({});
   const [editingListing, setEditingListing] = useState<EditableFullListing | null>(null);
   const [loadingEditListing, setLoadingEditListing] = useState<string | null>(null);
+  const [fullEnrichingAll, setFullEnrichingAll] = useState(false);
+  const [fullEnrichProgress, setFullEnrichProgress] = useState<{ steps: { name: string; status: string; detail?: string }[]; listingCount?: number } | null>(null);
+  const [streetViewReplacing, setStreetViewReplacing] = useState(false);
+  const [streetViewResult, setStreetViewResult] = useState<{ total: number; replaced: number; no_coverage: number } | null>(null);
+
+  // Sidebar collapse
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // Checkbox selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [streetViewHeroesRunning, setStreetViewHeroesRunning] = useState(false);
-  const [photoEditListingId, setPhotoEditListingId] = useState<string | null>(null);
+  // Batch Street View progress
+  const [svProgress, setSvProgress] = useState<{
+    current: number;
+    total: number;
+    replaced: number;
+    noCoverage: number;
+    errors: number;
+    done: boolean;
+    results: { id: string; name: string; status: string; detail?: string }[];
+  } | null>(null);
 
   // Sort & filter state
   const [sortKey, setSortKey] = useState<SortKey>('state');
@@ -172,7 +184,7 @@ export default function VendorDetailPage() {
         supabase.from('vendors').select('*').eq('id', vendorId).maybeSingle(),
         supabase
           .from('listings')
-          .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url, hero_image, street_view_url, photos')
+          .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url, hero_image')
           .eq('vendor_id', vendorId)
           .order('state', { ascending: true })
           .order('city', { ascending: true }),
@@ -302,7 +314,7 @@ export default function VendorDetailPage() {
       // Re-fetch the listing data to get updated fields
       const { data: refreshed, error: refreshErr } = await supabase
         .from('listings')
-        .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url, hero_image, street_view_url, photos')
+        .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url, hero_image')
         .eq('id', listing.id)
         .maybeSingle();
 
@@ -348,6 +360,200 @@ export default function VendorDetailPage() {
     }
   };
 
+  const handleFullEnrichAll = async () => {
+    if (!listings.length) return;
+    if (!confirm(`Run Full Enrich on all ${listings.length} locations? This will fetch Google data, photos, and regenerate descriptions.`)) return;
+
+    setFullEnrichingAll(true);
+    setFullEnrichProgress(null);
+
+    try {
+      const listingIds = listings.map((l) => l.id);
+      const res = await fetch('/api/enrich-listing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listingIds, mode: 'full' }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast({ title: 'Full Enrich failed', description: data.error ?? `HTTP ${res.status}`, variant: 'destructive' });
+        return;
+      }
+
+      setFullEnrichProgress({ steps: data.steps ?? [], listingCount: data.listingCount });
+
+      const failedSteps = (data.steps ?? []).filter((s: { status: string }) => s.status !== 'ok');
+      if (data.success) {
+        toast({
+          title: 'Full Enrich started',
+          description: `Google data fetched for ${data.listingCount} listings. Photo enrichment and description generation running in background.`,
+        });
+      } else {
+        toast({
+          title: 'Partial success',
+          description: `${failedSteps.length} step(s) had issues. Check the progress banner for details.`,
+          variant: 'destructive',
+        });
+      }
+
+      // Refresh listings to show updated data
+      fetchVendor();
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Full enrich request failed', variant: 'destructive' });
+    } finally {
+      setFullEnrichingAll(false);
+    }
+  };
+
+  // ── Checkbox selection helpers ──
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback(() => {
+    setSelectedIds(prev => {
+      if (prev.size === displayListings.length && displayListings.length > 0) {
+        return new Set();
+      }
+      return new Set(displayListings.map(l => l.id));
+    });
+  }, [displayListings]);
+
+  // ── Batch Street View Heroes ──
+  // Processes selected listings in small batches to avoid Edge Function timeouts.
+  // The old `replace_vendor` action processed ALL listings in one go, which caused
+  // timeout + retry storms for large vendors ("runaway process").
+  const handleBatchStreetView = async () => {
+    const hasSelection = selectedIds.size > 0;
+    const targetIds = hasSelection ? Array.from(selectedIds) : displayListings.map(l => l.id);
+
+    if (targetIds.length === 0) {
+      toast({ title: 'No listings', description: 'No listings to process.', variant: 'destructive' });
+      return;
+    }
+
+    const msg = hasSelection
+      ? `Fetch Street View hero images for ${targetIds.length} selected location(s)?`
+      : `Fetch Street View hero images for all ${targetIds.length} displayed location(s)?`;
+    if (!confirm(msg)) return;
+
+    setStreetViewReplacing(true);
+    setStreetViewResult(null);
+    setSvProgress({ current: 0, total: targetIds.length, replaced: 0, noCoverage: 0, errors: 0, done: false, results: [] });
+
+    const BATCH_SIZE = 5;
+    let replaced = 0;
+    let noCoverage = 0;
+    let errors = 0;
+    const allResults: { id: string; name: string; status: string; detail?: string }[] = [];
+
+    for (let i = 0; i < targetIds.length; i += BATCH_SIZE) {
+      const batchIds = targetIds.slice(i, i + BATCH_SIZE);
+
+      try {
+        const { data: fnData, error: fnErr } = await supabase.functions.invoke('streetview-hero', {
+          body: { action: 'replace_listings', listing_ids: batchIds },
+        });
+
+        if (fnErr) {
+          for (const id of batchIds) {
+            const name = listings.find(l => l.id === id)?.name ?? id;
+            allResults.push({ id, name, status: 'error', detail: fnErr.message });
+            errors++;
+          }
+        } else if (fnData.results) {
+          for (const r of fnData.results) {
+            const name = listings.find(l => l.id === r.id)?.name ?? r.id;
+            allResults.push({ id: r.id, name, status: r.status, detail: r.detail });
+            if (r.status === 'ok') replaced++;
+            else if (r.status === 'no_coverage') noCoverage++;
+            else errors++;
+          }
+        }
+      } catch (err) {
+        for (const id of batchIds) {
+          const name = listings.find(l => l.id === id)?.name ?? id;
+          allResults.push({ id, name, status: 'error', detail: err instanceof Error ? err.message : 'Unknown error' });
+          errors++;
+        }
+      }
+
+      setSvProgress({
+        current: Math.min(i + BATCH_SIZE, targetIds.length),
+        total: targetIds.length,
+        replaced,
+        noCoverage,
+        errors,
+        done: false,
+        results: [...allResults],
+      });
+    }
+
+    setSvProgress(prev => prev ? { ...prev, done: true } : prev);
+    setStreetViewReplacing(false);
+    setSelectedIds(new Set());
+
+    toast({
+      title: 'Street View Heroes Complete',
+      description: `${replaced} replaced, ${noCoverage} no coverage${errors > 0 ? `, ${errors} errors` : ''} out of ${targetIds.length} total.`,
+      variant: errors > 0 ? 'destructive' : undefined,
+    });
+
+    fetchVendor();
+  };
+
+  const handleFullEnrichSingle = async (listing: VendorListing) => {
+    setEnrichingLocation(listing.id);
+    setEnrichResults((prev) => { const n = { ...prev }; delete n[listing.id]; return n; });
+
+    try {
+      const res = await fetch('/api/enrich-listing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listingId: listing.id, listingIds: [listing.id], mode: 'full' }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast({ title: 'Full Enrich failed', description: data.error ?? `HTTP ${res.status}`, variant: 'destructive' });
+        setEnrichResults((prev) => ({ ...prev, [listing.id]: { success: false, steps: [] } }));
+        return;
+      }
+
+      setEnrichResults((prev) => ({ ...prev, [listing.id]: { success: data.success, steps: data.steps ?? [] } }));
+
+      // Re-fetch the listing data
+      const { data: refreshed, error: refreshErr } = await supabase
+        .from('listings')
+        .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url, hero_image')
+        .eq('id', listing.id)
+        .maybeSingle();
+
+      if (!refreshErr && refreshed) {
+        setListings((prev) => prev.map((l) => l.id === listing.id ? (refreshed as VendorListing) : l));
+      }
+
+      if (data.success) {
+        toast({ title: 'Full Enrich complete', description: `${listing.name} fully enriched. Photos & descriptions running in background.` });
+      } else {
+        toast({ title: 'Partial enrichment', description: 'Some steps had issues. Check results for details.', variant: 'destructive' });
+      }
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Full enrich failed', variant: 'destructive' });
+      setEnrichResults((prev) => ({ ...prev, [listing.id]: { success: false, steps: [] } }));
+    } finally {
+      setEnrichingLocation(null);
+    }
+  };
+
   const handleListingEdited = (updated: EditableFullListing) => {
     setListings((prev) => prev.map((l) => l.id === updated.id ? {
       ...l,
@@ -360,88 +566,8 @@ export default function VendorDetailPage() {
       website: updated.website,
       location_page_url: updated.location_page_url,
       crawl_status: updated.crawl_status,
-      hero_image: (updated as unknown as Record<string, unknown>).hero_image as string | null,
-      street_view_url: (updated as unknown as Record<string, unknown>).street_view_url as string | null,
-      photos: (updated as unknown as Record<string, unknown>).photos as string[] | null,
     } : l));
     setEditingListing(null);
-  };
-
-  const handlePhotoUpdate = useCallback((listingId: string, updated: { hero_image: string | null; photos: string[] | null }) => {
-    setListings((prev) => prev.map((l) =>
-      l.id === listingId ? { ...l, hero_image: updated.hero_image, photos: updated.photos } : l
-    ));
-  }, []);
-
-  const photoEditListing = useMemo(() => {
-    if (!photoEditListingId) return null;
-    return listings.find((l) => l.id === photoEditListingId) ?? null;
-  }, [photoEditListingId, listings]);
-
-  const toggleSelect = useCallback((id: string) => {
-    setSelectedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
-
-  const toggleSelectAll = useCallback(() => {
-    setSelectedIds(prev => {
-      if (prev.size === displayListings.length && displayListings.length > 0) return new Set();
-      return new Set(displayListings.map(l => l.id));
-    });
-  }, [displayListings]);
-
-  const handleStreetViewHeroes = async () => {
-    if (selectedIds.size === 0) return;
-    if (!confirm(`Set street view as hero for ${selectedIds.size} selected location(s)? This will replace existing heroes.`)) return;
-
-    setStreetViewHeroesRunning(true);
-    try {
-      const res = await fetch('/api/street-view-heroes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ listing_ids: Array.from(selectedIds) }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        toast({ title: 'Error', description: data.error ?? `HTTP ${res.status}`, variant: 'destructive' });
-        return;
-      }
-
-      // Refresh listings data
-      const { data: refreshed } = await supabase
-        .from('listings')
-        .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url, hero_image, street_view_url, photos')
-        .eq('vendor_id', vendorId)
-        .order('state', { ascending: true })
-        .order('city', { ascending: true });
-
-      if (refreshed) {
-        setListings(refreshed as VendorListing[]);
-      }
-
-      setSelectedIds(new Set());
-
-      const parts: string[] = [];
-      if (data.updated > 0) parts.push(`${data.updated} updated`);
-      if (data.skipped > 0) parts.push(`${data.skipped} skipped (no street view)`);
-      if (data.errors > 0) parts.push(`${data.errors} errors`);
-
-      toast({
-        title: data.errors === 0 ? 'Street View Heroes Updated' : 'Partial Update',
-        description: parts.join(', '),
-        variant: data.errors > 0 ? 'destructive' : undefined,
-      });
-    } catch (err) {
-      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to update heroes', variant: 'destructive' });
-    } finally {
-      setStreetViewHeroesRunning(false);
-    }
   };
 
   const handleAddLocation = async () => {
@@ -484,7 +610,7 @@ export default function VendorDetailPage() {
           photos: [],
           crawl_status: listingForm.website ? 'pending' : 'no_website',
         })
-        .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url, hero_image, street_view_url, photos')
+        .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url, hero_image')
         .single();
 
       if (error) throw error;
@@ -621,10 +747,20 @@ export default function VendorDetailPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {!sidebarCollapsed && (
           <div className="lg:col-span-1 space-y-4">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Vendor Details</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">Vendor Details</CardTitle>
+                  <button
+                    onClick={() => setSidebarCollapsed(true)}
+                    className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                    title="Collapse sidebar"
+                  >
+                    <PanelLeftClose className="w-4 h-4" />
+                  </button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
@@ -672,33 +808,30 @@ export default function VendorDetailPage() {
               </CardContent>
             </Card>
           </div>
+          )}
 
-          <div className="lg:col-span-3">
+          <div className={sidebarCollapsed ? 'lg:col-span-4' : 'lg:col-span-3'}>
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between flex-wrap gap-3">
-                  <CardTitle className="text-base">
-                    Locations
-                    <span className="ml-2 text-sm font-normal text-gray-400">
-                      ({stateFilter ? `${displayListings.length} of ${listings.length}` : listings.length})
-                    </span>
-                  </CardTitle>
                   <div className="flex items-center gap-2">
-                    {selectedIds.size > 0 && (
-                      <Button
-                        onClick={handleStreetViewHeroes}
-                        disabled={streetViewHeroesRunning}
-                        size="sm"
-                        variant="outline"
-                        className="gap-1 border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100"
+                    {sidebarCollapsed && (
+                      <button
+                        onClick={() => setSidebarCollapsed(false)}
+                        className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                        title="Show vendor details"
                       >
-                        {streetViewHeroesRunning ? (
-                          <><Loader2 className="w-4 h-4 animate-spin" />Processing...</>
-                        ) : (
-                          <><Camera className="w-4 h-4" />Street View Heroes ({selectedIds.size})</>
-                        )}
-                      </Button>
+                        <PanelLeftOpen className="w-4 h-4" />
+                      </button>
                     )}
+                    <CardTitle className="text-base">
+                      Locations
+                      <span className="ml-2 text-sm font-normal text-gray-400">
+                        ({stateFilter ? `${displayListings.length} of ${listings.length}` : listings.length})
+                      </span>
+                    </CardTitle>
+                  </div>
+                  <div className="flex items-center gap-2">
                     {uniqueStates.length > 1 && (
                       <div className="relative">
                         <select
@@ -715,6 +848,30 @@ export default function VendorDetailPage() {
                       </div>
                     )}
                     <Button
+                      onClick={handleBatchStreetView}
+                      disabled={streetViewReplacing || listings.length === 0}
+                      size="sm"
+                      variant="outline"
+                      className="gap-1 border-blue-200 text-blue-700 hover:bg-blue-50"
+                    >
+                      {streetViewReplacing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                      {streetViewReplacing
+                        ? 'Replacing...'
+                        : selectedIds.size > 0
+                          ? `Street View (${selectedIds.size})`
+                          : 'Street View Heroes'}
+                    </Button>
+                    <Button
+                      onClick={handleFullEnrichAll}
+                      disabled={fullEnrichingAll || listings.length === 0}
+                      size="sm"
+                      variant="outline"
+                      className="gap-1 border-amber-200 text-amber-700 hover:bg-amber-50"
+                    >
+                      {fullEnrichingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                      {fullEnrichingAll ? 'Enriching...' : 'Full Enrich All'}
+                    </Button>
+                    <Button
                       onClick={() => { setListingForm(emptyListingForm); setShowAddLocation(true); }}
                       size="sm"
                       className="bg-[#0F2744] hover:bg-[#1a3a5c] text-white gap-1"
@@ -725,6 +882,95 @@ export default function VendorDetailPage() {
                   </div>
                 </div>
               </CardHeader>
+              {fullEnrichProgress && (
+                <div className="mx-4 mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-amber-800">
+                      Full Enrich Results — {fullEnrichProgress.listingCount} listing(s)
+                    </span>
+                    <button
+                      onClick={() => setFullEnrichProgress(null)}
+                      className="text-amber-400 hover:text-amber-600 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="space-y-1">
+                    {fullEnrichProgress.steps.map((step, i) => (
+                      <div key={i} className="flex items-center gap-2 text-xs">
+                        {step.status === 'ok' ? (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                        ) : (
+                          <XCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                        )}
+                        <span className="font-medium text-amber-900">{step.name}</span>
+                        <span className="text-amber-700 truncate">{step.detail}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {svProgress && (
+                <div className="mx-4 mb-3 p-3 rounded-lg bg-blue-50 border border-blue-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-blue-800">
+                      <Camera className="w-4 h-4 inline mr-1.5" />
+                      Street View Heroes — {svProgress.done ? 'Complete' : `${svProgress.current}/${svProgress.total} processed`}
+                    </span>
+                    {svProgress.done && (
+                      <button
+                        onClick={() => setSvProgress(null)}
+                        className="text-blue-400 hover:text-blue-600 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="w-full bg-blue-200 rounded-full h-2 mb-2">
+                    <div
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${svProgress.total > 0 ? (svProgress.current / svProgress.total) * 100 : 0}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center gap-4 text-xs text-blue-700">
+                    <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-green-600" />{svProgress.replaced} replaced</span>
+                    <span className="flex items-center gap-1"><XCircle className="w-3 h-3 text-yellow-500" />{svProgress.noCoverage} no coverage</span>
+                    {svProgress.errors > 0 && (
+                      <span className="flex items-center gap-1 text-red-600"><XCircle className="w-3 h-3" />{svProgress.errors} errors</span>
+                    )}
+                  </div>
+                  {svProgress.done && svProgress.results.length > 0 && (
+                    <div className="mt-2 max-h-40 overflow-y-auto space-y-0.5 border-t border-blue-200 pt-2">
+                      {svProgress.results.map((r, i) => (
+                        <div key={i} className="flex items-center gap-2 text-xs">
+                          {r.status === 'ok' ? (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                          ) : r.status === 'no_coverage' ? (
+                            <XCircle className="w-3.5 h-3.5 text-yellow-500 shrink-0" />
+                          ) : (
+                            <XCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                          )}
+                          <span className="font-medium text-blue-900 truncate max-w-[200px]">{r.name}</span>
+                          <span className="text-blue-600 truncate">{r.status === 'ok' ? 'Updated' : r.detail}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {selectedIds.size > 0 && (
+                <div className="mx-4 mb-3 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-between">
+                  <span className="text-sm text-blue-800 font-medium">
+                    {selectedIds.size} location{selectedIds.size !== 1 ? 's' : ''} selected
+                  </span>
+                  <button
+                    onClick={() => setSelectedIds(new Set())}
+                    className="text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                  >
+                    Clear selection
+                  </button>
+                </div>
+              )}
               <CardContent className="p-0">
                 {listings.length === 0 ? (
                   <div className="py-12 text-center text-gray-400 px-4">
@@ -737,13 +983,15 @@ export default function VendorDetailPage() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b bg-gray-50">
-                          <th className="px-4 py-2.5 w-10">
-                            <Checkbox
-                              checked={selectedIds.size === displayListings.length && displayListings.length > 0 ? true : selectedIds.size > 0 ? 'indeterminate' : false}
-                              onCheckedChange={toggleSelectAll}
+                          <th className="px-2 py-2.5 w-10">
+                            <input
+                              type="checkbox"
+                              checked={displayListings.length > 0 && selectedIds.size === displayListings.length}
+                              onChange={toggleSelectAll}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                             />
                           </th>
-                          <th className="px-2 py-2.5 w-14 font-medium text-gray-600 text-xs">Hero</th>
+                          <th className="px-2 py-2.5 w-16" />
                           <SortHeader label="Name" col="name" />
                           <SortHeader label="Address" col="address" />
                           <SortHeader label="City" col="city" />
@@ -758,41 +1006,21 @@ export default function VendorDetailPage() {
                       <tbody>
                         {displayListings.map((listing) => (
                           <tr key={listing.id} className={`border-b last:border-0 hover:bg-gray-50/80 transition-colors group ${selectedIds.has(listing.id) ? 'bg-blue-50/50' : ''}`}>
-                            <td className="px-4 py-2.5 w-10">
-                              <Checkbox
+                            <td className="px-2 py-1.5">
+                              <input
+                                type="checkbox"
                                 checked={selectedIds.has(listing.id)}
-                                onCheckedChange={() => toggleSelect(listing.id)}
+                                onChange={() => toggleSelect(listing.id)}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                               />
                             </td>
-                            <td className="px-2 py-2.5 w-14">
-                              <button
-                                onClick={() => setPhotoEditListingId(listing.id)}
-                                className="group/thumb relative cursor-pointer"
-                                title="Click to edit photos"
-                              >
-                                {listing.hero_image ? (
-                                  <div className="relative">
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img
-                                      src={listing.hero_image}
-                                      alt={`${listing.name} hero`}
-                                      className="w-14 h-10 rounded object-cover border border-gray-200 group-hover/thumb:border-blue-400 transition-colors"
-                                    />
-                                    <div className="absolute inset-0 rounded bg-black/0 group-hover/thumb:bg-black/30 flex items-center justify-center transition-colors">
-                                      <ZoomIn className="w-3.5 h-3.5 text-white opacity-0 group-hover/thumb:opacity-100 transition-opacity drop-shadow" />
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="w-14 h-10 rounded bg-gray-100 border border-gray-200 group-hover/thumb:border-blue-400 flex items-center justify-center transition-colors">
-                                    <Camera className="w-3.5 h-3.5 text-gray-300 group-hover/thumb:text-blue-400 transition-colors" />
-                                  </div>
-                                )}
-                                {(listing.photos?.length ?? 0) > 0 && (
-                                  <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[8px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center shadow-sm">
-                                    {listing.photos!.length}
-                                  </span>
-                                )}
-                              </button>
+                            <td className="px-2 py-1.5 w-16">
+                              <img
+                                src={listing.hero_image || '/images/card-fallback.svg'}
+                                alt=""
+                                className="w-14 h-10 rounded object-cover border border-gray-200"
+                                loading="lazy"
+                              />
                             </td>
                             <td className="px-4 py-2.5 font-medium text-gray-900 whitespace-nowrap max-w-[200px] truncate" title={listing.name}>
                               <button
@@ -875,26 +1103,46 @@ export default function VendorDetailPage() {
                                   </Badge>
                                 </button>
                               ) : (
-                                <button
-                                  onClick={() => handleEnrich(listing)}
-                                  disabled={enrichingLocation !== null}
-                                  className="inline-flex items-center"
-                                  title={listing.website ? 'Enrich from website (scrape + classify + photos)' : 'Enrich from Google Places (photos + hours)'}
-                                >
-                                  <Badge
-                                    variant="outline"
-                                    className={`text-xs cursor-pointer transition-colors gap-1 ${
-                                      enrichingLocation !== null
-                                        ? 'opacity-40 cursor-not-allowed'
-                                        : listing.website
-                                          ? 'border-purple-200 text-purple-700 bg-purple-50 hover:bg-purple-100'
-                                          : 'border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100'
-                                    }`}
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => handleEnrich(listing)}
+                                    disabled={enrichingLocation !== null}
+                                    className="inline-flex items-center"
+                                    title={listing.website ? 'Enrich from website (scrape + classify + photos)' : 'Enrich from Google Places (photos + hours)'}
                                   >
-                                    <Zap className="w-3 h-3" />
-                                    {listing.website ? 'Website' : 'Google'}
-                                  </Badge>
-                                </button>
+                                    <Badge
+                                      variant="outline"
+                                      className={`text-xs cursor-pointer transition-colors gap-1 ${
+                                        enrichingLocation !== null
+                                          ? 'opacity-40 cursor-not-allowed'
+                                          : listing.website
+                                            ? 'border-purple-200 text-purple-700 bg-purple-50 hover:bg-purple-100'
+                                            : 'border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100'
+                                      }`}
+                                    >
+                                      <Zap className="w-3 h-3" />
+                                      {listing.website ? 'Website' : 'Google'}
+                                    </Badge>
+                                  </button>
+                                  <button
+                                    onClick={() => handleFullEnrichSingle(listing)}
+                                    disabled={enrichingLocation !== null}
+                                    className="inline-flex items-center"
+                                    title="Full Enrich: Google data + photos + description"
+                                  >
+                                    <Badge
+                                      variant="outline"
+                                      className={`text-xs cursor-pointer transition-colors gap-1 ${
+                                        enrichingLocation !== null
+                                          ? 'opacity-40 cursor-not-allowed'
+                                          : 'border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100'
+                                      }`}
+                                    >
+                                      <Sparkles className="w-3 h-3" />
+                                      Full
+                                    </Badge>
+                                  </button>
+                                </div>
                               )}
                             </td>
                             <td className="px-4 py-2.5">
@@ -993,15 +1241,6 @@ export default function VendorDetailPage() {
             </div>
           </div>
         </div>
-      )}
-
-      {photoEditListing && (
-        <PhotoEditModal
-          listing={photoEditListing}
-          open={!!photoEditListing}
-          onClose={() => setPhotoEditListingId(null)}
-          onUpdate={(updated) => handlePhotoUpdate(photoEditListing.id, updated)}
-        />
       )}
     </div>
   );

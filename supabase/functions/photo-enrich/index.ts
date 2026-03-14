@@ -518,18 +518,25 @@ Deno.serve(async (req: Request) => {
       const limit: number = body.limit ?? 0;
       const upgradeMode: boolean = body.upgrade_mode === true;
 
+      const listingIds: string[] | undefined = body.listing_ids;
+
       let query = supabase
         .from('listings')
         .select('id, name, website, google_photo_url, google_logo_url, street_view_url, google_place_id, hero_image, hero_image_source, logo_photo, crawl_notes, photos, website_photos, blocked_photos')
-        .eq('is_touchless', true)
         .order('id');
 
-      if (upgradeMode) {
-        query = query
-          .not('website', 'is', null)
-          .or('hero_image_source.eq.street_view,and(hero_image_source.eq.google,photos.is.null)');
+      if (listingIds && Array.isArray(listingIds) && listingIds.length > 0) {
+        // When specific listing IDs are provided, skip touchless/hero filters
+        query = query.in('id', listingIds);
       } else {
-        query = query.is('hero_image', null);
+        query = query.eq('is_touchless', true);
+        if (upgradeMode) {
+          query = query
+            .not('website', 'is', null)
+            .or('hero_image_source.eq.street_view,and(hero_image_source.eq.google,photos.is.null)');
+        } else {
+          query = query.is('hero_image', null);
+        }
       }
 
       if (limit > 0) query = query.limit(limit);

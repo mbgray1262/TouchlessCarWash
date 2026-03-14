@@ -5,6 +5,7 @@ export type FilterSource = 'all' | 'gallery' | 'google' | 'street_view' | 'websi
 export interface HeroListing {
   id: string;
   name: string;
+  address: string | null;
   city: string;
   state: string;
   slug: string | null;

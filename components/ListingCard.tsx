@@ -12,6 +12,7 @@ import { useCompare } from '@/lib/useCompare';
 import LogoImage from '@/components/LogoImage';
 import HeroImageFallback from '@/components/HeroImageFallback';
 import { OpenStatusBadge } from '@/components/OpenStatusBadge';
+import { ensureHttps } from '@/lib/seo';
 
 /** Hostnames configured in next.config.js remotePatterns — safe for next/image optimization. */
 const OPTIMIZED_HOSTS = new Set([
@@ -58,8 +59,10 @@ export function ListingCard({ listing, href, showVerifiedBadge = false, distance
   );
 
   // Don't use street_view_url as card image — often returns 403 and looks broken
-  const cardImage = listing.hero_image ?? listing.google_photo_url ?? null;
-  const cardLogo = listing.logo_photo ?? listing.google_logo_url ?? null;
+  const rawCardImage = listing.hero_image ?? listing.google_photo_url ?? null;
+  const cardImage = rawCardImage ? ensureHttps(rawCardImage) : null;
+  const rawCardLogo = listing.logo_photo ?? listing.google_logo_url ?? null;
+  const cardLogo = rawCardLogo ? ensureHttps(rawCardLogo) : null;
   const [imgError, setImgError] = useState(false);
   const { isFavorite, toggle } = useFavorites();
   const saved = isFavorite(listing.id);
@@ -89,7 +92,7 @@ export function ListingCard({ listing, href, showVerifiedBadge = false, distance
             {cardLogo && (
               <LogoImage
                 src={cardLogo}
-                alt=""
+                alt={`${listing.name} logo`}
                 wrapperClassName="absolute top-2.5 left-2.5 w-8 h-8 rounded-lg overflow-hidden bg-white/90 p-0.5 shadow"
                 className="w-full h-full object-contain"
               />

@@ -33,12 +33,15 @@ export async function GET() {
     .select('slug, published_at')
     .lte('published_at', now);
 
-  // Derive unique states and cities from listings
+  // Derive unique states and cities from listings, tracking listing counts per city
   const stateSet = new Set<string>();
   const citySet = new Set<string>();
+  const cityCount = new Map<string, number>();
   for (const l of listings || []) {
     stateSet.add(l.state);
-    citySet.add(`${l.state}||${l.city}`);
+    const cityKey = `${l.state}||${l.city}`;
+    citySet.add(cityKey);
+    cityCount.set(cityKey, (cityCount.get(cityKey) ?? 0) + 1);
   }
 
   // Calculate most recent listing date per state and per city (prefer updated_at)
@@ -63,16 +66,20 @@ export async function GET() {
   </url>`;
   });
 
-  const cityUrls = Array.from(citySet).map((key) => {
-    const [stateCode, city] = key.split('||');
-    const lastmod = cityLastmod.get(key) ?? now;
-    return `  <url>
+  // Only include city pages with 3+ listings in the sitemap to avoid thin content.
+  // Pages with fewer listings still work — they're just not submitted to Google.
+  const cityUrls = Array.from(citySet)
+    .filter((key) => (cityCount.get(key) ?? 0) >= 3)
+    .map((key) => {
+      const [stateCode, city] = key.split('||');
+      const lastmod = cityLastmod.get(key) ?? now;
+      return `  <url>
     <loc>${baseUrl}/state/${getStateSlug(stateCode)}/${slugify(city)}</loc>
     <lastmod>${lastmod}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>`;
-  });
+    });
 
   const listingUrls = (listings || []).map((listing) => {
     const stateSlug = getStateSlug(listing.state);
@@ -131,17 +138,20 @@ export async function GET() {
     <priority>0.8</priority>
   </url>`);
 
+  // Only include feature/state pages with 3+ listings (matching the page's notFound() threshold)
   const featureStateUrls: string[] = [];
   for (const feature of FEATURES) {
     const { data } = await supabase.rpc('feature_state_counts', { p_filter_slug: feature.slug });
     if (data) {
       for (const row of data as { state: string; count: number }[]) {
-        featureStateUrls.push(`  <url>
+        if (row.count >= 3) {
+          featureStateUrls.push(`  <url>
     <loc>${baseUrl}/features/${feature.slug}/${getStateSlug(row.state)}</loc>
     <lastmod>${now}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>`);
+        }
       }
     }
   }

@@ -3,16 +3,46 @@
 import Link from 'next/link';
 import { Droplet, Menu, X, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useState, useEffect } from 'react';
+import { useState, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useFavorites } from '@/lib/useFavorites';
+
+/**
+ * Inner component that reads searchParams (must be wrapped in Suspense
+ * so that useSearchParams doesn't force the entire page to bail out of
+ * static / SSR rendering in Next.js 13+).
+ */
+function AdminParamReader({ pathname }: { pathname: string }) {
+  const searchParams = useSearchParams();
+  const isAdmin = pathname.startsWith('/admin') || searchParams.get('admin') === 'true';
+
+  if (!isAdmin) return null;
+  return (
+    <Link href="/admin" className="text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors">
+      Admin
+    </Link>
+  );
+}
+
+function MobileAdminParamReader({ pathname, onClick }: { pathname: string; onClick: () => void }) {
+  const searchParams = useSearchParams();
+  const isAdmin = pathname.startsWith('/admin') || searchParams.get('admin') === 'true';
+
+  if (!isAdmin) return null;
+  return (
+    <Link
+      href="/admin"
+      className="text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors"
+      onClick={onClick}
+    >
+      Admin
+    </Link>
+  );
+}
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  const isAdmin = pathname.startsWith('/admin') || searchParams.get('admin') === 'true';
   const { favorites } = useFavorites();
   const favCount = favorites.length;
 
@@ -51,11 +81,9 @@ export function Header() {
                 </span>
               )}
             </Link>
-            {isAdmin && (
-              <Link href="/admin" className="text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors">
-                Admin
-              </Link>
-            )}
+            <Suspense>
+              <AdminParamReader pathname={pathname} />
+            </Suspense>
             <Button asChild size="sm" className="bg-[#22C55E] hover:bg-[#16A34A] text-white">
               <Link href="/add-listing">Add Your Business</Link>
             </Button>
@@ -120,15 +148,9 @@ export function Header() {
                 <Heart className={`w-4 h-4 ${favCount > 0 ? 'fill-red-500 text-red-500' : ''}`} />
                 My Saved Washes{favCount > 0 && ` (${favCount})`}
               </Link>
-              {isAdmin && (
-                <Link
-                  href="/admin"
-                  className="text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Admin
-                </Link>
-              )}
+              <Suspense>
+                <MobileAdminParamReader pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
+              </Suspense>
               <Button asChild size="sm" className="bg-[#22C55E] hover:bg-[#16A34A] text-white w-full">
                 <Link href="/add-listing" onClick={() => setMobileMenuOpen(false)}>Add Your Business</Link>
               </Button>

@@ -14,6 +14,7 @@ import {
   getStateListingCountFiltered,
 } from '@/lib/listing-queries';
 import { FEATURES, getFeatureBySlug } from '@/lib/features';
+import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import type { Metadata } from 'next';
 
 export const revalidate = 86400; // 24 hours
@@ -41,7 +42,9 @@ export async function generateStaticParams() {
   for (const { slug, data } of allData) {
     if (data) {
       for (const row of data as { state: string; count: number }[]) {
-        params.push({ slug, state: getStateSlug(row.state) });
+        if (row.count >= 3) {
+          params.push({ slug, state: getStateSlug(row.state) });
+        }
       }
     }
   }
@@ -63,11 +66,12 @@ export async function generateMetadata({ params }: FeatureStatePageProps): Promi
     description: feature.stateSeoDescription(stateName, count),
     alternates: { canonical: `${SITE_URL}/features/${feature.slug}/${params.state}` },
     openGraph: {
-      title: `${feature.stateSeoTitle(stateName, count)} | Touchless Car Wash Finder`,
+      title: feature.stateSeoTitle(stateName, count),
       description: feature.stateSeoDescription(stateName, count),
       url: `${SITE_URL}/features/${feature.slug}/${params.state}`,
       siteName: 'Touchless Car Wash Finder',
       type: 'website',
+      images: [DEFAULT_OG_IMAGE],
     },
   };
 }

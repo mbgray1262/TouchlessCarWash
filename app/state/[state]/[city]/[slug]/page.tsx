@@ -20,7 +20,10 @@ import { WhyVisitSection } from '@/components/WhyVisitSection';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
-import { US_STATES, getStateName, slugify } from '@/lib/constants';
+import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants';
+import { streetAddress } from '@/lib/utils';
+import { DEFAULT_OG_IMAGE, ensureHttps, truncateDescription } from '@/lib/seo';
+import { AdUnit } from '@/components/AdUnit';
 import type { Metadata } from 'next';
 
 const ListingMap = nextDynamic(() => import('@/components/ListingMap'), { ssr: false });
@@ -106,6 +109,30 @@ async function getNearbyListings(listing: Listing, limit = 6): Promise<Listing[]
   return combined as Listing[];
 }
 
+async function getChainListings(listing: Listing, limit = 6): Promise<{ chainName: string | null; listings: Listing[] }> {
+  if (!listing.vendor_id) return { chainName: null, listings: [] };
+
+  const [vendorResult, listingsResult] = await Promise.all([
+    supabase.from('vendors').select('canonical_name').eq('id', listing.vendor_id).single(),
+    supabase
+      .from('listings')
+      .select('id, name, slug, city, state, rating, review_count, address, hero_image, google_photo_url, street_view_url')
+      .eq('is_touchless', true)
+      .eq('vendor_id', listing.vendor_id)
+      .neq('id', listing.id)
+      .order('review_count', { ascending: false })
+      .limit(limit * 3),
+  ]);
+
+  const chainName = vendorResult.data?.canonical_name ?? null;
+  const data = listingsResult.data ?? [];
+
+  // Prioritize same state, then other states
+  const sameState = data.filter((l) => l.state === listing.state);
+  const otherState = data.filter((l) => l.state !== listing.state);
+  return { chainName, listings: [...sameState, ...otherState].slice(0, limit) as Listing[] };
+}
+
 async function getReviewSnippets(listingId: string): Promise<ReviewSnippet[]> {
   const { data } = await supabase
     .from('review_snippets')
@@ -146,7 +173,11 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   const topAmenities = (listing.amenities || []).slice(0, 3).join(', ');
   const amenityPart = topAmenities ? ` Touch-free, brushless car wash offering ${topAmenities}.` : '';
   const canonicalUrl = `${SITE_URL}/state/${params.state}/${params.city}/${params.slug}`;
-  const heroImage = listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
+  const rawHeroImage = listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
+  const heroImage = rawHeroImage ? ensureHttps(rawHeroImage) : null;
+  const ogImages = heroImage
+    ? [{ url: heroImage, width: 1200, height: 630, alt: listing.name }]
+    : [DEFAULT_OG_IMAGE];
 
   // Check for Best Of rankings (top 3 in a metro area)
   const rankings = await getBestOfRankings(listing.id);
@@ -165,7 +196,9 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
     ? `★ ${Number(listing.rating).toFixed(1)}${listing.review_count > 0 ? ` (${listing.review_count} reviews)` : ''} — `
     : '';
   const rankingPrefix = topRanking ? `#${topRanking.rank} Best Touchless Car Wash in ${topRanking.metro_name}. ` : '';
-  const description = `${ratingPrefix}${rankingPrefix}${listing.name} at ${listing.address}, ${listing.city}, ${listing.state}.${amenityPart} Hours, directions & more.`;
+  const description = truncateDescription(
+    `${ratingPrefix}${rankingPrefix}${listing.name} at ${streetAddress(listing.address, listing.city, listing.state, listing.zip)}, ${listing.city}, ${listing.state}.${amenityPart} Hours, directions & more.`
+  );
 
   return {
     title: { absolute: title },
@@ -176,7 +209,7 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
       description,
       url: canonicalUrl,
       type: 'website',
-      ...(heroImage ? { images: [{ url: heroImage, width: 1200, height: 630, alt: listing.name }] } : {}),
+      images: ogImages,
     },
     twitter: {
       card: 'summary_large_image',
@@ -509,10 +542,16 @@ function buildFAQs(listing: Listing, hours: Record<string, string> | null): { q:
     });
   }
 
-  // 10. Location (always shown)
+  // 10. Safe for luxury vehicles (always shown — high-value ad keyword content)
+  faqs.push({
+    q: `Is ${listing.name} safe for Tesla, BMW, and luxury vehicles?`,
+    a: `Yes. ${listing.name} is a touchless car wash, meaning no brushes or cloth ever contact your vehicle. This makes it the safest automated wash option for luxury and high-end vehicles including Tesla Model 3, Model Y, and Model S, BMW, Mercedes-Benz, Lexus, Audi, Porsche, Range Rover, and Genesis. Touchless washes are also recommended by auto detailing professionals for cars with ceramic coatings, paint protection film (PPF), vinyl wraps, or any premium paint finish.`,
+  });
+
+  // 11. Location (always shown)
   faqs.push({
     q: `Where is ${listing.name} located?`,
-    a: `${listing.name} is located at ${listing.address}, ${listing.city}, ${listing.state} ${listing.zip}.${listing.phone ? ` Call them at ${listing.phone}.` : ''} Get directions via Google Maps.`,
+    a: `${listing.name} is located at ${streetAddress(listing.address, listing.city, listing.state, listing.zip)}, ${listing.city}, ${listing.state} ${listing.zip}.${listing.phone ? ` Call them at ${listing.phone}.` : ''} Get directions via Google Maps.`,
   });
 
   return faqs;
@@ -746,10 +785,11 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     notFound();
   }
 
-  const [nearbyListings, reviewSnippets, rankings] = await Promise.all([
+  const [nearbyListings, reviewSnippets, rankings, chainResult] = await Promise.all([
     getNearbyListings(listing),
     getReviewSnippets(listing.id),
     getBestOfRankings(listing.id),
+    getChainListings(listing),
   ]);
 
   const stateCode = getStateCode(params.state);
@@ -914,7 +954,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-white/80 text-sm">
                         <span className="flex items-center gap-1.5">
                           <MapPin className="w-4 h-4 shrink-0" />
-                          {listing.address}, {listing.city}, {listing.state}
+                          {streetAddress(listing.address, listing.city, listing.state, listing.zip)}, {listing.city}, {listing.state}
                         </span>
                         {ratingStars}
                       </div>
@@ -970,7 +1010,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-white/80 text-sm">
                       <span className="flex items-center gap-1.5">
                         <MapPin className="w-4 h-4 shrink-0" />
-                        {listing.address}, {listing.city}, {listing.state}
+                        {streetAddress(listing.address, listing.city, listing.state, listing.zip)}, {listing.city}, {listing.state}
                       </span>
                       {ratingStars}
                     </div>
@@ -1250,7 +1290,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                   <div className="flex items-start gap-3">
                     <MapPin className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
                     <div className="text-sm text-gray-700">
-                      <div>{listing.address}</div>
+                      <div>{streetAddress(listing.address, listing.city, listing.state, listing.zip)}</div>
                       <div>{listing.city}, {listing.state} {listing.zip}</div>
                     </div>
                   </div>
@@ -1286,20 +1326,41 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                 </div>
 
                 {listing.latitude && listing.longitude && (
-                  <TrackableLink
-                    href={listing.google_place_id
-                      ? `https://www.google.com/maps/place/?q=place_id:${listing.google_place_id}`
-                      : `https://www.google.com/maps/search/?api=1&query=${listing.latitude},${listing.longitude}`
-                    }
-                    listingId={listing.id}
-                    eventType="directions"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-4 flex items-center justify-center gap-2 w-full bg-[#22C55E] text-white text-sm font-semibold py-3 rounded-xl hover:bg-[#16A34A] transition-colors shadow-sm"
-                  >
-                    <Navigation className="w-4 h-4" />
-                    Get Directions
-                  </TrackableLink>
+                  <div className="mt-4 flex flex-col gap-2">
+                    <TrackableLink
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${streetAddress(listing.address, listing.city, listing.state, listing.zip)}, ${listing.city}, ${listing.state} ${listing.zip}`)}`}
+                      listingId={listing.id}
+                      eventType="directions"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 w-full bg-[#22C55E] text-white text-sm font-semibold py-3 rounded-xl hover:bg-[#16A34A] transition-colors shadow-sm"
+                    >
+                      <Navigation className="w-4 h-4" />
+                      Get Directions
+                    </TrackableLink>
+                    <div className="flex gap-2">
+                      {listing.google_place_id && (
+                        <a
+                          href={`https://www.google.com/maps/place/?q=place_id:${listing.google_place_id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 py-2 rounded-lg transition-colors"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          View on Google
+                        </a>
+                      )}
+                      <a
+                        href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${listing.latitude},${listing.longitude}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 py-2 rounded-lg transition-colors"
+                      >
+                        <MapPin className="w-3 h-3" />
+                        Street View
+                      </a>
+                    </div>
+                  </div>
                 )}
                 <SuggestEditModal listingId={listing.id} listingName={listing.name} />
               </div>
@@ -1310,7 +1371,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                     lat={parseFloat(String(listing.latitude))}
                     lng={parseFloat(String(listing.longitude))}
                     name={listing.name}
-                    address={`${listing.address}, ${listing.city}, ${listing.state}`}
+                    address={`${streetAddress(listing.address, listing.city, listing.state, listing.zip)}, ${listing.city}, ${listing.state}`}
                   />
                 </div>
               )}
@@ -1345,6 +1406,19 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
             </div>
           </div>
 
+          {chainResult.listings.length > 0 && chainResult.chainName && (
+            <div className="mt-10">
+              <h2 className="text-xl font-bold text-[#0F2744] mb-5">
+                More {chainResult.chainName} Locations
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {chainResult.listings.map((cl) => (
+                  <NearbyListingCard key={cl.id} nearby={cl} stateSlug={getStateSlug(cl.state)} />
+                ))}
+              </div>
+            </div>
+          )}
+
           {nearbyListings.length > 0 && (
             <div className="mt-10">
               <div className="flex items-center justify-between mb-5">
@@ -1377,6 +1451,8 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
               </div>
             </div>
           )}
+
+          <AdUnit className="mt-10" format="auto" />
 
           {lastVerified && (
             <div className="mt-8 pt-6 border-t border-gray-200 flex items-center gap-2 text-xs text-gray-400">

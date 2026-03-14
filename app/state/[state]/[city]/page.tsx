@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { US_STATES, getStateName, slugify } from '@/lib/constants';
 import { CityListingsClient } from '@/components/CityListingsClient';
+import { DEFAULT_OG_IMAGE } from '@/lib/seo';
+import { AdUnit } from '@/components/AdUnit';
 import type { Metadata } from 'next';
 
 // ISR — regenerate every hour. Now actually works because we removed searchParams!
@@ -127,11 +129,10 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
 
   const metaDescription = cityDesc
     ? cityDesc.substring(0, 155) + (cityDesc.length > 155 ? '...' : '')
-    : `Find ${listings.length} touchless & touch-free car washes in ${cityName}, ${stateName}.${ratingSnippet} Browse verified no-touch, scratch-free car wash locations with ratings and reviews.`;
+    : `Find ${listings.length} touchless car washes in ${cityName}, ${stateName}.${ratingSnippet} Verified locations with ratings and reviews.`;
 
   const canonicalUrl = `https://touchlesscarwashfinder.com/state/${params.state}/${params.city}`;
-  const year = new Date().getFullYear();
-  const title = `Best Touchless Car Wash in ${cityName}, ${stateCode} (${listings.length} Locations) | ${year}`;
+  const title = `Best Touchless Car Wash in ${cityName}, ${stateCode}`;
 
   return {
     title,
@@ -140,11 +141,12 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
       canonical: canonicalUrl,
     },
     openGraph: {
-      title: `${title} | Touchless Car Wash Finder`,
+      title,
       description: metaDescription,
       url: canonicalUrl,
       siteName: 'Touchless Car Wash Finder',
       type: 'website',
+      images: [DEFAULT_OG_IMAGE],
     },
   };
 }
@@ -331,7 +333,7 @@ export default async function CityPage({ params }: CityPageProps) {
         name: 'Are touchless car washes safe for my car?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Yes. Touchless car washes use high-pressure water jets and specialized detergents instead of physical brushes or cloth. This eliminates the risk of swirl marks, micro-scratches, and paint damage that can occur with traditional brush-based washes, making them the safest automated wash option for all paint types, clear coats, and finishes.',
+          text: 'Yes. Touchless car washes use high-pressure water jets and specialized detergents instead of physical brushes or cloth. This eliminates the risk of swirl marks, micro-scratches, and paint damage that can occur with traditional brush-based washes, making them the safest automated wash option for all paint types, clear coats, ceramic coatings, and PPF. Owners of Tesla, BMW, Mercedes-Benz, Lexus, Audi, and other luxury vehicles choose touchless washes to protect their finish.',
         },
       },
       {
@@ -355,7 +357,7 @@ export default async function CityPage({ params }: CityPageProps) {
         name: 'Are touchless car washes scratch-free?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Yes. Because touchless (also called brushless or contactless) car washes never physically touch your vehicle, they eliminate the risk of scratches and swirl marks that brush-based washes can leave behind. High-pressure water and specially formulated detergents do all the cleaning, making them the safest automated option for any paint type or finish.',
+          text: 'Yes. Because touchless (also called brushless or contactless) car washes never physically touch your vehicle, they eliminate the risk of scratches and swirl marks that brush-based washes can leave behind. High-pressure water and specially formulated detergents do all the cleaning, making them the safest automated option for any paint type or finish — from everyday vehicles to luxury brands like Tesla, BMW, Mercedes-Benz, Lexus, and Porsche.',
         },
       },
       {
@@ -449,6 +451,8 @@ export default async function CityPage({ params }: CityPageProps) {
           </Button>
         </div>
 
+        <AdUnit className="mt-10" format="horizontal" />
+
         {nearbyCities.length > 0 && (
           <div className="mt-14 pt-10 border-t border-gray-200">
             <h2 className="text-xl font-bold text-foreground mb-4">Nearby Cities in {stateName}</h2>
@@ -505,7 +509,8 @@ export default async function CityPage({ params }: CityPageProps) {
                 Yes. Touchless car washes use high-pressure water jets and specialized detergents instead of physical
                 brushes or cloth. This eliminates the risk of swirl marks, micro-scratches, and paint damage that can
                 occur with traditional brush-based washes — making them the safest automated wash option for all paint
-                types, clear coats, and finishes.
+                types, clear coats, ceramic coatings, and PPF. Owners of Tesla, BMW, Mercedes-Benz, Lexus, Audi, and
+                other high-end vehicles choose touchless washes specifically to protect their finish.
               </p>
             </div>
 
@@ -542,7 +547,8 @@ export default async function CityPage({ params }: CityPageProps) {
                 Yes. Because touchless (also called brushless or contactless) car washes never physically touch your
                 vehicle, they eliminate the risk of scratches and swirl marks that brush-based washes can leave behind.
                 High-pressure water and specially formulated detergents do all the cleaning, making them the safest
-                automated option for any paint type or finish.
+                automated option for any paint type or finish — from everyday vehicles to luxury brands like Tesla,
+                BMW, Mercedes-Benz, Lexus, and Porsche.
               </p>
             </div>
 

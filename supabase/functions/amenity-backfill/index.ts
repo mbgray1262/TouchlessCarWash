@@ -119,14 +119,20 @@ Deno.serve(async (req: Request) => {
       }
 
       const limit: number = body.limit ?? 0;
+      const listingIds: string[] | undefined = body.listing_ids;
 
       let query = supabase
         .from('listings')
         .select('id, name, website, amenities')
-        .eq('is_touchless', true)
         .not('website', 'is', null)
-        .or('amenities.is.null,amenities.eq.{}')
         .order('id');
+
+      // If specific listing IDs provided, only process those (skip amenity emptiness check)
+      if (listingIds && Array.isArray(listingIds) && listingIds.length > 0) {
+        query = query.in('id', listingIds);
+      } else {
+        query = query.eq('is_touchless', true).or('amenities.is.null,amenities.eq.{}');
+      }
 
       if (limit > 0) query = query.limit(limit);
 
