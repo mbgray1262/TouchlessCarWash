@@ -61,21 +61,19 @@ async function selectBestCarWashImage(
     type: 'text',
     text: `You are selecting the best Street View photo for a car wash directory listing. I've shown you ${images.length} photo(s) taken at different headings from the same location.
 
-IMPORTANT: Many car washes are attached to gas stations or convenience stores. The car wash bay is often a separate structure behind, beside, or attached to the main building. Look carefully in the BACKGROUND and SIDES of each image — the car wash may not be the dominant subject.
+IMPORTANT: Many car washes are attached to gas stations or convenience stores. The car wash bay is often a separate structure behind, beside, or attached to the main building. Look carefully in the BACKGROUND and SIDES of each image.
 
-Pick the image that BEST shows a car wash facility. Look for ANY of these, even partially visible or in the background:
-- Car wash tunnel entrance or exit (large rectangular opening in a building)
-- Wash bay structures with canopies, roll-up doors, or overhead clearance bars
-- "CAR WASH" or "WASH" text on signage or buildings
-- Automated wash equipment, conveyor tracks, or guide rails
-- Self-serve wash bays (open-sided structures with pressure wash equipment)
-- Tall blow-dryer arches or foam applicator arches
-- Vehicles entering or exiting a wash tunnel
-- A building with the characteristic shape of a car wash (long, narrow, with large openings)
+Pick the image that BEST shows a CLEARLY IDENTIFIABLE car wash facility. You must be able to see at least ONE of these concrete indicators:
+- "CAR WASH" or "WASH" text visible on signage or building
+- A car wash tunnel entrance/exit (large rectangular opening with a conveyor or track)
+- Self-serve wash bays (open-sided covered stalls with visible hoses or pressure wash equipment)
+- Automated wash equipment: conveyor tracks, guide rails, blow-dryer arches, foam arches
+- A vehicle actively entering or exiting a wash tunnel
+- Clearance bars or height restriction signs at an entrance to a wash bay
 
-REJECT images ONLY if they show absolutely NO car wash structures — not even partially visible in the background. A gas station with a car wash bay visible behind it is ACCEPTABLE.
+BE STRICT: A generic building, road, parking lot, gas station, or storefront is NOT enough. You must see clear evidence of car wash infrastructure or signage. If you're unsure or guessing, reply NONE.
 
-Reply with ONLY the image number (1-${images.length}) or NONE if absolutely no image shows any car wash structure.`,
+Reply with ONLY the image number (1-${images.length}) or NONE if no image clearly shows car wash infrastructure.`,
   });
 
   for (let attempt = 1; attempt <= 3; attempt++) {
