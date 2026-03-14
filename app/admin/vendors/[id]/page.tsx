@@ -36,6 +36,7 @@ interface VendorListing {
   crawl_status: string | null;
   website: string | null;
   location_page_url: string | null;
+  hero_image: string | null;
 }
 
 interface NewListingForm {
@@ -168,7 +169,7 @@ export default function VendorDetailPage() {
         supabase.from('vendors').select('*').eq('id', vendorId).maybeSingle(),
         supabase
           .from('listings')
-          .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url')
+          .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url, hero_image')
           .eq('vendor_id', vendorId)
           .order('state', { ascending: true })
           .order('city', { ascending: true }),
@@ -298,7 +299,7 @@ export default function VendorDetailPage() {
       // Re-fetch the listing data to get updated fields
       const { data: refreshed, error: refreshErr } = await supabase
         .from('listings')
-        .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url')
+        .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url, hero_image')
         .eq('id', listing.id)
         .maybeSingle();
 
@@ -450,7 +451,7 @@ export default function VendorDetailPage() {
       // Re-fetch the listing data
       const { data: refreshed, error: refreshErr } = await supabase
         .from('listings')
-        .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url')
+        .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url, hero_image')
         .eq('id', listing.id)
         .maybeSingle();
 
@@ -527,7 +528,7 @@ export default function VendorDetailPage() {
           photos: [],
           crawl_status: listingForm.website ? 'pending' : 'no_website',
         })
-        .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url')
+        .select('id, name, slug, address, city, state, zip, is_touchless, crawl_status, website, location_page_url, hero_image')
         .single();
 
       if (error) throw error;
@@ -806,6 +807,7 @@ export default function VendorDetailPage() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b bg-gray-50">
+                          <th className="px-2 py-2.5 w-12" />
                           <SortHeader label="Name" col="name" />
                           <SortHeader label="Address" col="address" />
                           <SortHeader label="City" col="city" />
@@ -820,6 +822,15 @@ export default function VendorDetailPage() {
                       <tbody>
                         {displayListings.map((listing) => (
                           <tr key={listing.id} className="border-b last:border-0 hover:bg-gray-50/80 transition-colors group">
+                            <td className="px-2 py-1.5 w-12">
+                              {listing.hero_image ? (
+                                <img src={listing.hero_image} alt="" className="w-10 h-7 rounded object-cover border border-gray-200" loading="lazy" />
+                              ) : (
+                                <div className="w-10 h-7 rounded bg-gray-100 border border-gray-200 flex items-center justify-center">
+                                  <Camera className="w-3.5 h-3.5 text-gray-300" />
+                                </div>
+                              )}
+                            </td>
                             <td className="px-4 py-2.5 font-medium text-gray-900 whitespace-nowrap max-w-[200px] truncate" title={listing.name}>
                               <button
                                 onClick={() => handleOpenEditListing(listing)}
