@@ -211,6 +211,7 @@ export function HeroCard({
   const [cropOpen, setCropOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
+  const [enhanced, setEnhanced] = useState(false);
 
   useEffect(() => {
     if (isFocused && cardRef.current) {
@@ -372,13 +373,15 @@ export function HeroCard({
                   e.stopPropagation();
                   if (enhancing || !listing.hero_image) return;
                   setEnhancing(true);
-                  try { await onEnhance(listing.hero_image); } catch {} finally { setEnhancing(false); }
+                  try { await onEnhance(listing.hero_image); setEnhanced(true); } catch {} finally { setEnhancing(false); }
                 }}
                 disabled={enhancing}
                 className={`w-7 h-7 rounded-full text-white flex items-center justify-center shadow-md transition-colors ${
-                  enhancing ? 'bg-purple-500 animate-pulse' : 'bg-gray-700/80 hover:bg-purple-600'
+                  enhancing ? 'bg-purple-500 animate-pulse'
+                    : enhanced ? 'bg-purple-500 hover:bg-purple-600'
+                    : 'bg-gray-700/80 hover:bg-purple-600'
                 }`}
-                title="Auto-enhance (brightness, contrast, color)"
+                title={enhanced ? 'Enhanced ✓ — click to enhance again' : 'Auto-enhance (brightness, contrast, color)'}
               >
                 <Wand2 className="w-3.5 h-3.5" />
               </button>
