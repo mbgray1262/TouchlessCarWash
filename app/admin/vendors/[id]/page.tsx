@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { ArrowLeft, Save, Loader2, Plus, X, Check, CheckCircle2, XCircle, ExternalLink, MapPin, Trash2, Globe, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, Eye, Zap, RotateCw, Pencil, Sparkles, Camera } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Plus, X, Check, CheckCircle2, XCircle, ExternalLink, MapPin, Trash2, Globe, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, Eye, Zap, RotateCw, Pencil, Sparkles, Camera, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -104,6 +104,8 @@ export default function VendorDetailPage() {
   const [streetViewReplacing, setStreetViewReplacing] = useState(false);
   const [streetViewResult, setStreetViewResult] = useState<{ total: number; replaced: number; no_coverage: number } | null>(null);
 
+  // Sidebar collapse
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   // Checkbox selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   // Batch Street View progress
@@ -721,10 +723,20 @@ export default function VendorDetailPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {!sidebarCollapsed && (
           <div className="lg:col-span-1 space-y-4">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Vendor Details</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">Vendor Details</CardTitle>
+                  <button
+                    onClick={() => setSidebarCollapsed(true)}
+                    className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                    title="Collapse sidebar"
+                  >
+                    <PanelLeftClose className="w-4 h-4" />
+                  </button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
@@ -772,17 +784,29 @@ export default function VendorDetailPage() {
               </CardContent>
             </Card>
           </div>
+          )}
 
-          <div className="lg:col-span-3">
+          <div className={sidebarCollapsed ? 'lg:col-span-4' : 'lg:col-span-3'}>
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between flex-wrap gap-3">
-                  <CardTitle className="text-base">
-                    Locations
-                    <span className="ml-2 text-sm font-normal text-gray-400">
-                      ({stateFilter ? `${displayListings.length} of ${listings.length}` : listings.length})
-                    </span>
-                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    {sidebarCollapsed && (
+                      <button
+                        onClick={() => setSidebarCollapsed(false)}
+                        className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                        title="Show vendor details"
+                      >
+                        <PanelLeftOpen className="w-4 h-4" />
+                      </button>
+                    )}
+                    <CardTitle className="text-base">
+                      Locations
+                      <span className="ml-2 text-sm font-normal text-gray-400">
+                        ({stateFilter ? `${displayListings.length} of ${listings.length}` : listings.length})
+                      </span>
+                    </CardTitle>
+                  </div>
                   <div className="flex items-center gap-2">
                     {uniqueStates.length > 1 && (
                       <div className="relative">
@@ -943,7 +967,7 @@ export default function VendorDetailPage() {
                               className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                             />
                           </th>
-                          <th className="px-2 py-2.5 w-12" />
+                          <th className="px-2 py-2.5 w-16" />
                           <SortHeader label="Name" col="name" />
                           <SortHeader label="Address" col="address" />
                           <SortHeader label="City" col="city" />
@@ -966,11 +990,11 @@ export default function VendorDetailPage() {
                                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                               />
                             </td>
-                            <td className="px-2 py-1.5 w-12">
+                            <td className="px-2 py-1.5 w-16">
                               <img
                                 src={listing.hero_image || '/images/card-fallback.svg'}
                                 alt=""
-                                className="w-10 h-7 rounded object-cover border border-gray-200"
+                                className="w-14 h-10 rounded object-cover border border-gray-200"
                                 loading="lazy"
                               />
                             </td>
