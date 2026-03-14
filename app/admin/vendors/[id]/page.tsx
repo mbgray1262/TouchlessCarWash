@@ -1024,23 +1024,38 @@ export default function VendorDetailPage() {
                               />
                             </td>
                             <td className="px-2 py-1.5 w-16">
-                              <button
-                                onClick={() => setPhotoEditListingId(listing.id)}
-                                className="group/thumb relative cursor-pointer"
-                                title="Click to edit photos"
-                              >
-                                <img
-                                  src={listing.hero_image || '/images/card-fallback.svg'}
-                                  alt=""
-                                  className="w-14 h-10 rounded object-cover border border-gray-200 group-hover/thumb:border-blue-400 transition-colors"
-                                  loading="lazy"
-                                />
+                              <div className="group/thumb relative">
+                                <button
+                                  onClick={() => setPhotoEditListingId(listing.id)}
+                                  className="cursor-pointer"
+                                  title="Click to edit photos"
+                                >
+                                  <img
+                                    src={listing.hero_image || '/images/card-fallback.svg'}
+                                    alt=""
+                                    className="w-14 h-10 rounded object-cover border border-gray-200 group-hover/thumb:border-blue-400 transition-colors"
+                                    loading="lazy"
+                                  />
+                                </button>
+                                {listing.hero_image && (
+                                  <button
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      await supabase.from('listings').update({ hero_image: null }).eq('id', listing.id);
+                                      setListings((prev) => prev.map((l) => l.id === listing.id ? { ...l, hero_image: null } : l));
+                                    }}
+                                    className="absolute -top-1.5 -left-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full w-4 h-4 flex items-center justify-center shadow-sm opacity-0 group-hover/thumb:opacity-100 transition-opacity"
+                                    title="Delete hero image"
+                                  >
+                                    <X className="w-2.5 h-2.5" />
+                                  </button>
+                                )}
                                 {(listing.photos?.length ?? 0) > 0 && (
                                   <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[8px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center shadow-sm">
                                     {listing.photos!.length}
                                   </span>
                                 )}
-                              </button>
+                              </div>
                             </td>
                             <td className="px-4 py-2.5 font-medium text-gray-900 whitespace-nowrap max-w-[200px] truncate" title={listing.name}>
                               <button
