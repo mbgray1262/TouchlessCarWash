@@ -7,6 +7,7 @@ import { FilterSource } from './types';
 import { HeroCard } from './HeroCard';
 import { StatsBar } from './StatsBar';
 import { useHeroReview } from './useHeroReview';
+import { EquipmentImport } from './EquipmentImport';
 
 const SOURCE_FILTERS: { value: FilterSource; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -26,6 +27,8 @@ export default function HeroReviewPage() {
     totalPages,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     filterSource, setFilterSource,
     filterState, setFilterState,
     filterVendorId, setFilterVendorId,
@@ -289,6 +292,17 @@ export default function HeroReviewPage() {
               Next
               <ChevronRight className="w-4 h-4" />
             </button>
+
+            <select
+              value={pageSize}
+              onChange={(e) => { setPageSize(parseInt(e.target.value, 10)); setPage(0); }}
+              className="ml-4 px-2 py-1.5 text-sm rounded-md border border-gray-300 bg-white text-gray-600 cursor-pointer"
+              title="Cards per page"
+            >
+              <option value={20}>20 / page</option>
+              <option value={50}>50 / page</option>
+              <option value={100}>100 / page</option>
+            </select>
           </div>
         )}
 
@@ -296,6 +310,8 @@ export default function HeroReviewPage() {
           <span className="font-medium text-gray-700">Keyboard shortcuts:</span>{' '}
           Arrow keys to navigate cards &bull; <kbd className="px-1 py-0.5 bg-gray-100 rounded border text-gray-600 font-mono">X</kbd> to open/close replace panel &bull; <kbd className="px-1 py-0.5 bg-gray-100 rounded border text-gray-600 font-mono">1</kbd>-<kbd className="px-1 py-0.5 bg-gray-100 rounded border text-gray-600 font-mono">5</kbd> to select replacement &bull; <kbd className="px-1 py-0.5 bg-gray-100 rounded border text-gray-600 font-mono">Esc</kbd> to close panel
         </div>
+
+        <EquipmentImport onComplete={reload} />
       </div>
     </div>
   );

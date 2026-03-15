@@ -497,7 +497,10 @@ export function HeroCard({
         {listing.address && (
           <p className="text-xs text-gray-400 mt-0.5 truncate" title={listing.address}>{listing.address}</p>
         )}
-        <p className="text-xs text-gray-500 mt-0.5">{listing.city}, {listing.state}</p>
+        <p className="text-xs text-gray-500 mt-0.5">
+          {listing.city}, {listing.state}
+          <span className="ml-1.5 text-gray-300 font-mono select-all cursor-pointer" title={`ID: ${listing.id}`} onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(listing.id); }}>#{listing.id.slice(0, 6)}</span>
+        </p>
         <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
           <SourceBadge source={listing.hero_image_source} />
           {listing.equipment_brand && listing.equipment_brand !== '__other__' && (

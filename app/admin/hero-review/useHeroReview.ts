@@ -6,7 +6,7 @@ import { getStateSlug, slugify } from '@/lib/constants';
 import { HeroListing, FilterSource, ReplacementOption, SessionStats, EQUIPMENT_MODELS, EQUIPMENT_BRANDS } from './types';
 import { autoEnhanceImage } from './autoEnhance';
 
-const PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 20;
 
 /** Purge CDN cache for a listing's detail page so changes appear immediately. */
 async function revalidateListing(listing: HeroListing | undefined) {
@@ -29,6 +29,7 @@ export function useHeroReview() {
   const [totalCount, setTotalCount] = useState(0);
   const [totalWithHero, setTotalWithHero] = useState(0);
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   const [filterSource, setFilterSource] = useState<FilterSource>('all');
   const [filterState, setFilterState] = useState('');
@@ -147,8 +148,8 @@ export function useHeroReview() {
   const loadListings = useCallback(async () => {
     setLoading(true);
     try {
-      const from = page * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
 
       const { data, count, error } = await buildQuery().range(from, to);
       if (error) throw error;
@@ -165,7 +166,7 @@ export function useHeroReview() {
     } finally {
       setLoading(false);
     }
-  }, [page, buildQuery, showFlaggedOnly]);
+  }, [page, pageSize, buildQuery, showFlaggedOnly]);
 
   useEffect(() => {
     loadListings();
@@ -605,7 +606,7 @@ export function useHeroReview() {
     setFocusedId(listings[next].id);
   };
 
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+  const totalPages = Math.ceil(totalCount / pageSize);
 
   return {
     listings,
@@ -615,6 +616,8 @@ export function useHeroReview() {
     totalPages,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     filterSource, setFilterSource,
     filterState, setFilterState,
     filterVendorId, setFilterVendorId,
