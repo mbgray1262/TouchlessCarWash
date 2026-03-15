@@ -150,7 +150,9 @@ export function EquipmentImport({ onComplete, getModelsForBrand, customBrands }:
       return `  - ${b.label}`;
     }).join('\n');
 
-    return `For each listing card visible on this page that does NOT already have an equipment tag (🔧), determine the touchless car wash equipment manufacturer and model. Use the listing name, location, hero image, and your knowledge of car wash chains, manufacturer customer lists, and industry data.
+    return `IMPORTANT: This page has many listing cards. You MUST scroll down through the ENTIRE page to see all cards before responding. Do not stop at the first visible set — keep scrolling until you reach the pagination at the bottom.
+
+For each listing card on this page that does NOT already have an equipment tag (🔧), determine the touchless car wash equipment manufacturer and model. Use the listing name, location, hero image, and your knowledge of car wash chains, manufacturer customer lists, and industry data.
 
 Output ONLY a JSON array with one object per listing. Use the short ID shown on each card (the #xxxxxx code). Skip any listings that already have equipment tagged, and skip any where you cannot determine the manufacturer.
 
