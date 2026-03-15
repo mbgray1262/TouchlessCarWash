@@ -210,7 +210,7 @@ If you know the brand but not the specific model, set model to null. Do not gues
         const { data } = await supabase
           .from('listings')
           .select('id')
-          .ilike('id', `${listingId}%`)
+          .filter('id::text', 'ilike', `${listingId}%`)
           .eq('is_touchless', true)
           .limit(2);
 
