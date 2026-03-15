@@ -7,7 +7,7 @@ import {
   Star, MapPin, Phone, Globe, Clock, CheckCircle, ArrowLeft,
   Sparkles, ExternalLink, ChevronRight, Navigation, HelpCircle,
   CalendarCheck, ChevronDown, Droplet, CreditCard, Zap, MessageSquareQuote, Quote, Trophy, ShieldCheck,
-  ThumbsUp, ThumbsDown, Minus, Wrench
+  ThumbsUp, ThumbsDown, Minus
 } from 'lucide-react';
 import LogoImage from '@/components/LogoImage';
 import HeroImageFallback from '@/components/HeroImageFallback';
@@ -24,7 +24,6 @@ import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants'
 import { streetAddress } from '@/lib/utils';
 import { DEFAULT_OG_IMAGE, ensureHttps, truncateDescription } from '@/lib/seo';
 import { AdUnit } from '@/components/AdUnit';
-import { EQUIPMENT_BRANDS } from '@/app/admin/hero-review/types';
 import type { Metadata } from 'next';
 
 const ListingMap = nextDynamic(() => import('@/components/ListingMap'), { ssr: false });
@@ -1067,12 +1066,18 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                       })}
                     </div>
                   )}
-                  {listing.equipment_brand && (
-                    <div className="text-sm text-gray-700">
-                      <span className="font-medium">Equipment: </span>
-                      {listing.equipment_model || BRAND_LABELS[listing.equipment_brand] || listing.equipment_brand}
-                    </div>
-                  )}
+                  {listing.equipment_brand && (() => {
+                    const brandLabel = BRAND_LABELS[listing.equipment_brand] || listing.equipment_brand;
+                    const displayText = listing.equipment_model
+                      ? `${brandLabel} · ${listing.equipment_model}`
+                      : brandLabel;
+                    return (
+                      <div className="text-sm text-gray-700">
+                        <span className="font-medium">Equipment: </span>
+                        {displayText}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
@@ -1324,18 +1329,6 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                       </TrackableLink>
                     </div>
                   )}
-                  {listing.equipment_brand && (() => {
-                    const brandLabel = EQUIPMENT_BRANDS.find(b => b.value === listing.equipment_brand)?.label ?? listing.equipment_brand;
-                    const displayText = listing.equipment_model
-                      ? `${brandLabel} \u00B7 ${listing.equipment_model}`
-                      : brandLabel;
-                    return (
-                      <div className="flex items-center gap-3">
-                        <Wrench className="w-4 h-4 text-gray-400 shrink-0" />
-                        <span className="text-sm text-gray-700">{displayText}</span>
-                      </div>
-                    );
-                  })()}
                 </div>
 
                 {listing.latitude && listing.longitude && (
