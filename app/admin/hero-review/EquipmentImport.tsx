@@ -195,6 +195,37 @@ If you know the brand but not the specific model, set model to null. Do not gues
     let updated = 0;
     let skipped = 0;
 
+    // Batch-resolve short ID prefixes to full UUIDs
+    const idMap = new Map<string, string>(); // shortId -> fullId
+    const shortIds = preview.filter(r => r.id.length < 36).map(r => r.id);
+    if (shortIds.length > 0) {
+      // Fetch all touchless listing IDs and match prefixes client-side
+      // Need to paginate since Supabase default limit is 1000
+      let allListings: { id: string }[] = [];
+      let offset = 0;
+      const batchSize = 1000;
+      while (true) {
+        const { data: batch } = await supabase
+          .from('listings')
+          .select('id')
+          .eq('is_touchless', true)
+          .range(offset, offset + batchSize - 1);
+        if (!batch || batch.length === 0) break;
+        allListings = allListings.concat(batch);
+        if (batch.length < batchSize) break;
+        offset += batchSize;
+      }
+
+      for (const shortId of shortIds) {
+        const matches = allListings.filter(l => l.id.startsWith(shortId));
+        if (matches.length === 1) {
+          idMap.set(shortId, matches[0].id);
+        } else if (matches.length > 1) {
+          idMap.set(shortId, '__ambiguous__');
+        }
+      }
+    }
+
     for (const row of preview) {
       const brand = normalizeBrand(row.brand, customBrands);
       if (!brand) {
@@ -206,25 +237,18 @@ If you know the brand but not the specific model, set model to null. Do not gues
       // Resolve short ID prefix to full UUID
       let listingId = row.id;
       if (listingId.length < 36) {
-        // Look up by prefix
-        const { data } = await supabase
-          .from('listings')
-          .select('id')
-          .filter('id::text', 'ilike', `${listingId}%`)
-          .eq('is_touchless', true)
-          .limit(2);
-
-        if (!data || data.length === 0) {
+        const resolved = idMap.get(listingId);
+        if (!resolved) {
           errors.push(`#${row.id}: listing not found`);
           skipped++;
           continue;
         }
-        if (data.length > 1) {
-          errors.push(`#${row.id}: ambiguous ID prefix (${data.length} matches)`);
+        if (resolved === '__ambiguous__') {
+          errors.push(`#${row.id}: ambiguous ID prefix (multiple matches)`);
           skipped++;
           continue;
         }
-        listingId = data[0].id;
+        listingId = resolved;
       }
 
       const updateData: Record<string, string | null> = { equipment_brand: brand };
