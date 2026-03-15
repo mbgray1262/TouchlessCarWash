@@ -152,13 +152,24 @@ export function EquipmentImport({ onComplete, getModelsForBrand, customBrands }:
 
     return `IMPORTANT: This page has many listing cards. You MUST scroll down through the ENTIRE page to see all cards before responding. Do not stop at the first visible set — keep scrolling until you reach the pagination at the bottom.
 
-For each listing card on this page that does NOT already have an equipment tag (🔧), determine the touchless car wash equipment manufacturer and model. Use the listing name, location, hero image, and your knowledge of car wash chains, manufacturer customer lists, and industry data.
+For each listing card on this page that does NOT already have an equipment tag (🔧), determine the touchless car wash equipment manufacturer and model. Use ALL available evidence:
+1. The hero image and any visible equipment in the photo (look for manufacturer logos, equipment shape/design, LED arch patterns, spray arm configurations)
+2. Gallery images if available (click into the listing to see more photos)
+3. The listing name and location
+4. Your knowledge of car wash chains, manufacturer customer lists, and regional equipment patterns
 
-Output ONLY a JSON array with one object per listing. Use the short ID shown on each card (the #xxxxxx code). Skip any listings that already have equipment tagged, and skip any where you cannot determine the manufacturer.
+IMPORTANT — Be as SPECIFIC as possible about the model:
+- Do NOT default to a generic model. For example, do NOT assume "LaserWash 360" when it could be a "LaserWash 360 Plus", "LaserWash 4000", "LaserWash G5", or "LaserWash M5".
+- Look for visual clues that distinguish models: LED arches (LaserGlow = 360 Plus), equipment age/generation, number of wash arms, dryer configuration, etc.
+- If you cannot determine the specific model variant, set model to null rather than guessing a generic one.
+
+Output ONLY a JSON array with one object per listing. Use the short ID shown on each card (the #xxxxxx code). Skip any listings that already have equipment tagged, and skip any where you cannot determine the manufacturer with concrete visual or factual evidence.
+
+DO NOT guess based solely on the listing name. A business called "Laser Wash" does not necessarily use PDQ LaserWash equipment — "laser wash" is a generic term used by many car washes regardless of equipment brand.
 
 Format:
 [
-  {"id": "abc123", "brand": "PDQ (LaserWash)", "model": "LaserWash 360"},
+  {"id": "abc123", "brand": "PDQ (LaserWash)", "model": "LaserWash 360 Plus"},
   {"id": "def456", "brand": "WashWorld", "model": "Razor"}
 ]
 
@@ -167,7 +178,7 @@ IMPORTANT: Use the EXACT brand and model names from the reference list below. If
 Reference list of known brands and models:
 ${brandLines}
 
-If you know the brand but not the specific model, set model to null. Do not guess — only include listings where you have reasonable confidence.`;
+If you know the brand but not the specific model, set model to null. Do not guess — only include listings where you have reasonable confidence based on visual or factual evidence.`;
   }, [getModelsForBrand, customBrands]);
 
   const handleCopyPrompt = async () => {
