@@ -50,6 +50,7 @@ export default function HeroReviewPage() {
     handleMarkNotTouchless,
     handleSetEquipment,
     getModelsForBrand,
+    customBrands,
     handleFlag,
     navigateFocus,
     reload,
@@ -238,6 +239,7 @@ export default function HeroReviewPage() {
                   onMarkNotTouchless={() => handleMarkNotTouchless(listing.id)}
                   onSetEquipment={(brand, model) => handleSetEquipment(listing.id, brand, model)}
                   getModelsForBrand={getModelsForBrand}
+                  customBrands={customBrands}
                   onFlag={() => handleFlag(listing.id)}
                   onFocus={() => setFocusedId(listing.id)}
                   confirmIndex={confirmIndex}

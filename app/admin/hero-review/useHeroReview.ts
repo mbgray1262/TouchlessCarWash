@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getStateSlug, slugify } from '@/lib/constants';
-import { HeroListing, FilterSource, ReplacementOption, SessionStats, EQUIPMENT_MODELS } from './types';
+import { HeroListing, FilterSource, ReplacementOption, SessionStats, EQUIPMENT_MODELS, EQUIPMENT_BRANDS } from './types';
 import { autoEnhanceImage } from './autoEnhance';
 
 const PAGE_SIZE = 20;
@@ -53,24 +53,38 @@ export function useHeroReview() {
     }
   }, []);
 
-  // Dynamic model list: hardcoded defaults merged with any custom models from DB
+  // Dynamic brand + model lists: hardcoded defaults merged with custom entries from DB
+  const [customBrands, setCustomBrands] = useState<{ value: string; label: string }[]>([]);
   const [customModels, setCustomModels] = useState<Record<string, string[]>>({});
 
-  const loadCustomModels = useCallback(async () => {
+  const loadCustomEntries = useCallback(async () => {
     const { data } = await supabase
       .from('listings')
       .select('equipment_brand, equipment_model')
       .not('equipment_brand', 'is', null)
-      .not('equipment_model', 'is', null)
-      .neq('equipment_model', '__other__');
+      .neq('equipment_brand', '__other__');
     if (!data) return;
+
+    // Discover custom brands not in hardcoded list
+    const knownBrandValues = new Set(EQUIPMENT_BRANDS.map(b => b.value));
+    const seenBrands = new Set<string>();
+    const novelBrands: { value: string; label: string }[] = [];
+    for (const row of data) {
+      const b = row.equipment_brand;
+      if (!b || knownBrandValues.has(b) || seenBrands.has(b)) continue;
+      seenBrands.add(b);
+      // Convert slug back to title case for display
+      const label = b.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+      novelBrands.push({ value: b, label });
+    }
+    setCustomBrands(novelBrands.sort((a, b) => a.label.localeCompare(b.label)));
 
     // Group distinct models by brand
     const byBrand: Record<string, Set<string>> = {};
     for (const row of data) {
       const b = row.equipment_brand;
       const m = row.equipment_model;
-      if (!b || !m) continue;
+      if (!b || !m || m === '__other__') continue;
       if (!byBrand[b]) byBrand[b] = new Set();
       byBrand[b].add(m);
     }
@@ -107,8 +121,8 @@ export function useHeroReview() {
 
   // Load custom models on mount
   useEffect(() => {
-    loadCustomModels();
-  }, [loadCustomModels]);
+    loadCustomEntries();
+  }, [loadCustomEntries]);
 
   const buildQuery = useCallback(() => {
     let q = supabase
@@ -536,11 +550,22 @@ export function useHeroReview() {
     );
     revalidateListing(listing);
 
-    // If a custom model was entered, refresh the model list so it appears in dropdowns
+    // Optimistically add custom brand/model to local state so they appear immediately
+    if (brand && brand !== '__other__') {
+      const knownBrandValues = new Set<string>(EQUIPMENT_BRANDS.map(b => b.value));
+      if (!knownBrandValues.has(brand) && !customBrands.some(b => b.value === brand)) {
+        const label = brand.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+        setCustomBrands(prev => [...prev, { value: brand, label }].sort((a, b) => a.label.localeCompare(b.label)));
+      }
+    }
     if (model && model !== '__other__' && brand) {
       const hardcoded = EQUIPMENT_MODELS[brand] ?? [];
       if (!hardcoded.includes(model)) {
-        loadCustomModels();
+        setCustomModels(prev => {
+          const existing = prev[brand] ?? [];
+          if (existing.includes(model)) return prev;
+          return { ...prev, [brand]: [...existing, model].sort() };
+        });
       }
     }
   };
@@ -615,6 +640,7 @@ export function useHeroReview() {
     handleMarkNotTouchless,
     handleSetEquipment,
     getModelsForBrand,
+    customBrands,
     handleFlag,
     navigateFocus,
     reload: loadListings,

@@ -185,6 +185,7 @@ interface Props {
   onMarkNotTouchless: () => void;
   onSetEquipment: (brand: string | null, model: string | null) => void;
   getModelsForBrand: (brand: string) => string[];
+  customBrands: { value: string; label: string }[];
   onFlag: () => void;
   onFocus: () => void;
   confirmIndex: number | null;
@@ -210,6 +211,7 @@ export function HeroCard({
   onMarkNotTouchless,
   onSetEquipment,
   getModelsForBrand,
+  customBrands,
   onFlag,
   onFocus,
   confirmIndex,
@@ -222,6 +224,7 @@ export function HeroCard({
   const [uploading, setUploading] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
   const [modelDraft, setModelDraft] = useState(listing.equipment_model ?? '');
+  const [brandDraft, setBrandDraft] = useState('');
   /** Stores the original (pre-enhance) hero URL + source so we can toggle back. */
   const [preEnhance, setPreEnhance] = useState<{ url: string; source: string | null } | null>(null);
 
@@ -497,9 +500,9 @@ export function HeroCard({
         <p className="text-xs text-gray-500 mt-0.5">{listing.city}, {listing.state}</p>
         <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
           <SourceBadge source={listing.hero_image_source} />
-          {listing.equipment_brand && (
+          {listing.equipment_brand && listing.equipment_brand !== '__other__' && (
             <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 font-medium" title={listing.equipment_model && listing.equipment_model !== '__other__' ? `${listing.equipment_brand} — ${listing.equipment_model}` : listing.equipment_brand}>
-              🔧 {EQUIPMENT_BRANDS.find(b => b.value === listing.equipment_brand)?.label ?? listing.equipment_brand}
+              🔧 {EQUIPMENT_BRANDS.find(b => b.value === listing.equipment_brand)?.label ?? customBrands.find(b => b.value === listing.equipment_brand)?.label ?? listing.equipment_brand}
               {listing.equipment_model && listing.equipment_model !== '__other__' && (
                 <span className="text-indigo-500 font-normal"> · {listing.equipment_model}</span>
               )}
@@ -623,25 +626,70 @@ export function HeroCard({
               <Upload className="w-3 h-3" />
               {uploading ? 'Uploading…' : 'Upload'}
             </button>
-            <select
-              value={listing.equipment_brand ?? ''}
-              onChange={(e) => {
-                const val = e.target.value || null;
-                onSetEquipment(val, listing.equipment_model);
-              }}
-              onClick={(e) => e.stopPropagation()}
-              className={`text-xs px-2 py-1 rounded-md border transition-colors cursor-pointer ${
-                listing.equipment_brand
-                  ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
-                  : 'bg-white border-gray-300 text-gray-500'
-              }`}
-              title="Equipment manufacturer"
-            >
-              <option value="">🔧 Equipment…</option>
-              {EQUIPMENT_BRANDS.map(b => (
-                <option key={b.value} value={b.value}>{b.label}</option>
-              ))}
-            </select>
+            {(() => {
+              const allBrands = [...EQUIPMENT_BRANDS.filter(b => b.value !== 'other'), ...customBrands, { value: 'other', label: 'Other' }];
+              const currentBrand = listing.equipment_brand ?? '';
+              const isKnownBrand = allBrands.some(b => b.value === currentBrand);
+              const showBrandInput = currentBrand === '__other__' || (currentBrand && !isKnownBrand && !EQUIPMENT_BRANDS.some(b => b.value === currentBrand));
+              const selectValue = isKnownBrand ? currentBrand : (currentBrand ? '__other__' : '');
+
+              return (
+                <>
+                  <select
+                    value={selectValue}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '__other__') {
+                        onSetEquipment('__other__', null);
+                        setBrandDraft('');
+                      } else {
+                        onSetEquipment(val || null, val ? listing.equipment_model : null);
+                        setBrandDraft('');
+                      }
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    className={`text-xs px-2 py-1 rounded-md border transition-colors cursor-pointer ${
+                      listing.equipment_brand && listing.equipment_brand !== '__other__'
+                        ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+                        : 'bg-white border-gray-300 text-gray-500'
+                    }`}
+                    title="Equipment manufacturer"
+                  >
+                    <option value="">🔧 Equipment…</option>
+                    {allBrands.map(b => (
+                      <option key={b.value} value={b.value}>{b.label}</option>
+                    ))}
+                    <option value="__other__">Other…</option>
+                  </select>
+                  {showBrandInput && (
+                    <input
+                      type="text"
+                      placeholder="Manufacturer name…"
+                      value={brandDraft}
+                      onChange={(e) => setBrandDraft(e.target.value)}
+                      onBlur={() => {
+                        const val = brandDraft.trim() || null;
+                        if (val) {
+                          // Use a slug-ified version as the brand value
+                          const slug = val.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+                          onSetEquipment(slug, null);
+                        } else {
+                          onSetEquipment(null, null);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        e.stopPropagation();
+                        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-xs px-2 py-1 rounded-md border border-gray-300 text-gray-700 w-32 bg-white focus:border-indigo-400 focus:outline-none"
+                      title="Type a custom manufacturer name"
+                      autoFocus
+                    />
+                  )}
+                </>
+              );
+            })()}
             {listing.equipment_brand && (() => {
               const models = getModelsForBrand(listing.equipment_brand);
               const currentModel = listing.equipment_model ?? '';
