@@ -189,6 +189,8 @@ export default function HeroReviewPage() {
           </span>
         </div>
 
+        <EquipmentImport onComplete={reload} getModelsForBrand={getModelsForBrand} customBrands={customBrands} />
+
         {loading ? (
           <div className="grid grid-cols-4 gap-4">
             {Array.from({ length: 20 }).map((_, i) => (
@@ -311,7 +313,6 @@ export default function HeroReviewPage() {
           Arrow keys to navigate cards &bull; <kbd className="px-1 py-0.5 bg-gray-100 rounded border text-gray-600 font-mono">X</kbd> to open/close replace panel &bull; <kbd className="px-1 py-0.5 bg-gray-100 rounded border text-gray-600 font-mono">1</kbd>-<kbd className="px-1 py-0.5 bg-gray-100 rounded border text-gray-600 font-mono">5</kbd> to select replacement &bull; <kbd className="px-1 py-0.5 bg-gray-100 rounded border text-gray-600 font-mono">Esc</kbd> to close panel
         </div>
 
-        <EquipmentImport onComplete={reload} />
       </div>
     </div>
   );
