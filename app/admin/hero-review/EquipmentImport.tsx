@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { Upload, CheckCircle, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { Upload, CheckCircle, AlertCircle, ChevronDown, ChevronUp, Clipboard, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { EQUIPMENT_BRANDS } from './types';
 
 interface ImportRow {
   id: string;        // listing ID (full UUID or short prefix)
@@ -51,11 +52,20 @@ const BRAND_ALIASES: Record<string, string> = {
   'other': 'other',
 };
 
-function normalizeBrand(input: string): string | null {
+function normalizeBrand(input: string, customBrands?: { value: string; label: string }[]): string | null {
   if (!input) return null;
   const lower = input.trim().toLowerCase();
+  // Check static aliases first
   if (BRAND_ALIASES[lower]) return BRAND_ALIASES[lower];
-  // Try slug-ifying as a custom brand
+  // Check against EQUIPMENT_BRANDS labels (case-insensitive)
+  const hardcoded = EQUIPMENT_BRANDS.find(b => b.label.toLowerCase() === lower);
+  if (hardcoded) return hardcoded.value;
+  // Check against custom brands from DB
+  if (customBrands) {
+    const custom = customBrands.find(b => b.label.toLowerCase() === lower || b.value === lower);
+    if (custom) return custom.value;
+  }
+  // Try slug-ifying as a new custom brand
   const slug = lower.replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
   return slug || null;
 }
@@ -111,12 +121,59 @@ function parseInput(text: string): { rows: ImportRow[]; error?: string } {
   return { rows };
 }
 
-export function EquipmentImport({ onComplete }: { onComplete: () => void }) {
+interface EquipmentImportProps {
+  onComplete: () => void;
+  getModelsForBrand: (brand: string) => string[];
+  customBrands: { value: string; label: string }[];
+}
+
+export function EquipmentImport({ onComplete, getModelsForBrand, customBrands }: EquipmentImportProps) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [preview, setPreview] = useState<ImportRow[] | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const buildGeminiPrompt = useCallback(() => {
+    // Build the brand+model reference from current DB state
+    const allBrands = [
+      ...EQUIPMENT_BRANDS.filter(b => b.value !== 'other'),
+      ...customBrands,
+    ];
+
+    const brandLines = allBrands.map(b => {
+      const models = getModelsForBrand(b.value);
+      if (models.length > 0) {
+        return `  - ${b.label}: ${models.join(', ')}`;
+      }
+      return `  - ${b.label}`;
+    }).join('\n');
+
+    return `For each listing card visible on this page that does NOT already have an equipment tag (🔧), determine the touchless car wash equipment manufacturer and model. Use the listing name, location, hero image, and your knowledge of car wash chains, manufacturer customer lists, and industry data.
+
+Output ONLY a JSON array with one object per listing. Use the short ID shown on each card (the #xxxxxx code). Skip any listings that already have equipment tagged, and skip any where you cannot determine the manufacturer.
+
+Format:
+[
+  {"id": "abc123", "brand": "PDQ (LaserWash)", "model": "LaserWash 360"},
+  {"id": "def456", "brand": "WashWorld", "model": "Razor"}
+]
+
+IMPORTANT: Use the EXACT brand and model names from the reference list below. If a brand or model is not in this list, use the actual name — it will be added automatically.
+
+Reference list of known brands and models:
+${brandLines}
+
+If you know the brand but not the specific model, set model to null. Do not guess — only include listings where you have reasonable confidence.`;
+  }, [getModelsForBrand, customBrands]);
+
+  const handleCopyPrompt = async () => {
+    const prompt = buildGeminiPrompt();
+    await navigator.clipboard.writeText(prompt);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handlePreview = () => {
     setResult(null);
@@ -139,7 +196,7 @@ export function EquipmentImport({ onComplete }: { onComplete: () => void }) {
     let skipped = 0;
 
     for (const row of preview) {
-      const brand = normalizeBrand(row.brand);
+      const brand = normalizeBrand(row.brand, customBrands);
       if (!brand) {
         errors.push(`#${row.id}: unknown brand "${row.brand}"`);
         skipped++;
@@ -206,13 +263,23 @@ export function EquipmentImport({ onComplete }: { onComplete: () => void }) {
 
       {open && (
         <div className="px-4 pb-4 border-t border-gray-100">
-          <p className="text-xs text-gray-500 mt-3 mb-2">
-            Paste JSON or CSV from Gemini. Each row needs: <code className="bg-gray-100 px-1 rounded">id</code> (listing ID or #prefix from card), <code className="bg-gray-100 px-1 rounded">brand</code>, and optionally <code className="bg-gray-100 px-1 rounded">model</code>.
-          </p>
-          <div className="text-xs text-gray-400 mb-2 space-y-1">
-            <p><strong>JSON example:</strong> <code className="bg-gray-50 px-1 rounded">{`[{"id":"3d6e09","brand":"PDQ","model":"LaserWash 360"},...]`}</code></p>
-            <p><strong>CSV example:</strong> <code className="bg-gray-50 px-1 rounded">id,brand,model</code> (one per line)</p>
+          <div className="flex items-center gap-3 mt-3 mb-3">
+            <button
+              onClick={handleCopyPrompt}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                copied
+                  ? 'bg-green-100 text-green-700 border border-green-300'
+                  : 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100'
+              }`}
+            >
+              {copied ? <Check className="w-3.5 h-3.5" /> : <Clipboard className="w-3.5 h-3.5" />}
+              {copied ? 'Copied!' : 'Copy Gemini Prompt'}
+            </button>
+            <span className="text-xs text-gray-400">Includes current list of brands &amp; models from database</span>
           </div>
+          <p className="text-xs text-gray-500 mb-2">
+            Paste Gemini&apos;s JSON output below. Each row needs: <code className="bg-gray-100 px-1 rounded">id</code> (the #prefix from card), <code className="bg-gray-100 px-1 rounded">brand</code>, and optionally <code className="bg-gray-100 px-1 rounded">model</code>.
+          </p>
 
           <textarea
             value={input}
@@ -255,7 +322,7 @@ export function EquipmentImport({ onComplete }: { onComplete: () => void }) {
                 </thead>
                 <tbody>
                   {preview.map((row, i) => {
-                    const canonical = normalizeBrand(row.brand);
+                    const canonical = normalizeBrand(row.brand, customBrands);
                     return (
                       <tr key={i} className={`border-t border-gray-100 ${!canonical ? 'bg-red-50' : ''}`}>
                         <td className="px-2 py-1 font-mono text-gray-500">#{row.id}</td>
