@@ -35,6 +35,7 @@ export default function HeroReviewPage() {
     vendors,
     searchName, setSearchName,
     showFlaggedOnly, setShowFlaggedOnly,
+    showNoEquipmentOnly, setShowNoEquipmentOnly,
     expandedId, setExpandedId,
     focusedId, setFocusedId,
     confirmMap,
@@ -182,6 +183,16 @@ export default function HeroReviewPage() {
               className="rounded border-gray-300 text-orange-500 focus:ring-orange-300"
             />
             Flagged only
+          </label>
+
+          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showNoEquipmentOnly}
+              onChange={(e) => { setShowNoEquipmentOnly(e.target.checked); setPage(0); }}
+              className="rounded border-gray-300 text-orange-500 focus:ring-orange-300"
+            />
+            No Equipment
           </label>
 
           <span className="text-xs text-gray-400 ml-auto whitespace-nowrap">
