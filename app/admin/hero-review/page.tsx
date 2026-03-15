@@ -321,7 +321,7 @@ export default function HeroReviewPage() {
 
         <div className="mt-6 p-3 bg-white rounded-lg border border-gray-200 text-xs text-gray-500">
           <span className="font-medium text-gray-700">Keyboard shortcuts:</span>{' '}
-          Arrow keys to navigate cards &bull; <kbd className="px-1 py-0.5 bg-gray-100 rounded border text-gray-600 font-mono">X</kbd> to open/close replace panel &bull; <kbd className="px-1 py-0.5 bg-gray-100 rounded border text-gray-600 font-mono">1</kbd>-<kbd className="px-1 py-0.5 bg-gray-100 rounded border text-gray-600 font-mono">5</kbd> to select replacement &bull; <kbd className="px-1 py-0.5 bg-gray-100 rounded border text-gray-600 font-mono">Esc</kbd> to close panel
+          Arrow keys to navigate cards &bull; <kbd className="px-1 py-0.5 bg-gray-100 rounded border text-gray-600 font-mono">X</kbd> to open/close replace panel &bull; <kbd className="px-1 py-0.5 bg-gray-100 rounded border text-gray-600 font-mono">1</kbd>-<kbd className="px-1 py-0.5 bg-gray-100 rounded border text-gray-600 font-mono">5</kbd> to select replacement &bull; <kbd className="px-1 py-0.5 bg-gray-100 rounded border text-gray-600 font-mono">Del</kbd>/<kbd className="px-1 py-0.5 bg-gray-100 rounded border text-gray-600 font-mono">Backspace</kbd> delete photo in lightbox &bull; <kbd className="px-1 py-0.5 bg-gray-100 rounded border text-gray-600 font-mono">Esc</kbd> to close panel
         </div>
 
       </div>

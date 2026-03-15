@@ -43,24 +43,36 @@ interface LightboxProps {
   onEnhance?: (imageUrl: string) => Promise<void>;
   enhanceLabel?: string; // Override the button text (e.g. "Revert" for toggle-off)
   onDelete?: () => void;
+  /** Called when Delete/Backspace is pressed in gallery mode — deletes & advances without closing. */
+  onDeleteAdvance?: () => void;
   onPrev?: () => void;
   onNext?: () => void;
   position?: string; // e.g. "3 / 8"
 }
 
-function PhotoLightbox({ url, label, onClose, onUseAsHero, onEnhance, enhanceLabel, onDelete, onPrev, onNext, position }: LightboxProps) {
+function PhotoLightbox({ url, label, onClose, onUseAsHero, onEnhance, enhanceLabel, onDelete, onDeleteAdvance, onPrev, onNext, position }: LightboxProps) {
   const [lbEnhancing, setLbEnhancing] = useState(false);
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      // Don't handle if focus is in an input
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
       if (e.key === 'Escape') onClose();
       if (e.key === 'Enter') { onUseAsHero(); onClose(); }
-      if (e.key === 'Delete' && onDelete) { onDelete(); onClose(); }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && (onDeleteAdvance || onDelete)) {
+        e.preventDefault();
+        if (onDeleteAdvance) {
+          onDeleteAdvance();
+        } else if (onDelete) {
+          onDelete(); onClose();
+        }
+      }
       if (e.key === 'ArrowLeft' && onPrev) { e.preventDefault(); onPrev(); }
       if (e.key === 'ArrowRight' && onNext) { e.preventDefault(); onNext(); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [onClose, onUseAsHero, onDelete, onPrev, onNext]);
+  }, [onClose, onUseAsHero, onDelete, onDeleteAdvance, onPrev, onNext]);
 
   return (
     <div
@@ -335,6 +347,20 @@ export function HeroCard({
       const photoItems = galleryItems.filter(i => i.kind === 'photo');
       const item = photoItems[lightboxIndex];
       if (!item || !item.url) return null;
+
+      const handleDeleteAdvance = item.onDelete ? () => {
+        const totalAfterDelete = photoItems.length - 1;
+        item.onDelete!();
+        if (totalAfterDelete <= 0) {
+          // Was the only photo — close the lightbox
+          setLightboxIndex(null);
+        } else if (lightboxIndex >= totalAfterDelete) {
+          // Was the last photo — go to the new last one
+          setLightboxIndex(totalAfterDelete - 1);
+        }
+        // Otherwise stay at the same index (next photo slides into this position)
+      } : undefined;
+
       return (
         <PhotoLightbox
           url={item.url}
@@ -343,6 +369,7 @@ export function HeroCard({
           onUseAsHero={() => { item.onUseAsHero(); setLightboxIndex(null); }}
           onEnhance={async (imageUrl) => { await onEnhance(imageUrl); setLightboxIndex(null); }}
           onDelete={item.onDelete}
+          onDeleteAdvance={handleDeleteAdvance}
           onPrev={lightboxIndex > 0 ? () => setLightboxIndex(lightboxIndex - 1) : undefined}
           onNext={lightboxIndex < photoItems.length - 1 ? () => setLightboxIndex(lightboxIndex + 1) : undefined}
           position={`${lightboxIndex + 1} / ${photoItems.length}`}
