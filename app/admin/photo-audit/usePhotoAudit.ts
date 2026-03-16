@@ -17,6 +17,8 @@ export interface AuditResult {
   raw_response: Record<string, unknown> | null;
   reviewed: boolean;
   applied: boolean;
+  google_photos_added?: number;
+  google_photos_screened?: number;
   created_at: string;
   // Joined listing data
   listing_name?: string;
@@ -33,6 +35,7 @@ export function usePhotoAudit() {
   const [tab, setTab] = useState<Tab>('equipment');
   const [running, setRunning] = useState(false);
   const [runProgress, setRunProgress] = useState('');
+  const [includeGooglePhotos, setIncludeGooglePhotos] = useState(true);
   const [stats, setStats] = useState({ total: 0, applied: 0, pending: 0, equipment: 0, heroes: 0, cleanup: 0 });
 
   const loadResults = useCallback(async () => {
@@ -103,9 +106,10 @@ export function usePhotoAudit() {
     loadResults();
   }, [loadResults]);
 
-  const runBatch = useCallback(async (limit: number, dryRun: boolean) => {
+  const runBatch = useCallback(async (limit: number, dryRun: boolean, includeGoogle: boolean) => {
     setRunning(true);
-    setRunProgress(`Starting batch (${limit} listings, ${dryRun ? 'DRY RUN' : 'LIVE'})...`);
+    const googleLabel = includeGoogle ? ' + Google Photos' : '';
+    setRunProgress(`Starting batch (${limit} listings${googleLabel}, ${dryRun ? 'DRY RUN' : 'LIVE'})...`);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -117,7 +121,7 @@ export function usePhotoAudit() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ limit, dry_run: dryRun }),
+        body: JSON.stringify({ limit, dry_run: dryRun, include_google_photos: includeGoogle }),
       });
 
       const data = await res.json();
@@ -125,10 +129,13 @@ export function usePhotoAudit() {
       if (data.error) {
         setRunProgress(`Error: ${data.error}`);
       } else {
+        const googleMsg = data.google_photos_added > 0
+          ? ` Google photos added: ${data.google_photos_added} (screened ${data.google_photos_screened}).`
+          : '';
         setRunProgress(
           `Done! Processed ${data.listings_processed} listings. ` +
           `Equipment: ${data.equipment_detected}. Heroes replaced: ${data.heroes_replaced}. ` +
-          `Photos removed: ${data.photos_removed}. Auto-applied: ${data.auto_applied}.`
+          `Photos removed: ${data.photos_removed}. Auto-applied: ${data.auto_applied}.${googleMsg}`
         );
         await loadResults();
       }
@@ -195,6 +202,8 @@ export function usePhotoAudit() {
     setTab,
     running,
     runProgress,
+    includeGooglePhotos,
+    setIncludeGooglePhotos,
     stats,
     runBatch,
     applyEquipment,

@@ -259,6 +259,7 @@ type EquipmentFilter = 'all' | 'detected' | 'none' | 'pending';
 export default function PhotoAuditPage() {
   const {
     results, loading, tab, setTab, running, runProgress, stats,
+    includeGooglePhotos, setIncludeGooglePhotos,
     runBatch, applyEquipment, rejectResult, applyAllHighConfidence, undoApply,
   } = usePhotoAudit();
 
@@ -306,8 +307,18 @@ export default function PhotoAuditPage() {
               className="w-20 px-2 py-1.5 border border-gray-300 rounded text-sm"
             />
           </div>
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={includeGooglePhotos}
+              onChange={e => setIncludeGooglePhotos(e.target.checked)}
+              className="rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+            />
+            <span className="text-gray-700">Fetch Google Photos</span>
+            <span className="text-xs text-gray-400">(+~10s/listing)</span>
+          </label>
           <button
-            onClick={() => runBatch(batchLimit, true)}
+            onClick={() => runBatch(batchLimit, true, includeGooglePhotos)}
             disabled={running}
             className="flex items-center gap-1.5 px-4 py-2 bg-amber-100 text-amber-700 rounded-lg text-sm font-medium hover:bg-amber-200 disabled:opacity-50"
           >
@@ -315,7 +326,7 @@ export default function PhotoAuditPage() {
             Dry Run
           </button>
           <button
-            onClick={() => runBatch(batchLimit, false)}
+            onClick={() => runBatch(batchLimit, false, includeGooglePhotos)}
             disabled={running}
             className="flex items-center gap-1.5 px-4 py-2 bg-[#0F2744] text-white rounded-lg text-sm font-medium hover:bg-[#1a3a5c] disabled:opacity-50"
           >

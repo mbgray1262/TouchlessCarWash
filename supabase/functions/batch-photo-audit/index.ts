@@ -6,6 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
 };
 
+const MAX_GALLERY_PHOTOS = 5;
+
 async function getSecret(supabaseUrl: string, serviceKey: string, name: string): Promise<string> {
   const res = await fetch(`${supabaseUrl}/rest/v1/rpc/get_secret`, {
     method: 'POST',
@@ -39,7 +41,169 @@ async function fetchImageAsBase64(url: string): Promise<{ base64: string; mediaT
   }
 }
 
-// Brand normalization from detect-equipment
+// ---- Google Photo Enrichment utilities (from gallery-backfill) ----
+
+async function fetchGooglePlacePhotoUrls(
+  placeId: string,
+  googleApiKey: string,
+  existingPhotos: string[],
+  maxFetch: number,
+): Promise<string[]> {
+  const detailsUrl = `https://places.googleapis.com/v1/places/${placeId}?fields=photos&key=${googleApiKey}`;
+  const res = await fetch(detailsUrl, { signal: AbortSignal.timeout(10000) });
+  if (!res.ok) return [];
+
+  const data = await res.json() as {
+    photos?: Array<{ name: string; widthPx?: number; heightPx?: number }>;
+  };
+
+  const photos = data.photos ?? [];
+  if (photos.length === 0) return [];
+
+  const urls: string[] = [];
+  for (const photo of photos) {
+    if (urls.length >= maxFetch) break;
+    const mediaUrl = `https://places.googleapis.com/v1/${photo.name}/media?maxHeightPx=1600&maxWidthPx=1600&key=${googleApiKey}`;
+    const mediaRes = await fetch(mediaUrl, {
+      redirect: 'follow',
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!mediaRes.ok) continue;
+    const finalUrl = mediaRes.url;
+    if (!finalUrl) continue;
+    if (existingPhotos.includes(finalUrl)) continue;
+    urls.push(finalUrl);
+  }
+
+  return urls;
+}
+
+async function classifyPhotoWithClaude(
+  imageUrl: string,
+  apiKey: string,
+  approvedUrls: string[] = [],
+): Promise<{ verdict: 'GOOD_EQUIPMENT' | 'GOOD' | 'BAD_CONTACT' | 'BAD_OTHER'; reason: string }> {
+  const img = await fetchImageAsBase64(imageUrl);
+  if (!img) return { verdict: 'BAD_OTHER', reason: 'Could not fetch image' };
+
+  const refImages = (await Promise.all(
+    approvedUrls.slice(0, 3).map(u => fetchImageAsBase64(u))
+  )).filter((x): x is { base64: string; mediaType: string } => x !== null);
+
+  const dedupClause = refImages.length > 0
+    ? '\nAlso reject this photo (as BAD_OTHER) if it shows essentially the same view as any of the already-approved photos shown above — we want visual variety, not multiple shots of the same angle.'
+    : '';
+
+  const prompt = `You are selecting photos for a TOUCHLESS car wash directory listing. Be GENEROUS — having some photos is much better than having none.
+
+GOOD_EQUIPMENT — Use this verdict (highest priority!) if you can see touchless car wash equipment:
+- Overhead wash gantries, arches, or spray arms (PDQ LaserWash, WashWorld Razor, Belanger, Ryko, etc.)
+- Visible manufacturer branding/logos on equipment (NOT the business sign)
+- A car inside a touchless wash bay with nozzles/spray arches visible
+- Close-up of touchless wash equipment showing identifiable features
+This is the MOST VALUABLE type of photo for our directory.
+
+GOOD — Accept if ANY of these are true:
+- A car wash building, bay, tunnel, canopy, or sign is visible anywhere in the photo (it does NOT need to be the main subject)
+- The photo is taken from a road or parking lot but you can see a car wash business in the scene
+- A car is entering, inside, or exiting a wash bay
+- A car wash sign, menu board, or price sign is shown
+- The photo shows the exterior of a business that is clearly a car wash
+When in doubt, lean toward GOOD. A mediocre photo of the right place is better than no photo.
+
+BAD_CONTACT — Reject ONLY if you can clearly see brushes, cloth strips, foam rollers, or spinning mops physically making contact with a car's surface.
+
+BAD_OTHER — Reject ONLY if:
+- The photo has absolutely nothing to do with a car wash (food, random products, landscapes with no business)
+- It is a close-up of a car body (hood, bumper, wheel) with NO car wash facility visible at all
+- Interior of a car (dashboard, seats) with no wash visible
+- A selfie or group photo with no car wash visible
+- A logo, graphic, clip art, or promotional flyer (not a real photograph)
+- So blurry or dark that you cannot tell what is in the photo at all${dedupClause}
+
+Reply with ONLY: VERDICT: one-sentence reason`;
+
+  const refBlocks = refImages.flatMap((r, i) => [
+    { type: 'text' as const, text: `Already-approved photo ${i + 1}:` },
+    { type: 'image' as const, source: { type: 'base64' as const, media_type: r.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp', data: r.base64 } },
+  ]);
+
+  const maxAttempts = 4;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5',
+        max_tokens: 100,
+        messages: [{
+          role: 'user',
+          content: [
+            ...refBlocks,
+            { type: 'text', text: refImages.length > 0 ? 'Now evaluate this new candidate photo:' : '' },
+            { type: 'image', source: { type: 'base64', media_type: img.mediaType, data: img.base64 } },
+            { type: 'text', text: prompt },
+          ].filter(b => b.type !== 'text' || (b as {type: string; text: string}).text !== ''),
+        }],
+      }),
+    });
+
+    if (res.status === 529 || res.status === 503 || res.status === 429) {
+      if (attempt < maxAttempts) {
+        const delay = 2000 * attempt;
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+      return { verdict: 'BAD_OTHER', reason: 'Claude overloaded' };
+    }
+
+    if (!res.ok) return { verdict: 'BAD_OTHER', reason: `Claude error ${res.status}` };
+    const data = await res.json() as { content: Array<{ text: string }> };
+    const text = (data.content?.[0]?.text ?? '').trim();
+    const clean = text.replace(/^VERDICT:\s*/i, '').trim();
+
+    if (clean.startsWith('GOOD_EQUIPMENT')) return { verdict: 'GOOD_EQUIPMENT', reason: clean.replace(/^GOOD_EQUIPMENT[:\s-]*/i, '').trim() };
+    if (clean.startsWith('GOOD')) return { verdict: 'GOOD', reason: clean.replace(/^GOOD[:\s-]*/i, '').trim() };
+    if (clean.startsWith('BAD_CONTACT')) return { verdict: 'BAD_CONTACT', reason: clean.replace(/^BAD_CONTACT[:\s-]*/i, '').trim() };
+    return { verdict: 'BAD_OTHER', reason: clean.replace(/^BAD_OTHER[:\s-]*/i, '').trim() };
+  }
+
+  return { verdict: 'BAD_OTHER', reason: 'Max retries exceeded' };
+}
+
+async function rehostToStorage(
+  supabase: ReturnType<typeof createClient>,
+  imageUrl: string,
+  listingId: string,
+  slot: string,
+): Promise<string | null> {
+  try {
+    const res = await fetch(imageUrl, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) return null;
+    const ct = res.headers.get('content-type') || 'image/jpeg';
+    const mediaType = ct.split(';')[0].trim();
+    const ext = mediaType === 'image/png' ? 'png' : mediaType === 'image/webp' ? 'webp' : 'jpg';
+    const buffer = await res.arrayBuffer();
+    if (buffer.byteLength < 1000) return null;
+    const path = `listings/${listingId}/${slot}.${ext}`;
+    const { error } = await supabase.storage.from('listing-photos').upload(path, buffer, {
+      contentType: mediaType,
+      upsert: true,
+    });
+    if (error) return null;
+    const { data: { publicUrl } } = supabase.storage.from('listing-photos').getPublicUrl(path);
+    return publicUrl;
+  } catch {
+    return null;
+  }
+}
+
+// ---- Equipment brand normalization ----
+
 const BRAND_MAP: Record<string, string> = {
   'laserwash': 'pdq', 'laser wash': 'pdq', 'pdq': 'pdq', 'pdqinc': 'pdq',
   'washworld': 'washworld', 'wash world': 'washworld',
@@ -61,6 +225,8 @@ function normalizeBrand(raw: string): string | null {
   }
   return null;
 }
+
+// ---- Sonnet audit prompt and function ----
 
 const AUDIT_PROMPT = `You are auditing photos for a touchless car wash directory listing. You will see multiple photos from the same listing. Analyze ALL of them and provide a structured assessment.
 
@@ -147,7 +313,6 @@ async function auditListing(
   listingName: string,
   anthropicKey: string,
 ): Promise<AuditResult | null> {
-  // Fetch all images as base64
   const images = await Promise.all(photoUrls.map(u => fetchImageAsBase64(u)));
   const validImages = images.map((img, i) => ({ img, i })).filter(({ img }) => img !== null);
 
@@ -207,7 +372,6 @@ async function auditListing(
       const data = await res.json();
       const text = data.content?.[0]?.text ?? '';
 
-      // Parse JSON from response
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         console.error(`Could not parse JSON from response: ${text.slice(0, 200)}`);
@@ -227,11 +391,114 @@ async function auditListing(
   return null;
 }
 
+// ---- Google photo enrichment for a single listing ----
+
+async function enrichListingWithGooglePhotos(
+  supabase: ReturnType<typeof createClient>,
+  listing: {
+    id: string;
+    photos: string[] | null;
+    hero_image: string | null;
+    blocked_photos: string[] | null;
+    google_place_id: string;
+  },
+  anthropicKey: string,
+  googleApiKey: string,
+): Promise<{ photosAdded: number; photosScreened: number; updatedPhotos: string[]; updatedHero: string | null }> {
+  const currentPhotos: string[] = (listing.photos as string[]) ?? [];
+  const heroImage: string | null = (listing.hero_image as string | null) ?? null;
+  const blockedPhotos: string[] = (listing.blocked_photos as string[]) ?? [];
+
+  const heroNeedsUpgrade = !heroImage
+    || heroImage.includes('streetviewpixels')
+    || heroImage.includes('street_view');
+
+  const existingUrls = [...currentPhotos, ...(heroImage ? [heroImage] : []), ...blockedPhotos];
+
+  const needed = MAX_GALLERY_PHOTOS - currentPhotos.length;
+  if (needed <= 0 && !heroNeedsUpgrade) {
+    return { photosAdded: 0, photosScreened: 0, updatedPhotos: currentPhotos, updatedHero: null };
+  }
+
+  const fetchCount = Math.min(15, needed + 2);
+  const placePhotoUrls = await fetchGooglePlacePhotoUrls(
+    listing.google_place_id,
+    googleApiKey,
+    existingUrls,
+    fetchCount,
+  );
+
+  if (placePhotoUrls.length === 0) {
+    return { photosAdded: 0, photosScreened: 0, updatedPhotos: currentPhotos, updatedHero: null };
+  }
+
+  let photosScreened = 0;
+  const newApprovedEquipment: string[] = [];
+  const newApprovedOther: string[] = [];
+
+  for (const url of placePhotoUrls) {
+    if (currentPhotos.length + newApprovedEquipment.length + newApprovedOther.length >= MAX_GALLERY_PHOTOS) break;
+    photosScreened++;
+    try {
+      const result = await classifyPhotoWithClaude(url, anthropicKey, [...currentPhotos, ...newApprovedEquipment, ...newApprovedOther]);
+      if (result.verdict === 'GOOD_EQUIPMENT' || result.verdict === 'GOOD') {
+        const slot = `gallery_bp_${currentPhotos.length + newApprovedEquipment.length + newApprovedOther.length}_${Date.now()}`;
+        const rehosted = await rehostToStorage(supabase, url, listing.id, slot);
+        const finalUrl = rehosted ?? url;
+        if (result.verdict === 'GOOD_EQUIPMENT') {
+          newApprovedEquipment.push(finalUrl);
+        } else {
+          newApprovedOther.push(finalUrl);
+        }
+      }
+    } catch {
+      // skip on error
+    }
+  }
+
+  const photosAdded = newApprovedEquipment.length + newApprovedOther.length;
+  let updatedHero: string | null = null;
+
+  if (photosAdded > 0) {
+    // Equipment photos at front of gallery
+    const updatedPhotos = [...newApprovedEquipment, ...currentPhotos, ...newApprovedOther];
+    const updatePayload: Record<string, unknown> = {
+      photos: updatedPhotos,
+      photo_enrichment_attempted_at: new Date().toISOString(),
+    };
+
+    if (heroNeedsUpgrade) {
+      updatedHero = newApprovedEquipment.length > 0 ? newApprovedEquipment[0] : newApprovedEquipment.concat(newApprovedOther)[0];
+      updatePayload.hero_image = updatedHero;
+    }
+
+    await supabase.from('listings').update(updatePayload).eq('id', listing.id);
+
+    return { photosAdded, photosScreened, updatedPhotos, updatedHero };
+  } else {
+    // No photos passed screening — still mark as attempted
+    await supabase.from('listings').update({
+      photo_enrichment_attempted_at: new Date().toISOString(),
+    }).eq('id', listing.id);
+
+    // If hero needs upgrade and we have existing gallery photos, promote one
+    if (heroNeedsUpgrade && currentPhotos.length > 0) {
+      updatedHero = currentPhotos[0];
+      await supabase.from('listings').update({ hero_image: currentPhotos[0] }).eq('id', listing.id);
+    }
+
+    return { photosAdded: 0, photosScreened, updatedPhotos: currentPhotos, updatedHero };
+  }
+}
+
+// ---- Main handler ----
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const supabase = createClient(supabaseUrl, serviceKey);
@@ -245,11 +512,21 @@ Deno.serve(async (req) => {
   const limit = body.limit ?? 50;
   const offset = body.offset ?? 0;
   const dryRun = body.dry_run ?? false;
+  const includeGooglePhotos = body.include_google_photos ?? true;
+
+  // Get Google API key if needed
+  let googleApiKey = '';
+  if (includeGooglePhotos) {
+    googleApiKey = Deno.env.get('GOOGLE_PLACES_API_KEY') ?? await getSecret(supabaseUrl, serviceKey, 'GOOGLE_PLACES_API_KEY');
+    if (!googleApiKey) {
+      console.warn('Google Places API key not found — skipping photo enrichment');
+    }
+  }
 
   // Fetch untagged touchless listings with images
   const { data: listings, error } = await supabase
     .from('listings')
-    .select('id, name, hero_image, photos, google_photo_url, street_view_url, equipment_brand, blocked_photos')
+    .select('id, name, hero_image, photos, google_photo_url, street_view_url, equipment_brand, blocked_photos, google_place_id, photo_enrichment_attempted_at')
     .eq('is_touchless', true)
     .is('equipment_brand', null)
     .not('hero_image', 'is', null)
@@ -260,7 +537,7 @@ Deno.serve(async (req) => {
     return Response.json({ error: error.message }, { status: 500, headers: corsHeaders });
   }
 
-  console.log(`Processing ${listings.length} listings (limit=${limit}, offset=${offset}, dryRun=${dryRun})`);
+  console.log(`Processing ${listings.length} listings (limit=${limit}, offset=${offset}, dryRun=${dryRun}, googlePhotos=${includeGooglePhotos})`);
 
   const results: Array<{
     listing_id: string;
@@ -272,6 +549,8 @@ Deno.serve(async (req) => {
     suggested_hero: string | null;
     photos_to_remove: number;
     auto_applied: boolean;
+    google_photos_added: number;
+    google_photos_screened: number;
   }> = [];
 
   let processed = 0;
@@ -279,11 +558,63 @@ Deno.serve(async (req) => {
   let heroReplaced = 0;
   let photosRemoved = 0;
   let autoApplied = 0;
+  let totalGooglePhotosAdded = 0;
+  let totalGooglePhotosScreened = 0;
 
   for (const listing of listings) {
-    processed++;
+    // Wall-clock timeout guard — stop before Edge Function limit
+    if (Date.now() - startTime > 340_000) {
+      console.log('Approaching timeout, stopping batch early');
+      break;
+    }
 
-    // Collect all photos: hero first (index 0), then gallery, then google photo
+    processed++;
+    let googlePhotosAdded = 0;
+    let googlePhotosScreened = 0;
+
+    // ---- STEP 1: Google Photo Enrichment (if enabled) ----
+    if (
+      includeGooglePhotos &&
+      googleApiKey &&
+      !dryRun &&
+      listing.google_place_id &&
+      !listing.photo_enrichment_attempted_at &&
+      ((listing.photos as string[]) ?? []).length < 3
+    ) {
+      console.log(`[${processed}/${listings.length}] ${listing.name} — enriching from Google Photos...`);
+      try {
+        const enrichResult = await enrichListingWithGooglePhotos(
+          supabase,
+          {
+            id: listing.id,
+            photos: listing.photos as string[] | null,
+            hero_image: listing.hero_image as string | null,
+            blocked_photos: listing.blocked_photos as string[] | null,
+            google_place_id: listing.google_place_id as string,
+          },
+          anthropicKey,
+          googleApiKey,
+        );
+        googlePhotosAdded = enrichResult.photosAdded;
+        googlePhotosScreened = enrichResult.photosScreened;
+        totalGooglePhotosAdded += googlePhotosAdded;
+        totalGooglePhotosScreened += googlePhotosScreened;
+
+        // Update our in-memory copy of the listing so the audit sees new photos
+        if (enrichResult.photosAdded > 0) {
+          (listing as Record<string, unknown>).photos = enrichResult.updatedPhotos;
+        }
+        if (enrichResult.updatedHero) {
+          (listing as Record<string, unknown>).hero_image = enrichResult.updatedHero;
+        }
+
+        console.log(`  → Added ${googlePhotosAdded} photos (screened ${googlePhotosScreened})`);
+      } catch (err) {
+        console.error(`  → Enrichment error: ${(err as Error).message}`);
+      }
+    }
+
+    // ---- STEP 2: Collect all photos for Sonnet audit ----
     const photoUrls: string[] = [];
     const blockedSet = new Set((listing.blocked_photos as string[]) ?? []);
 
@@ -292,17 +623,17 @@ Deno.serve(async (req) => {
     const gallery = ((listing.photos as string[]) ?? []).filter(
       (p: string) => p && !photoUrls.includes(p) && !blockedSet.has(p)
     );
-    photoUrls.push(...gallery.slice(0, 8)); // Cap gallery at 8
+    photoUrls.push(...gallery.slice(0, 8));
 
     if (listing.google_photo_url && !photoUrls.includes(listing.google_photo_url as string)) {
       photoUrls.push(listing.google_photo_url as string);
     }
 
-    // Cap total at 12 photos
     const photosToAudit = photoUrls.slice(0, 12);
 
     if (photosToAudit.length === 0) continue;
 
+    // ---- STEP 3: Run Sonnet audit ----
     const result = await auditListing(photosToAudit, listing.name, anthropicKey);
 
     if (!result) {
@@ -312,7 +643,7 @@ Deno.serve(async (req) => {
 
     // Normalize equipment brand
     let normalizedBrand: string | null = null;
-    let model = result.equipment.model;
+    const model = result.equipment.model;
     if (result.equipment.brand) {
       normalizedBrand = normalizeBrand(result.equipment.brand);
       if (!normalizedBrand) normalizedBrand = result.equipment.brand.toLowerCase().replace(/\s+/g, '_');
@@ -346,13 +677,14 @@ Deno.serve(async (req) => {
         raw_response: result,
         reviewed: false,
         applied: false,
+        google_photos_added: googlePhotosAdded,
+        google_photos_screened: googlePhotosScreened,
       });
     }
 
     // AUTO-APPLY: High confidence equipment
     let didAutoApply = false;
     if (!dryRun && normalizedBrand && result.equipment.confidence === 'high') {
-      // Only auto-apply if brand is in known BRAND_MAP
       const isKnownBrand = Object.values(BRAND_MAP).includes(normalizedBrand);
       if (isKnownBrand) {
         await supabase
@@ -372,16 +704,13 @@ Deno.serve(async (req) => {
 
     // AUTO-APPLY: Replace poor hero with better photo
     if (!dryRun && result.hero_assessment?.current_hero_quality === 'poor' && suggestedHeroUrl) {
-      // Replace hero image
       const oldHero = listing.hero_image as string;
       const currentPhotos = (listing.photos as string[]) ?? [];
 
-      // Add old hero to gallery if not already there
       const newPhotos = [...currentPhotos];
       if (oldHero && !newPhotos.includes(oldHero)) {
         newPhotos.unshift(oldHero);
       }
-      // Remove new hero from gallery (it's becoming the hero)
       const filteredPhotos = newPhotos.filter(p => p !== suggestedHeroUrl);
 
       await supabase
@@ -403,9 +732,7 @@ Deno.serve(async (req) => {
       const currentBlocked = (listing.blocked_photos as string[]) ?? [];
       const removeSet = new Set(removeUrls);
 
-      // Don't remove the current hero
       removeSet.delete(listing.hero_image as string);
-      // Don't remove the suggested hero
       if (suggestedHeroUrl) removeSet.delete(suggestedHeroUrl);
 
       if (removeSet.size > 0) {
@@ -445,10 +772,12 @@ Deno.serve(async (req) => {
       suggested_hero: suggestedHeroUrl,
       photos_to_remove: removeUrls.length,
       auto_applied: didAutoApply,
+      google_photos_added: googlePhotosAdded,
+      google_photos_screened: googlePhotosScreened,
     });
 
     if (processed % 10 === 0) {
-      console.log(`Progress: ${processed}/${listings.length} | equipment: ${equipmentDetected} | heroes replaced: ${heroReplaced} | photos removed: ${photosRemoved}`);
+      console.log(`Progress: ${processed}/${listings.length} | equipment: ${equipmentDetected} | heroes replaced: ${heroReplaced} | photos removed: ${photosRemoved} | google added: ${totalGooglePhotosAdded}`);
     }
 
     // Rate limit delay
@@ -461,11 +790,13 @@ Deno.serve(async (req) => {
     heroes_replaced: heroReplaced,
     photos_removed: photosRemoved,
     auto_applied: autoApplied,
+    google_photos_added: totalGooglePhotosAdded,
+    google_photos_screened: totalGooglePhotosScreened,
     dry_run: dryRun,
-    results: results.slice(0, 100), // Cap response size
+    results: results.slice(0, 100),
   };
 
-  console.log(`Done! ${processed} listings | ${equipmentDetected} equipment | ${heroReplaced} heroes | ${photosRemoved} photos removed | ${autoApplied} auto-applied`);
+  console.log(`Done! ${processed} listings | ${equipmentDetected} equipment | ${heroReplaced} heroes | ${photosRemoved} photos removed | ${autoApplied} auto-applied | ${totalGooglePhotosAdded} google photos added`);
 
   return Response.json(summary, { headers: corsHeaders });
 });
