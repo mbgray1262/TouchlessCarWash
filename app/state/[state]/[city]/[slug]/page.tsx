@@ -318,16 +318,11 @@ const WASH_TYPE_LABELS: Record<string, { label: string; color: string }> = {
   touchless_automatic: { label: 'Touchless Automatic', color: 'bg-blue-100 text-blue-800 border-blue-200' },
 };
 
-const BRAND_LABELS: Record<string, string> = {
-  laserwash: 'LaserWash',
-  pdq: 'PDQ',
-  washworld: 'WashWorld',
-  belanger: 'Belanger',
-  istobal: 'Istobal',
-  ryko: 'Ryko',
-  petit: 'Petit',
-  ds: 'D&S',
-};
+// Brand labels imported from centralized equipment data
+import { getBrandLabel, getBrandBySlug, slugifyModel } from '@/lib/equipment-data';
+const BRAND_LABELS: Record<string, string> = new Proxy({} as Record<string, string>, {
+  get: (_target, prop: string) => getBrandLabel(prop),
+});
 
 function buildLocalBusinessSchema(listing: Listing, canonicalUrl: string, hours: Record<string, string> | null, reviewSnippets: ReviewSnippet[] = [], rankings: BestOfRanking[] = []): object {
   const hoursSpec = hours
@@ -1067,14 +1062,22 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                     </div>
                   )}
                   {listing.equipment_brand && (() => {
-                    const brandLabel = BRAND_LABELS[listing.equipment_brand] || listing.equipment_brand;
+                    const brandLabel = getBrandLabel(listing.equipment_brand);
                     const displayText = listing.equipment_model
                       ? `${brandLabel} · ${listing.equipment_model}`
                       : brandLabel;
+                    const brandData = getBrandBySlug(listing.equipment_brand);
+                    const equipmentUrl = listing.equipment_model && brandData
+                      ? `/equipment/${listing.equipment_brand}/${slugifyModel(listing.equipment_model)}`
+                      : brandData ? `/equipment/${listing.equipment_brand}` : null;
                     return (
                       <div className="text-sm text-gray-700">
                         <span className="font-medium">Equipment: </span>
-                        {displayText}
+                        {equipmentUrl ? (
+                          <Link href={equipmentUrl} className="text-blue-600 hover:underline">
+                            {displayText}
+                          </Link>
+                        ) : displayText}
                       </div>
                     );
                   })()}

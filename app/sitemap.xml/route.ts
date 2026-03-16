@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import { US_STATES, getStateSlug, slugify } from '@/lib/constants';
 import { METRO_AREAS, boundingBox, haversineDistance } from '@/lib/metro-areas';
 import { FEATURES } from '@/lib/features';
+import { EQUIPMENT_BRAND_DATA, EQUIPMENT_MODEL_DATA } from '@/lib/equipment-data';
 
 const VALID_STATE_CODES = new Set(US_STATES.map(s => s.code));
 
@@ -156,6 +157,66 @@ export async function GET() {
     }
   }
 
+  // Equipment pages — index, brand pages, and model pages
+  const equipmentUrls: string[] = [];
+  equipmentUrls.push(`  <url>
+    <loc>${baseUrl}/equipment</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`);
+
+  // Get equipment brand counts to only include brands with listings
+  const { data: brandCounts } = await supabase
+    .from('listings')
+    .select('equipment_brand')
+    .eq('is_touchless', true)
+    .not('equipment_brand', 'is', null);
+
+  const brandCountMap = new Map<string, number>();
+  for (const row of brandCounts || []) {
+    brandCountMap.set(row.equipment_brand, (brandCountMap.get(row.equipment_brand) ?? 0) + 1);
+  }
+
+  for (const brand of EQUIPMENT_BRAND_DATA) {
+    if ((brandCountMap.get(brand.slug) ?? 0) >= 2) {
+      equipmentUrls.push(`  <url>
+    <loc>${baseUrl}/equipment/${brand.slug}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`);
+    }
+  }
+
+  // Get model counts
+  const { data: modelCounts } = await supabase
+    .from('listings')
+    .select('equipment_brand, equipment_model')
+    .eq('is_touchless', true)
+    .not('equipment_brand', 'is', null)
+    .not('equipment_model', 'is', null);
+
+  const modelCountMap = new Map<string, number>();
+  for (const row of modelCounts || []) {
+    const key = `${row.equipment_brand}||${row.equipment_model}`;
+    modelCountMap.set(key, (modelCountMap.get(key) ?? 0) + 1);
+  }
+
+  for (const model of EQUIPMENT_MODEL_DATA) {
+    const brand = EQUIPMENT_BRAND_DATA.find(b => b.slug === model.brandSlug);
+    if (!brand) continue;
+    const key = `${model.brandSlug}||${model.name}`;
+    if ((modelCountMap.get(key) ?? 0) >= 2) {
+      equipmentUrls.push(`  <url>
+    <loc>${baseUrl}/equipment/${model.brandSlug}/${model.slug}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`);
+    }
+  }
+
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
@@ -216,6 +277,7 @@ ${bestOfUrls.join('\n')}
 ${featureIndexUrl}
 ${featureHubUrls.join('\n')}
 ${featureStateUrls.join('\n')}
+${equipmentUrls.join('\n')}
 ${stateUrls.join('\n')}
 ${cityUrls.join('\n')}
 ${listingUrls.join('\n')}
