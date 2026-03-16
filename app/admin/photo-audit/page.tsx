@@ -21,9 +21,31 @@ function Badge({ text, className }: { text: string; className: string }) {
   return <span className={`text-xs px-2 py-0.5 rounded font-medium ${className}`}>{text}</span>;
 }
 
-function PhotoThumb({ url, size = 80 }: { url: string; size?: number }) {
+function PhotoModal({ url, onClose }: { url: string; onClose: () => void }) {
   return (
-    <div className="relative shrink-0 rounded overflow-hidden bg-gray-100" style={{ width: size, height: size }}>
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-8" onClick={onClose}>
+      <div className="relative max-w-4xl max-h-[85vh] w-full" onClick={e => e.stopPropagation()}>
+        <button
+          onClick={onClose}
+          className="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors"
+        >
+          <X className="w-6 h-6" />
+        </button>
+        <div className="relative w-full h-[75vh] rounded-lg overflow-hidden bg-gray-900">
+          <Image src={url} alt="" fill className="object-contain" sizes="(max-width: 1024px) 100vw, 900px" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PhotoThumb({ url, size = 80, onClick }: { url: string; size?: number; onClick?: () => void }) {
+  return (
+    <div
+      className={`relative shrink-0 rounded overflow-hidden bg-gray-100 ${onClick ? 'cursor-pointer hover:ring-2 hover:ring-orange-400 transition-shadow' : ''}`}
+      style={{ width: size, height: size }}
+      onClick={onClick}
+    >
       <Image src={url} alt="" fill className="object-cover" sizes={`${size}px`} />
     </div>
   );
@@ -36,12 +58,14 @@ function EquipmentRow({ result, onApply, onReject, onUndo }: {
   onUndo: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [modalUrl, setModalUrl] = useState<string | null>(null);
 
   return (
     <div className="border-b border-gray-100 last:border-0">
+      {modalUrl && <PhotoModal url={modalUrl} onClose={() => setModalUrl(null)} />}
       <div className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50">
         {result.equipment_source_photo && (
-          <PhotoThumb url={result.equipment_source_photo} />
+          <PhotoThumb url={result.equipment_source_photo} onClick={() => setModalUrl(result.equipment_source_photo!)} />
         )}
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-gray-800 truncate">{result.listing_name}</p>
@@ -95,12 +119,15 @@ function EquipmentRow({ result, onApply, onReject, onUndo }: {
 }
 
 function HeroRow({ result }: { result: AuditResult }) {
+  const [modalUrl, setModalUrl] = useState<string | null>(null);
+
   return (
     <div className="flex items-center gap-4 px-4 py-3 border-b border-gray-100 last:border-0 hover:bg-gray-50">
+      {modalUrl && <PhotoModal url={modalUrl} onClose={() => setModalUrl(null)} />}
       <div className="flex items-center gap-2">
-        {result.listing_hero && <PhotoThumb url={result.listing_hero} />}
+        {result.listing_hero && <PhotoThumb url={result.listing_hero} onClick={() => setModalUrl(result.listing_hero!)} />}
         <span className="text-gray-400 text-sm">→</span>
-        {result.suggested_hero_url && <PhotoThumb url={result.suggested_hero_url} />}
+        {result.suggested_hero_url && <PhotoThumb url={result.suggested_hero_url} onClick={() => setModalUrl(result.suggested_hero_url!)} />}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-gray-800 truncate">{result.listing_name}</p>
@@ -118,8 +145,11 @@ function HeroRow({ result }: { result: AuditResult }) {
 }
 
 function CleanupRow({ result }: { result: AuditResult }) {
+  const [modalUrl, setModalUrl] = useState<string | null>(null);
+
   return (
     <div className="px-4 py-3 border-b border-gray-100 last:border-0 hover:bg-gray-50">
+      {modalUrl && <PhotoModal url={modalUrl} onClose={() => setModalUrl(null)} />}
       <div className="flex items-center gap-3 mb-2">
         <p className="text-sm font-medium text-gray-800 truncate flex-1">{result.listing_name}</p>
         <Badge text={`${result.photos_to_remove.length} flagged`} className="bg-red-100 text-red-700" />
@@ -127,7 +157,7 @@ function CleanupRow({ result }: { result: AuditResult }) {
       </div>
       <div className="flex gap-2 flex-wrap">
         {result.photos_to_remove.slice(0, 6).map((url, i) => (
-          <PhotoThumb key={i} url={url} size={60} />
+          <PhotoThumb key={i} url={url} size={60} onClick={() => setModalUrl(url)} />
         ))}
         {result.photos_to_remove.length > 6 && (
           <div className="w-[60px] h-[60px] flex items-center justify-center bg-gray-100 rounded text-xs text-gray-500">
