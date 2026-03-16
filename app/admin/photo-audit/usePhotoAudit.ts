@@ -144,38 +144,75 @@ export function usePhotoAudit() {
   const runBatch = useCallback(async (limit: number, dryRun: boolean, includeGoogle: boolean) => {
     setRunning(true);
     const googleLabel = includeGoogle ? ' + Google Photos' : '';
-    setRunProgress(`Starting batch (${limit} listings${googleLabel}, ${dryRun ? 'DRY RUN' : 'LIVE'})...`);
+    const CHUNK_SIZE = includeGoogle ? 20 : 50; // Smaller chunks when fetching Google Photos
+    const totalChunks = Math.ceil(limit / CHUNK_SIZE);
+    const isMultiChunk = totalChunks > 1;
+
+    let totalProcessed = 0;
+    let totalEquipment = 0;
+    let totalHeroes = 0;
+    let totalPhotosRemoved = 0;
+    let totalAutoApplied = 0;
+    let totalGoogleAdded = 0;
+    let totalGoogleScreened = 0;
+    let chunkNum = 0;
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/batch-photo-audit`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ limit, dry_run: dryRun, include_google_photos: includeGoogle }),
-      });
+      while (totalProcessed < limit) {
+        chunkNum++;
+        const remaining = limit - totalProcessed;
+        const chunkLimit = Math.min(CHUNK_SIZE, remaining);
 
-      const data = await res.json();
+        if (isMultiChunk) {
+          setRunProgress(`Processing chunk ${chunkNum}/${totalChunks} (${totalProcessed} done so far)...`);
+        } else {
+          setRunProgress(`Starting batch (${limit} listings${googleLabel}, ${dryRun ? 'DRY RUN' : 'LIVE'})...`);
+        }
 
-      if (data.error) {
-        setRunProgress(`Error: ${data.error}`);
-      } else {
-        const googleMsg = data.google_photos_added > 0
-          ? ` Google photos added: ${data.google_photos_added} (screened ${data.google_photos_screened}).`
-          : '';
-        setRunProgress(
-          `Done! Processed ${data.listings_processed} listings. ` +
-          `Equipment: ${data.equipment_detected}. Heroes replaced: ${data.heroes_replaced}. ` +
-          `Photos removed: ${data.photos_removed}. Auto-applied: ${data.auto_applied}.${googleMsg}`
-        );
-        await loadResults();
+        const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/batch-photo-audit`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ limit: chunkLimit, dry_run: dryRun, include_google_photos: includeGoogle }),
+        });
+
+        const data = await res.json();
+
+        if (data.error) {
+          setRunProgress(`Error on chunk ${chunkNum}: ${data.error} (${totalProcessed} processed so far)`);
+          break;
+        }
+
+        totalProcessed += data.listings_processed ?? 0;
+        totalEquipment += data.equipment_detected ?? 0;
+        totalHeroes += data.heroes_replaced ?? 0;
+        totalPhotosRemoved += data.photos_removed ?? 0;
+        totalAutoApplied += data.auto_applied ?? 0;
+        totalGoogleAdded += data.google_photos_added ?? 0;
+        totalGoogleScreened += data.google_photos_screened ?? 0;
+
+        // If the function processed fewer than requested, we've run out of listings
+        if ((data.listings_processed ?? 0) < chunkLimit) {
+          break;
+        }
       }
+
+      const googleMsg = totalGoogleAdded > 0
+        ? ` Google photos added: ${totalGoogleAdded} (screened ${totalGoogleScreened}).`
+        : '';
+      setRunProgress(
+        `Done! Processed ${totalProcessed} listings${isMultiChunk ? ` in ${chunkNum} chunks` : ''}. ` +
+        `Equipment: ${totalEquipment}. Heroes replaced: ${totalHeroes}. ` +
+        `Photos removed: ${totalPhotosRemoved}. Auto-applied: ${totalAutoApplied}.${googleMsg}`
+      );
+      await loadResults();
     } catch (err) {
-      setRunProgress(`Error: ${(err as Error).message}`);
+      setRunProgress(`Error: ${(err as Error).message} (${totalProcessed} processed before error)`);
     } finally {
       setRunning(false);
     }
