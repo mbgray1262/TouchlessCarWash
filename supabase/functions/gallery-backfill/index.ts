@@ -47,7 +47,7 @@ async function classifyPhotoWithClaude(
   imageUrl: string,
   apiKey: string,
   approvedUrls: string[] = [],
-): Promise<{ verdict: 'GOOD' | 'BAD_CONTACT' | 'BAD_OTHER'; reason: string }> {
+): Promise<{ verdict: 'GOOD_EQUIPMENT' | 'GOOD' | 'BAD_CONTACT' | 'BAD_OTHER'; reason: string }> {
   const img = await fetchImageAsBase64(imageUrl);
   if (!img) return { verdict: 'BAD_OTHER', reason: 'Could not fetch image' };
 
@@ -59,13 +59,19 @@ async function classifyPhotoWithClaude(
     ? '\nAlso reject this photo (as BAD_OTHER) if it shows essentially the same view as any of the already-approved photos shown above — we want visual variety, not multiple shots of the same angle.'
     : '';
 
-  const prompt = `You are selecting photos for a car wash directory listing. Be GENEROUS — having some photos is much better than having none.
+  const prompt = `You are selecting photos for a TOUCHLESS car wash directory listing. Be GENEROUS — having some photos is much better than having none.
+
+GOOD_EQUIPMENT — Use this verdict (highest priority!) if you can see touchless car wash equipment:
+- Overhead wash gantries, arches, or spray arms (PDQ LaserWash, WashWorld Razor, Belanger, Ryko, etc.)
+- Visible manufacturer branding/logos on equipment (NOT the business sign)
+- A car inside a touchless wash bay with nozzles/spray arches visible
+- Close-up of touchless wash equipment showing identifiable features
+This is the MOST VALUABLE type of photo for our directory.
 
 GOOD — Accept if ANY of these are true:
 - A car wash building, bay, tunnel, canopy, or sign is visible anywhere in the photo (it does NOT need to be the main subject)
 - The photo is taken from a road or parking lot but you can see a car wash business in the scene
 - A car is entering, inside, or exiting a wash bay
-- Car wash equipment (touchless nozzles, spray arches, dryers) is visible
 - A car wash sign, menu board, or price sign is shown
 - The photo shows the exterior of a business that is clearly a car wash
 When in doubt, lean toward GOOD. A mediocre photo of the right place is better than no photo.
@@ -125,6 +131,7 @@ Reply with ONLY: VERDICT: one-sentence reason`;
     const text = (data.content?.[0]?.text ?? '').trim();
     const clean = text.replace(/^VERDICT:\s*/i, '').trim();
 
+    if (clean.startsWith('GOOD_EQUIPMENT')) return { verdict: 'GOOD_EQUIPMENT', reason: clean.replace(/^GOOD_EQUIPMENT[:\s-]*/i, '').trim() };
     if (clean.startsWith('GOOD')) return { verdict: 'GOOD', reason: clean.replace(/^GOOD[:\s-]*/i, '').trim() };
     if (clean.startsWith('BAD_CONTACT')) return { verdict: 'BAD_CONTACT', reason: clean.replace(/^BAD_CONTACT[:\s-]*/i, '').trim() };
     return { verdict: 'BAD_OTHER', reason: clean.replace(/^BAD_OTHER[:\s-]*/i, '').trim() };
@@ -411,16 +418,22 @@ Deno.serve(async (req: Request) => {
             if (placePhotoUrls.length === 0) {
               fallbackReason = 'Google Places API returned no photos';
             } else {
-              const newApproved: string[] = [];
+              const newApprovedEquipment: string[] = [];
+              const newApprovedOther: string[] = [];
               for (const url of placePhotoUrls) {
-                if (currentPhotos.length + newApproved.length >= MAX_GALLERY_PHOTOS) break;
+                if (currentPhotos.length + newApprovedEquipment.length + newApprovedOther.length >= MAX_GALLERY_PHOTOS) break;
                 placePhotosScreened++;
                 try {
-                  const result = await classifyPhotoWithClaude(url, anthropicKey, [...currentPhotos, ...newApproved]);
-                  if (result.verdict === 'GOOD') {
-                    const slot = `gallery_bp_${currentPhotos.length + newApproved.length}_${Date.now()}`;
+                  const result = await classifyPhotoWithClaude(url, anthropicKey, [...currentPhotos, ...newApprovedEquipment, ...newApprovedOther]);
+                  if (result.verdict === 'GOOD_EQUIPMENT' || result.verdict === 'GOOD') {
+                    const slot = `gallery_bp_${currentPhotos.length + newApprovedEquipment.length + newApprovedOther.length}_${Date.now()}`;
                     const rehosted = await rehostToStorage(supabase, url, task.listing_id as string, slot);
-                    newApproved.push(rehosted ?? url);
+                    const finalUrl = rehosted ?? url;
+                    if (result.verdict === 'GOOD_EQUIPMENT') {
+                      newApprovedEquipment.push(finalUrl);
+                    } else {
+                      newApprovedOther.push(finalUrl);
+                    }
                     placePhotosApproved++;
                   }
                 } catch {
@@ -428,13 +441,17 @@ Deno.serve(async (req: Request) => {
                 }
               }
 
+              // Equipment photos go first so they're prioritized as hero candidates
+              const newApproved = [...newApprovedEquipment, ...newApprovedOther];
+
               if (newApproved.length > 0) {
-                const updatedPhotos = [...currentPhotos, ...newApproved];
+                // Put equipment photos at the front of the gallery
+                const updatedPhotos = [...newApprovedEquipment, ...currentPhotos, ...newApprovedOther];
                 const updatePayload: Record<string, unknown> = { photos: updatedPhotos };
 
-                // Also upgrade hero image if it's missing or Street View
+                // Prefer equipment photo as hero, otherwise use first new photo
                 if (heroNeedsUpgrade) {
-                  updatePayload.hero_image = newApproved[0];
+                  updatePayload.hero_image = newApprovedEquipment.length > 0 ? newApprovedEquipment[0] : newApproved[0];
                 }
 
                 await supabase.from('listings').update(updatePayload).eq('id', task.listing_id);
@@ -465,7 +482,7 @@ Deno.serve(async (req: Request) => {
           updated_at: new Date().toISOString(),
         }).eq('id', task.id);
 
-        return { succeeded: placePhotosApproved > 0 };
+        return { succeeded: placePhotosApproved > 0, equipmentPhotos: newApprovedEquipment?.length ?? 0 };
       }
 
       const results = await Promise.all(batchTasks.map(processOneTask));

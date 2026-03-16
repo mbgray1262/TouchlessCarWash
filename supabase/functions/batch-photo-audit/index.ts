@@ -88,6 +88,7 @@ Photo at index 0 is the current hero image. Rate it:
 - "poor": Does NOT show the car wash well (logo/graphic, close-up of car, blurry, wrong business, self-serve wand bay, clip art)
 
 If the hero is poor, identify which other photo (if any) would make a better hero.
+HERO PREFERENCE ORDER: (1) A clear photo showing identifiable touchless equipment is the BEST hero — it serves double duty as both an attractive hero AND equipment identification. (2) A clear daytime exterior shot of the car wash facility. (3) Any other clear photo of the business.
 
 ## TASK 3: Photo Quality Assessment
 For EACH photo, determine if it should be kept or removed:
