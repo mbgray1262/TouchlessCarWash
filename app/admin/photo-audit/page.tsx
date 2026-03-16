@@ -2,9 +2,8 @@
 
 import { useState } from 'react';
 import { usePhotoAudit, AuditResult } from './usePhotoAudit';
-import { Camera, Wrench, Trash2, Play, Loader2, Check, X, Undo2, ChevronDown, ChevronUp, ExternalLink, Eye, Filter } from 'lucide-react';
+import { Camera, Wrench, Trash2, Play, Loader2, Check, X, Undo2, ChevronDown, ChevronUp, ExternalLink, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { getStateSlug, slugify } from '@/lib/constants';
 
 const CONFIDENCE_COLORS: Record<string, string> = {
@@ -259,7 +258,9 @@ function CleanupRow({ result }: { result: AuditResult }) {
   );
 }
 
-type EquipmentFilter = 'all' | 'detected' | 'none' | 'pending';
+const PAGE_SIZE = 25;
+
+type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup';
 
 export default function PhotoAuditPage() {
   const {
@@ -269,27 +270,38 @@ export default function PhotoAuditPage() {
   } = usePhotoAudit();
 
   const [batchLimit, setBatchLimit] = useState(10);
-  const [equipFilter, setEquipFilter] = useState<EquipmentFilter>('all');
+  const [viewFilter, setViewFilter] = useState<ViewFilter>('all');
+  const [page, setPage] = useState(1);
 
-  // Filter results by tab
-  const allResults = results;
+  // Derived lists
   const equipmentDetected = results.filter(r => r.equipment_brand);
-  const equipmentNone = results.filter(r => !r.equipment_brand);
-  const heroResults = results.filter(r => r.hero_quality === 'poor' && r.suggested_hero_url);
-  const cleanupResults = results.filter(r => r.photos_to_remove.length > 0);
-
   const pendingEquipment = equipmentDetected.filter(r => !r.applied && !r.reviewed);
-  const appliedEquipment = equipmentDetected.filter(r => r.applied);
+  const poorHeroes = results.filter(r => r.hero_quality === 'poor' && r.suggested_hero_url && !r.applied);
+  const cleanupResults = results.filter(r => r.photos_to_remove.length > 0);
+  const needsReview = [...pendingEquipment, ...poorHeroes.filter(r => !pendingEquipment.some(p => p.id === r.id))];
 
-  // Equipment tab filtering
-  const filteredEquipmentResults = (() => {
-    switch (equipFilter) {
-      case 'detected': return equipmentDetected;
-      case 'none': return equipmentNone;
-      case 'pending': return pendingEquipment;
-      default: return allResults;
+  // Filtered results
+  const filteredResults = (() => {
+    switch (viewFilter) {
+      case 'review': return needsReview;
+      case 'equipment': return equipmentDetected;
+      case 'heroes': return results.filter(r => r.hero_quality === 'poor' && r.suggested_hero_url);
+      case 'cleanup': return cleanupResults;
+      default: return results;
     }
   })();
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filteredResults.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paginatedResults = filteredResults.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  // Reset page when filter changes
+  const setFilterAndReset = (f: ViewFilter) => { setViewFilter(f); setPage(1); };
+
+  // Progress percentage
+  const totalListings = queueStats.totalUntagged + queueStats.alreadyAudited;
+  const progressPct = totalListings > 0 ? Math.max(1, (queueStats.alreadyAudited / totalListings) * 100) : 0;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -298,37 +310,29 @@ export default function PhotoAuditPage() {
         AI-powered batch processing for equipment classification, hero image quality, and photo cleanup.
       </p>
 
-      {/* Pipeline progress */}
-      {queueStats.totalUntagged > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-medium text-gray-700">Pipeline Progress</p>
-            <p className="text-sm text-gray-500">
-              <span className="font-semibold text-gray-900">{queueStats.alreadyAudited}</span>
-              {' / '}
-              <span className="font-semibold text-gray-900">{queueStats.totalUntagged + queueStats.alreadyAudited}</span>
-              {' listings processed'}
-              <span className="text-gray-400 ml-2">
-                ({queueStats.remaining.toLocaleString()} remaining)
-              </span>
-            </p>
+      {/* Progress + Run controls combined */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6 space-y-4">
+        {/* Progress bar */}
+        {totalListings > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-sm font-medium text-gray-700">
+                {queueStats.alreadyAudited.toLocaleString()} / {totalListings.toLocaleString()} audited
+              </p>
+              <p className="text-sm text-gray-500">
+                {queueStats.remaining.toLocaleString()} remaining
+              </p>
+            </div>
+            <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-orange-400 to-orange-500 h-2.5 rounded-full transition-all duration-500"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
           </div>
-          <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-            <div
-              className="bg-gradient-to-r from-orange-400 to-orange-500 h-3 rounded-full transition-all duration-500"
-              style={{
-                width: `${Math.max(1, (queueStats.alreadyAudited / (queueStats.totalUntagged + queueStats.alreadyAudited)) * 100)}%`,
-              }}
-            />
-          </div>
-          <p className="text-xs text-gray-400 mt-1.5">
-            Touchless listings with images
-          </p>
-        </div>
-      )}
+        )}
 
-      {/* Run controls */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+        {/* Run controls */}
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium text-gray-700">Batch size:</label>
@@ -369,140 +373,120 @@ export default function PhotoAuditPage() {
           </button>
         </div>
         {runProgress && (
-          <p className="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded">{runProgress}</p>
+          <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded">{runProgress}</p>
         )}
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <div className="bg-white rounded-lg border border-gray-200 p-4 text-center">
-          <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-          <p className="text-xs text-gray-500">Total audited</p>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4 text-center">
-          <p className="text-2xl font-bold text-green-600">{equipmentDetected.length}</p>
-          <p className="text-xs text-gray-500">Equipment found</p>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4 text-center">
-          <p className="text-2xl font-bold text-amber-600">{pendingEquipment.length}</p>
-          <p className="text-xs text-gray-500">Need review</p>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4 text-center">
-          <p className="text-2xl font-bold text-red-500">{cleanupResults.length}</p>
-          <p className="text-xs text-gray-500">Photos cleaned</p>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1">
-        <button
-          onClick={() => setTab('equipment')}
-          className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            tab === 'equipment' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <Wrench className="w-4 h-4" /> All Results ({allResults.length})
-        </button>
-        <button
-          onClick={() => setTab('heroes')}
-          className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            tab === 'heroes' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <Camera className="w-4 h-4" /> Heroes ({heroResults.length})
-        </button>
-        <button
-          onClick={() => setTab('cleanup')}
-          className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            tab === 'cleanup' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <Trash2 className="w-4 h-4" /> Cleanup ({cleanupResults.length})
-        </button>
-      </div>
-
-      {/* Content */}
+      {/* Single filter bar */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="px-4 py-3 bg-gray-50 border-b flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-1.5">
+            <Filter className="w-3.5 h-3.5 text-gray-400" />
+            {([
+              { key: 'all', label: `All (${results.length})` },
+              { key: 'review', label: `Need Review (${needsReview.length})` },
+              { key: 'equipment', label: `Equipment (${equipmentDetected.length})` },
+              { key: 'heroes', label: `Poor Heroes (${poorHeroes.length})` },
+              { key: 'cleanup', label: `Cleanup (${cleanupResults.length})` },
+            ] as { key: ViewFilter; label: string }[]).map(f => (
+              <button
+                key={f.key}
+                onClick={() => setFilterAndReset(f.key)}
+                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                  viewFilter === f.key
+                    ? f.key === 'review' && needsReview.length > 0
+                      ? 'bg-amber-500 text-white shadow-sm'
+                      : 'bg-white text-gray-900 shadow-sm'
+                    : f.key === 'review' && needsReview.length > 0
+                      ? 'text-amber-600 font-semibold'
+                      : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+          {pendingEquipment.length > 0 && (
+            <button
+              onClick={applyAllHighConfidence}
+              className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded hover:bg-green-700"
+            >
+              <Check className="w-3 h-3" /> Apply All High Confidence
+            </button>
+          )}
+        </div>
+
+        {/* Results */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
           </div>
+        ) : filteredResults.length === 0 ? (
+          <p className="px-4 py-12 text-center text-sm text-gray-500">
+            {results.length === 0 ? 'No audit results yet. Run a batch to get started.' : 'No results match this filter.'}
+          </p>
         ) : (
           <>
-            {/* Equipment / All Results tab */}
-            {tab === 'equipment' && (
-              <>
-                {/* Filter bar */}
-                <div className="px-4 py-3 bg-gray-50 border-b flex items-center justify-between flex-wrap gap-2">
-                  <div className="flex items-center gap-1.5">
-                    <Filter className="w-3.5 h-3.5 text-gray-400" />
-                    {(['all', 'detected', 'none', 'pending'] as EquipmentFilter[]).map(f => (
+            {(viewFilter === 'heroes' ? paginatedResults.map(r => <HeroRow key={r.id} result={r} />) :
+              viewFilter === 'cleanup' ? paginatedResults.map(r => <CleanupRow key={r.id} result={r} />) :
+              paginatedResults.map(r => (
+                <EquipmentRow
+                  key={r.id}
+                  result={r}
+                  onApply={() => applyEquipment(r.id, r.listing_id, r.equipment_brand!, r.equipment_model)}
+                  onReject={() => rejectResult(r.id)}
+                  onUndo={() => undoApply(r.id, r.listing_id)}
+                />
+              ))
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+                <p className="text-xs text-gray-500">
+                  Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filteredResults.length)} of {filteredResults.length}
+                </p>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={safePage <= 1}
+                    className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                    // Show pages around current page
+                    let pageNum: number;
+                    if (totalPages <= 7) {
+                      pageNum = i + 1;
+                    } else if (safePage <= 4) {
+                      pageNum = i + 1;
+                    } else if (safePage >= totalPages - 3) {
+                      pageNum = totalPages - 6 + i;
+                    } else {
+                      pageNum = safePage - 3 + i;
+                    }
+                    return (
                       <button
-                        key={f}
-                        onClick={() => setEquipFilter(f)}
-                        className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-                          equipFilter === f
-                            ? 'bg-white text-gray-900 shadow-sm'
-                            : 'text-gray-500 hover:text-gray-700'
+                        key={pageNum}
+                        onClick={() => setPage(pageNum)}
+                        className={`w-8 h-8 rounded text-xs font-medium ${
+                          pageNum === safePage ? 'bg-orange-500 text-white' : 'text-gray-600 hover:bg-gray-100'
                         }`}
                       >
-                        {f === 'all' && `All (${allResults.length})`}
-                        {f === 'detected' && `Equipment (${equipmentDetected.length})`}
-                        {f === 'none' && `No match (${equipmentNone.length})`}
-                        {f === 'pending' && `Pending (${pendingEquipment.length})`}
+                        {pageNum}
                       </button>
-                    ))}
-                  </div>
-                  {pendingEquipment.length > 0 && (
-                    <button
-                      onClick={applyAllHighConfidence}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded hover:bg-green-700"
-                    >
-                      <Check className="w-3 h-3" /> Apply All High Confidence
-                    </button>
-                  )}
+                    );
+                  })}
+                  <button
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={safePage >= totalPages}
+                    className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
                 </div>
-
-                {filteredEquipmentResults.length === 0 ? (
-                  <p className="px-4 py-12 text-center text-sm text-gray-500">
-                    {allResults.length === 0
-                      ? 'No audit results yet. Run a batch to get started.'
-                      : 'No results match this filter.'}
-                  </p>
-                ) : (
-                  filteredEquipmentResults.map(r => (
-                    <EquipmentRow
-                      key={r.id}
-                      result={r}
-                      onApply={() => applyEquipment(r.id, r.listing_id, r.equipment_brand!, r.equipment_model)}
-                      onReject={() => rejectResult(r.id)}
-                      onUndo={() => undoApply(r.id, r.listing_id)}
-                    />
-                  ))
-                )}
-              </>
-            )}
-
-            {/* Heroes tab */}
-            {tab === 'heroes' && (
-              heroResults.length === 0 ? (
-                <p className="px-4 py-12 text-center text-sm text-gray-500">
-                  No hero replacements suggested yet.
-                </p>
-              ) : (
-                heroResults.map(r => <HeroRow key={r.id} result={r} />)
-              )
-            )}
-
-            {/* Cleanup tab */}
-            {tab === 'cleanup' && (
-              cleanupResults.length === 0 ? (
-                <p className="px-4 py-12 text-center text-sm text-gray-500">
-                  No photos flagged for removal yet.
-                </p>
-              ) : (
-                cleanupResults.map(r => <CleanupRow key={r.id} result={r} />)
-              )
+              </div>
             )}
           </>
         )}
