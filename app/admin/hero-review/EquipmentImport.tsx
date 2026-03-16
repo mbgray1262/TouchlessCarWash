@@ -150,20 +150,31 @@ export function EquipmentImport({ onComplete, getModelsForBrand, customBrands }:
       return `  - ${b.label}`;
     }).join('\n');
 
-    return `IMPORTANT: This page has many listing cards. You MUST scroll down through the ENTIRE page to see all cards before responding. Do not stop at the first visible set — keep scrolling until you reach the pagination at the bottom.
+    return `STRICT TASK: Visual Audit of Current View ONLY
 
-For each listing card on this page that does NOT already have an equipment tag (🔧), determine the touchless car wash equipment manufacturer and model. Use ALL available evidence:
-1. The hero image and any visible equipment in the photo (look for manufacturer logos, equipment shape/design, LED arch patterns, spray arm configurations)
-2. Gallery images if available (click into the listing to see more photos)
-3. The listing name and location
-4. Your knowledge of car wash chains, manufacturer customer lists, and regional equipment patterns
+⚠️ CRITICAL CONSTRAINT — NO NAVIGATION:
+- Do NOT click pagination, "Next", "Prev", or any page numbers.
+- Do NOT click into listing details or open any cards.
+- Do NOT perform any action that changes the URL or refreshes the page.
+- Stay ONLY on this exact page. Analyze ONLY the listing cards currently visible.
+- You MUST scroll down through the ENTIRE current page to see all cards before responding. Do not stop at the first visible set — keep scrolling until you reach the pagination at the bottom.
+
+For each listing card on this page that does NOT already have an equipment tag (the 🔧 wrench icon), determine the touchless car wash equipment manufacturer and model. Use ALL available evidence:
+1. The hero image thumbnail and any visible equipment in the photo (look for manufacturer logos, equipment shape/design, LED arch patterns, spray arm configurations)
+2. The listing name and location
+3. Your knowledge of car wash chains, manufacturer customer lists, and regional equipment patterns
+
+IDENTIFICATION CRITERIA:
+- Identify listings that DO NOT have the 🔧 (wrench) icon — those already have equipment data.
+- Use the visible #xxxxxx ID code from the card.
+- Determine the Brand and Model based ONLY on the visible hero thumbnail and listing title.
 
 IMPORTANT — Be as SPECIFIC as possible about the model:
 - Do NOT default to a generic model. For example, do NOT assume "LaserWash 360" when it could be a "LaserWash 360 Plus", "LaserWash 4000", "LaserWash G5", or "LaserWash M5".
 - Look for visual clues that distinguish models: LED arches (LaserGlow = 360 Plus), equipment age/generation, number of wash arms, dryer configuration, etc.
-- If you cannot determine the specific model variant, set model to null rather than guessing a generic one.
+- If the specific model (e.g., "360 Plus" vs "360") cannot be confirmed visually from the thumbnail, set model to null rather than guessing.
 
-Output ONLY a JSON array with one object per listing. Use the short ID shown on each card (the #xxxxxx code). Skip any listings that already have equipment tagged, and skip any where you cannot determine the manufacturer with concrete visual or factual evidence.
+Output ONLY a JSON array with one object per listing. Use the short ID shown on each card (the #xxxxxx code). Skip any listings that already have a wrench icon, and skip any where you cannot determine the manufacturer with concrete visual or factual evidence.
 
 DO NOT guess based solely on the listing name. A business called "Laser Wash" does not necessarily use PDQ LaserWash equipment — "laser wash" is a generic term used by many car washes regardless of equipment brand.
 
