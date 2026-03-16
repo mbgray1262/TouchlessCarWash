@@ -177,7 +177,7 @@ async function auditListing(
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-5-20241022',
+          model: 'claude-sonnet-4-5-20250929',
           max_tokens: 800,
           messages: [{
             role: 'user',
