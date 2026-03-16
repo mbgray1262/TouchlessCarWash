@@ -40,6 +40,7 @@ const navigation: NavEntry[] = [
       { href: '/admin/listings', label: 'Manage Listings', icon: List },
       { href: '/admin/hero-review', label: 'Hero Review', icon: Eye },
       { href: '/admin/ai-photo-review', label: 'AI Photo QA', icon: Camera },
+      { href: '/admin/photo-audit', label: 'Photo Audit', icon: Camera },
       { href: '/admin/bulk-verify', label: 'Bulk Verify', icon: ShieldCheck },
       { href: '/admin/filters', label: 'Filters', icon: Filter },
     ],
