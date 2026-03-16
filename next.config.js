@@ -44,28 +44,7 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'gteqijdpqjmgxfnyuhvy.supabase.co',
-        pathname: '/storage/v1/object/public/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'res.cloudinary.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'lh3.googleusercontent.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'streetviewpixels-pa.googleapis.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'places.googleapis.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'maps.googleapis.com',
+        hostname: '**',
       },
     ],
     formats: ['image/avif', 'image/webp'],
