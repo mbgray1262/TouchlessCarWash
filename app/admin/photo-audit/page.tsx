@@ -278,7 +278,19 @@ export default function PhotoAuditPage() {
   const pendingEquipment = equipmentDetected.filter(r => !r.applied && !r.reviewed);
   const poorHeroes = results.filter(r => r.hero_quality === 'poor' && r.suggested_hero_url && !r.applied);
   const cleanupResults = results.filter(r => r.photos_to_remove.length > 0);
-  const needsReview = [...pendingEquipment, ...poorHeroes.filter(r => !pendingEquipment.some(p => p.id === r.id))];
+  const pendingCleanup = cleanupResults.filter(r => !r.applied);
+  // Need Review = anything with an unresolved action (pending equipment, poor heroes, or flagged-not-removed photos)
+  const needsReviewSet = new Set<string>();
+  const needsReview = results.filter(r => {
+    const needs = (r.equipment_brand && !r.applied && !r.reviewed) ||
+      (r.hero_quality === 'poor' && r.suggested_hero_url && !r.applied) ||
+      (r.photos_to_remove.length > 0 && !r.applied);
+    if (needs && !needsReviewSet.has(r.id)) {
+      needsReviewSet.add(r.id);
+      return true;
+    }
+    return false;
+  });
 
   // Filtered results
   const filteredResults = (() => {
