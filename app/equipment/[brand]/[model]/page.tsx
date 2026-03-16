@@ -162,6 +162,18 @@ export default async function ModelDetailPage({ params }: Props) {
         {/* Description */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-10">
           <p className="text-blue-900">{model.description}</p>
+          {brand.website && (
+            <p className="mt-3">
+              <a
+                href={brand.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline text-sm inline-flex items-center gap-1"
+              >
+                Visit {brand.label} website &rarr;
+              </a>
+            </p>
+          )}
         </div>
 
         {/* Listings section */}
