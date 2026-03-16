@@ -48,10 +48,13 @@ export function usePhotoAudit() {
       .eq('is_touchless', true)
       .not('hero_image', 'is', null);
 
-    // Count how many have already been audited
+    // Count how many have already been audited (photo_audited_at is set by the edge function)
     const { count: alreadyAudited } = await supabase
-      .from('photo_audit_results')
-      .select('id', { count: 'exact', head: true });
+      .from('listings')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_touchless', true)
+      .not('hero_image', 'is', null)
+      .not('photo_audited_at', 'is', null);
 
     const total = totalTouchless ?? 0;
     const audited = alreadyAudited ?? 0;
@@ -70,7 +73,7 @@ export function usePhotoAudit() {
       .from('photo_audit_results')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(500);
+      .limit(1000);
 
     if (error) {
       console.error('Error loading audit results:', error);

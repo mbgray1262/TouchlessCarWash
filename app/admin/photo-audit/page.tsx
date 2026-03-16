@@ -317,8 +317,8 @@ export default function PhotoAuditPage() {
   // Reset page when filter changes
   const setFilterAndReset = (f: ViewFilter) => { setViewFilter(f); setPage(1); };
 
-  // Progress percentage
-  const totalListings = queueStats.totalUntagged + queueStats.alreadyAudited;
+  // Progress percentage — totalUntagged is the full universe of touchless listings with images
+  const totalListings = queueStats.totalUntagged;
   const progressPct = totalListings > 0 ? Math.max(1, (queueStats.alreadyAudited / totalListings) * 100) : 0;
 
   return (

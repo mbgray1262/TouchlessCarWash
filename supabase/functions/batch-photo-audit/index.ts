@@ -523,14 +523,14 @@ Deno.serve(async (req) => {
     }
   }
 
-  // Fetch untagged touchless listings with images
+  // Fetch touchless listings that haven't been audited yet
   const { data: listings, error } = await supabase
     .from('listings')
     .select('id, name, hero_image, photos, google_photo_url, street_view_url, equipment_brand, blocked_photos, google_place_id, photo_enrichment_attempted_at')
     .eq('is_touchless', true)
-    .is('equipment_brand', null)
+    .is('photo_audited_at', null)
     .not('hero_image', 'is', null)
-    .order('photo_enrichment_attempted_at', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: true })
     .range(offset, offset + limit - 1);
 
   if (error) {
@@ -680,6 +680,12 @@ Deno.serve(async (req) => {
         google_photos_added: googlePhotosAdded,
         google_photos_screened: googlePhotosScreened,
       });
+
+      // Mark listing as audited so it won't be re-processed
+      await supabase
+        .from('listings')
+        .update({ photo_audited_at: new Date().toISOString() })
+        .eq('id', listing.id);
     }
 
     // AUTO-APPLY: High confidence equipment
