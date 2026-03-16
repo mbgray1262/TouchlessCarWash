@@ -37,6 +37,30 @@ export function usePhotoAudit() {
   const [runProgress, setRunProgress] = useState('');
   const [includeGooglePhotos, setIncludeGooglePhotos] = useState(true);
   const [stats, setStats] = useState({ total: 0, applied: 0, pending: 0, equipment: 0, heroes: 0, cleanup: 0 });
+  const [queueStats, setQueueStats] = useState({ totalUntagged: 0, alreadyAudited: 0, remaining: 0 });
+
+  const loadQueueStats = useCallback(async () => {
+    // Count total untagged touchless listings (same query the edge function uses)
+    const { count: totalUntagged } = await supabase
+      .from('listings')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_touchless', true)
+      .is('equipment_brand', null)
+      .not('hero_image', 'is', null);
+
+    // Count how many have already been audited
+    const { count: alreadyAudited } = await supabase
+      .from('photo_audit_results')
+      .select('id', { count: 'exact', head: true });
+
+    const total = totalUntagged ?? 0;
+    const audited = alreadyAudited ?? 0;
+    setQueueStats({
+      totalUntagged: total,
+      alreadyAudited: audited,
+      remaining: Math.max(0, total - audited),
+    });
+  }, []);
 
   const loadResults = useCallback(async () => {
     setLoading(true);
@@ -100,7 +124,8 @@ export function usePhotoAudit() {
 
     setStats({ total, applied, pending, equipment, heroes, cleanup });
     setLoading(false);
-  }, []);
+    await loadQueueStats();
+  }, [loadQueueStats]);
 
   useEffect(() => {
     loadResults();
@@ -205,6 +230,7 @@ export function usePhotoAudit() {
     includeGooglePhotos,
     setIncludeGooglePhotos,
     stats,
+    queueStats,
     runBatch,
     applyEquipment,
     rejectResult,

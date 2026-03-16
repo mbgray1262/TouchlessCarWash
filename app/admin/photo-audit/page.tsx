@@ -258,7 +258,7 @@ type EquipmentFilter = 'all' | 'detected' | 'none' | 'pending';
 
 export default function PhotoAuditPage() {
   const {
-    results, loading, tab, setTab, running, runProgress, stats,
+    results, loading, tab, setTab, running, runProgress, stats, queueStats,
     includeGooglePhotos, setIncludeGooglePhotos,
     runBatch, applyEquipment, rejectResult, applyAllHighConfidence, undoApply,
   } = usePhotoAudit();
@@ -292,6 +292,35 @@ export default function PhotoAuditPage() {
       <p className="text-sm text-gray-500 mb-6">
         AI-powered batch processing for equipment classification, hero image quality, and photo cleanup.
       </p>
+
+      {/* Pipeline progress */}
+      {queueStats.totalUntagged > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium text-gray-700">Pipeline Progress</p>
+            <p className="text-sm text-gray-500">
+              <span className="font-semibold text-gray-900">{queueStats.alreadyAudited}</span>
+              {' / '}
+              <span className="font-semibold text-gray-900">{queueStats.totalUntagged + queueStats.alreadyAudited}</span>
+              {' listings processed'}
+              <span className="text-gray-400 ml-2">
+                ({queueStats.remaining.toLocaleString()} remaining)
+              </span>
+            </p>
+          </div>
+          <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+            <div
+              className="bg-gradient-to-r from-orange-400 to-orange-500 h-3 rounded-full transition-all duration-500"
+              style={{
+                width: `${Math.max(1, (queueStats.alreadyAudited / (queueStats.totalUntagged + queueStats.alreadyAudited)) * 100)}%`,
+              }}
+            />
+          </div>
+          <p className="text-xs text-gray-400 mt-1.5">
+            Untagged touchless listings with images · equipment_brand is null
+          </p>
+        </div>
+      )}
 
       {/* Run controls */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
