@@ -162,16 +162,22 @@ export function EquipmentImport({ onComplete, getModelsForBrand, customBrands }:
 
 STAY ON THIS PAGE. Do not click pagination, "Next", "Prev", or any links that leave this page. Scroll down to see ALL cards on the current page before responding.
 
-CRITICAL — EVERY UNTAGGED LISTING MUST BE IN YOUR OUTPUT:
-You MUST include an entry for EVERY card that does NOT have a 🔧 wrench icon. No exceptions. No silent skipping.
+CRITICAL — EVERY RELEVANT LISTING MUST BE IN YOUR OUTPUT:
+You MUST include an entry for EVERY card that meets EITHER of these criteria:
+1. Does NOT have a 🔧 wrench icon (completely untagged — needs brand and model).
+2. HAS a 🔧 wrench icon with a brand BUT NO model shown after the dot separator (needs model filled in). These show as "🔧 BrandName" without a "· ModelName" after it.
+
+For both cases:
 - If you can identify the equipment → include brand and model (or model: null if unsure of model).
 - If the thumbnail doesn't show equipment clearly → still include the listing with brand: null and model: null.
-Every untagged card must appear in your JSON output. Count the untagged cards first, then make sure your output has that many entries.
+Every qualifying card must appear in your JSON output.
 
 WHAT TO DO:
-1. Scroll through the ENTIRE page. Count all cards. Count how many have the 🔧 icon vs don't.
-2. For EVERY card WITHOUT a 🔧 wrench icon, examine the hero thumbnail and listing name.
-3. Report the total: "Found X cards, Y already tagged, Z untagged — classifying Z listings."
+1. Scroll through the ENTIRE page. Count all cards.
+2. Count cards with NO wrench icon (completely untagged).
+3. Count cards with a wrench icon but NO model after the dot (brand-only, needs model).
+4. Count cards with both brand AND model (fully tagged — skip these).
+5. Report: "Found X cards total: A fully tagged, B brand-only (need model), C untagged — classifying B+C listings."
 
 EVIDENCE TO USE:
 - Equipment visible in the hero thumbnail (manufacturer logos, equipment shape, LED arches, spray arm design)
@@ -179,7 +185,8 @@ EVIDENCE TO USE:
 - Your knowledge of car wash chains and their equipment suppliers
 
 RULES:
-- SKIP ONLY cards that already have a 🔧 wrench icon.
+- SKIP ONLY cards that have BOTH a brand AND a model (fully tagged with "🔧 Brand · Model").
+- For brand-only cards (wrench icon but no model), try to identify the model and include them in your output.
 - Do NOT guess based on the business name alone. "Laser Wash" in a name does NOT mean PDQ LaserWash equipment.
 - Be specific about models when you can visually confirm (e.g., LED arches = LaserWash 360 Plus). If you can't tell the exact model, set model to null.
 - If you cannot identify the brand at all from the thumbnail, set brand to null AND model to null — but STILL include the listing.
@@ -198,7 +205,7 @@ ${brandLines}
 
 If a brand or model is not in this list, use the actual name — it will be added automatically.
 
-REMINDER: Your JSON array MUST have one entry for every untagged card. If you found Z untagged cards, your array must have Z entries.`;
+REMINDER: Your JSON array MUST have one entry for every untagged card AND every brand-only card. If you found B brand-only + C untagged = B+C total, your array must have that many entries.`;
   }, [getModelsForBrand, customBrands]);
 
   const handleCopyPrompt = async () => {
