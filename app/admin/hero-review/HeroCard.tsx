@@ -201,6 +201,8 @@ interface Props {
   onFlag: () => void;
   onFocus: () => void;
   confirmIndex: number | null;
+  isSelected: boolean;
+  onToggleSelect: () => void;
 }
 
 export function HeroCard({
@@ -227,6 +229,8 @@ export function HeroCard({
   onFlag,
   onFocus,
   confirmIndex,
+  isSelected,
+  onToggleSelect,
 }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
@@ -404,6 +408,14 @@ export function HeroCard({
         ${listing.flagged ? 'ring-2 ring-amber-400 ring-offset-1' : ''}
       `}
     >
+      {/* Selection checkbox */}
+      <input
+        type="checkbox"
+        checked={isSelected}
+        onChange={(e) => { e.stopPropagation(); onToggleSelect(); }}
+        className="absolute top-2 left-2 z-20 w-4 h-4 rounded border-gray-300 text-orange-500 focus:ring-orange-300 cursor-pointer"
+      />
+
       <div className="relative bg-gray-100 h-48 overflow-hidden group/hero">
         {listing.hero_image ? (
           <>

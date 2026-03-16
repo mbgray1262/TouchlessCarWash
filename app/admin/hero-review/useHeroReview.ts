@@ -43,6 +43,7 @@ export function useHeroReview() {
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [confirmMap, setConfirmMap] = useState<Record<string, number>>({});
   const [flaggedIds, setFlaggedIds] = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [stats, setStats] = useState<SessionStats>({ replacements: 0, flagged: 0 });
 
   const flaggedIdsRef = useRef(flaggedIds);
@@ -165,6 +166,7 @@ export function useHeroReview() {
       const filtered = showFlaggedOnly ? items.filter(i => i.flagged) : items;
       setListings(filtered);
       setTotalCount(count ?? 0);
+      setSelectedIds(new Set());
     } finally {
       setLoading(false);
     }
@@ -573,6 +575,60 @@ export function useHeroReview() {
     }
   };
 
+  const toggleSelected = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAllVisible = () => {
+    setSelectedIds(new Set(listings.map(l => l.id)));
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  const handleBatchSetEquipment = async (ids: string[], brand: string | null, model: string | null) => {
+    if (ids.length === 0) return;
+
+    await supabase
+      .from('listings')
+      .update({ equipment_brand: brand, equipment_model: model })
+      .in('id', ids);
+
+    const idSet = new Set(ids);
+    setListings(prev =>
+      prev.map(l => idSet.has(l.id)
+        ? { ...l, equipment_brand: brand, equipment_model: model }
+        : l
+      )
+    );
+    setSelectedIds(new Set());
+
+    // Optimistically add custom brand/model
+    if (brand && brand !== '__other__') {
+      const knownBrandValues = new Set<string>(EQUIPMENT_BRANDS.map(b => b.value));
+      if (!knownBrandValues.has(brand) && !customBrands.some(b => b.value === brand)) {
+        const label = brand.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+        setCustomBrands(prev => [...prev, { value: brand, label }].sort((a, b) => a.label.localeCompare(b.label)));
+      }
+    }
+    if (model && model !== '__other__' && brand) {
+      const hardcoded = EQUIPMENT_MODELS[brand] ?? [];
+      if (!hardcoded.includes(model)) {
+        setCustomModels(prev => {
+          const existing = prev[brand] ?? [];
+          if (existing.includes(model)) return prev;
+          return { ...prev, [brand]: [...existing, model].sort() };
+        });
+      }
+    }
+  };
+
   const handleFlag = async (listingId: string) => {
     const listing = listings.find(l => l.id === listingId);
     const alreadyFlagged = listing?.flagged;
@@ -645,10 +701,15 @@ export function useHeroReview() {
     handleUploadHero,
     handleMarkNotTouchless,
     handleSetEquipment,
+    handleBatchSetEquipment,
     getModelsForBrand,
     customBrands,
     handleFlag,
     navigateFocus,
+    selectedIds,
+    toggleSelected,
+    selectAllVisible,
+    clearSelection,
     reload: loadListings,
   };
 }

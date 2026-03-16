@@ -8,6 +8,7 @@ import { HeroCard } from './HeroCard';
 import { StatsBar } from './StatsBar';
 import { useHeroReview } from './useHeroReview';
 import { EquipmentImport } from './EquipmentImport';
+import { BatchEquipmentBar } from './BatchEquipmentBar';
 
 const SOURCE_FILTERS: { value: FilterSource; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -137,10 +138,15 @@ export default function HeroReviewPage() {
     handleUploadHero,
     handleMarkNotTouchless,
     handleSetEquipment,
+    handleBatchSetEquipment,
     getModelsForBrand,
     customBrands,
     handleFlag,
     navigateFocus,
+    selectedIds,
+    toggleSelected,
+    selectAllVisible,
+    clearSelection,
     reload,
   } = useHeroReview();
 
@@ -353,6 +359,8 @@ export default function HeroReviewPage() {
                   onFlag={() => handleFlag(listing.id)}
                   onFocus={() => setFocusedId(listing.id)}
                   confirmIndex={confirmIndex}
+                  isSelected={selectedIds.has(listing.id)}
+                  onToggleSelect={() => toggleSelected(listing.id)}
                 />
               );
             })}
@@ -419,6 +427,19 @@ export default function HeroReviewPage() {
         </div>
 
       </div>
+
+      {/* Batch equipment assignment bar */}
+      {selectedIds.size > 0 && (
+        <BatchEquipmentBar
+          selectedCount={selectedIds.size}
+          totalVisible={listings.length}
+          onSelectAll={selectAllVisible}
+          onClearSelection={clearSelection}
+          onApply={(brand, model) => handleBatchSetEquipment(Array.from(selectedIds), brand, model)}
+          getModelsForBrand={getModelsForBrand}
+          customBrands={customBrands}
+        />
+      )}
     </div>
   );
 }
