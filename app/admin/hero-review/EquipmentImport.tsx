@@ -150,46 +150,36 @@ export function EquipmentImport({ onComplete, getModelsForBrand, customBrands }:
       return `  - ${b.label}`;
     }).join('\n');
 
-    return `STRICT TASK: Visual Audit of Current View ONLY
+    return `Classify the car wash equipment for listing cards on this page.
 
-⚠️ CRITICAL CONSTRAINT — NO NAVIGATION:
-- Do NOT click pagination, "Next", "Prev", or any page numbers.
-- Do NOT click into listing details or open any cards.
-- Do NOT perform any action that changes the URL or refreshes the page.
-- Stay ONLY on this exact page. Analyze ONLY the listing cards currently visible.
-- You MUST scroll down through the ENTIRE current page to see all cards before responding. Do not stop at the first visible set — keep scrolling until you reach the pagination at the bottom.
+STAY ON THIS PAGE. Do not click pagination, "Next", "Prev", or any links that leave this page. Scroll down to see all cards on the current page before responding.
 
-For each listing card on this page that does NOT already have an equipment tag (the 🔧 wrench icon), determine the touchless car wash equipment manufacturer and model. Use ALL available evidence:
-1. The hero image thumbnail and any visible equipment in the photo (look for manufacturer logos, equipment shape/design, LED arch patterns, spray arm configurations)
-2. The listing name and location
-3. Your knowledge of car wash chains, manufacturer customer lists, and regional equipment patterns
+WHAT TO DO:
+1. Scroll through ALL cards on this page.
+2. For each card WITHOUT a 🔧 wrench icon, look at the hero thumbnail photo and listing name.
+3. Identify the equipment brand and model if you can. If you can't tell, skip that listing.
 
-IDENTIFICATION CRITERIA:
-- Identify listings that DO NOT have the 🔧 (wrench) icon — those already have equipment data.
-- Use the visible #xxxxxx ID code from the card.
-- Determine the Brand and Model based ONLY on the visible hero thumbnail and listing title.
+EVIDENCE TO USE:
+- Equipment visible in the hero thumbnail (manufacturer logos, equipment shape, LED arches, spray arm design)
+- The listing name and location
+- Your knowledge of car wash chains and their equipment suppliers
 
-IMPORTANT — Be as SPECIFIC as possible about the model:
-- Do NOT default to a generic model. For example, do NOT assume "LaserWash 360" when it could be a "LaserWash 360 Plus", "LaserWash 4000", "LaserWash G5", or "LaserWash M5".
-- Look for visual clues that distinguish models: LED arches (LaserGlow = 360 Plus), equipment age/generation, number of wash arms, dryer configuration, etc.
-- If the specific model (e.g., "360 Plus" vs "360") cannot be confirmed visually from the thumbnail, set model to null rather than guessing.
+RULES:
+- SKIP cards that already have a 🔧 wrench icon (they're already classified).
+- Do NOT guess based on the business name alone. "Laser Wash" in a name does NOT mean PDQ LaserWash equipment.
+- Be specific about models when you can visually confirm (e.g., LED arches = LaserWash 360 Plus). If you can't tell the exact model, set model to null.
+- Use the #xxxxxx ID code shown on each card.
 
-Output ONLY a JSON array with one object per listing. Use the short ID shown on each card (the #xxxxxx code). Skip any listings that already have a wrench icon, and skip any where you cannot determine the manufacturer with concrete visual or factual evidence.
-
-DO NOT guess based solely on the listing name. A business called "Laser Wash" does not necessarily use PDQ LaserWash equipment — "laser wash" is a generic term used by many car washes regardless of equipment brand.
-
-Format:
+Output ONLY a JSON array:
 [
   {"id": "abc123", "brand": "PDQ (LaserWash)", "model": "LaserWash 360 Plus"},
-  {"id": "def456", "brand": "WashWorld", "model": "Razor"}
+  {"id": "def456", "brand": "WashWorld", "model": null}
 ]
 
-IMPORTANT: Use the EXACT brand and model names from the reference list below. If a brand or model is not in this list, use the actual name — it will be added automatically.
-
-Reference list of known brands and models:
+Use EXACT brand/model names from this reference list:
 ${brandLines}
 
-If you know the brand but not the specific model, set model to null. Do not guess — only include listings where you have reasonable confidence based on visual or factual evidence.`;
+If a brand or model is not in this list, use the actual name — it will be added automatically.`;
   }, [getModelsForBrand, customBrands]);
 
   const handleCopyPrompt = async () => {
