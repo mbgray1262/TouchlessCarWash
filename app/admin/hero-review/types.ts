@@ -16,6 +16,7 @@ export interface HeroListing {
   street_view_url: string | null;
   website: string | null;
   photo_enrichment_attempted_at: string | null;
+  google_place_id: string | null;
   equipment_brand: string | null;
   equipment_model: string | null;
   flagged?: boolean;

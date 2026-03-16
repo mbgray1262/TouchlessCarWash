@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useState } from 'react';
-import { X, Flag, ImageOff, ZoomIn, Crop, ExternalLink, CarFront, Star, Trash2, ChevronDown, ChevronLeft, ChevronRight, ImageIcon, Upload, Wand2 } from 'lucide-react';
+import { X, Flag, ImageOff, ZoomIn, Crop, ExternalLink, CarFront, Star, Trash2, ChevronDown, ChevronLeft, ChevronRight, ImageIcon, Upload, Wand2, Camera } from 'lucide-react';
 import { HeroListing, ReplacementOption, EQUIPMENT_BRANDS } from './types';
 import HeroImageFallback from '@/components/HeroImageFallback';
 import { CropModal } from './CropModal';
@@ -530,6 +530,18 @@ export function HeroCard({
               title="Open website"
             >
               <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          )}
+          {listing.google_place_id && (
+            <a
+              href={`https://www.google.com/maps/place/?q=place_id:${listing.google_place_id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex-shrink-0 text-gray-400 hover:text-amber-500 transition-colors"
+              title="Google Maps photos"
+            >
+              <Camera className="w-3.5 h-3.5" />
             </a>
           )}
         </div>

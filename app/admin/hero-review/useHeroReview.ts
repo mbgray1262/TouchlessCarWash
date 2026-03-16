@@ -143,7 +143,7 @@ export function useHeroReview() {
   const buildQuery = useCallback(() => {
     let q = supabase
       .from('listings')
-      .select('id, name, address, city, state, slug, hero_image, hero_image_source, photos, google_photo_url, street_view_url, website, photo_enrichment_attempted_at, equipment_brand, equipment_model', { count: 'exact' })
+      .select('id, name, address, city, state, slug, hero_image, hero_image_source, photos, google_photo_url, street_view_url, website, photo_enrichment_attempted_at, google_place_id, equipment_brand, equipment_model', { count: 'exact' })
       .eq('is_touchless', true)
       .order('photo_enrichment_attempted_at', { ascending: false, nullsFirst: false });
 
