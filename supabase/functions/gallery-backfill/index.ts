@@ -382,6 +382,7 @@ Deno.serve(async (req: Request) => {
         let placePhotosFetched = 0;
         let placePhotosScreened = 0;
         let placePhotosApproved = 0;
+        let equipmentPhotosFound = 0;
         let fallbackReason: string | null = null;
         let photosAfter = task.photos_before as number;
 
@@ -431,6 +432,7 @@ Deno.serve(async (req: Request) => {
                     const finalUrl = rehosted ?? url;
                     if (result.verdict === 'GOOD_EQUIPMENT') {
                       newApprovedEquipment.push(finalUrl);
+                      equipmentPhotosFound++;
                     } else {
                       newApprovedOther.push(finalUrl);
                     }
@@ -482,7 +484,7 @@ Deno.serve(async (req: Request) => {
           updated_at: new Date().toISOString(),
         }).eq('id', task.id);
 
-        return { succeeded: placePhotosApproved > 0, equipmentPhotos: newApprovedEquipment?.length ?? 0 };
+        return { succeeded: placePhotosApproved > 0, equipmentPhotos: equipmentPhotosFound };
       }
 
       const results = await Promise.all(batchTasks.map(processOneTask));
