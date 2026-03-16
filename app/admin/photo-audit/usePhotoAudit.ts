@@ -25,6 +25,7 @@ export interface AuditResult {
   listing_hero?: string;
   listing_city?: string;
   listing_state?: string;
+  listing_slug?: string;
 }
 
 type Tab = 'equipment' | 'heroes' | 'cleanup';
@@ -40,12 +41,11 @@ export function usePhotoAudit() {
   const [queueStats, setQueueStats] = useState({ totalUntagged: 0, alreadyAudited: 0, remaining: 0 });
 
   const loadQueueStats = useCallback(async () => {
-    // Count total untagged touchless listings (same query the edge function uses)
-    const { count: totalUntagged } = await supabase
+    // Count total touchless listings with images (the full universe we want to audit)
+    const { count: totalTouchless } = await supabase
       .from('listings')
       .select('id', { count: 'exact', head: true })
       .eq('is_touchless', true)
-      .is('equipment_brand', null)
       .not('hero_image', 'is', null);
 
     // Count how many have already been audited
@@ -53,7 +53,7 @@ export function usePhotoAudit() {
       .from('photo_audit_results')
       .select('id', { count: 'exact', head: true });
 
-    const total = totalUntagged ?? 0;
+    const total = totalTouchless ?? 0;
     const audited = alreadyAudited ?? 0;
     setQueueStats({
       totalUntagged: total,
@@ -87,18 +87,18 @@ export function usePhotoAudit() {
 
     // Fetch listing names in batch
     const listingIds = Array.from(new Set(data.map(r => r.listing_id)));
-    const listings: Record<string, { name: string; hero_image: string | null; city: string; state: string }> = {};
+    const listings: Record<string, { name: string; hero_image: string | null; city: string; state: string; slug: string }> = {};
 
     // Fetch in chunks of 50
     for (let i = 0; i < listingIds.length; i += 50) {
       const chunk = listingIds.slice(i, i + 50);
       const { data: listingData } = await supabase
         .from('listings')
-        .select('id, name, hero_image, city, state')
+        .select('id, name, hero_image, city, state, slug')
         .in('id', chunk);
       if (listingData) {
         for (const l of listingData) {
-          listings[l.id] = { name: l.name, hero_image: l.hero_image, city: l.city, state: l.state };
+          listings[l.id] = { name: l.name, hero_image: l.hero_image, city: l.city, state: l.state, slug: l.slug };
         }
       }
     }
@@ -110,6 +110,7 @@ export function usePhotoAudit() {
       listing_hero: listings[r.listing_id]?.hero_image,
       listing_city: listings[r.listing_id]?.city,
       listing_state: listings[r.listing_id]?.state,
+      listing_slug: listings[r.listing_id]?.slug,
     }));
 
     setResults(enriched);

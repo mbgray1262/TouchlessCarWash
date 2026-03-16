@@ -5,6 +5,7 @@ import { usePhotoAudit, AuditResult } from './usePhotoAudit';
 import { Camera, Wrench, Trash2, Play, Loader2, Check, X, Undo2, ChevronDown, ChevronUp, ExternalLink, Eye, Filter } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { getStateSlug, slugify } from '@/lib/constants';
 
 const CONFIDENCE_COLORS: Record<string, string> = {
   high: 'bg-green-100 text-green-700',
@@ -53,15 +54,19 @@ function PhotoThumb({ url, size = 80, onClick }: { url: string; size?: number; o
 }
 
 function ListingLink({ result }: { result: AuditResult }) {
-  if (!result.listing_name) return null;
+  if (!result.listing_name || !result.listing_slug || !result.listing_city || !result.listing_state) return null;
+  const stateSlug = getStateSlug(result.listing_state);
+  const citySlug = slugify(result.listing_city);
   return (
-    <Link
-      href={`/admin/listings`}
+    <a
+      href={`/state/${stateSlug}/${citySlug}/${result.listing_slug}`}
+      target="_blank"
+      rel="noopener noreferrer"
       className="text-gray-400 hover:text-orange-500 transition-colors"
-      title="View listing"
+      title="View listing (new tab)"
     >
       <ExternalLink className="w-3.5 h-3.5" />
-    </Link>
+    </a>
   );
 }
 
@@ -317,7 +322,7 @@ export default function PhotoAuditPage() {
             />
           </div>
           <p className="text-xs text-gray-400 mt-1.5">
-            Untagged touchless listings with images · equipment_brand is null
+            Touchless listings with images
           </p>
         </div>
       )}
