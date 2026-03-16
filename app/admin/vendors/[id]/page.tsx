@@ -65,6 +65,64 @@ const emptyListingForm: NewListingForm = {
   longitude: '',
 };
 
+/** US state abbreviations for address parsing */
+const US_STATE_ABBREVS = new Set([
+  'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD',
+  'MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC',
+  'SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC',
+]);
+
+/**
+ * Parse a full address string like "12570 Warwick Blvd, Newport News, VA 23606"
+ * into { street, city, state, zip } components.
+ */
+function parseFullAddress(raw: string): { street: string; city: string; state: string; zip: string } | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  // Try: "street, city, state zip" or "street, city, ST, zip"
+  // Split on commas
+  const parts = trimmed.split(',').map(p => p.trim());
+
+  if (parts.length >= 3) {
+    const street = parts[0];
+    const city = parts[1];
+    // Last part might be "VA 23606" or "VA, 23606" (already split)
+    const lastPart = parts.slice(2).join(' ').trim();
+    // Match state (2 letters) and optional zip
+    const stateZipMatch = lastPart.match(/^([A-Z]{2})\s*(\d{5}(?:-\d{4})?)?$/i);
+    if (stateZipMatch && US_STATE_ABBREVS.has(stateZipMatch[1].toUpperCase())) {
+      return { street, city, state: stateZipMatch[1].toUpperCase(), zip: stateZipMatch[2] || '' };
+    }
+    // Try: last part might be just a state code, and zip might be separate
+    const justState = lastPart.match(/^([A-Z]{2})$/i);
+    if (justState && US_STATE_ABBREVS.has(justState[1].toUpperCase())) {
+      return { street, city, state: justState[1].toUpperCase(), zip: '' };
+    }
+  }
+
+  if (parts.length === 2) {
+    // "street, city ST zip" — no comma between city and state
+    const street = parts[0];
+    const rest = parts[1];
+    const match = rest.match(/^(.+?)\s+([A-Z]{2})\s*(\d{5}(?:-\d{4})?)?$/i);
+    if (match && US_STATE_ABBREVS.has(match[2].toUpperCase())) {
+      return { street, city: match[1].trim(), state: match[2].toUpperCase(), zip: match[3] || '' };
+    }
+  }
+
+  // Single string: "street city ST zip"
+  if (parts.length === 1) {
+    const match = trimmed.match(/^(.+?)\s+([A-Z]{2})\s+(\d{5}(?:-\d{4})?)$/i);
+    if (match && US_STATE_ABBREVS.has(match[2].toUpperCase())) {
+      // Try to split the first part into street and city (tricky — use last comma or heuristic)
+      return { street: '', city: match[1].trim(), state: match[2].toUpperCase(), zip: match[3] };
+    }
+  }
+
+  return null;
+}
+
 function slugify(text: string) {
   return text
     .toLowerCase()
@@ -881,7 +939,7 @@ export default function VendorDetailPage() {
                       {fullEnrichingAll ? 'Enriching...' : 'Full Enrich All'}
                     </Button>
                     <Button
-                      onClick={() => { setListingForm(emptyListingForm); setShowAddLocation(true); }}
+                      onClick={() => { setListingForm({ ...emptyListingForm, name: vendor?.canonical_name || '' }); setShowAddLocation(true); }}
                       size="sm"
                       className="bg-[#0F2744] hover:bg-[#1a3a5c] text-white gap-1"
                     >
@@ -1230,8 +1288,44 @@ export default function VendorDetailPage() {
                 <Input placeholder="e.g. Mister Car Wash - Austin" value={listingForm.name} onChange={(e) => setListingForm((f) => ({ ...f, name: e.target.value }))} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                <Input placeholder="123 Main St" value={listingForm.address} onChange={(e) => setListingForm((f) => ({ ...f, address: e.target.value }))} />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Address <span className="text-xs text-gray-400 font-normal ml-1">Paste a full address to auto-fill city, state &amp; zip</span></label>
+                <Input
+                  placeholder="12570 Warwick Blvd, Newport News, VA 23606"
+                  value={listingForm.address}
+                  onChange={(e) => setListingForm((f) => ({ ...f, address: e.target.value }))}
+                  onPaste={(e) => {
+                    // Wait for the paste to complete, then try to parse
+                    setTimeout(() => {
+                      const val = (e.target as HTMLInputElement).value;
+                      const parsed = parseFullAddress(val);
+                      if (parsed) {
+                        setListingForm((f) => ({
+                          ...f,
+                          address: parsed.street,
+                          city: f.city || parsed.city,
+                          state: f.state || parsed.state,
+                          zip: f.zip || parsed.zip,
+                        }));
+                      }
+                    }, 0);
+                  }}
+                  onBlur={(e) => {
+                    const val = e.target.value;
+                    // Only auto-parse if city is still empty (user hasn't filled it manually)
+                    if (val && !listingForm.city) {
+                      const parsed = parseFullAddress(val);
+                      if (parsed) {
+                        setListingForm((f) => ({
+                          ...f,
+                          address: parsed.street,
+                          city: parsed.city,
+                          state: parsed.state,
+                          zip: parsed.zip,
+                        }));
+                      }
+                    }
+                  }}
+                />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
