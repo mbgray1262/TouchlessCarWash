@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { usePhotoAudit, AuditResult } from './usePhotoAudit';
-import { Camera, Wrench, Trash2, Play, Loader2, Check, X, Undo2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Camera, Wrench, Trash2, Play, Loader2, Check, X, Undo2, ChevronDown, ChevronUp, ExternalLink, Eye, Filter } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 const CONFIDENCE_COLORS: Record<string, string> = {
   high: 'bg-green-100 text-green-700',
@@ -51,6 +52,19 @@ function PhotoThumb({ url, size = 80, onClick }: { url: string; size?: number; o
   );
 }
 
+function ListingLink({ result }: { result: AuditResult }) {
+  if (!result.listing_name) return null;
+  return (
+    <Link
+      href={`/admin/listings`}
+      className="text-gray-400 hover:text-orange-500 transition-colors"
+      title="View listing"
+    >
+      <ExternalLink className="w-3.5 h-3.5" />
+    </Link>
+  );
+}
+
 function EquipmentRow({ result, onApply, onReject, onUndo }: {
   result: AuditResult;
   onApply: () => void;
@@ -59,47 +73,74 @@ function EquipmentRow({ result, onApply, onReject, onUndo }: {
 }) {
   const [expanded, setExpanded] = useState(false);
   const [modalUrl, setModalUrl] = useState<string | null>(null);
+  const hasEquipment = !!result.equipment_brand;
+  const rawEquip = (result.raw_response ?? {}) as Record<string, unknown>;
+  const equipData = (rawEquip.equipment ?? null) as Record<string, unknown> | null;
+  const heroData = (rawEquip.hero_assessment ?? null) as Record<string, unknown> | null;
+  const visibleText = equipData ? String(equipData.visible_text ?? '') : '';
 
   return (
-    <div className="border-b border-gray-100 last:border-0">
+    <div className={`border-b border-gray-100 last:border-0 ${!hasEquipment ? 'opacity-70' : ''}`}>
       {modalUrl && <PhotoModal url={modalUrl} onClose={() => setModalUrl(null)} />}
       <div className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50">
-        {result.equipment_source_photo && (
-          <PhotoThumb url={result.equipment_source_photo} onClick={() => setModalUrl(result.equipment_source_photo!)} />
+        {/* Thumbnail — show source photo if equipment found, otherwise hero */}
+        {(result.equipment_source_photo || result.listing_hero) && (
+          <PhotoThumb
+            url={result.equipment_source_photo || result.listing_hero!}
+            onClick={() => setModalUrl(result.equipment_source_photo || result.listing_hero!)}
+          />
         )}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-800 truncate">{result.listing_name}</p>
-          <p className="text-xs text-gray-500">{result.listing_city}, {result.listing_state}</p>
-          <div className="flex items-center gap-2 mt-1">
-            {result.equipment_brand && (
-              <span className="text-sm font-semibold text-indigo-700">{result.equipment_brand}</span>
-            )}
-            {result.equipment_model && (
-              <span className="text-sm text-gray-600">· {result.equipment_model}</span>
-            )}
-            {result.equipment_confidence && (
-              <Badge text={result.equipment_confidence} className={CONFIDENCE_COLORS[result.equipment_confidence] ?? 'bg-gray-100 text-gray-600'} />
-            )}
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium text-gray-800 truncate">{result.listing_name}</p>
+            <ListingLink result={result} />
           </div>
+          <p className="text-xs text-gray-500">{result.listing_city}, {result.listing_state}</p>
+          {hasEquipment ? (
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-sm font-semibold text-indigo-700">{result.equipment_brand}</span>
+              {result.equipment_model && (
+                <span className="text-sm text-gray-600">· {result.equipment_model}</span>
+              )}
+              <Badge text={result.equipment_confidence!} className={CONFIDENCE_COLORS[result.equipment_confidence!] ?? 'bg-gray-100 text-gray-600'} />
+              {visibleText && (
+                <span className="text-xs text-gray-400 italic">&quot;{visibleText}&quot;</span>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-xs text-gray-400">No equipment detected</span>
+              {result.hero_quality && (
+                <Badge text={`hero: ${result.hero_quality}`} className={HERO_QUALITY_COLORS[result.hero_quality] ?? 'bg-gray-100 text-gray-600'} />
+              )}
+              {result.photos_to_remove.length > 0 && (
+                <Badge text={`${result.photos_to_remove.length} removed`} className="bg-red-50 text-red-500" />
+              )}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {result.applied ? (
+          {hasEquipment && (
             <>
-              <Badge text="Auto-applied" className="bg-green-100 text-green-700" />
-              <button onClick={onUndo} className="p-1.5 rounded hover:bg-gray-200 text-gray-400 hover:text-orange-500" title="Undo">
-                <Undo2 className="w-4 h-4" />
-              </button>
-            </>
-          ) : result.reviewed ? (
-            <Badge text="Rejected" className="bg-gray-100 text-gray-500" />
-          ) : (
-            <>
-              <button onClick={onApply} className="flex items-center gap-1 px-3 py-1.5 rounded bg-green-600 text-white text-xs font-medium hover:bg-green-700">
-                <Check className="w-3 h-3" /> Approve
-              </button>
-              <button onClick={onReject} className="flex items-center gap-1 px-3 py-1.5 rounded bg-gray-200 text-gray-700 text-xs font-medium hover:bg-gray-300">
-                <X className="w-3 h-3" /> Reject
-              </button>
+              {result.applied ? (
+                <>
+                  <Badge text="Auto-applied" className="bg-green-100 text-green-700" />
+                  <button onClick={onUndo} className="p-1.5 rounded hover:bg-gray-200 text-gray-400 hover:text-orange-500" title="Undo">
+                    <Undo2 className="w-4 h-4" />
+                  </button>
+                </>
+              ) : result.reviewed ? (
+                <Badge text="Rejected" className="bg-gray-100 text-gray-500" />
+              ) : (
+                <>
+                  <button onClick={onApply} className="flex items-center gap-1 px-3 py-1.5 rounded bg-green-600 text-white text-xs font-medium hover:bg-green-700">
+                    <Check className="w-3 h-3" /> Approve
+                  </button>
+                  <button onClick={onReject} className="flex items-center gap-1 px-3 py-1.5 rounded bg-gray-200 text-gray-700 text-xs font-medium hover:bg-gray-300">
+                    <X className="w-3 h-3" /> Reject
+                  </button>
+                </>
+              )}
             </>
           )}
           <button onClick={() => setExpanded(!expanded)} className="p-1 text-gray-400 hover:text-gray-600">
@@ -107,11 +148,28 @@ function EquipmentRow({ result, onApply, onReject, onUndo }: {
           </button>
         </div>
       </div>
-      {expanded && result.raw_response && (
-        <div className="px-4 pb-3">
-          <pre className="text-xs bg-gray-50 p-3 rounded overflow-x-auto max-h-48">
-            {JSON.stringify(result.raw_response, null, 2)}
-          </pre>
+      {expanded && (
+        <div className="px-4 pb-3 space-y-2">
+          {/* Show AI reasoning in a readable format */}
+          {heroData && (
+            <div className="text-xs text-gray-600 bg-blue-50 px-3 py-2 rounded">
+              <strong>Hero:</strong> {String(heroData.current_hero_quality)} — {String(heroData.reason)}
+            </div>
+          )}
+          {equipData && hasEquipment && (
+            <div className="text-xs text-gray-600 bg-indigo-50 px-3 py-2 rounded">
+              <strong>Equipment:</strong> {String(equipData.brand)} {equipData.model ? `· ${String(equipData.model)}` : ''} ({String(equipData.confidence)})
+              {visibleText && <> — saw &quot;{visibleText}&quot;</>}
+            </div>
+          )}
+          {result.raw_response && (
+            <details className="text-xs">
+              <summary className="text-gray-400 cursor-pointer hover:text-gray-600">Raw JSON</summary>
+              <pre className="bg-gray-50 p-3 rounded overflow-x-auto max-h-48 mt-1">
+                {JSON.stringify(result.raw_response, null, 2)}
+              </pre>
+            </details>
+          )}
         </div>
       )}
     </div>
@@ -130,7 +188,10 @@ function HeroRow({ result }: { result: AuditResult }) {
         {result.suggested_hero_url && <PhotoThumb url={result.suggested_hero_url} onClick={() => setModalUrl(result.suggested_hero_url!)} />}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-800 truncate">{result.listing_name}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium text-gray-800 truncate">{result.listing_name}</p>
+          <ListingLink result={result} />
+        </div>
         <p className="text-xs text-gray-500">{result.suggested_hero_reason}</p>
       </div>
       <div className="shrink-0">
@@ -146,28 +207,54 @@ function HeroRow({ result }: { result: AuditResult }) {
 
 function CleanupRow({ result }: { result: AuditResult }) {
   const [modalUrl, setModalUrl] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const rawResponse = result.raw_response as Record<string, unknown> | null;
+  const verdicts = (rawResponse?.photo_verdicts as Array<{ index: number; keep: boolean; reason: string }>) ?? [];
+  const removeVerdicts = verdicts.filter(v => !v.keep);
 
   return (
     <div className="px-4 py-3 border-b border-gray-100 last:border-0 hover:bg-gray-50">
       {modalUrl && <PhotoModal url={modalUrl} onClose={() => setModalUrl(null)} />}
       <div className="flex items-center gap-3 mb-2">
         <p className="text-sm font-medium text-gray-800 truncate flex-1">{result.listing_name}</p>
+        <ListingLink result={result} />
         <Badge text={`${result.photos_to_remove.length} flagged`} className="bg-red-100 text-red-700" />
         {result.applied && <Badge text="Auto-removed" className="bg-green-100 text-green-700" />}
+        <button onClick={() => setExpanded(!expanded)} className="p-1 text-gray-400 hover:text-gray-600">
+          {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </button>
       </div>
-      <div className="flex gap-2 flex-wrap">
-        {result.photos_to_remove.slice(0, 6).map((url, i) => (
-          <PhotoThumb key={i} url={url} size={60} onClick={() => setModalUrl(url)} />
+      <div className="flex gap-3 flex-wrap">
+        {result.photos_to_remove.slice(0, 8).map((url, i) => (
+          <div key={i} className="flex flex-col items-center gap-1">
+            <PhotoThumb url={url} size={70} onClick={() => setModalUrl(url)} />
+            {removeVerdicts[i] && (
+              <span className="text-[10px] text-red-500 max-w-[70px] text-center leading-tight truncate" title={removeVerdicts[i].reason}>
+                {removeVerdicts[i].reason}
+              </span>
+            )}
+          </div>
         ))}
-        {result.photos_to_remove.length > 6 && (
-          <div className="w-[60px] h-[60px] flex items-center justify-center bg-gray-100 rounded text-xs text-gray-500">
-            +{result.photos_to_remove.length - 6}
+        {result.photos_to_remove.length > 8 && (
+          <div className="w-[70px] h-[70px] flex items-center justify-center bg-gray-100 rounded text-xs text-gray-500">
+            +{result.photos_to_remove.length - 8}
           </div>
         )}
       </div>
+      {expanded && removeVerdicts.length > 0 && (
+        <div className="mt-2 space-y-1">
+          {removeVerdicts.map((v, i) => (
+            <div key={i} className="text-xs text-gray-600 bg-red-50 px-3 py-1.5 rounded">
+              <span className="font-medium text-red-600">Photo {v.index}:</span> {v.reason}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
+
+type EquipmentFilter = 'all' | 'detected' | 'none' | 'pending';
 
 export default function PhotoAuditPage() {
   const {
@@ -176,14 +263,27 @@ export default function PhotoAuditPage() {
   } = usePhotoAudit();
 
   const [batchLimit, setBatchLimit] = useState(10);
+  const [equipFilter, setEquipFilter] = useState<EquipmentFilter>('all');
 
   // Filter results by tab
-  const equipmentResults = results.filter(r => r.equipment_brand);
+  const allResults = results;
+  const equipmentDetected = results.filter(r => r.equipment_brand);
+  const equipmentNone = results.filter(r => !r.equipment_brand);
   const heroResults = results.filter(r => r.hero_quality === 'poor' && r.suggested_hero_url);
   const cleanupResults = results.filter(r => r.photos_to_remove.length > 0);
 
-  const pendingEquipment = equipmentResults.filter(r => !r.applied && !r.reviewed);
-  const appliedEquipment = equipmentResults.filter(r => r.applied);
+  const pendingEquipment = equipmentDetected.filter(r => !r.applied && !r.reviewed);
+  const appliedEquipment = equipmentDetected.filter(r => r.applied);
+
+  // Equipment tab filtering
+  const filteredEquipmentResults = (() => {
+    switch (equipFilter) {
+      case 'detected': return equipmentDetected;
+      case 'none': return equipmentNone;
+      case 'pending': return pendingEquipment;
+      default: return allResults;
+    }
+  })();
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -235,16 +335,16 @@ export default function PhotoAuditPage() {
           <p className="text-xs text-gray-500">Total audited</p>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 p-4 text-center">
-          <p className="text-2xl font-bold text-green-600">{stats.applied}</p>
-          <p className="text-xs text-gray-500">Auto-applied</p>
+          <p className="text-2xl font-bold text-green-600">{equipmentDetected.length}</p>
+          <p className="text-xs text-gray-500">Equipment found</p>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 p-4 text-center">
-          <p className="text-2xl font-bold text-amber-600">{stats.pending}</p>
-          <p className="text-xs text-gray-500">Pending review</p>
+          <p className="text-2xl font-bold text-amber-600">{pendingEquipment.length}</p>
+          <p className="text-xs text-gray-500">Need review</p>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 p-4 text-center">
-          <p className="text-2xl font-bold text-indigo-600">{stats.equipment}</p>
-          <p className="text-xs text-gray-500">Equipment to review</p>
+          <p className="text-2xl font-bold text-red-500">{cleanupResults.length}</p>
+          <p className="text-xs text-gray-500">Photos cleaned</p>
         </div>
       </div>
 
@@ -256,7 +356,7 @@ export default function PhotoAuditPage() {
             tab === 'equipment' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
           }`}
         >
-          <Wrench className="w-4 h-4" /> Equipment ({equipmentResults.length})
+          <Wrench className="w-4 h-4" /> All Results ({allResults.length})
         </button>
         <button
           onClick={() => setTab('heroes')}
@@ -284,37 +384,48 @@ export default function PhotoAuditPage() {
           </div>
         ) : (
           <>
-            {/* Equipment tab */}
+            {/* Equipment / All Results tab */}
             {tab === 'equipment' && (
               <>
-                {pendingEquipment.length > 0 && (
-                  <div className="px-4 py-3 bg-gray-50 border-b flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700">
-                      {pendingEquipment.length} pending review
-                    </span>
+                {/* Filter bar */}
+                <div className="px-4 py-3 bg-gray-50 border-b flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <Filter className="w-3.5 h-3.5 text-gray-400" />
+                    {(['all', 'detected', 'none', 'pending'] as EquipmentFilter[]).map(f => (
+                      <button
+                        key={f}
+                        onClick={() => setEquipFilter(f)}
+                        className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                          equipFilter === f
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                      >
+                        {f === 'all' && `All (${allResults.length})`}
+                        {f === 'detected' && `Equipment (${equipmentDetected.length})`}
+                        {f === 'none' && `No match (${equipmentNone.length})`}
+                        {f === 'pending' && `Pending (${pendingEquipment.length})`}
+                      </button>
+                    ))}
+                  </div>
+                  {pendingEquipment.length > 0 && (
                     <button
                       onClick={applyAllHighConfidence}
                       className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded hover:bg-green-700"
                     >
                       <Check className="w-3 h-3" /> Apply All High Confidence
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
 
-                {appliedEquipment.length > 0 && (
-                  <div className="px-4 py-2 bg-green-50 border-b">
-                    <span className="text-xs font-medium text-green-700">
-                      {appliedEquipment.length} auto-applied
-                    </span>
-                  </div>
-                )}
-
-                {equipmentResults.length === 0 ? (
+                {filteredEquipmentResults.length === 0 ? (
                   <p className="px-4 py-12 text-center text-sm text-gray-500">
-                    No equipment detections yet. Run a batch to get started.
+                    {allResults.length === 0
+                      ? 'No audit results yet. Run a batch to get started.'
+                      : 'No results match this filter.'}
                   </p>
                 ) : (
-                  equipmentResults.map(r => (
+                  filteredEquipmentResults.map(r => (
                     <EquipmentRow
                       key={r.id}
                       result={r}
