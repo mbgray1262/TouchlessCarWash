@@ -5,6 +5,7 @@ import { usePhotoAudit, AuditResult } from './usePhotoAudit';
 import { Camera, Wrench, Trash2, Play, Loader2, Check, X, Undo2, ChevronDown, ChevronUp, ExternalLink, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 import { getStateSlug, slugify } from '@/lib/constants';
+import { ListingEditorModal } from './ListingEditorModal';
 
 const CONFIDENCE_COLORS: Record<string, string> = {
   high: 'bg-green-100 text-green-700',
@@ -69,11 +70,12 @@ function ListingLink({ result }: { result: AuditResult }) {
   );
 }
 
-function EquipmentRow({ result, onApply, onReject, onUndo }: {
+function EquipmentRow({ result, onApply, onReject, onUndo, onOpenEditor }: {
   result: AuditResult;
   onApply: () => void;
   onReject: () => void;
   onUndo: () => void;
+  onOpenEditor: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [modalUrl, setModalUrl] = useState<string | null>(null);
@@ -87,16 +89,16 @@ function EquipmentRow({ result, onApply, onReject, onUndo }: {
     <div className={`border-b border-gray-100 last:border-0 ${!hasEquipment ? 'opacity-70' : ''}`}>
       {modalUrl && <PhotoModal url={modalUrl} onClose={() => setModalUrl(null)} />}
       <div className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50">
-        {/* Thumbnail — show source photo if equipment found, otherwise hero */}
+        {/* Thumbnail — click to open listing editor */}
         {(result.equipment_source_photo || result.listing_hero) && (
           <PhotoThumb
             url={result.equipment_source_photo || result.listing_hero!}
-            onClick={() => setModalUrl(result.equipment_source_photo || result.listing_hero!)}
+            onClick={onOpenEditor}
           />
         )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <p className="text-sm font-medium text-gray-800 truncate">{result.listing_name}</p>
+            <button onClick={onOpenEditor} className="text-sm font-medium text-gray-800 truncate hover:text-orange-600 transition-colors text-left">{result.listing_name}</button>
             <ListingLink result={result} />
           </div>
           <p className="text-xs text-gray-500">{result.listing_city}, {result.listing_state}</p>
@@ -266,12 +268,13 @@ export default function PhotoAuditPage() {
   const {
     results, loading, tab, setTab, running, runProgress, stats, queueStats,
     includeGooglePhotos, setIncludeGooglePhotos,
-    runBatch, applyEquipment, rejectResult, applyAllHighConfidence, undoApply,
+    runBatch, applyEquipment, rejectResult, applyAllHighConfidence, undoApply, reload,
   } = usePhotoAudit();
 
   const [batchLimit, setBatchLimit] = useState(10);
   const [viewFilter, setViewFilter] = useState<ViewFilter>('all');
   const [page, setPage] = useState(1);
+  const [editorListingId, setEditorListingId] = useState<string | null>(null);
 
   // Derived lists
   const equipmentDetected = results.filter(r => r.equipment_brand);
@@ -448,6 +451,7 @@ export default function PhotoAuditPage() {
                   onApply={() => applyEquipment(r.id, r.listing_id, r.equipment_brand!, r.equipment_model)}
                   onReject={() => rejectResult(r.id)}
                   onUndo={() => undoApply(r.id, r.listing_id)}
+                  onOpenEditor={() => setEditorListingId(r.listing_id)}
                 />
               ))
             )}
@@ -503,6 +507,15 @@ export default function PhotoAuditPage() {
           </>
         )}
       </div>
+
+      {/* Listing editor modal */}
+      {editorListingId && (
+        <ListingEditorModal
+          listingId={editorListingId}
+          onClose={() => setEditorListingId(null)}
+          onUpdate={reload}
+        />
+      )}
     </div>
   );
 }
