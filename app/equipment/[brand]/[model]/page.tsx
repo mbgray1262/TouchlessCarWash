@@ -162,6 +162,11 @@ export default async function ModelDetailPage({ params }: Props) {
         {/* Description */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-10">
           <p className="text-blue-900">{model.description}</p>
+          {model.bestFor && (
+            <p className="text-blue-800 mt-3 text-sm">
+              <span className="font-semibold">Best for:</span> {model.bestFor}
+            </p>
+          )}
           {brand.website && (
             <p className="mt-3">
               <a
@@ -175,6 +180,26 @@ export default async function ModelDetailPage({ params }: Props) {
             </p>
           )}
         </div>
+
+        {/* Key features */}
+        {model.keyFeatures && model.keyFeatures.length > 0 && (
+          <section className="mb-12">
+            <h2 className="text-2xl font-bold mb-4">
+              Key Features of the {model.name}
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {model.keyFeatures.map((feature, i) => (
+                <div
+                  key={i}
+                  className="flex items-start gap-3 bg-white border border-gray-200 rounded-lg p-4"
+                >
+                  <span className="text-blue-500 mt-0.5 shrink-0">✓</span>
+                  <span className="text-gray-700 text-sm">{feature}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Listings section */}
         {listings.length > 0 && (

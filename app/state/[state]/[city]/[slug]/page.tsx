@@ -320,9 +320,6 @@ const WASH_TYPE_LABELS: Record<string, { label: string; color: string }> = {
 
 // Brand labels imported from centralized equipment data
 import { getBrandLabel, getBrandBySlug, slugifyModel } from '@/lib/equipment-data';
-const BRAND_LABELS: Record<string, string> = new Proxy({} as Record<string, string>, {
-  get: (_target, prop: string) => getBrandLabel(prop),
-});
 
 function buildLocalBusinessSchema(listing: Listing, canonicalUrl: string, hours: Record<string, string> | null, reviewSnippets: ReviewSnippet[] = [], rankings: BestOfRanking[] = []): object {
   const hoursSpec = hours
@@ -432,7 +429,7 @@ function buildFAQs(listing: Listing, hours: Record<string, string> | null): { q:
     touchlessAnswer += ` Wash types available: ${typeLabels.join(' and ')}.`;
   }
   if (listing.equipment_brand) {
-    const brandLabel = listing.equipment_model || BRAND_LABELS[listing.equipment_brand] || listing.equipment_brand;
+    const brandLabel = listing.equipment_model || getBrandLabel(listing.equipment_brand) || listing.equipment_brand;
     touchlessAnswer += ` They use ${brandLabel} touchless wash equipment.`;
   }
   faqs.push({ q: `Is ${listing.name} a touchless car wash?`, a: touchlessAnswer });
@@ -493,7 +490,7 @@ function buildFAQs(listing: Listing, hours: Record<string, string> | null): { q:
   // 6. Equipment & technology (conditional)
   const tech = asArray(listing.extracted_data?.equipment_technology);
   if (listing.equipment_brand || tech.length > 0) {
-    const brandLabel = listing.equipment_brand ? (BRAND_LABELS[listing.equipment_brand] || listing.equipment_brand) : null;
+    const brandLabel = listing.equipment_brand ? (getBrandLabel(listing.equipment_brand) || listing.equipment_brand) : null;
     const model = listing.equipment_model;
     let equipAnswer = `${listing.name} uses `;
     if (model) {

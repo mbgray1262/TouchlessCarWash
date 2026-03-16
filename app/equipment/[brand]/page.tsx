@@ -163,23 +163,51 @@ export default async function BrandDetailPage({ params }: Props) {
       </section>
 
       <div className="max-w-6xl mx-auto px-4 py-12">
-        {/* Description */}
+        {/* About section */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-10">
           <p className="text-blue-900">{brand.description}</p>
+          {brand.website && (
+            <p className="mt-3">
+              <a
+                href={brand.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline text-sm inline-flex items-center gap-1"
+              >
+                Visit {brand.label} website &rarr;
+              </a>
+            </p>
+          )}
         </div>
 
-        {/* Website link */}
-        {brand.website && (
-          <p className="mb-10">
-            <a
-              href={brand.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-800 underline font-medium"
-            >
-              Visit {brand.label} website &rarr;
-            </a>
-          </p>
+        {/* History */}
+        {brand.history && (
+          <section className="mb-12">
+            <h2 className="text-2xl font-bold mb-4">
+              History of {brand.label}
+            </h2>
+            <p className="text-gray-700 leading-relaxed">{brand.history}</p>
+          </section>
+        )}
+
+        {/* Key features */}
+        {brand.features && brand.features.length > 0 && (
+          <section className="mb-12">
+            <h2 className="text-2xl font-bold mb-4">
+              What Makes {brand.label} Different
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {brand.features.map((feature, i) => (
+                <div
+                  key={i}
+                  className="flex items-start gap-3 bg-white border border-gray-200 rounded-lg p-4"
+                >
+                  <span className="text-blue-500 mt-0.5 shrink-0">✓</span>
+                  <span className="text-gray-700 text-sm">{feature}</span>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
 
         {/* Models section */}
