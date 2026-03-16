@@ -109,17 +109,30 @@ export function useHeroReview() {
     return [...hardcoded, ...custom];
   }, [customModels]);
 
-  // Load vendor list for dropdown
+  // Load vendor list for dropdown (paginate to get all vendors past Supabase 1000-row default)
   useEffect(() => {
-    supabase
-      .from('vendors')
-      .select('id, canonical_name')
-      .order('canonical_name')
-      .then(({ data }) => {
-        if (data) {
-          setVendors(data.map(v => ({ id: v.id, name: v.canonical_name })));
+    async function loadAllVendors() {
+      const all: { id: number; name: string }[] = [];
+      const batchSize = 1000;
+      let offset = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const { data } = await supabase
+          .from('vendors')
+          .select('id, canonical_name')
+          .order('canonical_name')
+          .range(offset, offset + batchSize - 1);
+        if (data && data.length > 0) {
+          all.push(...data.filter(v => v.canonical_name).map(v => ({ id: v.id, name: v.canonical_name })));
+          offset += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
         }
-      });
+      }
+      setVendors(all);
+    }
+    loadAllVendors();
   }, []);
 
   // Load custom models on mount
