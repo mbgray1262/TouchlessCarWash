@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useCallback, useState } from 'react';
-import { Search, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import { useEffect, useCallback, useState, useRef } from 'react';
+import { Search, ChevronLeft, ChevronRight, RefreshCw, ChevronsUpDown, X } from 'lucide-react';
 import { US_STATES } from '@/lib/constants';
 import { FilterSource } from './types';
 import { HeroCard } from './HeroCard';
@@ -17,6 +17,90 @@ const SOURCE_FILTERS: { value: FilterSource; label: string }[] = [
   { value: 'website', label: 'Website' },
   { value: 'none', label: 'No Hero' },
 ];
+
+function VendorCombobox({ vendors, value, onChange }: {
+  vendors: { id: number; name: string }[];
+  value: string;
+  onChange: (val: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const selectedVendor = vendors.find(v => String(v.id) === value);
+
+  const filtered = search
+    ? vendors.filter(v => v.name.toLowerCase().includes(search.toLowerCase()))
+    : vendors;
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setSearch('');
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => { setOpen(!open); if (!open) setTimeout(() => inputRef.current?.focus(), 0); }}
+        className="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white flex items-center gap-1 min-w-[12rem] max-w-[16rem] text-left"
+      >
+        <span className="truncate flex-1">{selectedVendor?.name || 'All Vendors'}</span>
+        {value ? (
+          <X
+            className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600 shrink-0"
+            onClick={(e) => { e.stopPropagation(); onChange(''); setSearch(''); setOpen(false); }}
+          />
+        ) : (
+          <ChevronsUpDown className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+        )}
+      </button>
+      {open && (
+        <div className="absolute z-50 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg w-64">
+          <div className="p-2 border-b border-gray-100">
+            <input
+              ref={inputRef}
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search vendors..."
+              className="w-full text-sm border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-orange-300"
+            />
+          </div>
+          <div className="max-h-60 overflow-y-auto">
+            <button
+              type="button"
+              onClick={() => { onChange(''); setSearch(''); setOpen(false); }}
+              className={`w-full text-left px-3 py-1.5 text-sm hover:bg-orange-50 ${!value ? 'bg-orange-50 font-medium' : ''}`}
+            >
+              All Vendors
+            </button>
+            {filtered.map(v => (
+              <button
+                key={v.id}
+                type="button"
+                onClick={() => { onChange(String(v.id)); setSearch(''); setOpen(false); }}
+                className={`w-full text-left px-3 py-1.5 text-sm hover:bg-orange-50 truncate ${String(v.id) === value ? 'bg-orange-50 font-medium' : ''}`}
+              >
+                {v.name}
+              </button>
+            ))}
+            {filtered.length === 0 && (
+              <div className="px-3 py-2 text-sm text-gray-400">No vendors found</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function HeroReviewPage() {
   const {
@@ -179,16 +263,11 @@ export default function HeroReviewPage() {
             ))}
           </select>
 
-          <select
+          <VendorCombobox
+            vendors={vendors}
             value={filterVendorId}
-            onChange={(e) => handleVendorChange(e.target.value)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white max-w-48"
-          >
-            <option value="">All Vendors</option>
-            {vendors.map(v => (
-              <option key={v.id} value={v.id}>{v.name}</option>
-            ))}
-          </select>
+            onChange={handleVendorChange}
+          />
 
           <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
             <input
@@ -294,11 +373,11 @@ export default function HeroReviewPage() {
             <span className="text-sm text-gray-600 flex items-center gap-1.5">
               Page
               <input
-                type="number"
-                min={1}
-                max={totalPages}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={pageInputValue}
-                onChange={(e) => setPageInputValue(e.target.value)}
+                onChange={(e) => setPageInputValue(e.target.value.replace(/[^0-9]/g, ''))}
                 onBlur={commitPageInput}
                 onKeyDown={(e) => {
                   e.stopPropagation();
