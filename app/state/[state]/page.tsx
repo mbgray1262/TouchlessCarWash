@@ -153,24 +153,9 @@ export default async function StatePage({ params }: StatePageProps) {
 
   const availableFeatures = featureCountsRaw.filter((f): f is { slug: string; name: string; count: number } => f !== null && f.count >= 3);
 
+  // Return proper 404 for states with no listings — prevents Google soft 404s
   if (totalCount === 0) {
-    return (
-      <div className="min-h-screen">
-        <div className="bg-[#0F2744] py-10">
-          <div className="container mx-auto px-4 max-w-6xl">
-            <nav className="flex items-center gap-1.5 text-sm text-white/50 mb-5">
-              <Link href="/" className="hover:text-white transition-colors">Home</Link>
-              <ChevronRight className="w-3.5 h-3.5" />
-              <Link href="/states" className="hover:text-white transition-colors">States</Link>
-              <ChevronRight className="w-3.5 h-3.5" />
-              <span className="text-white">{stateName}</span>
-            </nav>
-            <h1 className="text-4xl font-bold text-white mb-3">Touchless Car Washes in {stateName}</h1>
-            <p className="text-white/70">No listings found in {stateName} yet. Check back soon!</p>
-          </div>
-        </div>
-      </div>
-    );
+    notFound();
   }
 
   // Sort cities alphabetically for display

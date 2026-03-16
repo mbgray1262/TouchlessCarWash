@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Prevent duplicate URLs from trailing slashes (e.g. /state/texas vs /state/texas/)
+  trailingSlash: false,
   eslint: {
     ignoreDuringBuilds: true,
   },

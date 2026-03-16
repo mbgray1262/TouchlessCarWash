@@ -11,6 +11,9 @@ export const metadata: Metadata = {
   title: "Touchless Car Wash Equipment & Brands",
   description:
     "Explore touchless car wash equipment brands and models. Find car washes near you by the equipment they use, including PDQ, WashTec, Belanger, and more.",
+  alternates: {
+    canonical: "https://touchlesscarwashfinder.com/equipment",
+  },
 };
 
 async function getBrandStats() {

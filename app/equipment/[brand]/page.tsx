@@ -37,6 +37,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: brand.seoTitle,
     description: brand.seoDescription,
+    alternates: {
+      canonical: `https://touchlesscarwashfinder.com/equipment/${brandSlug}`,
+    },
   };
 }
 

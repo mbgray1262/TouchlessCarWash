@@ -166,27 +166,9 @@ export default async function CityPage({ params }: CityPageProps) {
     getFilters(),
   ]);
 
+  // Return proper 404 for cities with no listings — prevents Google soft 404s
   if (allListings.length === 0) {
-    return (
-      <div className="min-h-screen py-12">
-        <div className="container mx-auto px-4 max-w-6xl">
-          <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-6">
-            <Link href="/" className="hover:text-[#0F2744] transition-colors">Home</Link>
-            <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
-            <Link href="/states" className="hover:text-[#0F2744] transition-colors">States</Link>
-            <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
-            <Link href={`/state/${params.state}`} className="hover:text-[#0F2744] transition-colors">{stateName}</Link>
-            <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
-            <span className="text-[#0F2744] font-medium">{cityName}</span>
-          </nav>
-          <h1 className="text-4xl font-bold text-[#0F2744] mb-4">Touchless Car Washes in {cityName}, {stateCode}</h1>
-          <p className="text-lg text-muted-foreground mb-6">No listings found in {cityName} yet.</p>
-          <Button asChild variant="outline">
-            <Link href={`/state/${params.state}`}>Browse all of {stateName}</Link>
-          </Button>
-        </div>
-      </div>
-    );
+    notFound();
   }
 
   // Build filter→listingIds map for client-side in-memory filtering

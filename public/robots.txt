@@ -3,5 +3,10 @@ Allow: /
 Disallow: /admin/
 Disallow: /api/
 Disallow: /search
+Disallow: /compare
+Disallow: /favorites
+
+# Prioritize crawling of listing pages and location directories
+# All other pages are in the sitemap
 
 Sitemap: https://touchlesscarwashfinder.com/sitemap.xml

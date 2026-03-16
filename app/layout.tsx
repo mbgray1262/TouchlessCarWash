@@ -17,6 +17,13 @@ export const metadata: Metadata = {
   verification: {
     google: 'aO6V2H3Yb4O904NRWtdJRkZZdb2AiVRtPNdf3Hy9Zzk',
   },
+  robots: {
+    index: true,
+    follow: true,
+    'max-image-preview': 'large',
+    'max-snippet': -1,
+    'max-video-preview': -1,
+  },
   openGraph: {
     siteName: 'Touchless Car Wash Finder',
     type: 'website',
