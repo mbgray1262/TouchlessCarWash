@@ -12,6 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { CropModal } from '@/app/admin/hero-review/CropModal';
+import { EQUIPMENT_BRANDS, EQUIPMENT_MODELS } from '@/app/admin/hero-review/types';
 
 const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const DAY_LABELS: Record<string, string> = {
@@ -308,8 +309,8 @@ export default function FullEditListingPanel({ listing, open, onClose, onSaved }
         longitude: form.longitude ? parseFloat(form.longitude) : null,
         location_page_url: form.location_page_url.trim() || null,
         parent_chain: form.parent_chain.trim() || null,
-        equipment_brand: form.equipment_brand.trim() || null,
-        equipment_model: form.equipment_model.trim() || null,
+        equipment_brand: (form.equipment_brand.trim() && form.equipment_brand.trim() !== '__other__') ? form.equipment_brand.trim() : null,
+        equipment_model: (form.equipment_model.trim() && form.equipment_model.trim() !== '__other__') ? form.equipment_model.trim() : null,
         google_place_id: form.google_place_id.trim() || null,
         google_maps_url: form.google_maps_url.trim() || null,
         google_description: form.google_description.trim() || null,
@@ -627,11 +628,89 @@ export default function FullEditListingPanel({ listing, open, onClose, onSaved }
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-xs text-gray-500">Equipment Brand</Label>
-                    <Input value={form.equipment_brand} onChange={(e) => updateField('equipment_brand', e.target.value)} className="mt-1" placeholder="e.g. PDQ" />
+                    {(() => {
+                      const allBrands = [...EQUIPMENT_BRANDS.filter(b => b.value !== 'other'), { value: '__other__', label: 'Other…' }];
+                      const currentBrand = form.equipment_brand;
+                      const isKnown = allBrands.some(b => b.value === currentBrand);
+                      const showCustom = currentBrand === '__other__' || (currentBrand && !isKnown);
+                      const selectVal = isKnown ? currentBrand : (currentBrand && currentBrand !== '__other__' ? '__other__' : '');
+
+                      return (
+                        <div className="mt-1 space-y-1">
+                          <select
+                            value={selectVal}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === '__other__') {
+                                updateField('equipment_brand', '__other__');
+                                updateField('equipment_model', '');
+                              } else {
+                                updateField('equipment_brand', val);
+                                if (!val) updateField('equipment_model', '');
+                              }
+                            }}
+                            className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none"
+                          >
+                            <option value="">Select brand…</option>
+                            {allBrands.map(b => (
+                              <option key={b.value} value={b.value}>{b.label}</option>
+                            ))}
+                          </select>
+                          {showCustom && (
+                            <Input
+                              value={currentBrand === '__other__' ? '' : currentBrand}
+                              onChange={(e) => updateField('equipment_brand', e.target.value || '__other__')}
+                              placeholder="Type brand name…"
+                              className="text-sm"
+                            />
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div>
                     <Label className="text-xs text-gray-500">Equipment Model</Label>
-                    <Input value={form.equipment_model} onChange={(e) => updateField('equipment_model', e.target.value)} className="mt-1" placeholder="e.g. LaserWash 360" />
+                    {(() => {
+                      const brand = form.equipment_brand;
+                      const models = (brand && brand !== '__other__') ? (EQUIPMENT_MODELS[brand] || []) : [];
+                      const currentModel = form.equipment_model;
+                      const isKnown = models.includes(currentModel);
+                      const showCustom = currentModel === '__other__' || (currentModel && !isKnown);
+                      const selectVal = isKnown ? currentModel : (currentModel && currentModel !== '__other__' ? '__other__' : '');
+
+                      if (!brand) {
+                        return <Input value="" disabled className="mt-1 text-sm" placeholder="Select brand first" />;
+                      }
+
+                      return (
+                        <div className="mt-1 space-y-1">
+                          {models.length > 0 ? (
+                            <select
+                              value={selectVal}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                updateField('equipment_model', val === '__other__' ? '__other__' : val);
+                              }}
+                              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none"
+                            >
+                              <option value="">Select model…</option>
+                              {models.map(m => (
+                                <option key={m} value={m}>{m}</option>
+                              ))}
+                              <option value="__other__">Other…</option>
+                            </select>
+                          ) : null}
+                          {(showCustom || models.length === 0) && (
+                            <Input
+                              value={currentModel === '__other__' ? '' : currentModel}
+                              onChange={(e) => updateField('equipment_model', e.target.value || (models.length > 0 ? '__other__' : ''))}
+                              placeholder="Type model name…"
+                              className="text-sm"
+                            />
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
