@@ -120,7 +120,10 @@ function EquipmentRow({ result, onApply, onReject, onUndo, onOpenEditor }: {
                 <Badge text={`hero: ${result.hero_quality}`} className={HERO_QUALITY_COLORS[result.hero_quality] ?? 'bg-gray-100 text-gray-600'} />
               )}
               {result.photos_to_remove.length > 0 && (
-                <Badge text={`${result.photos_to_remove.length} removed`} className="bg-red-50 text-red-500" />
+                <Badge
+                  text={`${result.photos_to_remove.length} ${result.applied ? 'removed' : 'flagged'}`}
+                  className={result.applied ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}
+                />
               )}
             </div>
           )}

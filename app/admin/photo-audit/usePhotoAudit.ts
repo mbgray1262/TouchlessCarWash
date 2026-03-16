@@ -103,7 +103,7 @@ export function usePhotoAudit() {
       }
     }
 
-    const enriched: AuditResult[] = data.map(r => ({
+    const enrichedAll: AuditResult[] = data.map(r => ({
       ...r,
       photos_to_remove: r.photos_to_remove ?? [],
       listing_name: listings[r.listing_id]?.name,
@@ -112,6 +112,15 @@ export function usePhotoAudit() {
       listing_state: listings[r.listing_id]?.state,
       listing_slug: listings[r.listing_id]?.slug,
     }));
+
+    // Deduplicate by listing_id — keep only the latest result per listing
+    // (data is already ordered by created_at desc, so first occurrence wins)
+    const seenListings = new Set<string>();
+    const enriched = enrichedAll.filter(r => {
+      if (seenListings.has(r.listing_id)) return false;
+      seenListings.add(r.listing_id);
+      return true;
+    });
 
     setResults(enriched);
 
