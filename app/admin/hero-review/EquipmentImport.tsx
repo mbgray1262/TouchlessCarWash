@@ -79,14 +79,22 @@ function parseInput(text: string): { rows: ImportRow[]; error?: string } {
     const parsed = JSON.parse(trimmed);
     const arr = Array.isArray(parsed) ? parsed : [parsed];
     const rows: ImportRow[] = [];
+    let skippedNull = 0;
     for (const item of arr) {
       if (!item.id) continue;
+      // Skip entries where brand is null/empty (Gemini couldn't identify equipment)
+      const brand = item.brand == null ? '' : String(item.brand || item.manufacturer || '').trim();
+      if (!brand || brand === 'null') {
+        skippedNull++;
+        continue;
+      }
       rows.push({
         id: String(item.id).trim(),
-        brand: String(item.brand || item.manufacturer || '').trim(),
-        model: item.model ? String(item.model).trim() : undefined,
+        brand,
+        model: (item.model != null && String(item.model).trim() !== 'null') ? String(item.model).trim() : undefined,
       });
     }
+    if (rows.length === 0 && skippedNull > 0) return { rows: [], error: `All ${skippedNull} entries had null brand (equipment not identifiable). Nothing to import.` };
     if (rows.length === 0) return { rows: [], error: 'No valid rows found in JSON' };
     return { rows };
   } catch {
@@ -150,14 +158,20 @@ export function EquipmentImport({ onComplete, getModelsForBrand, customBrands }:
       return `  - ${b.label}`;
     }).join('\n');
 
-    return `Classify the car wash equipment for listing cards on this page.
+    return `Classify the car wash equipment for EVERY listing card on this page.
 
-STAY ON THIS PAGE. Do not click pagination, "Next", "Prev", or any links that leave this page. Scroll down to see all cards on the current page before responding.
+STAY ON THIS PAGE. Do not click pagination, "Next", "Prev", or any links that leave this page. Scroll down to see ALL cards on the current page before responding.
+
+CRITICAL — EVERY UNTAGGED LISTING MUST BE IN YOUR OUTPUT:
+You MUST include an entry for EVERY card that does NOT have a 🔧 wrench icon. No exceptions. No silent skipping.
+- If you can identify the equipment → include brand and model (or model: null if unsure of model).
+- If the thumbnail doesn't show equipment clearly → still include the listing with brand: null and model: null.
+Every untagged card must appear in your JSON output. Count the untagged cards first, then make sure your output has that many entries.
 
 WHAT TO DO:
-1. Scroll through ALL cards on this page.
-2. For each card WITHOUT a 🔧 wrench icon, look at the hero thumbnail photo and listing name.
-3. Identify the equipment brand and model if you can. If you can't tell, skip that listing.
+1. Scroll through the ENTIRE page. Count all cards. Count how many have the 🔧 icon vs don't.
+2. For EVERY card WITHOUT a 🔧 wrench icon, examine the hero thumbnail and listing name.
+3. Report the total: "Found X cards, Y already tagged, Z untagged — classifying Z listings."
 
 EVIDENCE TO USE:
 - Equipment visible in the hero thumbnail (manufacturer logos, equipment shape, LED arches, spray arm design)
@@ -165,21 +179,26 @@ EVIDENCE TO USE:
 - Your knowledge of car wash chains and their equipment suppliers
 
 RULES:
-- SKIP cards that already have a 🔧 wrench icon (they're already classified).
+- SKIP ONLY cards that already have a 🔧 wrench icon.
 - Do NOT guess based on the business name alone. "Laser Wash" in a name does NOT mean PDQ LaserWash equipment.
 - Be specific about models when you can visually confirm (e.g., LED arches = LaserWash 360 Plus). If you can't tell the exact model, set model to null.
+- If you cannot identify the brand at all from the thumbnail, set brand to null AND model to null — but STILL include the listing.
 - Use the #xxxxxx ID code shown on each card.
 
-Output ONLY a JSON array:
+Output format — first state the counts, then provide the JSON array:
+"Found X cards, Y tagged, Z untagged."
 [
   {"id": "abc123", "brand": "PDQ (LaserWash)", "model": "LaserWash 360 Plus"},
-  {"id": "def456", "brand": "WashWorld", "model": null}
+  {"id": "def456", "brand": "WashWorld", "model": null},
+  {"id": "ghi789", "brand": null, "model": null}
 ]
 
 Use EXACT brand/model names from this reference list:
 ${brandLines}
 
-If a brand or model is not in this list, use the actual name — it will be added automatically.`;
+If a brand or model is not in this list, use the actual name — it will be added automatically.
+
+REMINDER: Your JSON array MUST have one entry for every untagged card. If you found Z untagged cards, your array must have Z entries.`;
   }, [getModelsForBrand, customBrands]);
 
   const handleCopyPrompt = async () => {
