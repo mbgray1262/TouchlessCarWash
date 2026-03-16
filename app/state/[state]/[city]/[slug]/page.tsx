@@ -1075,6 +1075,9 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                             {displayText}
                           </Link>
                         ) : displayText}
+                        <p className="text-xs text-gray-400 mt-2 leading-relaxed">
+                          Equipment identified via AI image recognition and may not be 100% accurate. Car washes may upgrade or replace equipment over time.
+                        </p>
                       </div>
                     );
                   })()}
