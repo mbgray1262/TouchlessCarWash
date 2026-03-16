@@ -186,12 +186,16 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
     setEnhancing(true);
     try {
       if (preEnhance) {
-        // Revert
+        // Revert — swap enhanced URL back to original in photos array
+        const currentPhotos = listing.photos ?? [];
+        const revertedPhotos = currentPhotos.map(p => p === listing.hero_image ? preEnhance.url : p);
+
         await supabase.from('listings').update({
           hero_image: preEnhance.url,
           hero_image_source: preEnhance.source,
+          photos: revertedPhotos,
         }).eq('id', listing.id);
-        setListing(prev => prev ? { ...prev, hero_image: preEnhance.url, hero_image_source: preEnhance.source } : prev);
+        setListing(prev => prev ? { ...prev, hero_image: preEnhance.url, hero_image_source: preEnhance.source, photos: revertedPhotos } : prev);
         setPreEnhance(null);
       } else {
         // Enhance
@@ -207,12 +211,17 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
         if (!res.ok) throw new Error(await res.text());
         const { url } = await res.json() as { url: string };
 
+        // Replace old hero URL in photos array to avoid duplicate gallery entries
+        const currentPhotos = listing.photos ?? [];
+        const updatedPhotos = currentPhotos.map(p => p === originalUrl ? url : p);
+
         await supabase.from('listings').update({
           hero_image: url,
           hero_image_source: 'gallery',
+          photos: updatedPhotos,
         }).eq('id', listing.id);
 
-        setListing(prev => prev ? { ...prev, hero_image: url, hero_image_source: 'gallery' } : prev);
+        setListing(prev => prev ? { ...prev, hero_image: url, hero_image_source: 'gallery', photos: updatedPhotos } : prev);
         setPreEnhance({ url: originalUrl, source: originalSource });
       }
       revalidate();
@@ -230,16 +239,6 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
 
   return (
     <>
-      {/* Crop modal */}
-      {cropOpen && listing.hero_image && (
-        <CropModal
-          imageUrl={listing.hero_image}
-          listingId={listing.id}
-          onSave={handleCropSave}
-          onClose={() => setCropOpen(false)}
-        />
-      )}
-
       {/* Gallery lightbox */}
       {lightboxIndex !== null && galleryPhotos[lightboxIndex] && (
         <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm" onClick={() => setLightboxIndex(null)}>
@@ -428,6 +427,17 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
           </div>
         </div>
       </div>
+
+      {/* Crop modal — rendered last so it layers on top of everything */}
+      {cropOpen && listing.hero_image && (
+        <CropModal
+          imageUrl={listing.hero_image}
+          listingId={listing.id}
+          onSave={handleCropSave}
+          onClose={() => setCropOpen(false)}
+          zIndex={60}
+        />
+      )}
     </>
   );
 }

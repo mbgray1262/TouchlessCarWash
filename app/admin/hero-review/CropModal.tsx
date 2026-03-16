@@ -11,6 +11,7 @@ interface Props {
   uploadType?: 'hero' | 'gallery';
   onSave: (croppedUrl: string) => void;
   onClose: () => void;
+  zIndex?: number;
 }
 
 const ASPECT_OPTIONS = [
@@ -63,7 +64,7 @@ async function getCroppedBlob(
   });
 }
 
-export function CropModal({ imageUrl, listingId, uploadType = 'hero', onSave, onClose }: Props) {
+export function CropModal({ imageUrl, listingId, uploadType = 'hero', onSave, onClose, zIndex }: Props) {
   const imgRef = useRef<HTMLImageElement>(null);
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
@@ -117,7 +118,8 @@ export function CropModal({ imageUrl, listingId, uploadType = 'hero', onSave, on
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+      className={`fixed inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 ${zIndex ? '' : 'z-50'}`}
+      style={zIndex ? { zIndex } : undefined}
       onClick={onClose}
     >
       <div
