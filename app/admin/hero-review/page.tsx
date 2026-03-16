@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { Search, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { US_STATES } from '@/lib/constants';
 import { FilterSource } from './types';
@@ -59,6 +59,21 @@ export default function HeroReviewPage() {
     navigateFocus,
     reload,
   } = useHeroReview();
+
+  // Local state for page input so user can clear/retype freely
+  const [pageInputValue, setPageInputValue] = useState(String(page + 1));
+  useEffect(() => {
+    setPageInputValue(String(page + 1));
+  }, [page]);
+
+  const commitPageInput = () => {
+    const val = parseInt(pageInputValue, 10);
+    if (!isNaN(val) && val >= 1 && val <= totalPages) {
+      setPage(val - 1);
+    } else {
+      setPageInputValue(String(page + 1));
+    }
+  };
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if ((e.target as HTMLElement).tagName === 'INPUT') return;
@@ -282,15 +297,15 @@ export default function HeroReviewPage() {
                 type="number"
                 min={1}
                 max={totalPages}
-                value={page + 1}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value, 10);
-                  if (!isNaN(val) && val >= 1 && val <= totalPages) {
-                    setPage(val - 1);
-                  }
-                }}
+                value={pageInputValue}
+                onChange={(e) => setPageInputValue(e.target.value)}
+                onBlur={commitPageInput}
                 onKeyDown={(e) => {
                   e.stopPropagation();
+                  if (e.key === 'Enter') {
+                    commitPageInput();
+                    (e.target as HTMLInputElement).blur();
+                  }
                 }}
                 className="w-16 px-2 py-1 text-sm text-center rounded-md border border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none"
               />
