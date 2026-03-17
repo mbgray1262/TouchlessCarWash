@@ -360,6 +360,110 @@ Deno.serve(async (req) => {
   const offset = body.offset ?? 0;
   const dryRun = body.dry_run ?? false;
   const skipExisting = body.skip_existing ?? true;
+  const reclassify = body.reclassify ?? false; // reclassify old Claude results with Gemini
+
+  // ── Reclassify mode: re-run Claude classifications through Gemini ──
+  if (reclassify && geminiKey) {
+    const batchLimit = body.limit ?? 50;
+    const { data: listings, error } = await supabase
+      .from('listings')
+      .select('id, name, hero_image')
+      .eq('classification_source', 'claude')
+      .eq('is_touchless', true)
+      .not('hero_image', 'is', null)
+      .order('name')
+      .range(offset, offset + batchLimit - 1);
+
+    if (error) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!listings || listings.length === 0) {
+      return new Response(JSON.stringify({ message: 'No more Claude-classified listings to reclassify', processed: 0 }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    let processed = 0;
+    let updated = 0;
+    let failed = 0;
+    const results: Array<{ id: string; name: string; old_brand?: string; new_brand?: string; new_model?: string; confidence?: string; status: string }> = [];
+
+    for (const listing of listings) {
+      processed++;
+      try {
+        const imageUrls = listing.hero_image ? [listing.hero_image] : [];
+        if (imageUrls.length === 0) {
+          results.push({ id: listing.id, name: listing.name, status: 'skipped_no_hero' });
+          continue;
+        }
+
+        const attempt = await detectWithGemini(imageUrls, geminiKey);
+        if (attempt.result && (attempt.result.confidence === 'high' || attempt.result.confidence === 'medium')) {
+          if (!dryRun) {
+            await supabase
+              .from('listings')
+              .update({
+                equipment_brand: attempt.result.brand,
+                equipment_model: attempt.result.model,
+                classification_source: 'gemini',
+                classification_confidence: attempt.result.confidence,
+              })
+              .eq('id', listing.id);
+          }
+          updated++;
+          results.push({
+            id: listing.id,
+            name: listing.name,
+            new_brand: attempt.result.brand,
+            new_model: attempt.result.model,
+            confidence: attempt.result.confidence,
+            status: 'reclassified',
+          });
+        } else {
+          // Low confidence or no detection — mark as attempted but don't overwrite
+          if (!dryRun) {
+            await supabase
+              .from('listings')
+              .update({ classification_source: 'gemini_attempted' })
+              .eq('id', listing.id);
+          }
+          results.push({ id: listing.id, name: listing.name, status: 'low_confidence_or_no_detection' });
+        }
+      } catch (err) {
+        failed++;
+        results.push({ id: listing.id, name: listing.name, status: `error: ${err.message}` });
+      }
+
+      // Small delay to avoid rate limiting
+      if (processed < listings.length) {
+        await new Promise(r => setTimeout(r, 500));
+      }
+    }
+
+    // Count remaining
+    const { count: remaining } = await supabase
+      .from('listings')
+      .select('id', { count: 'exact', head: true })
+      .eq('classification_source', 'claude')
+      .eq('is_touchless', true)
+      .not('hero_image', 'is', null);
+
+    return new Response(JSON.stringify({
+      mode: 'reclassify',
+      processed,
+      updated,
+      failed,
+      remaining: (remaining ?? 0) - updated,
+      dry_run: dryRun,
+      results,
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
 
   // ── Single-listing mode (uses Gemini with all images) ────────
   if (listingId) {
@@ -408,7 +512,12 @@ Deno.serve(async (req) => {
     if (bestResult && !dryRun && (bestResult.confidence === 'high' || bestResult.confidence === 'medium')) {
       await supabase
         .from('listings')
-        .update({ equipment_brand: bestResult.brand, equipment_model: bestResult.model })
+        .update({
+          equipment_brand: bestResult.brand,
+          equipment_model: bestResult.model,
+          classification_source: 'gemini',
+          classification_confidence: bestResult.confidence,
+        })
         .eq('id', single.id);
     }
 
@@ -528,7 +637,12 @@ Deno.serve(async (req) => {
       if (!dryRun && (bestResult.confidence === 'high' || bestResult.confidence === 'medium')) {
         await supabase
           .from('listings')
-          .update({ equipment_brand: bestResult.brand, equipment_model: bestResult.model })
+          .update({
+            equipment_brand: bestResult.brand,
+            equipment_model: bestResult.model,
+            classification_source: 'gemini',
+            classification_confidence: bestResult.confidence,
+          })
           .eq('id', listing.id);
       }
     }
