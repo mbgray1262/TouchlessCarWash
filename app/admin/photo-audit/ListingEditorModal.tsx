@@ -48,6 +48,8 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
   const [googlePhotosOpen, setGooglePhotosOpen] = useState(false);
   const [googlePhotosLoading, setGooglePhotosLoading] = useState(false);
   const [savingGooglePhoto, setSavingGooglePhoto] = useState<string | null>(null);
+  const [googleLightboxIndex, setGoogleLightboxIndex] = useState<number | null>(null);
+  const [classifyEvidence, setClassifyEvidence] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadListing = useCallback(async () => {
@@ -65,11 +67,16 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
   // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && lightboxIndex === null && !cropOpen) onClose();
+      if (e.key === 'Escape') {
+        if (googleLightboxIndex !== null) { setGoogleLightboxIndex(null); return; }
+        if (lightboxIndex !== null) { setLightboxIndex(null); return; }
+        if (cropOpen) return;
+        onClose();
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [onClose, lightboxIndex, cropOpen]);
+  }, [onClose, lightboxIndex, cropOpen, googleLightboxIndex]);
 
   const revalidate = useCallback(async () => {
     if (!listing) return;
@@ -325,6 +332,7 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
     if (!listing || classifying) return;
     setClassifying(true);
     setClassifyResult(null);
+    setClassifyEvidence(null);
     try {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
       const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -342,6 +350,12 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
         const brandLabel = EQUIPMENT_BRANDS.find(b => b.value === data.detection.brand)?.label ?? data.detection.brand;
         const modelText = data.detection.model ? ` — ${data.detection.model}` : '';
         setClassifyResult(`${brandLabel}${modelText} (${data.detection.confidence} confidence)`);
+        // Show the AI's reasoning
+        if (data.detection.raw_text) {
+          setClassifyEvidence(data.detection.raw_text);
+        } else if (data.diagnostics?.[0]?.raw_ai_response) {
+          setClassifyEvidence(data.diagnostics[0].raw_ai_response);
+        }
         // Reload listing to pick up saved brand/model
         if (data.saved) {
           await loadListing();
@@ -352,6 +366,10 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
         }
       } else {
         setClassifyResult('No equipment detected');
+        // Show raw AI response for debugging
+        if (data.diagnostics?.[0]?.raw_ai_response) {
+          setClassifyEvidence(data.diagnostics[0].raw_ai_response);
+        }
       }
     } catch (err) {
       console.error('AI classification failed:', err);
@@ -519,6 +537,67 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
         </div>
       )}
 
+      {/* Google Photos lightbox */}
+      {googleLightboxIndex !== null && googlePhotos && googlePhotos[googleLightboxIndex] && (
+        <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm" onClick={() => setGoogleLightboxIndex(null)}>
+          {googleLightboxIndex > 0 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setGoogleLightboxIndex(googleLightboxIndex - 1); }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 text-white flex items-center justify-center"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+          )}
+          {googleLightboxIndex < googlePhotos.length - 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setGoogleLightboxIndex(googleLightboxIndex + 1); }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 text-white flex items-center justify-center"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          )}
+          <div className="flex flex-col items-center gap-4" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={googlePhotos[googleLightboxIndex].url}
+              alt=""
+              className="max-w-[88vw] max-h-[75vh] object-contain rounded-lg shadow-2xl"
+            />
+            <div className="flex items-center gap-2">
+              <span className="text-white/40 text-xs">{googleLightboxIndex + 1} / {googlePhotos.length}</span>
+              <div className="w-px h-4 bg-white/20" />
+              <button
+                onClick={() => {
+                  const photo = googlePhotos[googleLightboxIndex];
+                  saveGooglePhoto(photo.name, photo.url, false);
+                  setGoogleLightboxIndex(null);
+                }}
+                disabled={!!savingGooglePhoto}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white text-sm font-semibold shadow-lg"
+              >
+                <Plus className="w-3.5 h-3.5" /> Add to gallery
+              </button>
+              <button
+                onClick={() => {
+                  const photo = googlePhotos[googleLightboxIndex];
+                  saveGooglePhoto(photo.name, photo.url, true);
+                  setGoogleLightboxIndex(null);
+                }}
+                disabled={!!savingGooglePhoto}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold shadow-lg"
+              >
+                <Star className="w-3.5 h-3.5" /> Set as hero
+              </button>
+              <button
+                onClick={() => setGoogleLightboxIndex(null)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm"
+              >
+                <X className="w-3.5 h-3.5" /> Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main modal */}
       <div className="fixed inset-0 bg-black z-50 flex items-center justify-center p-4" onClick={onClose}>
         <div
@@ -572,7 +651,7 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
                   </div>
                 )}
                 {/* Hero action buttons */}
-                <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute top-3 right-3 flex gap-2">
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploading}
@@ -680,17 +759,22 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
                 <p className="text-sm text-gray-400 py-4 text-center">No Google Place photos available</p>
               ) : googlePhotos ? (
                 <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
-                  {googlePhotos.map((photo) => {
+                  {googlePhotos.map((photo, idx) => {
                     const isSaving = savingGooglePhoto === photo.url;
-                    const alreadySaved = (listing.photos ?? []).some(p => p.includes('google-'));
                     return (
                       <div key={photo.name} className="relative flex-shrink-0 group">
-                        <div className="w-[160px] h-[120px] rounded-lg overflow-hidden bg-gray-100">
+                        <div
+                          className="w-[160px] h-[120px] rounded-lg overflow-hidden bg-gray-100 cursor-pointer hover:ring-2 hover:ring-green-400 transition-shadow"
+                          onClick={() => setGoogleLightboxIndex(idx)}
+                        >
                           <img
                             src={photo.url}
                             alt=""
                             className="w-full h-full object-cover"
                           />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                            <ZoomIn className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 drop-shadow-lg transition-opacity" />
+                          </div>
                           {isSaving && (
                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-lg">
                               <Loader2 className="w-6 h-6 text-white animate-spin" />
@@ -701,7 +785,7 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
                         {!isSaving && (
                           <div className="absolute bottom-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
-                              onClick={() => saveGooglePhoto(photo.name, photo.url, false)}
+                              onClick={(e) => { e.stopPropagation(); saveGooglePhoto(photo.name, photo.url, false); }}
                               disabled={!!savingGooglePhoto}
                               className="w-7 h-7 rounded-full bg-green-500 hover:bg-green-600 text-white flex items-center justify-center shadow-lg"
                               title="Add to gallery"
@@ -709,7 +793,7 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
                               <Plus className="w-3.5 h-3.5" />
                             </button>
                             <button
-                              onClick={() => saveGooglePhoto(photo.name, photo.url, true)}
+                              onClick={(e) => { e.stopPropagation(); saveGooglePhoto(photo.name, photo.url, true); }}
                               disabled={!!savingGooglePhoto}
                               className="w-7 h-7 rounded-full bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center shadow-lg"
                               title="Set as hero image"
@@ -833,6 +917,13 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
                 </span>
               )}
             </div>
+            {/* AI evidence / reasoning */}
+            {classifyEvidence && (
+              <div className="mt-2 p-3 rounded-lg bg-violet-50 border border-violet-200">
+                <p className="text-xs font-semibold text-violet-600 mb-1">AI Evidence:</p>
+                <p className="text-xs text-violet-800 whitespace-pre-line leading-relaxed">{classifyEvidence}</p>
+              </div>
+            )}
           </div>
 
           {/* Gallery section */}
