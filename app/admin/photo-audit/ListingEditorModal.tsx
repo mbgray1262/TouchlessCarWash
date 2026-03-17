@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { X, Star, Trash2, Crop, Wand2, ZoomIn, ChevronLeft, ChevronRight, ImageOff, ExternalLink, Check, Upload, Sparkles, Loader2, ImagePlus, Plus, ChevronDown, ChevronUp, Ban, MapPin } from 'lucide-react';
+import { X, Star, Trash2, Crop, Wand2, ZoomIn, ChevronLeft, ChevronRight, ImageOff, ExternalLink, Check, Upload, Sparkles, Loader2, ImagePlus, Plus, ChevronDown, ChevronUp, Ban, MapPin, Globe, Image as ImageIcon } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { CropModal } from '../hero-review/CropModal';
@@ -26,6 +26,7 @@ interface ListingData {
   google_place_id: string | null;
   latitude: number | null;
   longitude: number | null;
+  website: string | null;
 }
 
 interface Props {
@@ -57,7 +58,7 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
   const loadListing = useCallback(async () => {
     const { data } = await supabase
       .from('listings')
-      .select('id, name, hero_image, hero_image_source, photos, city, state, slug, google_photo_url, street_view_url, blocked_photos, equipment_brand, equipment_model, google_place_id, latitude, longitude')
+      .select('id, name, hero_image, hero_image_source, photos, city, state, slug, google_photo_url, street_view_url, blocked_photos, equipment_brand, equipment_model, google_place_id, latitude, longitude, website')
       .eq('id', listingId)
       .maybeSingle();
     if (data) setListing(data as ListingData);
@@ -387,6 +388,11 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
     if (!listing || !confirm(`Mark "${listing.name}" as NOT touchless? It will be removed from the site.`)) return;
     setSaving(true);
     await supabase.from('listings').update({ is_touchless: false }).eq('id', listing.id);
+    // Also dismiss all audit results so it leaves the Need Review queue
+    await supabase
+      .from('photo_audit_results')
+      .update({ reviewed: true, applied: true })
+      .eq('listing_id', listing.id);
     onUpdate?.();
     setSaving(false);
     onClose();
@@ -395,6 +401,11 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
   const deleteListing = async () => {
     if (!listing || !confirm(`Permanently DELETE "${listing.name}"? This cannot be undone.`)) return;
     setSaving(true);
+    // Dismiss audit results first (FK constraint)
+    await supabase
+      .from('photo_audit_results')
+      .update({ reviewed: true, applied: true })
+      .eq('listing_id', listing.id);
     await supabase.from('listings').delete().eq('id', listing.id);
     onUpdate?.();
     setSaving(false);
@@ -1032,6 +1043,27 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
               >
                 <MapPin className="w-4 h-4" /> Street View
               </button>
+              {listing.website && (
+                <button
+                  onClick={() => window.open(listing.website!, '_blank')}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-700 text-sm font-medium transition-colors"
+                  title="Open car wash website"
+                >
+                  <Globe className="w-4 h-4" /> Website
+                </button>
+              )}
+              {listing.google_place_id && (
+                <button
+                  onClick={() => {
+                    const query = encodeURIComponent(`${listing.name}, ${listing.city}, ${listing.state}`);
+                    window.open(`https://www.google.com/maps/search/${query}/photos`, '_blank');
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-100 hover:bg-green-200 text-green-700 text-sm font-medium transition-colors"
+                  title="Browse Google Photos in new tab"
+                >
+                  <ImageIcon className="w-4 h-4" /> Google Photos
+                </button>
+              )}
             </div>
             <button
               onClick={dismissAudit}
