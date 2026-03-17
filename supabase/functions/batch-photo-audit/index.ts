@@ -666,10 +666,11 @@ async function processOneListing(
 
 // ---- Main handler (supports server-side job tracking + self-chaining) ----
 
-// Chunk sizes tuned for Supabase gateway timeout (~150s)
-// Each Sonnet call ≈ 10-20s, enrichment adds ~15s/listing
-const CHUNK_SIZE_GOOGLE = 4;
-const CHUNK_SIZE_NO_GOOGLE = 8;
+// Chunk sizes tuned for edge function timeout (340s guard).
+// Gateway may 504 at ~150s, but the function keeps running internally.
+// Frontend poll handles 504s gracefully by checking job record.
+const CHUNK_SIZE_GOOGLE = 8;
+const CHUNK_SIZE_NO_GOOGLE = 15;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
