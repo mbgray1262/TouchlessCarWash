@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { X, Star, Trash2, Crop, Wand2, ZoomIn, ChevronLeft, ChevronRight, ImageOff, ExternalLink, Check } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { X, Star, Trash2, Crop, Wand2, ZoomIn, ChevronLeft, ChevronRight, ImageOff, ExternalLink, Check, Upload } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { CropModal } from '../hero-review/CropModal';
@@ -36,6 +36,8 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
   const [enhancing, setEnhancing] = useState(false);
   const [preEnhance, setPreEnhance] = useState<{ url: string; source: string | null } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadListing = useCallback(async () => {
     const { data } = await supabase
@@ -233,6 +235,56 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
     }
   };
 
+  const handleUploadHero = async (file: File) => {
+    if (!listing) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('listingId', listing.id);
+      formData.append('type', 'hero');
+
+      const res = await fetch('/api/upload-image', { method: 'POST', body: formData });
+      if (!res.ok) throw new Error(await res.text());
+      const { url } = await res.json() as { url: string };
+
+      // Move old hero into gallery, set new uploaded image as hero
+      const oldHero = listing.hero_image;
+      const currentPhotos = listing.photos ?? [];
+      let updatedPhotos = [...currentPhotos];
+      if (oldHero && !updatedPhotos.includes(oldHero)) {
+        updatedPhotos.unshift(oldHero);
+      }
+      if (!updatedPhotos.includes(url)) {
+        updatedPhotos = [url, ...updatedPhotos];
+      }
+
+      await supabase.from('listings').update({
+        hero_image: url,
+        hero_image_source: 'gallery',
+        photos: updatedPhotos,
+      }).eq('id', listing.id);
+
+      await supabase.from('hero_reviews').insert({
+        listing_id: listing.id,
+        action: 'replaced',
+        old_hero_url: oldHero,
+        new_hero_url: url,
+        new_source: 'upload',
+      });
+
+      setListing(prev => prev ? { ...prev, hero_image: url, hero_image_source: 'gallery', photos: updatedPhotos } : prev);
+      setPreEnhance(null);
+      revalidate();
+      onUpdate?.();
+    } catch (err) {
+      console.error('Upload failed:', err);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const dismissAudit = async () => {
     setSaving(true);
     // Mark the latest audit result for this listing as reviewed + applied
@@ -262,6 +314,18 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
 
   return (
     <>
+      {/* Hidden file input for hero upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleUploadHero(file);
+        }}
+      />
+
       {/* Gallery lightbox */}
       {lightboxIndex !== null && galleryPhotos[lightboxIndex] && (
         <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm" onClick={() => setLightboxIndex(null)}>
@@ -359,6 +423,16 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
                 {/* Hero action buttons */}
                 <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className={`w-9 h-9 rounded-full text-white flex items-center justify-center shadow-lg transition-colors ${
+                      uploading ? 'bg-orange-500 animate-pulse' : 'bg-gray-700/80 hover:bg-orange-600'
+                    }`}
+                    title="Upload new hero from disk"
+                  >
+                    <Upload className="w-4 h-4" />
+                  </button>
+                  <button
                     onClick={handleEnhance}
                     disabled={enhancing}
                     className={`w-9 h-9 rounded-full text-white flex items-center justify-center shadow-lg transition-colors ${
@@ -400,7 +474,14 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
                 <div className="text-center">
                   <ImageOff className="w-10 h-10 text-gray-300 mx-auto mb-2" />
                   <p className="text-sm text-gray-400">No hero image</p>
-                  <p className="text-xs text-gray-400 mt-1">Click a gallery photo below to set as hero</p>
+                  <p className="text-xs text-gray-400 mt-1">Click a gallery photo below or upload one</p>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="mt-3 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium mx-auto disabled:opacity-50"
+                  >
+                    <Upload className="w-4 h-4" /> Upload Photo
+                  </button>
                 </div>
               </div>
             )}
