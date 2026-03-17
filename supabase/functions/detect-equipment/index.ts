@@ -131,6 +131,12 @@ const BRAND_MAP: Record<string, string> = {
   'supermatic': 'super_wash',
 };
 
+function confidenceToInt(confidence: string): number {
+  if (confidence === 'high') return 90;
+  if (confidence === 'medium') return 70;
+  return 40; // low
+}
+
 function normalizeBrand(brandRaw: string): string {
   const brandLower = brandRaw.toLowerCase();
   for (const [keyword, value] of Object.entries(BRAND_MAP)) {
@@ -410,7 +416,7 @@ Deno.serve(async (req) => {
                 equipment_brand: attempt.result.brand,
                 equipment_model: attempt.result.model,
                 classification_source: 'gemini',
-                classification_confidence: attempt.result.confidence,
+                classification_confidence: confidenceToInt(attempt.result.confidence),
               })
               .eq('id', listing.id);
           }
@@ -516,7 +522,7 @@ Deno.serve(async (req) => {
           equipment_brand: bestResult.brand,
           equipment_model: bestResult.model,
           classification_source: 'gemini',
-          classification_confidence: bestResult.confidence,
+          classification_confidence: confidenceToInt(bestResult.confidence),
         })
         .eq('id', single.id);
     }
@@ -641,7 +647,7 @@ Deno.serve(async (req) => {
             equipment_brand: bestResult.brand,
             equipment_model: bestResult.model,
             classification_source: 'gemini',
-            classification_confidence: bestResult.confidence,
+            classification_confidence: confidenceToInt(bestResult.confidence),
           })
           .eq('id', listing.id);
       }
