@@ -118,30 +118,36 @@ async function detectEquipmentInImage(
             },
             {
               type: 'text',
-              text: `Look at this car wash photo carefully. Identify the WASH EQUIPMENT manufacturer — the machine that actually washes the car (the touchless gantry, spray arms, or friction wash arch).
+              text: `You are an expert car wash equipment identifier. Look at this photo and identify the touchless/automatic car wash equipment manufacturer.
 
-IMPORTANT DISTINCTIONS:
-- We want the WASH EQUIPMENT brand (the machine that sprays water/chemicals on the car)
-- IGNORE drying equipment brands (like MaxAir, AirDry, etc.) — those are dryers, not wash equipment
-- IGNORE business signs, building signs, or franchise names
-- IGNORE fragrance/vending machine brands
+IDENTIFICATION METHODS (use ALL of these):
+1. Direct branding: Text/logos on the wash gantry, spray arms, side booms, or control panel
+2. Equipment design clues: Recognize equipment by its distinctive shape, color scheme, or design
+3. Integrated component branding: Some manufacturers brand their dryers/accessories — these identify the WASH system too:
+   - "MaxAir" dryer = WashWorld Razor system
+   - "PDQ" on any component = PDQ system
+   - Website URLs (pdqinc.com = PDQ, washworldinc.com = WashWorld)
 
-Common wash equipment manufacturers:
-LaserWash (by PDQ), PDQ, WashWorld, Razor (by WashWorld), Belanger, Ryko, Istobal, Petit AutoWash, Oasis, Mark VII, Kärcher, Autec, Saber, D&S, Broadway, NS Corporation, Washman, MAXAR
+KNOWN MANUFACTURERS AND THEIR VISUAL CLUES:
+- PDQ: LaserWash models (360, G5, M5), blue/silver gantry, "LaserWash" text
+- WashWorld: Razor models, often has MaxAir integrated dryer with blue header, L-arm design
+- Belanger: Kondor, FreeStyler models
+- Ryko: SoftGloss models
+- Istobal: M'NEX models
+- D&S: IQ Touch Free
+- Petit AutoWash: Accutrac models
+- Mark VII: ChoiceWash models
+- Kärcher, Autec, Saber, Broadway, NS Corporation, Oasis, Washman, MAXAR
 
-Look for branding text on:
-- The main wash gantry/arch that moves over the car
-- Side booms or spray arms
-- The control panel or payment terminal
-- Website URLs like pdqinc.com, washworldinc.com, etc.
+IGNORE: Business/franchise names, street signs, and non-car-wash equipment
 
 Respond in this exact format:
-BRAND: [wash equipment brand name, or NONE]
-MODEL: [model name/number if visible, or NONE]
-CONFIDENCE: [HIGH if text clearly readable, MEDIUM if partially visible, LOW if uncertain]
-TEXT: [exact text you can read on the wash equipment]
+BRAND: [manufacturer name, or NONE]
+MODEL: [model name if identifiable, or NONE]
+CONFIDENCE: [HIGH if certain, MEDIUM if likely, LOW if uncertain]
+TEXT: [what clues you used to identify it]
 
-If you cannot identify the WASH equipment brand (only see dryer brands, business signs, etc.), respond:
+If you truly cannot identify the equipment, respond:
 BRAND: NONE`,
             },
           ],
