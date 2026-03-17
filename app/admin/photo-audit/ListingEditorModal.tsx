@@ -387,7 +387,7 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
   };
 
   const markNotTouchless = async () => {
-    if (!listing || !confirm(`Mark "${listing.name}" as NOT touchless? It will be removed from the site.`)) return;
+    if (!listing) return;
     setSaving(true);
     await supabase.from('listings').update({ is_touchless: false }).eq('id', listing.id);
     // Also dismiss all audit results so it leaves the Need Review queue
@@ -401,7 +401,7 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
   };
 
   const deleteListing = async () => {
-    if (!listing || !confirm(`Permanently DELETE "${listing.name}"? This cannot be undone.`)) return;
+    if (!listing) return;
     setSaving(true);
     // Dismiss audit results first (FK constraint)
     await supabase
