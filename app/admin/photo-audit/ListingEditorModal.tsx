@@ -184,14 +184,17 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
     const heroUrl = listing.hero_image;
     const blocked = listing.blocked_photos ?? [];
     const newBlocked = blocked.includes(heroUrl) ? blocked : [heroUrl, ...blocked];
+    // Also remove from photos array so it doesn't reappear in gallery
+    const updatedPhotos = (listing.photos ?? []).filter(p => p !== heroUrl);
 
     await supabase.from('listings').update({
       hero_image: null,
       hero_image_source: null,
       blocked_photos: newBlocked,
+      photos: updatedPhotos,
     }).eq('id', listing.id);
 
-    setListing(prev => prev ? { ...prev, hero_image: null, hero_image_source: null, blocked_photos: newBlocked } : prev);
+    setListing(prev => prev ? { ...prev, hero_image: null, hero_image_source: null, blocked_photos: newBlocked, photos: updatedPhotos } : prev);
     setPreEnhance(null);
     setEnhancedPreview(null);
     revalidate();
