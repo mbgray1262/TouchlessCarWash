@@ -73,6 +73,9 @@ const BRAND_MAP: Record<string, string> = {
   'dencar': 'dencar',
   'ns corporation': 'ns_corp',
   'ns wash': 'ns_corp',
+  'super wash': 'super_wash',
+  'superwash': 'super_wash',
+  'supermatic': 'super_wash',
 };
 
 function normalizeBrand(brandRaw: string): string {
@@ -121,6 +124,7 @@ KNOWN MANUFACTURERS AND VISUAL IDENTIFICATION:
 - Mark VII: ChoiceWash models. Distinctive overhead design.
 - Kärcher: German engineering, often yellow/black branding.
 - Autec: Evolution models.
+- Super Wash: Supermatic models. "SUPER WASH" text on gantry header, "SUPERMATIC" model name often visible. Older-style touchless systems.
 - Also: Saber, Broadway, NS Corporation, Oasis, Washman, MAXAR
 
 IMPORTANT:
