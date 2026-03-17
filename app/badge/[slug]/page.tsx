@@ -7,7 +7,7 @@ import { getStateSlug } from '@/lib/constants';
 import { BadgeClaimClient } from '@/components/BadgeClaimClient';
 import type { Metadata } from 'next';
 
-export const revalidate = 86400;
+export const revalidate = 3600; // 1 hour
 
 // ── Types ────────────────────────────────────────────────────────────────
 

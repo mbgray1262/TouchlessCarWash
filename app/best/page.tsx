@@ -5,7 +5,7 @@ import { METRO_AREAS, boundingBox, haversineDistance, getMetrosByRegion, type Me
 import type { Metadata } from 'next';
 
 // Revalidate every 24 hours — pre-rendered but refreshes daily for new metros/counts
-export const revalidate = 86400;
+export const revalidate = 3600; // 1 hour
 
 export const metadata: Metadata = {
   title: 'Best Touchless Car Washes by Metro Area',

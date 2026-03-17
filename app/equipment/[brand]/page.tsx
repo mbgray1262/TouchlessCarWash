@@ -12,7 +12,7 @@ import {
 } from "@/lib/equipment-data";
 import { slugify, US_STATES } from "@/lib/constants";
 
-export const revalidate = 86400;
+export const revalidate = 3600; // 1 hour
 
 function getStateName(code: string): string {
   const state = US_STATES.find(

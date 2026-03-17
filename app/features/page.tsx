@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { FEATURES } from '@/lib/features';
 import type { Metadata } from 'next';
 
-export const revalidate = 86400; // 24 hours
+export const revalidate = 3600; // 1 hour
 
 const SITE_URL = 'https://touchlesscarwashfinder.com';
 

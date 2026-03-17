@@ -16,7 +16,7 @@ import { DEFAULT_OG_IMAGE, ensureHttps } from '@/lib/seo';
 import type { Metadata } from 'next';
 
 // Revalidate every 24 hours — pages are pre-rendered (SSG) but refresh daily for updated rankings
-export const revalidate = 86400;
+export const revalidate = 3600; // 1 hour
 
 interface BestOfPageProps {
   params: { slug: string };

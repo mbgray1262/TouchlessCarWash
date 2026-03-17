@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { getStateName } from '@/lib/constants';
 
-export const revalidate = 86400; // Cache for 24 hours
+export const revalidate = 3600; // 1 hour
 
 /**
  * Public CSV download of basic touchless car wash location data.

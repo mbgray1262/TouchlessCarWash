@@ -9,7 +9,7 @@ import { FEATURES, getFeatureBySlug } from '@/lib/features';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import type { Metadata } from 'next';
 
-export const revalidate = 86400; // 24 hours
+export const revalidate = 3600; // 1 hour
 
 const SITE_URL = 'https://touchlesscarwashfinder.com';
 

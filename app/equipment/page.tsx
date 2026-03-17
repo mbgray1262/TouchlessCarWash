@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/lib/supabase";
 import { EQUIPMENT_BRAND_DATA, getBrandLabel } from "@/lib/equipment-data";
 
-export const revalidate = 86400;
+export const revalidate = 3600; // 1 hour
 
 export const metadata: Metadata = {
   title: "Touchless Car Wash Equipment & Brands",
