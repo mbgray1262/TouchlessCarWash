@@ -43,6 +43,59 @@ async function fetchImageAsBase64(url: string): Promise<{ base64: string; mediaT
   }
 }
 
+// Known model names per brand → normalized values for dropdown matching
+const KNOWN_MODELS: Record<string, string[]> = {
+  pdq: ['LaserWash 360', 'LaserWash 360 Plus', 'LaserWash 4000', 'LaserWash G5', 'LaserWash M5', 'LaserWash Sentry', 'ProTouch', 'Tandem Surfline', 'Access'],
+  washworld: ['Razor', 'Razor Edge', 'Razor Touch', 'Razor XR', 'Profile'],
+  belanger: ['Kondor', 'Eclipse', 'FreeStyler', 'SpinLite', 'Vector'],
+  ryko: ['SoftGloss', 'SoftGloss Maxx', 'Radius'],
+  istobal: ["M'NEX 22", "M'NEX 25", "M'NEX 32", 'ISTOBAL 1900'],
+  ds: ['IQ 2.0 Touch Free', 'Carwash Systems'],
+  petit: ['Accutrac 360i', 'Accutrac 360t', 'Accutrac Mini'],
+  oasis: ['Typhoon', 'XR-1000'],
+  mark_vii: ['ChoiceWash XT', 'ChoiceWash CT', 'AquaJet', 'SoftLine'],
+  karcher: ['CWB 3', 'CB 1/28', 'CB 2/28', 'CB 3/32'],
+  autec: ['Evolution', 'EV-1 Evolution', 'AES-425', 'Express Automatic'],
+  hydrospray: ['In Bay Automatic (IBA)'],
+  dencar: ['Dynawash Express'],
+  super_wash: ['Supermatic', 'Supermatic II'],
+};
+
+/** Try to match the AI's model string to a known model for the brand */
+function normalizeModel(brand: string, modelRaw: string): string | null {
+  if (!modelRaw || modelRaw.toUpperCase() === 'NONE') return null;
+  const models = KNOWN_MODELS[brand];
+  if (!models || models.length === 0) return modelRaw;
+
+  const modelLower = modelRaw.toLowerCase().replace(/[^a-z0-9 ]/g, '');
+
+  // Try exact match first (case-insensitive)
+  for (const known of models) {
+    if (known.toLowerCase() === modelRaw.toLowerCase()) return known;
+  }
+
+  // Try partial match — does AI response contain a known model name?
+  for (const known of models) {
+    const knownLower = known.toLowerCase();
+    if (modelLower.includes(knownLower) || knownLower.includes(modelLower)) return known;
+  }
+
+  // If AI just said the brand name as model (e.g. "LaserWash" for PDQ), return null
+  // so it doesn't create a bogus "Other" model entry
+  const brandAliases: Record<string, string[]> = {
+    pdq: ['laserwash', 'laser wash', 'pdq'],
+    washworld: ['washworld', 'wash world'],
+    belanger: ['belanger'],
+    ryko: ['ryko'],
+    istobal: ['istobal'],
+    super_wash: ['super wash', 'supermatic'],
+  };
+  const aliases = brandAliases[brand] ?? [];
+  if (aliases.some(a => modelLower === a || modelLower === a.replace(/\s/g, ''))) return null;
+
+  return modelRaw;
+}
+
 // Known equipment brand keywords → normalized values
 const BRAND_MAP: Record<string, string> = {
   'laserwash': 'pdq',
@@ -113,19 +166,19 @@ IDENTIFICATION METHODS (use ALL of these):
    - "PDQ" on any component = PDQ system
    - Website URLs (pdqinc.com = PDQ, washworldinc.com = WashWorld)
 
-KNOWN MANUFACTURERS AND VISUAL IDENTIFICATION:
-- PDQ: LaserWash models (360, G5, M5). Silver/gray gantry, distinctive curved top arch, "LaserWash" text usually on front. Square-ish gantry profile.
-- WashWorld: Razor models. Blue and silver T-bar header, blue protective shrouds on spray arms, L-arm design, MaxAir integrated dryer with blue housing. Distinctive angular arm design.
-- Belanger: Kondor, FreeStyler models. Sleek modern design, often white/gray.
-- Ryko: SoftGloss models. Rounded gantry design.
-- Istobal: M'NEX models. European design, often blue/white.
-- D&S: IQ Touch Free. Green branding, "IQ 2.0" on header.
-- Petit AutoWash: Accutrac models. Track-based system with equipment on rails.
-- Mark VII: ChoiceWash models. Distinctive overhead design.
-- Kärcher: German engineering, often yellow/black branding.
-- Autec: Evolution models.
-- Super Wash: Supermatic models. "SUPER WASH" text on gantry header, "SUPERMATIC" model name often visible. Older-style touchless systems.
-- Also: Saber, Broadway, NS Corporation, Oasis, Washman, MAXAR
+KNOWN MANUFACTURERS, MODELS, AND VISUAL IDENTIFICATION:
+- PDQ: Models: LaserWash 360, LaserWash 360 Plus, LaserWash 4000, LaserWash G5, LaserWash M5, LaserWash Sentry, ProTouch, Tandem Surfline, Access. Silver/gray gantry, distinctive curved top arch, "LaserWash" text usually on front. Square-ish gantry profile. IMPORTANT: Do NOT just say "LaserWash" — specify which LaserWash model (360, G5, M5, etc). If you can't tell the specific model, say NONE for MODEL.
+- WashWorld: Models: Razor, Razor Edge, Razor Touch, Razor XR, Profile. Blue and silver T-bar header, blue protective shrouds on spray arms, L-arm design, MaxAir integrated dryer with blue housing. Distinctive angular arm design.
+- Belanger: Models: Kondor, Eclipse, FreeStyler, SpinLite, Vector. Sleek modern design, often white/gray.
+- Ryko: Models: SoftGloss, SoftGloss Maxx, Radius. Rounded gantry design.
+- Istobal: Models: M'NEX 22, M'NEX 25, M'NEX 32, ISTOBAL 1900. European design, often blue/white.
+- D&S: Models: IQ 2.0 Touch Free, Carwash Systems. Green branding, "IQ 2.0" on header.
+- Petit AutoWash: Models: Accutrac 360i, Accutrac 360t, Accutrac Mini. Track-based system with equipment on rails.
+- Mark VII: Models: ChoiceWash XT, ChoiceWash CT, AquaJet, SoftLine. Distinctive overhead design.
+- Kärcher: Models: CWB 3, CB 1/28, CB 2/28, CB 3/32. German engineering, often yellow/black branding.
+- Autec: Models: Evolution, EV-1 Evolution, AES-425, Express Automatic.
+- Super Wash: Models: Supermatic, Supermatic II. "SUPER WASH" text on gantry header, "SUPERMATIC" model name often visible. Older-style touchless systems.
+- Also: Saber, Broadway, NS Corporation, Oasis, Washman, MAXAR, Delta Sonic
 
 IMPORTANT:
 - Do NOT confuse the business/franchise name with the equipment manufacturer
@@ -268,10 +321,11 @@ function parseDetectionResponse(text: string, sourceImage: string, imageBytes: n
   const rawText = rawMatch?.[1]?.trim() ?? brandRaw;
 
   const normalizedBrand = normalizeBrand(brandRaw);
+  const normalizedModel = normalizeModel(normalizedBrand, modelRaw);
 
   const result: DetectionResult = {
     brand: normalizedBrand,
-    model: modelRaw && modelRaw.toUpperCase() !== 'NONE' ? modelRaw : null,
+    model: normalizedModel,
     confidence,
     source_image: sourceImage,
     raw_text: rawText,
