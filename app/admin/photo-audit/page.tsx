@@ -335,10 +335,10 @@ export default function PhotoAuditPage() {
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <p className="text-sm font-medium text-gray-700">
-                {queueStats.alreadyAudited.toLocaleString()} / {totalListings.toLocaleString()} audited
+                {queueStats.alreadyAudited.toLocaleString()} / {totalListings.toLocaleString()} touchless listings scanned by AI
               </p>
               <p className="text-sm text-gray-500">
-                {queueStats.remaining.toLocaleString()} remaining
+                {queueStats.remaining.toLocaleString()} not yet scanned
               </p>
             </div>
             <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
