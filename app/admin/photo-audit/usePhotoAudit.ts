@@ -89,19 +89,29 @@ export function usePhotoAudit() {
   const loadResults = useCallback(async () => {
     setLoading(true);
 
-    let { data, error } = await supabase
-      .from('photo_audit_results')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(1000);
+    // Fetch ALL audit results in batches of 1000 to avoid Supabase row limits
+    let data: Record<string, unknown>[] = [];
+    let offset = 0;
+    const PAGE_SIZE = 1000;
+    while (true) {
+      const { data: page, error } = await supabase
+        .from('photo_audit_results')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(offset, offset + PAGE_SIZE - 1);
 
-    if (error) {
-      console.error('Error loading audit results:', error);
-      setLoading(false);
-      return;
+      if (error) {
+        console.error('Error loading audit results:', error);
+        setLoading(false);
+        return;
+      }
+      if (!page || page.length === 0) break;
+      data = data.concat(page);
+      if (page.length < PAGE_SIZE) break; // last page
+      offset += PAGE_SIZE;
     }
 
-    if (!data || data.length === 0) {
+    if (data.length === 0) {
       setResults([]);
       setStats({ total: 0, applied: 0, pending: 0, equipment: 0, heroes: 0, cleanup: 0 });
       setLoading(false);
