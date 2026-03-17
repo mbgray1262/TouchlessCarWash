@@ -66,6 +66,10 @@ const BRAND_MAP: Record<string, string> = {
   'd&s': 'ds',
   'broadway': 'broadway',
   'razor': 'washworld', // Razor is a WashWorld product
+  'maxar': 'other',     // MAXAR brand detected in wild
+  'hydro-spray': 'hydrospray',
+  'dencar': 'dencar',
+  'ns corporation': 'ns_corp',
 };
 
 interface DetectionResult {
@@ -76,12 +80,21 @@ interface DetectionResult {
   raw_text: string;
 }
 
+interface DetectionAttempt {
+  result: DetectionResult | null;
+  raw_ai_response: string;
+  image_bytes: number;
+  error?: string;
+}
+
 async function detectEquipmentInImage(
   imageUrl: string,
   anthropicKey: string,
-): Promise<DetectionResult | null> {
+): Promise<DetectionAttempt> {
   const img = await fetchImageAsBase64(imageUrl);
-  if (!img) return null;
+  if (!img) return { result: null, raw_ai_response: '', image_bytes: 0, error: 'image_fetch_failed' };
+
+  const imageBytes = Math.ceil(img.base64.length * 3 / 4); // approximate decoded size
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -92,8 +105,8 @@ async function detectEquipmentInImage(
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20250929',
-        max_tokens: 150,
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 300,
         messages: [{
           role: 'user',
           content: [
@@ -103,11 +116,19 @@ async function detectEquipmentInImage(
             },
             {
               type: 'text',
-              text: `Look at this car wash photo. Is there any visible text, logo, or branding on the car wash EQUIPMENT (the washing machine/gantry/arch, NOT the business sign)?
+              text: `Look at this car wash photo carefully. Is there any visible text, logo, or branding on the car wash EQUIPMENT (the washing machine/gantry/arch)?
 
-Look specifically for manufacturer names printed on the equipment such as: LaserWash, PDQ, WashWorld, Razor, Belanger, Ryko, Istobal, Petit, Oasis, Mark VII, Karcher, Autec, Saber, D&S, Broadway.
+This includes text on:
+- The main wash arch/gantry structure
+- Side panels or arms of the equipment
+- Control panels
+- Any part of the automated wash machinery
+
+Look specifically for manufacturer names such as: LaserWash, PDQ, WashWorld, Razor, Belanger, Ryko, Istobal, Petit, Oasis, Mark VII, Karcher, Autec, Saber, D&S, Broadway, Washman, MAXAR.
 
 Also look for website URLs on equipment like pdqinc.com, washworldinc.com, etc.
+
+Important: Focus on TEXT ON THE EQUIPMENT ITSELF, not on business signs above the bay.
 
 Respond in this exact format:
 BRAND: [brand name visible on equipment, or NONE]
@@ -124,13 +145,14 @@ BRAND: NONE`,
     });
 
     if (!res.ok) {
-      console.error(`Anthropic API error: ${res.status}`);
-      return null;
+      const errText = await res.text();
+      console.error(`Anthropic API error: ${res.status} — ${errText.slice(0, 200)}`);
+      return { result: null, raw_ai_response: `HTTP ${res.status}: ${errText.slice(0, 200)}`, image_bytes: imageBytes, error: `api_error_${res.status}` };
     }
 
     const data = await res.json();
     const text = data.content?.[0]?.text ?? '';
-    console.log(`AI response for ${imageUrl.slice(-40)}: ${text.slice(0, 120)}`);
+    console.log(`AI response for ${imageUrl.slice(-40)}: ${text.slice(0, 200)}`);
 
     // Parse response
     const brandMatch = text.match(/BRAND:\s*(.+)/i);
@@ -139,7 +161,9 @@ BRAND: NONE`,
     const rawMatch = text.match(/TEXT:\s*(.+)/i);
 
     const brandRaw = brandMatch?.[1]?.trim() ?? '';
-    if (!brandRaw || brandRaw.toUpperCase() === 'NONE') return null;
+    if (!brandRaw || brandRaw.toUpperCase() === 'NONE') {
+      return { result: null, raw_ai_response: text, image_bytes: imageBytes };
+    }
 
     const modelRaw = modelMatch?.[1]?.trim() ?? '';
     const confidence = (confMatch?.[1]?.trim()?.toLowerCase() ?? 'low') as 'high' | 'medium' | 'low';
@@ -159,16 +183,18 @@ BRAND: NONE`,
       normalizedBrand = 'other';
     }
 
-    return {
+    const result: DetectionResult = {
       brand: normalizedBrand,
       model: modelRaw && modelRaw.toUpperCase() !== 'NONE' ? modelRaw : null,
       confidence,
       source_image: imageUrl,
       raw_text: rawText,
     };
+
+    return { result, raw_ai_response: text, image_bytes: imageBytes };
   } catch (err) {
     console.error(`Detection error for ${imageUrl}:`, err);
-    return null;
+    return { result: null, raw_ai_response: '', image_bytes: imageBytes, error: String(err) };
   }
 }
 
@@ -220,15 +246,19 @@ Deno.serve(async (req) => {
     imageUrls.push(...gallery.slice(0, 3));
 
     let bestResult: DetectionResult | null = null;
+    const diagnostics: Array<{ url: string; status: string; raw_ai_response: string; image_bytes: number; detail?: string }> = [];
     for (const url of imageUrls) {
-      const result = await detectEquipmentInImage(url, anthropicKey);
-      if (result) {
+      const attempt = await detectEquipmentInImage(url, anthropicKey);
+      if (attempt.result) {
+        diagnostics.push({ url: url.slice(-80), status: 'detected', raw_ai_response: attempt.raw_ai_response, image_bytes: attempt.image_bytes, detail: `${attempt.result.brand}/${attempt.result.model} [${attempt.result.confidence}]` });
         if (!bestResult ||
-            (result.confidence === 'high' && bestResult.confidence !== 'high') ||
-            (result.confidence === 'medium' && bestResult.confidence === 'low')) {
-          bestResult = result;
+            (attempt.result.confidence === 'high' && bestResult.confidence !== 'high') ||
+            (attempt.result.confidence === 'medium' && bestResult.confidence === 'low')) {
+          bestResult = attempt.result;
         }
-        if (result.confidence === 'high') break;
+        if (attempt.result.confidence === 'high') break;
+      } else {
+        diagnostics.push({ url: url.slice(-80), status: attempt.error ?? 'no_detection', raw_ai_response: attempt.raw_ai_response, image_bytes: attempt.image_bytes });
       }
       await new Promise(r => setTimeout(r, 200));
     }
@@ -244,6 +274,8 @@ Deno.serve(async (req) => {
       listing_id: single.id,
       name: single.name,
       images_scanned: imageUrls.length,
+      image_urls: imageUrls,
+      diagnostics,
       detection: bestResult ? {
         brand: bestResult.brand,
         model: bestResult.model,
@@ -318,26 +350,26 @@ Deno.serve(async (req) => {
 
     for (const url of imageUrls) {
       imagesScanned++;
-      const result = await detectEquipmentInImage(url, anthropicKey);
+      const attempt = await detectEquipmentInImage(url, anthropicKey);
 
       // Capture debug info for first 5 listings
       if (processed <= 5) {
         debugResponses.push({
           listing: listing.name,
           image: url.slice(-60),
-          response: result ? `${result.brand}/${result.model} [${result.confidence}]` : 'NONE',
+          response: attempt.result ? `${attempt.result.brand}/${attempt.result.model} [${attempt.result.confidence}]` : 'NONE',
         });
       }
 
-      if (result) {
+      if (attempt.result) {
         // Keep highest confidence result
         if (!bestResult ||
-            (result.confidence === 'high' && bestResult.confidence !== 'high') ||
-            (result.confidence === 'medium' && bestResult.confidence === 'low')) {
-          bestResult = result;
+            (attempt.result.confidence === 'high' && bestResult.confidence !== 'high') ||
+            (attempt.result.confidence === 'medium' && bestResult.confidence === 'low')) {
+          bestResult = attempt.result;
         }
         // If we found a high confidence match, no need to scan more images
-        if (result.confidence === 'high') break;
+        if (attempt.result.confidence === 'high') break;
       }
 
       // Small delay to avoid rate limits
