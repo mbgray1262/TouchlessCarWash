@@ -39,6 +39,8 @@ export const EQUIPMENT_BRANDS = [
   { value: 'hydrospray', label: 'Hydro-Spray' },
   { value: 'dencar', label: 'Dencar Technology' },
   { value: 'ns_corp', label: 'NS Corporation' },
+  { value: 'maxar', label: 'MAXAR' },
+  { value: 'washman', label: 'Washman' },
   { value: 'other', label: 'Other' },
 ] as const;
 
@@ -60,6 +62,8 @@ export const EQUIPMENT_MODELS: Record<string, string[]> = {
   hydrospray: ['In Bay Automatic (IBA)'],
   dencar: ['Dynawash Express'],
   ns_corp: [],
+  maxar: [],
+  washman: [],
   other: [],
 };
 

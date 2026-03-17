@@ -66,7 +66,8 @@ const BRAND_MAP: Record<string, string> = {
   'd&s': 'ds',
   'broadway': 'broadway',
   'razor': 'washworld', // Razor is a WashWorld product
-  'maxar': 'other',     // MAXAR brand detected in wild
+  'maxar': 'maxar',
+  'washman': 'washman',
   'hydro-spray': 'hydrospray',
   'dencar': 'dencar',
   'ns corporation': 'ns_corp',
@@ -90,6 +91,7 @@ interface DetectionAttempt {
 async function detectEquipmentInImage(
   imageUrl: string,
   anthropicKey: string,
+  modelId: string = 'claude-haiku-4-5-20251001',
 ): Promise<DetectionAttempt> {
   const img = await fetchImageAsBase64(imageUrl);
   if (!img) return { result: null, raw_ai_response: '', image_bytes: 0, error: 'image_fetch_failed' };
@@ -105,7 +107,7 @@ async function detectEquipmentInImage(
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: modelId,
         max_tokens: 300,
         messages: [{
           role: 'user',
@@ -116,27 +118,30 @@ async function detectEquipmentInImage(
             },
             {
               type: 'text',
-              text: `Look at this car wash photo carefully. Is there any visible text, logo, or branding on the car wash EQUIPMENT (the washing machine/gantry/arch)?
+              text: `Look at this car wash photo carefully. Identify the WASH EQUIPMENT manufacturer — the machine that actually washes the car (the touchless gantry, spray arms, or friction wash arch).
 
-This includes text on:
-- The main wash arch/gantry structure
-- Side panels or arms of the equipment
-- Control panels
-- Any part of the automated wash machinery
+IMPORTANT DISTINCTIONS:
+- We want the WASH EQUIPMENT brand (the machine that sprays water/chemicals on the car)
+- IGNORE drying equipment brands (like MaxAir, AirDry, etc.) — those are dryers, not wash equipment
+- IGNORE business signs, building signs, or franchise names
+- IGNORE fragrance/vending machine brands
 
-Look specifically for manufacturer names such as: LaserWash, PDQ, WashWorld, Razor, Belanger, Ryko, Istobal, Petit, Oasis, Mark VII, Karcher, Autec, Saber, D&S, Broadway, Washman, MAXAR.
+Common wash equipment manufacturers:
+LaserWash (by PDQ), PDQ, WashWorld, Razor (by WashWorld), Belanger, Ryko, Istobal, Petit AutoWash, Oasis, Mark VII, Kärcher, Autec, Saber, D&S, Broadway, NS Corporation, Washman, MAXAR
 
-Also look for website URLs on equipment like pdqinc.com, washworldinc.com, etc.
-
-Important: Focus on TEXT ON THE EQUIPMENT ITSELF, not on business signs above the bay.
+Look for branding text on:
+- The main wash gantry/arch that moves over the car
+- Side booms or spray arms
+- The control panel or payment terminal
+- Website URLs like pdqinc.com, washworldinc.com, etc.
 
 Respond in this exact format:
-BRAND: [brand name visible on equipment, or NONE]
+BRAND: [wash equipment brand name, or NONE]
 MODEL: [model name/number if visible, or NONE]
-CONFIDENCE: [HIGH if text is clearly readable, MEDIUM if partially visible, LOW if uncertain]
-TEXT: [exact text you can read on the equipment]
+CONFIDENCE: [HIGH if text clearly readable, MEDIUM if partially visible, LOW if uncertain]
+TEXT: [exact text you can read on the wash equipment]
 
-If no car wash equipment is visible, or no branding is readable, respond:
+If you cannot identify the WASH equipment brand (only see dryer brands, business signs, etc.), respond:
 BRAND: NONE`,
             },
           ],
@@ -246,9 +251,11 @@ Deno.serve(async (req) => {
     imageUrls.push(...gallery.slice(0, 3));
 
     let bestResult: DetectionResult | null = null;
+    // Use Sonnet for single-listing interactive mode (better accuracy, only 1-2 images)
+    const singleModel = 'claude-sonnet-4-6';
     const diagnostics: Array<{ url: string; status: string; raw_ai_response: string; image_bytes: number; detail?: string }> = [];
     for (const url of imageUrls) {
-      const attempt = await detectEquipmentInImage(url, anthropicKey);
+      const attempt = await detectEquipmentInImage(url, anthropicKey, singleModel);
       if (attempt.result) {
         diagnostics.push({ url: url.slice(-80), status: 'detected', raw_ai_response: attempt.raw_ai_response, image_bytes: attempt.image_bytes, detail: `${attempt.result.brand}/${attempt.result.model} [${attempt.result.confidence}]` });
         if (!bestResult ||
