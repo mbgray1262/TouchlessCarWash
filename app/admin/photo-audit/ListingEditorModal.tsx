@@ -496,6 +496,8 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
     try {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
       const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30_000);
       const res = await fetch(`${supabaseUrl}/functions/v1/google-place-photos`, {
         method: 'POST',
         headers: {
@@ -507,12 +509,19 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
           listing_id: listing.id,
           set_as_hero: asHero,
         }),
+        signal: controller.signal,
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      clearTimeout(timeout);
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`HTTP ${res.status}: ${text}`);
+      }
       await loadListing();
-      revalidate();
+      revalidate(); // fire-and-forget
       onUpdate?.();
-    } catch (err) {
+    } catch (err: any) {
+      const msg = err?.name === 'AbortError' ? 'Timed out (30s)' : (err?.message ?? 'Unknown error');
+      alert(`Failed to save photo: ${msg}`);
       console.error('Failed to save Google photo:', err);
     } finally {
       setSavingGooglePhoto(null);
