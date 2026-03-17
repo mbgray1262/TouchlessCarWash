@@ -177,6 +177,7 @@ async function detectWithGemini(
           contents: [{ parts }],
           generationConfig: { maxOutputTokens: 500 },
         }),
+        signal: AbortSignal.timeout(30_000),
       },
     );
 

@@ -37,6 +37,7 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [cropOpen, setCropOpen] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
+  const [enhancedPreview, setEnhancedPreview] = useState<string | null>(null); // data URL for preview
   const [preEnhance, setPreEnhance] = useState<{ url: string; source: string | null } | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -130,6 +131,7 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
 
     setListing(prev => prev ? { ...prev, hero_image: url, hero_image_source: source, photos: updatedPhotos } : prev);
     setPreEnhance(null);
+    setEnhancedPreview(null);
     revalidate();
     onUpdate?.();
     setSaving(false);
@@ -150,6 +152,7 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
 
     setListing(prev => prev ? { ...prev, hero_image: null, hero_image_source: null, blocked_photos: newBlocked } : prev);
     setPreEnhance(null);
+    setEnhancedPreview(null);
     revalidate();
     onUpdate?.();
     setSaving(false);
@@ -182,6 +185,7 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
 
     setListing(prev => prev ? { ...prev, hero_image: croppedUrl, hero_image_source: 'gallery' } : prev);
     setPreEnhance(null);
+    setEnhancedPreview(null);
     setCropOpen(false);
     revalidate();
     onUpdate?.();
@@ -189,52 +193,64 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
   };
 
   const handleEnhance = async () => {
-    if (!listing.hero_image || enhancing) return;
+    if (!listing?.hero_image || enhancing) return;
+
+    // Toggle OFF — just clear the preview
+    if (enhancedPreview) {
+      setEnhancedPreview(null);
+      return;
+    }
+
+    // Toggle ON — generate enhanced preview (client-side only, no upload)
     setEnhancing(true);
     try {
-      if (preEnhance) {
-        // Revert — swap enhanced URL back to original in photos array
-        const currentPhotos = listing.photos ?? [];
-        const revertedPhotos = currentPhotos.map(p => p === listing.hero_image ? preEnhance.url : p);
+      const blob = await autoEnhanceImage(listing.hero_image);
+      const dataUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+      setEnhancedPreview(dataUrl);
+    } catch (err) {
+      console.error('Enhance preview failed:', err);
+    } finally {
+      setEnhancing(false);
+    }
+  };
 
-        await supabase.from('listings').update({
-          hero_image: preEnhance.url,
-          hero_image_source: preEnhance.source,
-          photos: revertedPhotos,
-        }).eq('id', listing.id);
-        setListing(prev => prev ? { ...prev, hero_image: preEnhance.url, hero_image_source: preEnhance.source, photos: revertedPhotos } : prev);
-        setPreEnhance(null);
-      } else {
-        // Enhance
-        const originalUrl = listing.hero_image;
-        const originalSource = listing.hero_image_source;
-        const blob = await autoEnhanceImage(originalUrl);
-        const formData = new FormData();
-        formData.append('file', blob, 'enhanced-hero.jpg');
-        formData.append('listingId', listing.id);
-        formData.append('type', 'hero');
+  const saveEnhancedHero = async () => {
+    if (!listing?.hero_image || !enhancedPreview) return;
+    setEnhancing(true);
+    try {
+      // Convert data URL back to blob
+      const res = await fetch(enhancedPreview);
+      const blob = await res.blob();
 
-        const res = await fetch('/api/upload-image', { method: 'POST', body: formData });
-        if (!res.ok) throw new Error(await res.text());
-        const { url } = await res.json() as { url: string };
+      const formData = new FormData();
+      formData.append('file', blob, 'enhanced-hero.jpg');
+      formData.append('listingId', listing.id);
+      formData.append('type', 'hero');
 
-        // Replace old hero URL in photos array to avoid duplicate gallery entries
-        const currentPhotos = listing.photos ?? [];
-        const updatedPhotos = currentPhotos.map(p => p === originalUrl ? url : p);
+      const uploadRes = await fetch('/api/upload-image', { method: 'POST', body: formData });
+      if (!uploadRes.ok) throw new Error(await uploadRes.text());
+      const { url } = await uploadRes.json() as { url: string };
 
-        await supabase.from('listings').update({
-          hero_image: url,
-          hero_image_source: 'gallery',
-          photos: updatedPhotos,
-        }).eq('id', listing.id);
+      const originalUrl = listing.hero_image;
+      const currentPhotos = listing.photos ?? [];
+      const updatedPhotos = currentPhotos.map(p => p === originalUrl ? url : p);
 
-        setListing(prev => prev ? { ...prev, hero_image: url, hero_image_source: 'gallery', photos: updatedPhotos } : prev);
-        setPreEnhance({ url: originalUrl, source: originalSource });
-      }
+      await supabase.from('listings').update({
+        hero_image: url,
+        hero_image_source: 'gallery',
+        photos: updatedPhotos,
+      }).eq('id', listing.id);
+
+      setListing(prev => prev ? { ...prev, hero_image: url, hero_image_source: 'gallery', photos: updatedPhotos } : prev);
+      setEnhancedPreview(null);
       revalidate();
       onUpdate?.();
     } catch (err) {
-      console.error('Enhance failed:', err);
+      console.error('Save enhanced hero failed:', err);
     } finally {
       setEnhancing(false);
     }
@@ -280,6 +296,7 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
 
       setListing(prev => prev ? { ...prev, hero_image: url, hero_image_source: 'gallery', photos: updatedPhotos } : prev);
       setPreEnhance(null);
+    setEnhancedPreview(null);
       revalidate();
       onUpdate?.();
     } catch (err) {
@@ -470,10 +487,25 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
             {listing.hero_image ? (
               <div className="relative group rounded-xl overflow-hidden bg-gray-100 max-h-[400px]">
                 <img
-                  src={listing.hero_image}
+                  src={enhancedPreview ?? listing.hero_image}
                   alt={listing.name}
                   className="w-full object-contain max-h-[400px]"
                 />
+                {/* Enhanced preview badge + save button */}
+                {enhancedPreview && (
+                  <div className="absolute top-3 left-3 flex items-center gap-2">
+                    <span className="px-2 py-1 rounded-full bg-purple-600 text-white text-xs font-medium shadow-lg">
+                      Enhanced preview
+                    </span>
+                    <button
+                      onClick={saveEnhancedHero}
+                      disabled={enhancing}
+                      className="px-3 py-1 rounded-full bg-green-600 hover:bg-green-700 text-white text-xs font-medium shadow-lg transition-colors"
+                    >
+                      Save
+                    </button>
+                  </div>
+                )}
                 {/* Hero action buttons */}
                 <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
@@ -491,10 +523,10 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
                     disabled={enhancing}
                     className={`w-9 h-9 rounded-full text-white flex items-center justify-center shadow-lg transition-colors ${
                       enhancing ? 'bg-purple-500 animate-pulse'
-                        : preEnhance ? 'bg-purple-500 hover:bg-purple-600'
+                        : enhancedPreview ? 'bg-purple-500 hover:bg-purple-600'
                         : 'bg-gray-700/80 hover:bg-purple-600'
                     }`}
-                    title={preEnhance ? 'Revert to original' : 'Auto-enhance'}
+                    title={enhancedPreview ? 'Show original' : 'Auto-enhance preview'}
                   >
                     <Wand2 className="w-4 h-4" />
                   </button>
