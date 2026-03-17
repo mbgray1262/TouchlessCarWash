@@ -89,7 +89,7 @@ export function usePhotoAudit() {
   const loadResults = useCallback(async () => {
     setLoading(true);
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('photo_audit_results')
       .select('*')
       .order('created_at', { ascending: false })
@@ -109,20 +109,25 @@ export function usePhotoAudit() {
     }
 
     const listingIds = Array.from(new Set(data.map(r => r.listing_id)));
-    const listings: Record<string, { name: string; hero_image: string | null; city: string; state: string; slug: string }> = {};
+    const listings: Record<string, { name: string; hero_image: string | null; city: string; state: string; slug: string; is_touchless: boolean | null }> = {};
+    const nonTouchlessIds = new Set<string>();
 
     for (let i = 0; i < listingIds.length; i += 50) {
       const chunk = listingIds.slice(i, i + 50);
       const { data: listingData } = await supabase
         .from('listings')
-        .select('id, name, hero_image, city, state, slug')
+        .select('id, name, hero_image, city, state, slug, is_touchless')
         .in('id', chunk);
       if (listingData) {
         for (const l of listingData) {
-          listings[l.id] = { name: l.name, hero_image: l.hero_image, city: l.city, state: l.state, slug: l.slug };
+          listings[l.id] = { name: l.name, hero_image: l.hero_image, city: l.city, state: l.state, slug: l.slug, is_touchless: l.is_touchless };
+          if (l.is_touchless === false) nonTouchlessIds.add(l.id);
         }
       }
     }
+
+    // Filter out audit results for listings marked as not touchless
+    data = data.filter(r => !nonTouchlessIds.has(r.listing_id));
 
     const enrichedAll: AuditResult[] = data.map(r => ({
       ...r,
