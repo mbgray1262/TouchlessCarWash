@@ -32,7 +32,7 @@ async function fetchImageAsBase64(url: string): Promise<{ base64: string; mediaT
     const mediaType = ct.split(';')[0].trim();
     if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(mediaType)) return null;
     const buffer = await res.arrayBuffer();
-    if (buffer.byteLength < 5000) return null; // skip tiny images
+    if (buffer.byteLength < 5000) return null;
     const bytes = new Uint8Array(buffer);
     let binary = '';
     for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
@@ -43,7 +43,7 @@ async function fetchImageAsBase64(url: string): Promise<{ base64: string; mediaT
   }
 }
 
-// Known equipment brand keywords to look for
+// Known equipment brand keywords → normalized values
 const BRAND_MAP: Record<string, string> = {
   'laserwash': 'pdq',
   'laser wash': 'pdq',
@@ -65,13 +65,23 @@ const BRAND_MAP: Record<string, string> = {
   'saber': 'saber',
   'd&s': 'ds',
   'broadway': 'broadway',
-  'razor': 'washworld', // Razor is a WashWorld product
+  'razor': 'washworld',
   'maxar': 'maxar',
   'washman': 'washman',
   'hydro-spray': 'hydrospray',
+  'hydrospray': 'hydrospray',
   'dencar': 'dencar',
   'ns corporation': 'ns_corp',
+  'ns wash': 'ns_corp',
 };
+
+function normalizeBrand(brandRaw: string): string {
+  const brandLower = brandRaw.toLowerCase();
+  for (const [keyword, value] of Object.entries(BRAND_MAP)) {
+    if (brandLower.includes(keyword)) return value;
+  }
+  return 'other';
+}
 
 interface DetectionResult {
   brand: string | null;
@@ -88,7 +98,107 @@ interface DetectionAttempt {
   error?: string;
 }
 
-async function detectEquipmentInImage(
+const EQUIPMENT_PROMPT = `You are an expert at identifying touchless and automatic car wash equipment manufacturers from photos.
+
+Identify the WASH EQUIPMENT manufacturer and model visible in this car wash photo.
+
+IDENTIFICATION METHODS (use ALL of these):
+1. Direct branding: Text/logos on the wash gantry, spray arms, side booms, or control panel
+2. Visual design recognition: Identify equipment by its distinctive shape, color scheme, arm configuration, and design features
+3. Integrated component branding: Some manufacturers brand their dryers/accessories — these identify the WASH system too:
+   - "MaxAir" dryer = WashWorld Razor system
+   - "PDQ" on any component = PDQ system
+   - Website URLs (pdqinc.com = PDQ, washworldinc.com = WashWorld)
+
+KNOWN MANUFACTURERS AND VISUAL IDENTIFICATION:
+- PDQ: LaserWash models (360, G5, M5). Silver/gray gantry, distinctive curved top arch, "LaserWash" text usually on front. Square-ish gantry profile.
+- WashWorld: Razor models. Blue and silver T-bar header, blue protective shrouds on spray arms, L-arm design, MaxAir integrated dryer with blue housing. Distinctive angular arm design.
+- Belanger: Kondor, FreeStyler models. Sleek modern design, often white/gray.
+- Ryko: SoftGloss models. Rounded gantry design.
+- Istobal: M'NEX models. European design, often blue/white.
+- D&S: IQ Touch Free. Green branding, "IQ 2.0" on header.
+- Petit AutoWash: Accutrac models. Track-based system with equipment on rails.
+- Mark VII: ChoiceWash models. Distinctive overhead design.
+- Kärcher: German engineering, often yellow/black branding.
+- Autec: Evolution models.
+- Also: Saber, Broadway, NS Corporation, Oasis, Washman, MAXAR
+
+IMPORTANT:
+- Do NOT confuse the business/franchise name with the equipment manufacturer
+- Car wash businesses often paint their own name on equipment — look past that to the equipment design
+- Focus on the WASH MACHINE shape, arm design, and structural features
+
+Respond in this exact format:
+BRAND: [manufacturer name, or NONE]
+MODEL: [model name if identifiable, or NONE]
+CONFIDENCE: [HIGH if certain, MEDIUM if likely, LOW if uncertain]
+TEXT: [what visual clues or text you used to identify it]
+
+If you truly cannot identify the equipment, respond:
+BRAND: NONE`;
+
+// ── Gemini-based detection ──────────────────────────────────────
+async function detectWithGemini(
+  imageUrls: string[],
+  geminiKey: string,
+): Promise<DetectionAttempt> {
+  // Fetch all images as base64
+  const imageBlocks: Array<{ inline_data: { mime_type: string; data: string } }> = [];
+  let totalBytes = 0;
+
+  for (const url of imageUrls) {
+    const img = await fetchImageAsBase64(url);
+    if (img) {
+      imageBlocks.push({ inline_data: { mime_type: img.mediaType, data: img.base64 } });
+      totalBytes += Math.ceil(img.base64.length * 3 / 4);
+    }
+  }
+
+  if (imageBlocks.length === 0) {
+    return { result: null, raw_ai_response: '', image_bytes: 0, error: 'no_images_loaded' };
+  }
+
+  try {
+    // Send ALL images in a single request for better context
+    const parts = [
+      ...imageBlocks,
+      { text: imageBlocks.length > 1
+        ? `Here are ${imageBlocks.length} photos of the same car wash location. ${EQUIPMENT_PROMPT}`
+        : EQUIPMENT_PROMPT
+      },
+    ];
+
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts }],
+          generationConfig: { maxOutputTokens: 500 },
+        }),
+      },
+    );
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`Gemini API error: ${res.status} — ${errText.slice(0, 300)}`);
+      return { result: null, raw_ai_response: `HTTP ${res.status}: ${errText.slice(0, 300)}`, image_bytes: totalBytes, error: `gemini_api_error_${res.status}` };
+    }
+
+    const data = await res.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+    console.log(`Gemini response: ${text.slice(0, 200)}`);
+
+    return parseDetectionResponse(text, imageUrls[0], totalBytes);
+  } catch (err) {
+    console.error(`Gemini detection error:`, err);
+    return { result: null, raw_ai_response: '', image_bytes: totalBytes, error: String(err) };
+  }
+}
+
+// ── Claude-based detection (for batch mode fallback) ─────────────
+async function detectWithClaude(
   imageUrl: string,
   anthropicKey: string,
   modelId: string = 'claude-haiku-4-5-20251001',
@@ -96,7 +206,7 @@ async function detectEquipmentInImage(
   const img = await fetchImageAsBase64(imageUrl);
   if (!img) return { result: null, raw_ai_response: '', image_bytes: 0, error: 'image_fetch_failed' };
 
-  const imageBytes = Math.ceil(img.base64.length * 3 / 4); // approximate decoded size
+  const imageBytes = Math.ceil(img.base64.length * 3 / 4);
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -112,44 +222,8 @@ async function detectEquipmentInImage(
         messages: [{
           role: 'user',
           content: [
-            {
-              type: 'image',
-              source: { type: 'base64', media_type: img.mediaType, data: img.base64 },
-            },
-            {
-              type: 'text',
-              text: `You are an expert car wash equipment identifier. Look at this photo and identify the touchless/automatic car wash equipment manufacturer.
-
-IDENTIFICATION METHODS (use ALL of these):
-1. Direct branding: Text/logos on the wash gantry, spray arms, side booms, or control panel
-2. Equipment design clues: Recognize equipment by its distinctive shape, color scheme, or design
-3. Integrated component branding: Some manufacturers brand their dryers/accessories — these identify the WASH system too:
-   - "MaxAir" dryer = WashWorld Razor system
-   - "PDQ" on any component = PDQ system
-   - Website URLs (pdqinc.com = PDQ, washworldinc.com = WashWorld)
-
-KNOWN MANUFACTURERS AND THEIR VISUAL CLUES:
-- PDQ: LaserWash models (360, G5, M5), blue/silver gantry, "LaserWash" text
-- WashWorld: Razor models, often has MaxAir integrated dryer with blue header, L-arm design
-- Belanger: Kondor, FreeStyler models
-- Ryko: SoftGloss models
-- Istobal: M'NEX models
-- D&S: IQ Touch Free
-- Petit AutoWash: Accutrac models
-- Mark VII: ChoiceWash models
-- Kärcher, Autec, Saber, Broadway, NS Corporation, Oasis, Washman, MAXAR
-
-IGNORE: Business/franchise names, street signs, and non-car-wash equipment
-
-Respond in this exact format:
-BRAND: [manufacturer name, or NONE]
-MODEL: [model name if identifiable, or NONE]
-CONFIDENCE: [HIGH if certain, MEDIUM if likely, LOW if uncertain]
-TEXT: [what clues you used to identify it]
-
-If you truly cannot identify the equipment, respond:
-BRAND: NONE`,
-            },
+            { type: 'image', source: { type: 'base64', media_type: img.mediaType, data: img.base64 } },
+            { type: 'text', text: EQUIPMENT_PROMPT },
           ],
         }],
       }),
@@ -163,52 +237,45 @@ BRAND: NONE`,
 
     const data = await res.json();
     const text = data.content?.[0]?.text ?? '';
-    console.log(`AI response for ${imageUrl.slice(-40)}: ${text.slice(0, 200)}`);
+    console.log(`Claude response for ${imageUrl.slice(-40)}: ${text.slice(0, 200)}`);
 
-    // Parse response
-    const brandMatch = text.match(/BRAND:\s*(.+)/i);
-    const modelMatch = text.match(/MODEL:\s*(.+)/i);
-    const confMatch = text.match(/CONFIDENCE:\s*(.+)/i);
-    const rawMatch = text.match(/TEXT:\s*(.+)/i);
-
-    const brandRaw = brandMatch?.[1]?.trim() ?? '';
-    if (!brandRaw || brandRaw.toUpperCase() === 'NONE') {
-      return { result: null, raw_ai_response: text, image_bytes: imageBytes };
-    }
-
-    const modelRaw = modelMatch?.[1]?.trim() ?? '';
-    const confidence = (confMatch?.[1]?.trim()?.toLowerCase() ?? 'low') as 'high' | 'medium' | 'low';
-    const rawText = rawMatch?.[1]?.trim() ?? brandRaw;
-
-    // Normalize brand to our standard values
-    let normalizedBrand: string | null = null;
-    const brandLower = brandRaw.toLowerCase();
-    for (const [keyword, value] of Object.entries(BRAND_MAP)) {
-      if (brandLower.includes(keyword)) {
-        normalizedBrand = value;
-        break;
-      }
-    }
-
-    if (!normalizedBrand) {
-      normalizedBrand = 'other';
-    }
-
-    const result: DetectionResult = {
-      brand: normalizedBrand,
-      model: modelRaw && modelRaw.toUpperCase() !== 'NONE' ? modelRaw : null,
-      confidence,
-      source_image: imageUrl,
-      raw_text: rawText,
-    };
-
-    return { result, raw_ai_response: text, image_bytes: imageBytes };
+    return parseDetectionResponse(text, imageUrl, imageBytes);
   } catch (err) {
-    console.error(`Detection error for ${imageUrl}:`, err);
+    console.error(`Claude detection error for ${imageUrl}:`, err);
     return { result: null, raw_ai_response: '', image_bytes: imageBytes, error: String(err) };
   }
 }
 
+// ── Shared response parser ──────────────────────────────────────
+function parseDetectionResponse(text: string, sourceImage: string, imageBytes: number): DetectionAttempt {
+  const brandMatch = text.match(/BRAND:\s*(.+)/i);
+  const modelMatch = text.match(/MODEL:\s*(.+)/i);
+  const confMatch = text.match(/CONFIDENCE:\s*(.+)/i);
+  const rawMatch = text.match(/TEXT:\s*(.+)/im);
+
+  const brandRaw = brandMatch?.[1]?.trim() ?? '';
+  if (!brandRaw || brandRaw.toUpperCase() === 'NONE') {
+    return { result: null, raw_ai_response: text, image_bytes: imageBytes };
+  }
+
+  const modelRaw = modelMatch?.[1]?.trim() ?? '';
+  const confidence = (confMatch?.[1]?.trim()?.toLowerCase() ?? 'low') as 'high' | 'medium' | 'low';
+  const rawText = rawMatch?.[1]?.trim() ?? brandRaw;
+
+  const normalizedBrand = normalizeBrand(brandRaw);
+
+  const result: DetectionResult = {
+    brand: normalizedBrand,
+    model: modelRaw && modelRaw.toUpperCase() !== 'NONE' ? modelRaw : null,
+    confidence,
+    source_image: sourceImage,
+    raw_text: rawText,
+  };
+
+  return { result, raw_ai_response: text, image_bytes: imageBytes };
+}
+
+// ── Main handler ────────────────────────────────────────────────
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -218,22 +285,24 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const supabase = createClient(supabaseUrl, serviceKey);
 
+  const geminiKey = Deno.env.get('GEMINI_API_KEY') ?? await getSecret(supabaseUrl, serviceKey, 'GEMINI_API_KEY');
   const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY') ?? await getSecret(supabaseUrl, serviceKey, 'ANTHROPIC_API_KEY');
-  if (!anthropicKey) {
-    return new Response(JSON.stringify({ error: 'No Anthropic API key' }), {
+
+  if (!geminiKey && !anthropicKey) {
+    return new Response(JSON.stringify({ error: 'No AI API key configured (need GEMINI_API_KEY or ANTHROPIC_API_KEY)' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 
   const body = await req.json().catch(() => ({}));
-  const listingId = body.listing_id ?? null; // Single listing mode
+  const listingId = body.listing_id ?? null;
   const limit = body.limit ?? 500;
   const offset = body.offset ?? 0;
   const dryRun = body.dry_run ?? false;
   const skipExisting = body.skip_existing ?? true;
 
-  // ── Single-listing mode ────────────────────────────────────────
+  // ── Single-listing mode (uses Gemini with all images) ────────
   if (listingId) {
     const { data: single, error: singleErr } = await supabase
       .from('listings')
@@ -256,25 +325,30 @@ Deno.serve(async (req) => {
     const gallery = (single.photos ?? []).filter((p: string) => !imageUrls.includes(p));
     imageUrls.push(...gallery.slice(0, 3));
 
-    let bestResult: DetectionResult | null = null;
-    // Use Sonnet for single-listing interactive mode (better accuracy, only 1-2 images)
-    const singleModel = 'claude-sonnet-4-6';
-    const diagnostics: Array<{ url: string; status: string; raw_ai_response: string; image_bytes: number; detail?: string }> = [];
-    for (const url of imageUrls) {
-      const attempt = await detectEquipmentInImage(url, anthropicKey, singleModel);
-      if (attempt.result) {
-        diagnostics.push({ url: url.slice(-80), status: 'detected', raw_ai_response: attempt.raw_ai_response, image_bytes: attempt.image_bytes, detail: `${attempt.result.brand}/${attempt.result.model} [${attempt.result.confidence}]` });
-        if (!bestResult ||
-            (attempt.result.confidence === 'high' && bestResult.confidence !== 'high') ||
-            (attempt.result.confidence === 'medium' && bestResult.confidence === 'low')) {
-          bestResult = attempt.result;
+    // Use Gemini (preferred) or fall back to Claude
+    let attempt: DetectionAttempt;
+    let engine = 'gemini';
+
+    if (geminiKey) {
+      attempt = await detectWithGemini(imageUrls, geminiKey);
+    } else {
+      engine = 'claude';
+      // Fall back: try each image with Claude
+      let bestAttempt: DetectionAttempt = { result: null, raw_ai_response: '', image_bytes: 0 };
+      for (const url of imageUrls) {
+        const a = await detectWithClaude(url, anthropicKey!);
+        if (a.result && (!bestAttempt.result ||
+            (a.result.confidence === 'high' && bestAttempt.result?.confidence !== 'high'))) {
+          bestAttempt = a;
+          if (a.result.confidence === 'high') break;
         }
-        if (attempt.result.confidence === 'high') break;
-      } else {
-        diagnostics.push({ url: url.slice(-80), status: attempt.error ?? 'no_detection', raw_ai_response: attempt.raw_ai_response, image_bytes: attempt.image_bytes });
+        if (!bestAttempt.raw_ai_response && a.raw_ai_response) bestAttempt = a;
+        await new Promise(r => setTimeout(r, 200));
       }
-      await new Promise(r => setTimeout(r, 200));
+      attempt = bestAttempt;
     }
+
+    const bestResult = attempt.result;
 
     if (bestResult && !dryRun && (bestResult.confidence === 'high' || bestResult.confidence === 'medium')) {
       await supabase
@@ -286,9 +360,15 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({
       listing_id: single.id,
       name: single.name,
+      engine,
       images_scanned: imageUrls.length,
       image_urls: imageUrls,
-      diagnostics,
+      diagnostics: [{
+        status: attempt.result ? 'detected' : (attempt.error ?? 'no_detection'),
+        raw_ai_response: attempt.raw_ai_response,
+        image_bytes: attempt.image_bytes,
+        detail: attempt.result ? `${attempt.result.brand}/${attempt.result.model} [${attempt.result.confidence}]` : undefined,
+      }],
       detection: bestResult ? {
         brand: bestResult.brand,
         model: bestResult.model,
@@ -302,9 +382,14 @@ Deno.serve(async (req) => {
     });
   }
 
-  // ── Batch mode (original behavior) ─────────────────────────────
-  // Fetch touchless listings with images but no equipment_brand yet
-  // Order by photo_enrichment_attempted_at DESC so we get the most photo-rich listings first
+  // ── Batch mode (uses Claude Haiku for cost efficiency) ────────
+  if (!anthropicKey) {
+    return new Response(JSON.stringify({ error: 'Batch mode requires ANTHROPIC_API_KEY' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   let query = supabase
     .from('listings')
     .select('id, name, hero_image, photos, google_photo_url, street_view_url, equipment_brand')
@@ -337,8 +422,6 @@ Deno.serve(async (req) => {
     raw_text: string;
   }> = [];
 
-  const debugResponses: Array<{ listing: string; image: string; response: string }> = [];
-
   let processed = 0;
   let imagesScanned = 0;
   let detected = 0;
@@ -346,7 +429,6 @@ Deno.serve(async (req) => {
   for (const listing of listings) {
     processed++;
 
-    // Collect all images for this listing
     const imageUrls: string[] = [];
     if (listing.hero_image) imageUrls.push(listing.hero_image);
     if (listing.google_photo_url && listing.google_photo_url !== listing.hero_image) {
@@ -355,7 +437,6 @@ Deno.serve(async (req) => {
     if (listing.street_view_url && !imageUrls.includes(listing.street_view_url)) {
       imageUrls.push(listing.street_view_url);
     }
-    // Add gallery photos (up to 3 per listing to keep costs/memory down)
     const gallery = (listing.photos ?? []).filter((p: string) => !imageUrls.includes(p));
     imageUrls.push(...gallery.slice(0, 3));
 
@@ -363,29 +444,17 @@ Deno.serve(async (req) => {
 
     for (const url of imageUrls) {
       imagesScanned++;
-      const attempt = await detectEquipmentInImage(url, anthropicKey);
-
-      // Capture debug info for first 5 listings
-      if (processed <= 5) {
-        debugResponses.push({
-          listing: listing.name,
-          image: url.slice(-60),
-          response: attempt.result ? `${attempt.result.brand}/${attempt.result.model} [${attempt.result.confidence}]` : 'NONE',
-        });
-      }
+      const attempt = await detectWithClaude(url, anthropicKey);
 
       if (attempt.result) {
-        // Keep highest confidence result
         if (!bestResult ||
             (attempt.result.confidence === 'high' && bestResult.confidence !== 'high') ||
             (attempt.result.confidence === 'medium' && bestResult.confidence === 'low')) {
           bestResult = attempt.result;
         }
-        // If we found a high confidence match, no need to scan more images
         if (attempt.result.confidence === 'high') break;
       }
 
-      // Small delay to avoid rate limits
       await new Promise(r => setTimeout(r, 200));
     }
 
@@ -401,19 +470,14 @@ Deno.serve(async (req) => {
         raw_text: bestResult.raw_text,
       });
 
-      // Only save high/medium confidence results, unless dry run
       if (!dryRun && (bestResult.confidence === 'high' || bestResult.confidence === 'medium')) {
         await supabase
           .from('listings')
-          .update({
-            equipment_brand: bestResult.brand,
-            equipment_model: bestResult.model,
-          })
+          .update({ equipment_brand: bestResult.brand, equipment_model: bestResult.model })
           .eq('id', listing.id);
       }
     }
 
-    // Log progress every 50 listings
     if (processed % 50 === 0) {
       console.log(`Progress: ${processed}/${listings.length} listings, ${imagesScanned} images scanned, ${detected} detections`);
     }
@@ -426,7 +490,6 @@ Deno.serve(async (req) => {
     detection_rate: `${((detected / processed) * 100).toFixed(1)}%`,
     dry_run: dryRun,
     detections: results,
-    debug_responses: debugResponses.slice(0, 30),
   };
 
   console.log(`Done! ${detected}/${processed} listings had detectable equipment (${summary.detection_rate})`);
