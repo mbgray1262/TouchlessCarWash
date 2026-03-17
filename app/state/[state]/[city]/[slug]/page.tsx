@@ -66,6 +66,17 @@ async function getListing(slug: string): Promise<Listing | null> {
   return data as Listing;
 }
 
+/** Check if a listing exists but is NOT touchless (for showing a helpful message instead of 404) */
+async function getNonTouchlessListing(slug: string): Promise<{ name: string; city: string; state: string } | null> {
+  const { data } = await supabase
+    .from('listings')
+    .select('name, city, state')
+    .eq('slug', slug)
+    .eq('is_touchless', false)
+    .maybeSingle();
+  return data;
+}
+
 /**
  * Try to find a listing whose slug starts with the requested slug.
  * Handles old short slugs (e.g. "rice-street-car-wash") that were later
@@ -166,7 +177,7 @@ const getBestOfRankings = cache(async (listingId: string): Promise<BestOfRanking
 
 export async function generateMetadata({ params }: ListingPageProps): Promise<Metadata> {
   const listing = await getListing(params.slug);
-  if (!listing) return { title: 'Listing Not Found' };
+  if (!listing) return { title: 'Listing Not Found', robots: { index: false, follow: false } };
 
   const stateCode = getStateCode(params.state);
   const stateName = stateCode ? getStateName(stateCode) : listing.state;
@@ -774,6 +785,40 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     // with longer address-based slugs (e.g. "rice-street-car-wash-1736-rice-st-...").
     const redirectUrl = await findListingByPartialSlug(params.slug);
     if (redirectUrl) redirect(redirectUrl);
+
+    // Check if this listing exists but is NOT touchless — show helpful page instead of 404
+    const nonTouchless = await getNonTouchlessListing(params.slug);
+    if (nonTouchless) {
+      const stateSlug = getStateSlug(nonTouchless.state) || nonTouchless.state.toLowerCase();
+      const citySlug = nonTouchless.city.toLowerCase().replace(/\s+/g, '-');
+      return (
+        <div className="max-w-2xl mx-auto px-4 py-16 text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            {nonTouchless.name} is not a touchless car wash
+          </h1>
+          <p className="text-gray-600 mb-8">
+            Our research shows that {nonTouchless.name} in {nonTouchless.city}, {nonTouchless.state} does not offer touchless wash services.
+            They use soft-touch or friction-based equipment that makes contact with your vehicle.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              href={`/state/${stateSlug}/${citySlug}`}
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#22C55E] text-white rounded-lg font-medium hover:bg-[#16a34a] transition-colors"
+            >
+              <MapPin className="w-4 h-4" />
+              Find touchless washes in {nonTouchless.city}
+            </Link>
+            <Link
+              href="/search"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+            >
+              Search all locations
+            </Link>
+          </div>
+        </div>
+      );
+    }
+
     notFound();
   }
 
