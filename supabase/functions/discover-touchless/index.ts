@@ -498,7 +498,6 @@ const TOUCHLESS_KEYWORDS = [
   'laser',  // LaserWash is a well-known touchless brand
   'no-touch', 'no touch', 'notouch',
   'frictionless', 'friction-free',
-  'soft-touch', 'soft touch', // technically uses brushes, but foam/cloth
 ];
 
 /** Keywords that strongly suggest a car wash is NOT touchless. */
