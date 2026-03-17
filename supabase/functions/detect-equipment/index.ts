@@ -322,13 +322,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Collect all images
+    // Only classify the hero image — the user has already selected the best equipment shot
     const imageUrls: string[] = [];
     if (single.hero_image) imageUrls.push(single.hero_image);
-    if (single.google_photo_url && single.google_photo_url !== single.hero_image) imageUrls.push(single.google_photo_url);
-    if (single.street_view_url && !imageUrls.includes(single.street_view_url)) imageUrls.push(single.street_view_url);
-    const gallery = (single.photos ?? []).filter((p: string) => !imageUrls.includes(p));
-    imageUrls.push(...gallery.slice(0, 3));
 
     // Use Gemini (preferred) or fall back to Claude
     let attempt: DetectionAttempt;
