@@ -70,6 +70,29 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
 
   useEffect(() => { loadListing(); }, [loadListing]);
 
+  // Reset all state when advancing to a new listing
+  useEffect(() => {
+    setListing(null);
+    setLoading(true);
+    setLightboxIndex(null);
+    setCropOpen(false);
+    setEnhancing(false);
+    setEnhancedPreview(null);
+    setPreEnhance(null);
+    setSaving(false);
+    setUploading(false);
+    setClassifying(false);
+    setClassifyResult(null);
+    setGooglePhotos(null);
+    setGooglePhotosTotal(0);
+    setGooglePhotosHasMore(false);
+    setGooglePhotosOpen(false);
+    setGooglePhotosLoading(false);
+    setSavingGooglePhoto(null);
+    setGoogleLightboxIndex(null);
+    setClassifyEvidence(null);
+  }, [listingId]);
+
   // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
