@@ -74,17 +74,23 @@ Deno.serve(async (req) => {
     return json({ error: 'GOOGLE_PLACES_API_KEY not configured' }, 500);
   }
 
-  // ── GET: Browse photos ──────────────────────────────────────
+  // ── GET: Browse photos (paginated) ─────────────────────────
   if (req.method === 'GET') {
     const url = new URL(req.url);
     const placeId = url.searchParams.get('place_id');
     if (!placeId) return json({ error: 'place_id required' }, 400);
 
-    const photoRefs = await fetchPhotoReferences(placeId, googleApiKey);
-    if (photoRefs.length === 0) return json({ photos: [] });
+    const offset = parseInt(url.searchParams.get('offset') ?? '0', 10);
+    const limit = parseInt(url.searchParams.get('limit') ?? '5', 10);
 
-    // Resolve all thumbnail URLs in parallel
-    const photoPromises = photoRefs.map(async (photo) => {
+    const photoRefs = await fetchPhotoReferences(placeId, googleApiKey);
+    if (photoRefs.length === 0) return json({ photos: [], total: 0, hasMore: false });
+
+    // Slice the page we need
+    const page = photoRefs.slice(offset, offset + limit);
+
+    // Resolve only this page of thumbnail URLs in parallel
+    const photoPromises = page.map(async (photo) => {
       const thumbUrl = await resolveMediaUrl(photo.name, googleApiKey, 800);
       if (!thumbUrl) return null;
       return {
@@ -97,7 +103,11 @@ Deno.serve(async (req) => {
     });
 
     const photos = (await Promise.all(photoPromises)).filter(Boolean);
-    return json({ photos, total: photoRefs.length });
+    return json({
+      photos,
+      total: photoRefs.length,
+      hasMore: offset + limit < photoRefs.length,
+    });
   }
 
   // ── POST: Save a photo to listing ───────────────────────────

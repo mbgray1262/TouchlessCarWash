@@ -48,6 +48,8 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
   const [classifying, setClassifying] = useState(false);
   const [classifyResult, setClassifyResult] = useState<string | null>(null);
   const [googlePhotos, setGooglePhotos] = useState<Array<{ name: string; url: string }> | null>(null);
+  const [googlePhotosTotal, setGooglePhotosTotal] = useState(0);
+  const [googlePhotosHasMore, setGooglePhotosHasMore] = useState(false);
   const [googlePhotosOpen, setGooglePhotosOpen] = useState(false);
   const [googlePhotosLoading, setGooglePhotosLoading] = useState(false);
   const [savingGooglePhoto, setSavingGooglePhoto] = useState<string | null>(null);
@@ -450,23 +452,31 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
     onClose();
   };
 
-  // ─── Google Place Photos ─────────────────────────────────────
-  const fetchGooglePhotos = async () => {
+  // ─── Google Place Photos (paginated) ────────────────────────
+  const fetchGooglePhotos = async (loadMore = false) => {
     if (!listing?.google_place_id || googlePhotosLoading) return;
     setGooglePhotosLoading(true);
     try {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
       const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+      const offset = loadMore ? (googlePhotos?.length ?? 0) : 0;
       const res = await fetch(
-        `${supabaseUrl}/functions/v1/google-place-photos?place_id=${encodeURIComponent(listing.google_place_id)}`,
+        `${supabaseUrl}/functions/v1/google-place-photos?place_id=${encodeURIComponent(listing.google_place_id)}&offset=${offset}&limit=5`,
         { headers: { 'Authorization': `Bearer ${supabaseKey}` } }
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setGooglePhotos(data.photos ?? []);
+      const newPhotos = data.photos ?? [];
+      if (loadMore && googlePhotos) {
+        setGooglePhotos([...googlePhotos, ...newPhotos]);
+      } else {
+        setGooglePhotos(newPhotos);
+      }
+      setGooglePhotosTotal(data.total ?? 0);
+      setGooglePhotosHasMore(data.hasMore ?? false);
     } catch (err) {
       console.error('Failed to fetch Google photos:', err);
-      setGooglePhotos([]);
+      if (!loadMore) setGooglePhotos([]);
     } finally {
       setGooglePhotosLoading(false);
     }
@@ -795,10 +805,10 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
               >
                 <ImagePlus className="w-3.5 h-3.5 text-green-600" />
                 Google Place Photos
-                {googlePhotos && <span className="text-gray-400 normal-case font-normal">({googlePhotos.length})</span>}
+                {googlePhotos && <span className="text-gray-400 normal-case font-normal">({googlePhotos.length} of {googlePhotosTotal})</span>}
                 <ChevronUp className="w-3.5 h-3.5 ml-auto" />
               </button>
-              {googlePhotosLoading ? (
+              {googlePhotosLoading && !googlePhotos?.length ? (
                 <div className="flex items-center justify-center py-6">
                   <Loader2 className="w-6 h-6 text-green-500 animate-spin" />
                   <span className="ml-2 text-sm text-gray-500">Loading Google photos…</span>
@@ -806,54 +816,74 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
               ) : googlePhotos && googlePhotos.length === 0 ? (
                 <p className="text-sm text-gray-400 py-4 text-center">No Google Place photos available</p>
               ) : googlePhotos ? (
-                <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
-                  {googlePhotos.map((photo, idx) => {
-                    const isSaving = savingGooglePhoto === photo.url;
-                    return (
-                      <div key={photo.name} className="relative flex-shrink-0 group">
-                        <div
-                          className="w-[160px] h-[120px] rounded-lg overflow-hidden bg-gray-100 cursor-pointer hover:ring-2 hover:ring-green-400 transition-shadow"
-                          onClick={() => setGoogleLightboxIndex(idx)}
-                        >
-                          <img
-                            src={photo.url}
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                            <ZoomIn className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 drop-shadow-lg transition-opacity" />
+                <>
+                  <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
+                    {googlePhotos.map((photo, idx) => {
+                      const isSaving = savingGooglePhoto === photo.url;
+                      return (
+                        <div key={photo.name} className="relative flex-shrink-0 group">
+                          <div
+                            className="w-[160px] h-[120px] rounded-lg overflow-hidden bg-gray-100 cursor-pointer hover:ring-2 hover:ring-green-400 transition-shadow"
+                            onClick={() => setGoogleLightboxIndex(idx)}
+                          >
+                            <img
+                              src={photo.url}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                              <ZoomIn className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 drop-shadow-lg transition-opacity" />
+                            </div>
+                            {isSaving && (
+                              <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-lg">
+                                <Loader2 className="w-6 h-6 text-white animate-spin" />
+                              </div>
+                            )}
                           </div>
-                          {isSaving && (
-                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-lg">
-                              <Loader2 className="w-6 h-6 text-white animate-spin" />
+                          {/* Overlay action buttons */}
+                          {!isSaving && (
+                            <div className="absolute bottom-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); saveGooglePhoto(photo.name, photo.url, false); }}
+                                disabled={!!savingGooglePhoto}
+                                className="w-7 h-7 rounded-full bg-green-500 hover:bg-green-600 text-white flex items-center justify-center shadow-lg"
+                                title="Add to gallery"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); saveGooglePhoto(photo.name, photo.url, true); }}
+                                disabled={!!savingGooglePhoto}
+                                className="w-7 h-7 rounded-full bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center shadow-lg"
+                                title="Set as hero image"
+                              >
+                                <Star className="w-3.5 h-3.5" />
+                              </button>
                             </div>
                           )}
                         </div>
-                        {/* Overlay action buttons */}
-                        {!isSaving && (
-                          <div className="absolute bottom-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); saveGooglePhoto(photo.name, photo.url, false); }}
-                              disabled={!!savingGooglePhoto}
-                              className="w-7 h-7 rounded-full bg-green-500 hover:bg-green-600 text-white flex items-center justify-center shadow-lg"
-                              title="Add to gallery"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); saveGooglePhoto(photo.name, photo.url, true); }}
-                              disabled={!!savingGooglePhoto}
-                              className="w-7 h-7 rounded-full bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center shadow-lg"
-                              title="Set as hero image"
-                            >
-                              <Star className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
+                      );
+                    })}
+                    {/* Load more button inline in the strip */}
+                    {googlePhotosHasMore && (
+                      <button
+                        onClick={() => fetchGooglePhotos(true)}
+                        disabled={googlePhotosLoading}
+                        className="flex-shrink-0 w-[120px] h-[120px] rounded-lg border-2 border-dashed border-green-300 hover:border-green-500 bg-green-50 hover:bg-green-100 flex flex-col items-center justify-center gap-1 transition-colors"
+                      >
+                        {googlePhotosLoading ? (
+                          <Loader2 className="w-5 h-5 text-green-500 animate-spin" />
+                        ) : (
+                          <>
+                            <Plus className="w-5 h-5 text-green-600" />
+                            <span className="text-xs text-green-700 font-medium">Load more</span>
+                            <span className="text-[10px] text-green-500">{googlePhotosTotal - googlePhotos.length} remaining</span>
+                          </>
                         )}
-                      </div>
-                    );
-                  })}
-                </div>
+                      </button>
+                    )}
+                  </div>
+                </>
               ) : null}
             </div>
           )}
