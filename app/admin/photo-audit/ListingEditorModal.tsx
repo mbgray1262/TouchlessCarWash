@@ -56,7 +56,11 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
   const [savingGooglePhoto, setSavingGooglePhoto] = useState<string | null>(null);
   const [googleLightboxIndex, setGoogleLightboxIndex] = useState<number | null>(null);
   const [classifyEvidence, setClassifyEvidence] = useState<string | null>(null);
+  const [pasteUrlOpen, setPasteUrlOpen] = useState(false);
+  const [pasteUrlValue, setPasteUrlValue] = useState('');
+  const [pasteUrlLoading, setPasteUrlLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pasteInputRef = useRef<HTMLInputElement>(null);
 
   const loadListing = useCallback(async () => {
     const { data } = await supabase
@@ -91,6 +95,9 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
     setSavingGooglePhoto(null);
     setGoogleLightboxIndex(null);
     setClassifyEvidence(null);
+    setPasteUrlOpen(false);
+    setPasteUrlValue('');
+    setPasteUrlLoading(false);
   }, [listingId]);
 
   // Close on Escape
@@ -348,6 +355,55 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handlePasteUrl = async () => {
+    const url = pasteUrlValue.trim();
+    if (!url || !listing) return;
+    setPasteUrlLoading(true);
+    try {
+      // Fetch the image, re-host it to Supabase Storage
+      const imgRes = await fetch(url);
+      if (!imgRes.ok) throw new Error(`Failed to fetch image: ${imgRes.status}`);
+      const blob = await imgRes.blob();
+      const ext = blob.type === 'image/png' ? 'png' : 'jpg';
+      const fileName = `${listing.id}/pasted-${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('listing-photos')
+        .upload(fileName, blob, { contentType: blob.type, upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from('listing-photos').getPublicUrl(fileName);
+      const hostedUrl = urlData.publicUrl;
+
+      // Set as hero
+      const oldHero = listing.hero_image;
+      const currentPhotos = listing.photos ?? [];
+      let updatedPhotos = [...currentPhotos];
+      if (oldHero && !updatedPhotos.includes(oldHero)) {
+        updatedPhotos.unshift(oldHero);
+      }
+
+      await supabase.from('listings').update({
+        hero_image: hostedUrl,
+        hero_image_source: 'pasted',
+        photos: updatedPhotos,
+      }).eq('id', listing.id);
+
+      setListing(prev => prev ? { ...prev, hero_image: hostedUrl, hero_image_source: 'pasted', photos: updatedPhotos } : prev);
+      setPasteUrlValue('');
+      setPasteUrlOpen(false);
+      setPreEnhance(null);
+      setEnhancedPreview(null);
+      revalidate();
+      onUpdate?.();
+    } catch (err) {
+      console.error('Paste URL failed:', err);
+      alert(`Failed to save image: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setPasteUrlLoading(false);
     }
   };
 
@@ -751,6 +807,31 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
                     </button>
                   </div>
                 )}
+                {/* Paste URL input (shown above hero when toggled) */}
+                {pasteUrlOpen && (
+                  <div className="absolute top-3 left-3 right-3 z-10 flex items-center gap-2 bg-white/95 backdrop-blur-sm rounded-xl p-2 shadow-xl">
+                    <input
+                      ref={pasteInputRef}
+                      type="text"
+                      value={pasteUrlValue}
+                      onChange={(e) => setPasteUrlValue(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handlePasteUrl(); if (e.key === 'Escape') setPasteUrlOpen(false); }}
+                      placeholder="Paste image URL..."
+                      className="flex-1 px-3 py-1.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                    />
+                    <button
+                      onClick={handlePasteUrl}
+                      disabled={pasteUrlLoading || !pasteUrlValue.trim()}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-medium disabled:opacity-50"
+                    >
+                      {pasteUrlLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                      Set as Hero
+                    </button>
+                    <button onClick={() => setPasteUrlOpen(false)} className="text-gray-400 hover:text-gray-600">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
                 {/* Hero action buttons */}
                 <div className="absolute top-3 right-3 flex gap-2">
                   <button
@@ -762,6 +843,15 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
                     title="Upload new hero from disk"
                   >
                     <Upload className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => { setPasteUrlOpen(!pasteUrlOpen); setTimeout(() => pasteInputRef.current?.focus(), 100); }}
+                    className={`w-9 h-9 rounded-full text-white flex items-center justify-center shadow-lg transition-colors ${
+                      pasteUrlOpen ? 'bg-violet-500 hover:bg-violet-600' : 'bg-gray-700/80 hover:bg-violet-600'
+                    }`}
+                    title="Paste image URL"
+                  >
+                    <Plus className="w-4 h-4" />
                   </button>
                   <button
                     onClick={handleEnhance}
@@ -817,25 +907,54 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
                   <ImageOff className="w-10 h-10 text-gray-300 mx-auto mb-2" />
                   <p className="text-sm text-gray-400">No hero image</p>
                   <p className="text-xs text-gray-400 mt-1">Click a gallery photo below or upload one</p>
-                  <div className="mt-3 flex items-center gap-2 justify-center">
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploading}
-                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium disabled:opacity-50"
-                    >
-                      <Upload className="w-4 h-4" /> Upload Photo
-                    </button>
-                    {listing.google_place_id && (
+                  <div className="mt-3 flex flex-col items-center gap-2">
+                    <div className="flex items-center gap-2">
                       <button
-                        onClick={() => {
-                          if (listing.google_place_id) {
-                            window.open(`https://www.google.com/maps/place/?q=place_id:${listing.google_place_id}`, '_blank');
-                          }
-                        }}
-                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium disabled:opacity-50"
                       >
-                        <ExternalLink className="w-4 h-4" /> Browse Google Photos
+                        <Upload className="w-4 h-4" /> Upload Photo
                       </button>
+                      <button
+                        onClick={() => { setPasteUrlOpen(!pasteUrlOpen); setTimeout(() => pasteInputRef.current?.focus(), 100); }}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-violet-500 hover:bg-violet-600 text-white text-sm font-medium"
+                      >
+                        <Plus className="w-4 h-4" /> Paste URL
+                      </button>
+                      {listing.google_place_id && (
+                        <button
+                          onClick={() => {
+                            if (listing.google_place_id) {
+                              window.open(`https://www.google.com/maps/place/?q=place_id:${listing.google_place_id}`, '_blank');
+                            }
+                          }}
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium"
+                        >
+                          <ExternalLink className="w-4 h-4" /> Browse Google Photos
+                        </button>
+                      )}
+                    </div>
+                    {pasteUrlOpen && (
+                      <div className="flex items-center gap-2 w-full max-w-lg">
+                        <input
+                          ref={pasteInputRef}
+                          type="text"
+                          value={pasteUrlValue}
+                          onChange={(e) => setPasteUrlValue(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') handlePasteUrl(); if (e.key === 'Escape') setPasteUrlOpen(false); }}
+                          placeholder="Paste image URL here..."
+                          className="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                        />
+                        <button
+                          onClick={handlePasteUrl}
+                          disabled={pasteUrlLoading || !pasteUrlValue.trim()}
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium disabled:opacity-50"
+                        >
+                          {pasteUrlLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                          Set as Hero
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
