@@ -113,15 +113,20 @@ Deno.serve(async (req) => {
   // ── POST: Save a photo to listing ───────────────────────────
   if (req.method === 'POST') {
     const body = await req.json().catch(() => ({}));
-    const { photo_name, listing_id, set_as_hero } = body;
+    const { photo_name, photo_url, listing_id, set_as_hero } = body;
 
-    if (!photo_name || !listing_id) {
-      return json({ error: 'photo_name and listing_id required' }, 400);
+    if ((!photo_name && !photo_url) || !listing_id) {
+      return json({ error: 'photo_name or photo_url, and listing_id required' }, 400);
     }
 
-    // 1. Fetch full-resolution image
-    const fullUrl = await resolveMediaUrl(photo_name, googleApiKey, 1600);
-    if (!fullUrl) return json({ error: 'Failed to resolve photo URL' }, 500);
+    // 1. Fetch full-resolution image (from direct URL or Places API photo name)
+    let fullUrl: string | null;
+    if (photo_url) {
+      fullUrl = photo_url;
+    } else {
+      fullUrl = await resolveMediaUrl(photo_name, googleApiKey, 1600);
+      if (!fullUrl) return json({ error: 'Failed to resolve photo URL' }, 500);
+    }
 
     const imgRes = await fetch(fullUrl);
     if (!imgRes.ok) return json({ error: 'Failed to fetch image' }, 500);
@@ -161,7 +166,7 @@ Deno.serve(async (req) => {
     const updateData: Record<string, unknown> = { photos: updatedPhotos };
     if (set_as_hero) {
       updateData.hero_image = publicUrl;
-      updateData.hero_image_source = 'google';
+      updateData.hero_image_source = photo_url ? 'pasted' : 'google';
     }
 
     await supabase.from('listings').update(updateData).eq('id', listing_id);

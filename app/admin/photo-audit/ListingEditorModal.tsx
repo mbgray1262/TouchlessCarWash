@@ -359,40 +359,47 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
   };
 
   const handlePasteUrl = async () => {
-    const url = pasteUrlValue.trim();
+    let url = pasteUrlValue.trim();
     if (!url || !listing) return;
     setPasteUrlLoading(true);
     try {
-      // Fetch the image, re-host it to Supabase Storage
-      const imgRes = await fetch(url);
-      if (!imgRes.ok) throw new Error(`Failed to fetch image: ${imgRes.status}`);
-      const blob = await imgRes.blob();
-      const ext = blob.type === 'image/png' ? 'png' : 'jpg';
-      const fileName = `${listing.id}/pasted-${Date.now()}.${ext}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('listing-photos')
-        .upload(fileName, blob, { contentType: blob.type, upsert: true });
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage.from('listing-photos').getPublicUrl(fileName);
-      const hostedUrl = urlData.publicUrl;
-
-      // Set as hero
-      const oldHero = listing.hero_image;
-      const currentPhotos = listing.photos ?? [];
-      let updatedPhotos = [...currentPhotos];
-      if (oldHero && !updatedPhotos.includes(oldHero)) {
-        updatedPhotos.unshift(oldHero);
+      // Extract image URL from Google Maps URLs
+      // Google Maps photo URLs contain embedded lh3.googleusercontent.com URLs
+      if (url.includes('google.com/maps')) {
+        const match = url.match(/6shttps?:%2F%2F([^!]+)/);
+        if (match) {
+          url = decodeURIComponent('https://' + match[1]);
+          // Remove size constraints to get full res
+          url = url.replace(/=w\d+-h\d+-k-no/, '=w1600-h1200-k-no');
+        } else {
+          throw new Error('Could not extract image URL from Google Maps link. Try right-clicking the photo and selecting "Copy image address" instead.');
+        }
       }
 
-      await supabase.from('listings').update({
-        hero_image: hostedUrl,
-        hero_image_source: 'pasted',
-        photos: updatedPhotos,
-      }).eq('id', listing.id);
+      // Use the edge function to download server-side (avoids CORS)
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+      const res = await fetch(`${supabaseUrl}/functions/v1/google-place-photos`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({
+          listing_id: listing.id,
+          photo_url: url,
+          set_as_hero: true,
+        }),
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
 
-      setListing(prev => prev ? { ...prev, hero_image: hostedUrl, hero_image_source: 'pasted', photos: updatedPhotos } : prev);
+      // Reload listing to pick up the new hero
+      await loadListing();
       setPasteUrlValue('');
       setPasteUrlOpen(false);
       setPreEnhance(null);
