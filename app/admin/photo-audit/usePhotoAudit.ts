@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 
 export interface AuditResult {
@@ -28,7 +28,27 @@ export interface AuditResult {
   listing_slug?: string;
 }
 
+export interface BatchJob {
+  id: string;
+  status: string;
+  total_requested: number;
+  total_processed: number;
+  dry_run: boolean;
+  include_google_photos: boolean;
+  equipment_detected: number;
+  heroes_replaced: number;
+  photos_removed: number;
+  auto_applied: number;
+  google_photos_added: number;
+  google_photos_screened: number;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 type Tab = 'equipment' | 'heroes' | 'cleanup';
+
+const POLL_INTERVAL = 5000; // 5 seconds
 
 export function usePhotoAudit() {
   const [results, setResults] = useState<AuditResult[]>([]);
@@ -39,16 +59,16 @@ export function usePhotoAudit() {
   const [includeGooglePhotos, setIncludeGooglePhotos] = useState(true);
   const [stats, setStats] = useState({ total: 0, applied: 0, pending: 0, equipment: 0, heroes: 0, cleanup: 0 });
   const [queueStats, setQueueStats] = useState({ totalUntagged: 0, alreadyAudited: 0, remaining: 0 });
+  const [activeJob, setActiveJob] = useState<BatchJob | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadQueueStats = useCallback(async () => {
-    // Count total touchless listings with images (the full universe we want to audit)
     const { count: totalTouchless } = await supabase
       .from('listings')
       .select('id', { count: 'exact', head: true })
       .eq('is_touchless', true)
       .not('hero_image', 'is', null);
 
-    // Count how many have already been audited (photo_audited_at is set by the edge function)
     const { count: alreadyAudited } = await supabase
       .from('listings')
       .select('id', { count: 'exact', head: true })
@@ -68,7 +88,6 @@ export function usePhotoAudit() {
   const loadResults = useCallback(async () => {
     setLoading(true);
 
-    // Load audit results with listing data
     const { data, error } = await supabase
       .from('photo_audit_results')
       .select('*')
@@ -88,11 +107,9 @@ export function usePhotoAudit() {
       return;
     }
 
-    // Fetch listing names in batch
     const listingIds = Array.from(new Set(data.map(r => r.listing_id)));
     const listings: Record<string, { name: string; hero_image: string | null; city: string; state: string; slug: string }> = {};
 
-    // Fetch in chunks of 50
     for (let i = 0; i < listingIds.length; i += 50) {
       const chunk = listingIds.slice(i, i + 50);
       const { data: listingData } = await supabase
@@ -116,8 +133,6 @@ export function usePhotoAudit() {
       listing_slug: listings[r.listing_id]?.slug,
     }));
 
-    // Deduplicate by listing_id — keep only the latest result per listing
-    // (data is already ordered by created_at desc, so first occurrence wins)
     const seenListings = new Set<string>();
     const enriched = enrichedAll.filter(r => {
       if (seenListings.has(r.listing_id)) return false;
@@ -127,7 +142,6 @@ export function usePhotoAudit() {
 
     setResults(enriched);
 
-    // Compute stats
     const total = enriched.length;
     const applied = enriched.filter(r => r.applied).length;
     const pending = total - applied;
@@ -140,86 +154,144 @@ export function usePhotoAudit() {
     await loadQueueStats();
   }, [loadQueueStats]);
 
+  // ─── Job polling ──────────────────────────────────────────────────
+
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }, []);
+
+  const formatJobProgress = useCallback((job: BatchJob) => {
+    const pct = job.total_requested > 0
+      ? Math.round((job.total_processed / job.total_requested) * 100)
+      : 0;
+    const statusLabel = job.status === 'running'
+      ? `Processing... ${job.total_processed} / ${job.total_requested} (${pct}%)`
+      : job.status === 'completed'
+        ? `Done! Processed ${job.total_processed} listings.`
+        : `Failed: ${job.error_message ?? 'Unknown error'}`;
+
+    const details = [
+      job.equipment_detected > 0 ? `Equipment: ${job.equipment_detected}` : null,
+      job.heroes_replaced > 0 ? `Heroes replaced: ${job.heroes_replaced}` : null,
+      job.photos_removed > 0 ? `Photos removed: ${job.photos_removed}` : null,
+      job.auto_applied > 0 ? `Auto-applied: ${job.auto_applied}` : null,
+      job.google_photos_added > 0 ? `Google photos: +${job.google_photos_added}` : null,
+    ].filter(Boolean).join('. ');
+
+    return details ? `${statusLabel} ${details}.` : statusLabel;
+  }, []);
+
+  const pollJob = useCallback(async (jobId: string) => {
+    const { data } = await supabase
+      .from('batch_audit_jobs')
+      .select('*')
+      .eq('id', jobId)
+      .maybeSingle();
+
+    if (!data) return;
+    const job = data as BatchJob;
+    setActiveJob(job);
+    setRunProgress(formatJobProgress(job));
+
+    // Also refresh queue stats periodically
+    await loadQueueStats();
+
+    if (job.status === 'completed' || job.status === 'failed') {
+      setRunning(false);
+      stopPolling();
+      // Final refresh of results
+      await loadResults();
+    }
+  }, [formatJobProgress, loadQueueStats, loadResults, stopPolling]);
+
+  const startPolling = useCallback((jobId: string) => {
+    stopPolling();
+    // Immediate first poll
+    pollJob(jobId);
+    // Then poll every 5s
+    pollRef.current = setInterval(() => pollJob(jobId), POLL_INTERVAL);
+  }, [pollJob, stopPolling]);
+
+  // Check for any running jobs on mount
+  useEffect(() => {
+    const checkRunningJobs = async () => {
+      const { data } = await supabase
+        .from('batch_audit_jobs')
+        .select('*')
+        .eq('status', 'running')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (data && data.length > 0) {
+        const job = data[0] as BatchJob;
+        setActiveJob(job);
+        setRunning(true);
+        setRunProgress(formatJobProgress(job));
+        startPolling(job.id);
+      }
+    };
+    checkRunningJobs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => stopPolling();
+  }, [stopPolling]);
+
   useEffect(() => {
     loadResults();
   }, [loadResults]);
 
+  // ─── Run batch (now creates a server-side job) ────────────────────
+
   const runBatch = useCallback(async (limit: number, dryRun: boolean, includeGoogle: boolean) => {
     setRunning(true);
-    const googleLabel = includeGoogle ? ' + Google Photos' : '';
-    const CHUNK_SIZE = includeGoogle ? 20 : 50; // Smaller chunks when fetching Google Photos
-    const totalChunks = Math.ceil(limit / CHUNK_SIZE);
-    const isMultiChunk = totalChunks > 1;
-
-    let totalProcessed = 0;
-    let totalEquipment = 0;
-    let totalHeroes = 0;
-    let totalPhotosRemoved = 0;
-    let totalAutoApplied = 0;
-    let totalGoogleAdded = 0;
-    let totalGoogleScreened = 0;
-    let chunkNum = 0;
+    setRunProgress(`Starting batch job (${limit} listings, ${dryRun ? 'DRY RUN' : 'LIVE'})...`);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      while (totalProcessed < limit) {
-        chunkNum++;
-        const remaining = limit - totalProcessed;
-        const chunkLimit = Math.min(CHUNK_SIZE, remaining);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/batch-photo-audit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          total_requested: limit,
+          dry_run: dryRun,
+          include_google_photos: includeGoogle,
+        }),
+      });
 
-        if (isMultiChunk) {
-          setRunProgress(`Processing chunk ${chunkNum}/${totalChunks} (${totalProcessed} done so far)...`);
-        } else {
-          setRunProgress(`Starting batch (${limit} listings${googleLabel}, ${dryRun ? 'DRY RUN' : 'LIVE'})...`);
-        }
+      const data = await res.json();
 
-        const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/batch-photo-audit`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({ limit: chunkLimit, dry_run: dryRun, include_google_photos: includeGoogle }),
-        });
-
-        const data = await res.json();
-
-        if (data.error) {
-          setRunProgress(`Error on chunk ${chunkNum}: ${data.error} (${totalProcessed} processed so far)`);
-          break;
-        }
-
-        totalProcessed += data.listings_processed ?? 0;
-        totalEquipment += data.equipment_detected ?? 0;
-        totalHeroes += data.heroes_replaced ?? 0;
-        totalPhotosRemoved += data.photos_removed ?? 0;
-        totalAutoApplied += data.auto_applied ?? 0;
-        totalGoogleAdded += data.google_photos_added ?? 0;
-        totalGoogleScreened += data.google_photos_screened ?? 0;
-
-        // If the function processed fewer than requested, we've run out of listings
-        if ((data.listings_processed ?? 0) < chunkLimit) {
-          break;
-        }
+      if (data.error) {
+        setRunProgress(`Error: ${data.error}`);
+        setRunning(false);
+        return;
       }
 
-      const googleMsg = totalGoogleAdded > 0
-        ? ` Google photos added: ${totalGoogleAdded} (screened ${totalGoogleScreened}).`
-        : '';
-      setRunProgress(
-        `Done! Processed ${totalProcessed} listings${isMultiChunk ? ` in ${chunkNum} chunks` : ''}. ` +
-        `Equipment: ${totalEquipment}. Heroes replaced: ${totalHeroes}. ` +
-        `Photos removed: ${totalPhotosRemoved}. Auto-applied: ${totalAutoApplied}.${googleMsg}`
-      );
-      await loadResults();
+      if (data.job_id) {
+        // Job created — start polling
+        setRunProgress(`Job started! Processing ${limit} listings in the background...`);
+        startPolling(data.job_id);
+      } else {
+        // Legacy response (shouldn't happen with new function)
+        setRunProgress(`Done! Processed ${data.listings_processed ?? 0} listings.`);
+        setRunning(false);
+        await loadResults();
+      }
     } catch (err) {
-      setRunProgress(`Error: ${(err as Error).message} (${totalProcessed} processed before error)`);
-    } finally {
+      setRunProgress(`Error: ${(err as Error).message}`);
       setRunning(false);
     }
-  }, [loadResults]);
+  }, [loadResults, startPolling]);
 
   const applyEquipment = useCallback(async (auditId: string, listingId: string, brand: string, model: string | null) => {
     await supabase
@@ -281,6 +353,7 @@ export function usePhotoAudit() {
     setIncludeGooglePhotos,
     stats,
     queueStats,
+    activeJob,
     runBatch,
     applyEquipment,
     rejectResult,

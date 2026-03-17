@@ -491,7 +491,183 @@ async function enrichListingWithGooglePhotos(
   }
 }
 
-// ---- Main handler ----
+// ---- Process one listing (extracted for clarity) ----
+
+async function processOneListing(
+  supabase: ReturnType<typeof createClient>,
+  listing: Record<string, unknown>,
+  anthropicKey: string,
+  googleApiKey: string,
+  includeGooglePhotos: boolean,
+  dryRun: boolean,
+): Promise<{
+  equipmentDetected: number;
+  heroReplaced: number;
+  photosRemoved: number;
+  autoApplied: number;
+  googlePhotosAdded: number;
+  googlePhotosScreened: number;
+}> {
+  let equipmentDetected = 0;
+  let heroReplaced = 0;
+  let photosRemoved = 0;
+  let autoApplied = 0;
+  let googlePhotosAdded = 0;
+  let googlePhotosScreened = 0;
+
+  // ---- STEP 1: Google Photo Enrichment (if enabled) ----
+  const currentPhotoCount = ((listing.photos as string[]) ?? []).length;
+  const shouldEnrich = includeGooglePhotos && googleApiKey && !dryRun && listing.google_place_id &&
+    ((!listing.photo_enrichment_attempted_at && currentPhotoCount < 3) ||
+     (listing.photo_enrichment_attempted_at && currentPhotoCount === 0));
+  if (shouldEnrich) {
+    try {
+      const enrichResult = await enrichListingWithGooglePhotos(
+        supabase,
+        {
+          id: listing.id as string,
+          photos: listing.photos as string[] | null,
+          hero_image: listing.hero_image as string | null,
+          blocked_photos: listing.blocked_photos as string[] | null,
+          google_place_id: listing.google_place_id as string,
+        },
+        anthropicKey,
+        googleApiKey,
+      );
+      googlePhotosAdded = enrichResult.photosAdded;
+      googlePhotosScreened = enrichResult.photosScreened;
+      if (enrichResult.photosAdded > 0) {
+        listing.photos = enrichResult.updatedPhotos;
+      }
+      if (enrichResult.updatedHero) {
+        listing.hero_image = enrichResult.updatedHero;
+      }
+    } catch (err) {
+      console.error(`  → Enrichment error: ${(err as Error).message}`);
+    }
+  }
+
+  // ---- STEP 2: Collect all photos for Sonnet audit ----
+  const photoUrls: string[] = [];
+  const blockedSet = new Set((listing.blocked_photos as string[]) ?? []);
+  if (listing.hero_image) photoUrls.push(listing.hero_image as string);
+  const gallery = ((listing.photos as string[]) ?? []).filter(
+    (p: string) => p && !photoUrls.includes(p) && !blockedSet.has(p)
+  );
+  photoUrls.push(...gallery.slice(0, 8));
+  if (listing.google_photo_url && !photoUrls.includes(listing.google_photo_url as string)) {
+    photoUrls.push(listing.google_photo_url as string);
+  }
+  const photosToAudit = photoUrls.slice(0, 12);
+  if (photosToAudit.length === 0) {
+    return { equipmentDetected, heroReplaced, photosRemoved, autoApplied, googlePhotosAdded, googlePhotosScreened };
+  }
+
+  // ---- STEP 3: Run Sonnet audit ----
+  const result = await auditListing(photosToAudit, listing.name as string, anthropicKey);
+  if (!result) {
+    return { equipmentDetected, heroReplaced, photosRemoved, autoApplied, googlePhotosAdded, googlePhotosScreened };
+  }
+
+  // Normalize equipment brand
+  let normalizedBrand: string | null = null;
+  const model = result.equipment.model;
+  if (result.equipment.brand) {
+    normalizedBrand = normalizeBrand(result.equipment.brand);
+    if (!normalizedBrand) normalizedBrand = result.equipment.brand.toLowerCase().replace(/\s+/g, '_');
+  }
+
+  const removeUrls = (result.photo_verdicts ?? [])
+    .filter(v => !v.keep && v.index < photosToAudit.length)
+    .map(v => photosToAudit[v.index]);
+
+  const bestIdx = result.hero_assessment?.best_photo_index;
+  const suggestedHeroUrl = bestIdx != null && bestIdx > 0 && bestIdx < photosToAudit.length
+    ? photosToAudit[bestIdx] : null;
+
+  // Save to photo_audit_results
+  if (!dryRun) {
+    await supabase.from('photo_audit_results').insert({
+      listing_id: listing.id,
+      equipment_brand: normalizedBrand,
+      equipment_model: model,
+      equipment_confidence: result.equipment.confidence ?? 'low',
+      equipment_source_photo: result.equipment.source_photo_index != null
+        ? photosToAudit[result.equipment.source_photo_index] ?? null : null,
+      hero_quality: result.hero_assessment?.current_hero_quality ?? 'acceptable',
+      suggested_hero_url: suggestedHeroUrl,
+      suggested_hero_reason: result.hero_assessment?.reason,
+      photos_to_remove: removeUrls,
+      raw_response: result,
+      reviewed: false,
+      applied: false,
+      google_photos_added: googlePhotosAdded,
+      google_photos_screened: googlePhotosScreened,
+    });
+    await supabase.from('listings')
+      .update({ photo_audited_at: new Date().toISOString() })
+      .eq('id', listing.id);
+  }
+
+  // AUTO-APPLY: High confidence equipment
+  let didAutoApply = false;
+  if (!dryRun && normalizedBrand && result.equipment.confidence === 'high') {
+    const isKnownBrand = Object.values(BRAND_MAP).includes(normalizedBrand);
+    if (isKnownBrand) {
+      await supabase.from('listings').update({ equipment_brand: normalizedBrand, equipment_model: model }).eq('id', listing.id);
+      didAutoApply = true;
+      autoApplied++;
+      equipmentDetected++;
+    }
+  } else if (normalizedBrand) {
+    equipmentDetected++;
+  }
+
+  // AUTO-APPLY: Replace poor hero
+  if (!dryRun && result.hero_assessment?.current_hero_quality === 'poor' && suggestedHeroUrl) {
+    const oldHero = listing.hero_image as string;
+    const currentPhotos = (listing.photos as string[]) ?? [];
+    const newPhotos = [...currentPhotos];
+    if (oldHero && !newPhotos.includes(oldHero)) newPhotos.unshift(oldHero);
+    const filteredPhotos = newPhotos.filter(p => p !== suggestedHeroUrl);
+    await supabase.from('listings').update({
+      hero_image: suggestedHeroUrl, hero_image_source: 'gallery', photos: filteredPhotos,
+    }).eq('id', listing.id);
+    heroReplaced++;
+    didAutoApply = true;
+  }
+
+  // AUTO-APPLY: Remove bad photos
+  if (!dryRun && removeUrls.length > 0) {
+    const currentPhotos = (listing.photos as string[]) ?? [];
+    const currentBlocked = (listing.blocked_photos as string[]) ?? [];
+    const removeSet = new Set(removeUrls);
+    removeSet.delete(listing.hero_image as string);
+    if (suggestedHeroUrl) removeSet.delete(suggestedHeroUrl);
+    if (removeSet.size > 0) {
+      const cleanedPhotos = currentPhotos.filter((p: string) => !removeSet.has(p));
+      const newBlocked = [...currentBlocked, ...removeSet];
+      await supabase.from('listings').update({ photos: cleanedPhotos, blocked_photos: newBlocked }).eq('id', listing.id);
+      photosRemoved += removeSet.size;
+      didAutoApply = true;
+    }
+  }
+
+  if (!dryRun && didAutoApply) {
+    await supabase.from('photo_audit_results')
+      .update({ applied: true })
+      .eq('listing_id', listing.id)
+      .order('created_at', { ascending: false })
+      .limit(1);
+  }
+
+  return { equipmentDetected, heroReplaced, photosRemoved, autoApplied, googlePhotosAdded, googlePhotosScreened };
+}
+
+// ---- Main handler (supports server-side job tracking + self-chaining) ----
+
+const CHUNK_SIZE_GOOGLE = 20;
+const CHUNK_SIZE_NO_GOOGLE = 50;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -509,10 +685,17 @@ Deno.serve(async (req) => {
   }
 
   const body = await req.json().catch(() => ({}));
-  const limit = body.limit ?? 50;
-  const offset = body.offset ?? 0;
-  const dryRun = body.dry_run ?? false;
-  const includeGooglePhotos = body.include_google_photos ?? true;
+
+  // ─── Job-based mode (self-chaining, runs server-side) ─────────────
+  // If job_id is provided, continue an existing job.
+  // If not, but total_requested > 0, create a new job.
+  // Legacy mode (no job): process a single chunk and return.
+
+  let jobId: string | null = body.job_id ?? null;
+  let totalRequested: number = body.limit ?? body.total_requested ?? 50;
+  const dryRun: boolean = body.dry_run ?? false;
+  const includeGooglePhotos: boolean = body.include_google_photos ?? true;
+  const chunkSize = includeGooglePhotos ? CHUNK_SIZE_GOOGLE : CHUNK_SIZE_NO_GOOGLE;
 
   // Get Google API key if needed
   let googleApiKey = '';
@@ -523,284 +706,163 @@ Deno.serve(async (req) => {
     }
   }
 
-  // Fetch touchless listings that haven't been audited yet
-  const { data: listings, error } = await supabase
+  // Load or create job
+  interface JobRecord {
+    id: string; status: string; total_requested: number; total_processed: number;
+    dry_run: boolean; include_google_photos: boolean;
+    equipment_detected: number; heroes_replaced: number; photos_removed: number;
+    auto_applied: number; google_photos_added: number; google_photos_screened: number;
+    error_message: string | null;
+  }
+  let job: JobRecord | null = null;
+
+  if (jobId) {
+    // Continue existing job
+    const { data } = await supabase.from('batch_audit_jobs').select('*').eq('id', jobId).maybeSingle();
+    job = data as JobRecord | null;
+    if (!job || job.status !== 'running') {
+      return Response.json({ error: 'Job not found or not running', job_id: jobId }, { headers: corsHeaders });
+    }
+    totalRequested = job.total_requested;
+  } else if (body.total_requested || body.limit) {
+    // Create a new job
+    const { data, error: insertErr } = await supabase.from('batch_audit_jobs').insert({
+      total_requested: totalRequested,
+      dry_run: dryRun,
+      include_google_photos: includeGooglePhotos,
+      status: 'running',
+    }).select('*').single();
+    if (insertErr || !data) {
+      return Response.json({ error: `Failed to create job: ${insertErr?.message}` }, { status: 500, headers: corsHeaders });
+    }
+    job = data as JobRecord;
+    jobId = job.id;
+    console.log(`Created job ${jobId} for ${totalRequested} listings`);
+  }
+
+  // Determine how many to process this chunk
+  const remaining = job ? Math.max(0, job.total_requested - job.total_processed) : totalRequested;
+  const thisChunkLimit = Math.min(chunkSize, remaining);
+
+  if (thisChunkLimit <= 0 && job) {
+    // Job is already done
+    await supabase.from('batch_audit_jobs').update({
+      status: 'completed', updated_at: new Date().toISOString(),
+    }).eq('id', job.id);
+    return Response.json({ job_id: jobId, status: 'completed' }, { headers: corsHeaders });
+  }
+
+  // Fetch unaudited listings for this chunk
+  const { data: listings, error: listErr } = await supabase
     .from('listings')
     .select('id, name, hero_image, photos, google_photo_url, street_view_url, equipment_brand, blocked_photos, google_place_id, photo_enrichment_attempted_at')
     .eq('is_touchless', true)
     .is('photo_audited_at', null)
     .not('hero_image', 'is', null)
     .order('created_at', { ascending: true })
-    .range(offset, offset + limit - 1);
+    .limit(thisChunkLimit);
 
-  if (error) {
-    return Response.json({ error: error.message }, { status: 500, headers: corsHeaders });
+  if (listErr) {
+    if (job) {
+      await supabase.from('batch_audit_jobs').update({
+        status: 'failed', error_message: listErr.message, updated_at: new Date().toISOString(),
+      }).eq('id', job.id);
+    }
+    return Response.json({ error: listErr.message, job_id: jobId }, { status: 500, headers: corsHeaders });
   }
 
-  console.log(`Processing ${listings.length} listings (limit=${limit}, offset=${offset}, dryRun=${dryRun}, googlePhotos=${includeGooglePhotos})`);
+  console.log(`[Job ${jobId ?? 'legacy'}] Processing ${listings.length} listings (chunk of ${thisChunkLimit}, ${job ? `${job.total_processed}/${job.total_requested} done so far` : 'one-shot'})`);
 
-  const results: Array<{
-    listing_id: string;
-    name: string;
-    equipment_brand: string | null;
-    equipment_model: string | null;
-    equipment_confidence: string;
-    hero_quality: string;
-    suggested_hero: string | null;
-    photos_to_remove: number;
-    auto_applied: boolean;
-    google_photos_added: number;
-    google_photos_screened: number;
-  }> = [];
-
-  let processed = 0;
-  let equipmentDetected = 0;
-  let heroReplaced = 0;
-  let photosRemoved = 0;
-  let autoApplied = 0;
-  let totalGooglePhotosAdded = 0;
-  let totalGooglePhotosScreened = 0;
+  // Process each listing in this chunk
+  let chunkProcessed = 0;
+  let chunkEquipment = 0;
+  let chunkHeroes = 0;
+  let chunkPhotosRemoved = 0;
+  let chunkAutoApplied = 0;
+  let chunkGoogleAdded = 0;
+  let chunkGoogleScreened = 0;
 
   for (const listing of listings) {
-    // Wall-clock timeout guard — stop before Edge Function limit
     if (Date.now() - startTime > 340_000) {
-      console.log('Approaching timeout, stopping batch early');
+      console.log('Approaching timeout, stopping chunk early');
       break;
     }
 
-    processed++;
-    let googlePhotosAdded = 0;
-    let googlePhotosScreened = 0;
+    chunkProcessed++;
+    const stats = await processOneListing(supabase, listing as Record<string, unknown>, anthropicKey, googleApiKey, includeGooglePhotos, dryRun);
+    chunkEquipment += stats.equipmentDetected;
+    chunkHeroes += stats.heroReplaced;
+    chunkPhotosRemoved += stats.photosRemoved;
+    chunkAutoApplied += stats.autoApplied;
+    chunkGoogleAdded += stats.googlePhotosAdded;
+    chunkGoogleScreened += stats.googlePhotosScreened;
 
-    // ---- STEP 1: Google Photo Enrichment (if enabled) ----
-    // Enrich if: never attempted, OR previously attempted but still very few photos (retry)
-    const currentPhotoCount = ((listing.photos as string[]) ?? []).length;
-    const shouldEnrich = includeGooglePhotos && googleApiKey && !dryRun && listing.google_place_id &&
-      ((!listing.photo_enrichment_attempted_at && currentPhotoCount < 3) ||
-       (listing.photo_enrichment_attempted_at && currentPhotoCount === 0));
-    if (shouldEnrich) {
-      console.log(`[${processed}/${listings.length}] ${listing.name} — enriching from Google Photos...`);
-      try {
-        const enrichResult = await enrichListingWithGooglePhotos(
-          supabase,
-          {
-            id: listing.id,
-            photos: listing.photos as string[] | null,
-            hero_image: listing.hero_image as string | null,
-            blocked_photos: listing.blocked_photos as string[] | null,
-            google_place_id: listing.google_place_id as string,
-          },
-          anthropicKey,
-          googleApiKey,
-        );
-        googlePhotosAdded = enrichResult.photosAdded;
-        googlePhotosScreened = enrichResult.photosScreened;
-        totalGooglePhotosAdded += googlePhotosAdded;
-        totalGooglePhotosScreened += googlePhotosScreened;
-
-        // Update our in-memory copy of the listing so the audit sees new photos
-        if (enrichResult.photosAdded > 0) {
-          (listing as Record<string, unknown>).photos = enrichResult.updatedPhotos;
-        }
-        if (enrichResult.updatedHero) {
-          (listing as Record<string, unknown>).hero_image = enrichResult.updatedHero;
-        }
-
-        console.log(`  → Added ${googlePhotosAdded} photos (screened ${googlePhotosScreened})`);
-      } catch (err) {
-        console.error(`  → Enrichment error: ${(err as Error).message}`);
-      }
+    if (chunkProcessed % 5 === 0) {
+      console.log(`  Chunk progress: ${chunkProcessed}/${listings.length}`);
     }
 
-    // ---- STEP 2: Collect all photos for Sonnet audit ----
-    const photoUrls: string[] = [];
-    const blockedSet = new Set((listing.blocked_photos as string[]) ?? []);
-
-    if (listing.hero_image) photoUrls.push(listing.hero_image as string);
-
-    const gallery = ((listing.photos as string[]) ?? []).filter(
-      (p: string) => p && !photoUrls.includes(p) && !blockedSet.has(p)
-    );
-    photoUrls.push(...gallery.slice(0, 8));
-
-    if (listing.google_photo_url && !photoUrls.includes(listing.google_photo_url as string)) {
-      photoUrls.push(listing.google_photo_url as string);
-    }
-
-    const photosToAudit = photoUrls.slice(0, 12);
-
-    if (photosToAudit.length === 0) continue;
-
-    // ---- STEP 3: Run Sonnet audit ----
-    const result = await auditListing(photosToAudit, listing.name, anthropicKey);
-
-    if (!result) {
-      console.log(`[${processed}/${listings.length}] ${listing.name} — audit failed`);
-      continue;
-    }
-
-    // Normalize equipment brand
-    let normalizedBrand: string | null = null;
-    const model = result.equipment.model;
-    if (result.equipment.brand) {
-      normalizedBrand = normalizeBrand(result.equipment.brand);
-      if (!normalizedBrand) normalizedBrand = result.equipment.brand.toLowerCase().replace(/\s+/g, '_');
-    }
-
-    // Determine photos to remove
-    const removeUrls = (result.photo_verdicts ?? [])
-      .filter(v => !v.keep && v.index < photosToAudit.length)
-      .map(v => photosToAudit[v.index]);
-
-    // Determine suggested hero URL
-    const bestIdx = result.hero_assessment?.best_photo_index;
-    const suggestedHeroUrl = bestIdx != null && bestIdx > 0 && bestIdx < photosToAudit.length
-      ? photosToAudit[bestIdx]
-      : null;
-
-    // Save to photo_audit_results
-    if (!dryRun) {
-      await supabase.from('photo_audit_results').insert({
-        listing_id: listing.id,
-        equipment_brand: normalizedBrand,
-        equipment_model: model,
-        equipment_confidence: result.equipment.confidence ?? 'low',
-        equipment_source_photo: result.equipment.source_photo_index != null
-          ? photosToAudit[result.equipment.source_photo_index] ?? null
-          : null,
-        hero_quality: result.hero_assessment?.current_hero_quality ?? 'acceptable',
-        suggested_hero_url: suggestedHeroUrl,
-        suggested_hero_reason: result.hero_assessment?.reason,
-        photos_to_remove: removeUrls,
-        raw_response: result,
-        reviewed: false,
-        applied: false,
-        google_photos_added: googlePhotosAdded,
-        google_photos_screened: googlePhotosScreened,
-      });
-
-      // Mark listing as audited so it won't be re-processed
-      await supabase
-        .from('listings')
-        .update({ photo_audited_at: new Date().toISOString() })
-        .eq('id', listing.id);
-    }
-
-    // AUTO-APPLY: High confidence equipment
-    let didAutoApply = false;
-    if (!dryRun && normalizedBrand && result.equipment.confidence === 'high') {
-      const isKnownBrand = Object.values(BRAND_MAP).includes(normalizedBrand);
-      if (isKnownBrand) {
-        await supabase
-          .from('listings')
-          .update({
-            equipment_brand: normalizedBrand,
-            equipment_model: model,
-          })
-          .eq('id', listing.id);
-        didAutoApply = true;
-        autoApplied++;
-        equipmentDetected++;
-      }
-    } else if (normalizedBrand) {
-      equipmentDetected++;
-    }
-
-    // AUTO-APPLY: Replace poor hero with better photo
-    if (!dryRun && result.hero_assessment?.current_hero_quality === 'poor' && suggestedHeroUrl) {
-      const oldHero = listing.hero_image as string;
-      const currentPhotos = (listing.photos as string[]) ?? [];
-
-      const newPhotos = [...currentPhotos];
-      if (oldHero && !newPhotos.includes(oldHero)) {
-        newPhotos.unshift(oldHero);
-      }
-      const filteredPhotos = newPhotos.filter(p => p !== suggestedHeroUrl);
-
-      await supabase
-        .from('listings')
-        .update({
-          hero_image: suggestedHeroUrl,
-          hero_image_source: 'gallery',
-          photos: filteredPhotos,
-        })
-        .eq('id', listing.id);
-
-      heroReplaced++;
-      didAutoApply = true;
-    }
-
-    // AUTO-APPLY: Remove obviously bad photos
-    if (!dryRun && removeUrls.length > 0) {
-      const currentPhotos = (listing.photos as string[]) ?? [];
-      const currentBlocked = (listing.blocked_photos as string[]) ?? [];
-      const removeSet = new Set(removeUrls);
-
-      removeSet.delete(listing.hero_image as string);
-      if (suggestedHeroUrl) removeSet.delete(suggestedHeroUrl);
-
-      if (removeSet.size > 0) {
-        const cleanedPhotos = currentPhotos.filter((p: string) => !removeSet.has(p));
-        const newBlocked = [...currentBlocked, ...removeSet];
-
-        await supabase
-          .from('listings')
-          .update({
-            photos: cleanedPhotos,
-            blocked_photos: newBlocked,
-          })
-          .eq('id', listing.id);
-
-        photosRemoved += removeSet.size;
-        didAutoApply = true;
-      }
-    }
-
-    // Mark as applied if any auto-apply happened
-    if (!dryRun && didAutoApply) {
-      await supabase
-        .from('photo_audit_results')
-        .update({ applied: true })
-        .eq('listing_id', listing.id)
-        .order('created_at', { ascending: false })
-        .limit(1);
-    }
-
-    results.push({
-      listing_id: listing.id,
-      name: listing.name,
-      equipment_brand: normalizedBrand,
-      equipment_model: model,
-      equipment_confidence: result.equipment.confidence ?? 'low',
-      hero_quality: result.hero_assessment?.current_hero_quality ?? 'unknown',
-      suggested_hero: suggestedHeroUrl,
-      photos_to_remove: removeUrls.length,
-      auto_applied: didAutoApply,
-      google_photos_added: googlePhotosAdded,
-      google_photos_screened: googlePhotosScreened,
-    });
-
-    if (processed % 10 === 0) {
-      console.log(`Progress: ${processed}/${listings.length} | equipment: ${equipmentDetected} | heroes replaced: ${heroReplaced} | photos removed: ${photosRemoved} | google added: ${totalGooglePhotosAdded}`);
-    }
-
-    // Rate limit delay
     await new Promise(r => setTimeout(r, 200));
   }
 
-  const summary = {
-    listings_processed: processed,
-    equipment_detected: equipmentDetected,
-    heroes_replaced: heroReplaced,
-    photos_removed: photosRemoved,
-    auto_applied: autoApplied,
-    google_photos_added: totalGooglePhotosAdded,
-    google_photos_screened: totalGooglePhotosScreened,
+  // Update job record
+  if (job) {
+    const newTotalProcessed = job.total_processed + chunkProcessed;
+    const moreWork = newTotalProcessed < job.total_requested && listings.length >= thisChunkLimit;
+
+    await supabase.from('batch_audit_jobs').update({
+      total_processed: newTotalProcessed,
+      equipment_detected: job.equipment_detected + chunkEquipment,
+      heroes_replaced: job.heroes_replaced + chunkHeroes,
+      photos_removed: job.photos_removed + chunkPhotosRemoved,
+      auto_applied: job.auto_applied + chunkAutoApplied,
+      google_photos_added: job.google_photos_added + chunkGoogleAdded,
+      google_photos_screened: job.google_photos_screened + chunkGoogleScreened,
+      status: moreWork ? 'running' : 'completed',
+      updated_at: new Date().toISOString(),
+    }).eq('id', job.id);
+
+    console.log(`[Job ${jobId}] Chunk done: +${chunkProcessed} (total: ${newTotalProcessed}/${job.total_requested}). ${moreWork ? 'Continuing...' : 'COMPLETED!'}`);
+
+    // Self-chain: if more work, fire off the next chunk
+    if (moreWork) {
+      const selfUrl = `${supabaseUrl}/functions/v1/batch-photo-audit`;
+      try {
+        // Fire-and-forget: start next chunk, don't wait for it to finish
+        const controller = new AbortController();
+        setTimeout(() => controller.abort(), 8000); // just ensure the request is sent
+        await fetch(selfUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${serviceKey}`,
+          },
+          body: JSON.stringify({ job_id: jobId }),
+          signal: controller.signal,
+        }).catch(() => { /* abort expected */ });
+      } catch {
+        // If self-invoke fails, job stays 'running' — frontend can resume
+        console.error('Self-chain failed — frontend will need to resume');
+      }
+    }
+
+    return Response.json({
+      job_id: jobId,
+      status: moreWork ? 'running' : 'completed',
+      total_processed: newTotalProcessed,
+      total_requested: job.total_requested,
+      chunk_processed: chunkProcessed,
+    }, { headers: corsHeaders });
+  }
+
+  // Legacy mode (no job) — return summary directly
+  return Response.json({
+    listings_processed: chunkProcessed,
+    equipment_detected: chunkEquipment,
+    heroes_replaced: chunkHeroes,
+    photos_removed: chunkPhotosRemoved,
+    auto_applied: chunkAutoApplied,
+    google_photos_added: chunkGoogleAdded,
+    google_photos_screened: chunkGoogleScreened,
     dry_run: dryRun,
-    results: results.slice(0, 100),
-  };
-
-  console.log(`Done! ${processed} listings | ${equipmentDetected} equipment | ${heroReplaced} heroes | ${photosRemoved} photos removed | ${autoApplied} auto-applied | ${totalGooglePhotosAdded} google photos added`);
-
-  return Response.json(summary, { headers: corsHeaders });
+  }, { headers: corsHeaders });
 });

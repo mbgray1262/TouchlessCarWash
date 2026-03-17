@@ -270,11 +270,11 @@ type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup';
 export default function PhotoAuditPage() {
   const {
     results, loading, tab, setTab, running, runProgress, stats, queueStats,
-    includeGooglePhotos, setIncludeGooglePhotos,
+    includeGooglePhotos, setIncludeGooglePhotos, activeJob,
     runBatch, applyEquipment, rejectResult, applyAllHighConfidence, undoApply, reload,
   } = usePhotoAudit();
 
-  const [batchLimit, setBatchLimit] = useState(10);
+  const [batchLimit, setBatchLimit] = useState(100);
   const [viewFilter, setViewFilter] = useState<ViewFilter>('all');
   const [page, setPage] = useState(1);
   const [editorListingId, setEditorListingId] = useState<string | null>(null);
@@ -357,10 +357,10 @@ export default function PhotoAuditPage() {
             <input
               type="number"
               min={1}
-              max={500}
+              max={10000}
               value={batchLimit}
               onChange={e => setBatchLimit(Number(e.target.value))}
-              className="w-20 px-2 py-1.5 border border-gray-300 rounded text-sm"
+              className="w-24 px-2 py-1.5 border border-gray-300 rounded text-sm"
             />
           </div>
           <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -374,24 +374,43 @@ export default function PhotoAuditPage() {
             <span className="text-xs text-gray-400">(+~10s/listing)</span>
           </label>
           <button
-            onClick={() => runBatch(batchLimit, true, includeGooglePhotos)}
-            disabled={running}
-            className="flex items-center gap-1.5 px-4 py-2 bg-amber-100 text-amber-700 rounded-lg text-sm font-medium hover:bg-amber-200 disabled:opacity-50"
-          >
-            {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-            Dry Run
-          </button>
-          <button
             onClick={() => runBatch(batchLimit, false, includeGooglePhotos)}
             disabled={running}
             className="flex items-center gap-1.5 px-4 py-2 bg-[#0F2744] text-white rounded-lg text-sm font-medium hover:bg-[#1a3a5c] disabled:opacity-50"
           >
             {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-            Run Batch
+            {running ? 'Running...' : 'Run Batch'}
+          </button>
+          <button
+            onClick={() => runBatch(queueStats.remaining, false, includeGooglePhotos)}
+            disabled={running || queueStats.remaining === 0}
+            className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-50"
+          >
+            {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+            Run All ({queueStats.remaining.toLocaleString()})
           </button>
         </div>
+        {/* Job progress */}
         {runProgress && (
-          <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded">{runProgress}</p>
+          <div className="space-y-2">
+            {activeJob && activeJob.status === 'running' && (
+              <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                <div
+                  className="bg-gradient-to-r from-blue-400 to-blue-500 h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${activeJob.total_requested > 0 ? Math.max(2, (activeJob.total_processed / activeJob.total_requested) * 100) : 0}%` }}
+                />
+              </div>
+            )}
+            <p className={`text-sm p-3 rounded ${
+              activeJob?.status === 'failed' ? 'text-red-600 bg-red-50' :
+              activeJob?.status === 'running' ? 'text-blue-600 bg-blue-50' :
+              'text-gray-600 bg-gray-50'
+            }`}>
+              {running && <Loader2 className="w-3.5 h-3.5 animate-spin inline mr-2" />}
+              {runProgress}
+              {running && <span className="text-xs text-gray-400 ml-2">(runs in background — you can navigate away)</span>}
+            </p>
+          </div>
         )}
       </div>
 
