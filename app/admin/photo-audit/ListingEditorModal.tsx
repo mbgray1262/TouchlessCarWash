@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { X, Star, Trash2, Crop, Wand2, ZoomIn, ChevronLeft, ChevronRight, ImageOff, ExternalLink } from 'lucide-react';
+import { X, Star, Trash2, Crop, Wand2, ZoomIn, ChevronLeft, ChevronRight, ImageOff, ExternalLink, Check } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { CropModal } from '../hero-review/CropModal';
@@ -233,6 +233,29 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
     }
   };
 
+  const dismissAudit = async () => {
+    setSaving(true);
+    // Mark the latest audit result for this listing as reviewed + applied
+    // so it no longer appears in Need Review
+    const { data: auditRows } = await supabase
+      .from('photo_audit_results')
+      .select('id')
+      .eq('listing_id', listingId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (auditRows && auditRows.length > 0) {
+      await supabase
+        .from('photo_audit_results')
+        .update({ reviewed: true, applied: true })
+        .eq('id', auditRows[0].id);
+    }
+
+    onUpdate?.();
+    setSaving(false);
+    onClose();
+  };
+
   const stateSlug = getStateSlug(listing.state);
   const citySlug = slugify(listing.city);
   const listingUrl = `/state/${stateSlug}/${citySlug}/${listing.slug}`;
@@ -384,7 +407,7 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
           </div>
 
           {/* Gallery section */}
-          <div className="px-6 pb-6">
+          <div className="px-6 pb-4">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
               Gallery ({galleryPhotos.length} photos)
             </p>
@@ -424,6 +447,18 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Footer with dismiss action */}
+          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex items-center justify-between">
+            <p className="text-xs text-gray-400">Dismiss this listing from the review queue</p>
+            <button
+              onClick={dismissAudit}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium shadow-sm disabled:opacity-50 transition-colors"
+            >
+              <Check className="w-4 h-4" /> Looks Good — Dismiss
+            </button>
           </div>
         </div>
       </div>
