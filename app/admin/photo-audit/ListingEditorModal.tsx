@@ -33,9 +33,10 @@ interface Props {
   listingId: string;
   onClose: () => void;
   onUpdate?: () => void; // callback to refresh parent data
+  onNext?: () => void; // advance to next listing in queue
 }
 
-export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
+export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Props) {
   const [listing, setListing] = useState<ListingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -397,7 +398,7 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
       .eq('listing_id', listing.id);
     onUpdate?.();
     setSaving(false);
-    onClose();
+    if (onNext) { onNext(); } else { onClose(); }
   };
 
   const deleteListing = async () => {
@@ -411,7 +412,7 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
     await supabase.from('listings').delete().eq('id', listing.id);
     onUpdate?.();
     setSaving(false);
-    onClose();
+    if (onNext) { onNext(); } else { onClose(); }
   };
 
   const openStreetView = () => {
@@ -449,7 +450,11 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
 
     onUpdate?.();
     setSaving(false);
-    onClose();
+    if (onNext) {
+      onNext();
+    } else {
+      onClose();
+    }
   };
 
   // ─── Google Place Photos (paginated) ────────────────────────
@@ -1099,7 +1104,7 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
               disabled={saving}
               className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium shadow-sm disabled:opacity-50 transition-colors"
             >
-              <Check className="w-4 h-4" /> Looks Good — Dismiss
+              <Check className="w-4 h-4" /> {onNext ? 'Looks Good → Next' : 'Looks Good — Dismiss'}
             </button>
           </div>
         </div>
