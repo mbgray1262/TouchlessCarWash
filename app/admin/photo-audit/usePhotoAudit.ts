@@ -61,6 +61,7 @@ export function usePhotoAudit() {
   const [queueStats, setQueueStats] = useState({ totalUntagged: 0, alreadyAudited: 0, remaining: 0 });
   const [activeJob, setActiveJob] = useState<BatchJob | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const continuingRef = useRef(false); // prevent double-firing continuations
 
   const loadQueueStats = useCallback(async () => {
     const { count: totalTouchless } = await supabase
@@ -184,6 +185,26 @@ export function usePhotoAudit() {
     return details ? `${statusLabel} ${details}.` : statusLabel;
   }, []);
 
+  // Fire the next chunk for an in-progress job (frontend-triggered chaining)
+  const continueJob = useCallback(async (jobId: string) => {
+    if (continuingRef.current) return; // already firing
+    continuingRef.current = true;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/batch-photo-audit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ job_id: jobId }),
+      }).catch(() => {}); // fire-and-forget; poll will pick up results
+    } finally {
+      continuingRef.current = false;
+    }
+  }, []);
+
   const pollJob = useCallback(async (jobId: string) => {
     const { data } = await supabase
       .from('batch_audit_jobs')
@@ -204,8 +225,17 @@ export function usePhotoAudit() {
       stopPolling();
       // Final refresh of results
       await loadResults();
+    } else if (job.status === 'running' && job.total_processed < job.total_requested) {
+      // Edge function finished its chunk — trigger the next one
+      // Only fire if updated_at is > 5 seconds ago (chunk is done, not mid-processing)
+      const updatedAt = new Date(job.updated_at).getTime();
+      const now = Date.now();
+      if (now - updatedAt > 5000 && !continuingRef.current) {
+        console.log(`[Poll] Job ${jobId}: ${job.total_processed}/${job.total_requested} — triggering next chunk`);
+        continueJob(jobId);
+      }
     }
-  }, [formatJobProgress, loadQueueStats, loadResults, stopPolling]);
+  }, [continueJob, formatJobProgress, loadQueueStats, loadResults, stopPolling]);
 
   const startPolling = useCallback((jobId: string) => {
     stopPolling();

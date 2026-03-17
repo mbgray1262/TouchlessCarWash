@@ -821,29 +821,10 @@ Deno.serve(async (req) => {
       updated_at: new Date().toISOString(),
     }).eq('id', job.id);
 
-    console.log(`[Job ${jobId}] Chunk done: +${chunkProcessed} (total: ${newTotalProcessed}/${job.total_requested}). ${moreWork ? 'Continuing...' : 'COMPLETED!'}`);
+    console.log(`[Job ${jobId}] Chunk done: +${chunkProcessed} (total: ${newTotalProcessed}/${job.total_requested}). ${moreWork ? 'Waiting for frontend to trigger next chunk...' : 'COMPLETED!'}`);
 
-    // Self-chain: if more work, fire off the next chunk
-    if (moreWork) {
-      const selfUrl = `${supabaseUrl}/functions/v1/batch-photo-audit`;
-      try {
-        // Fire-and-forget: start next chunk, don't wait for it to finish
-        const controller = new AbortController();
-        setTimeout(() => controller.abort(), 8000); // just ensure the request is sent
-        await fetch(selfUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${serviceKey}`,
-          },
-          body: JSON.stringify({ job_id: jobId }),
-          signal: controller.signal,
-        }).catch(() => { /* abort expected */ });
-      } catch {
-        // If self-invoke fails, job stays 'running' — frontend can resume
-        console.error('Self-chain failed — frontend will need to resume');
-      }
-    }
+    // No self-chaining — frontend polls and triggers the next chunk
+    // This avoids WORKER_LIMIT errors on Supabase free tier
 
     return Response.json({
       job_id: jobId,
