@@ -573,14 +573,12 @@ Deno.serve(async (req) => {
     let googlePhotosScreened = 0;
 
     // ---- STEP 1: Google Photo Enrichment (if enabled) ----
-    if (
-      includeGooglePhotos &&
-      googleApiKey &&
-      !dryRun &&
-      listing.google_place_id &&
-      !listing.photo_enrichment_attempted_at &&
-      ((listing.photos as string[]) ?? []).length < 3
-    ) {
+    // Enrich if: never attempted, OR previously attempted but still very few photos (retry)
+    const currentPhotoCount = ((listing.photos as string[]) ?? []).length;
+    const shouldEnrich = includeGooglePhotos && googleApiKey && !dryRun && listing.google_place_id &&
+      ((!listing.photo_enrichment_attempted_at && currentPhotoCount < 3) ||
+       (listing.photo_enrichment_attempted_at && currentPhotoCount === 0));
+    if (shouldEnrich) {
       console.log(`[${processed}/${listings.length}] ${listing.name} — enriching from Google Photos...`);
       try {
         const enrichResult = await enrichListingWithGooglePhotos(
