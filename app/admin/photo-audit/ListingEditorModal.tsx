@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { X, Star, Trash2, Crop, Wand2, ZoomIn, ChevronLeft, ChevronRight, ImageOff, ExternalLink, Check, Upload, Sparkles, Loader2 } from 'lucide-react';
+import { X, Star, Trash2, Crop, Wand2, ZoomIn, ChevronLeft, ChevronRight, ImageOff, ExternalLink, Check, Upload, Sparkles, Loader2, ImagePlus, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { CropModal } from '../hero-review/CropModal';
@@ -23,6 +23,7 @@ interface ListingData {
   blocked_photos: string[] | null;
   equipment_brand: string | null;
   equipment_model: string | null;
+  google_place_id: string | null;
 }
 
 interface Props {
@@ -43,12 +44,16 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
   const [uploading, setUploading] = useState(false);
   const [classifying, setClassifying] = useState(false);
   const [classifyResult, setClassifyResult] = useState<string | null>(null);
+  const [googlePhotos, setGooglePhotos] = useState<Array<{ name: string; url: string }> | null>(null);
+  const [googlePhotosOpen, setGooglePhotosOpen] = useState(false);
+  const [googlePhotosLoading, setGooglePhotosLoading] = useState(false);
+  const [savingGooglePhoto, setSavingGooglePhoto] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadListing = useCallback(async () => {
     const { data } = await supabase
       .from('listings')
-      .select('id, name, hero_image, hero_image_source, photos, city, state, slug, google_photo_url, street_view_url, blocked_photos, equipment_brand, equipment_model')
+      .select('id, name, hero_image, hero_image_source, photos, city, state, slug, google_photo_url, street_view_url, blocked_photos, equipment_brand, equipment_model, google_place_id')
       .eq('id', listingId)
       .maybeSingle();
     if (data) setListing(data as ListingData);
@@ -379,6 +384,66 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
     onClose();
   };
 
+  // ─── Google Place Photos ─────────────────────────────────────
+  const fetchGooglePhotos = async () => {
+    if (!listing?.google_place_id || googlePhotosLoading) return;
+    setGooglePhotosLoading(true);
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+      const res = await fetch(
+        `${supabaseUrl}/functions/v1/google-place-photos?place_id=${encodeURIComponent(listing.google_place_id)}`,
+        { headers: { 'Authorization': `Bearer ${supabaseKey}` } }
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setGooglePhotos(data.photos ?? []);
+    } catch (err) {
+      console.error('Failed to fetch Google photos:', err);
+      setGooglePhotos([]);
+    } finally {
+      setGooglePhotosLoading(false);
+    }
+  };
+
+  const saveGooglePhoto = async (photoName: string, photoUrl: string, asHero: boolean) => {
+    if (!listing || savingGooglePhoto) return;
+    setSavingGooglePhoto(photoUrl);
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+      const res = await fetch(`${supabaseUrl}/functions/v1/google-place-photos`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({
+          photo_name: photoName,
+          listing_id: listing.id,
+          set_as_hero: asHero,
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await loadListing();
+      revalidate();
+      onUpdate?.();
+    } catch (err) {
+      console.error('Failed to save Google photo:', err);
+    } finally {
+      setSavingGooglePhoto(null);
+    }
+  };
+
+  const toggleGooglePhotos = () => {
+    if (!googlePhotosOpen) {
+      setGooglePhotosOpen(true);
+      if (!googlePhotos) fetchGooglePhotos();
+    } else {
+      setGooglePhotosOpen(false);
+    }
+  };
+
   const stateSlug = getStateSlug(listing.state);
   const citySlug = slugify(listing.city);
   const listingUrl = `/state/${stateSlug}/${citySlug}/${listing.slug}`;
@@ -537,6 +602,17 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
                   >
                     <Crop className="w-4 h-4" />
                   </button>
+                  {listing.google_place_id && (
+                    <button
+                      onClick={toggleGooglePhotos}
+                      className={`w-9 h-9 rounded-full text-white flex items-center justify-center shadow-lg transition-colors ${
+                        googlePhotosOpen ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-700/80 hover:bg-green-600'
+                      }`}
+                      title="Browse Google Place photos"
+                    >
+                      <ImagePlus className="w-4 h-4" />
+                    </button>
+                  )}
                   <button
                     onClick={deleteHero}
                     disabled={saving}
@@ -561,17 +637,94 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
                   <ImageOff className="w-10 h-10 text-gray-300 mx-auto mb-2" />
                   <p className="text-sm text-gray-400">No hero image</p>
                   <p className="text-xs text-gray-400 mt-1">Click a gallery photo below or upload one</p>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploading}
-                    className="mt-3 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium mx-auto disabled:opacity-50"
-                  >
-                    <Upload className="w-4 h-4" /> Upload Photo
-                  </button>
+                  <div className="mt-3 flex items-center gap-2 justify-center">
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium disabled:opacity-50"
+                    >
+                      <Upload className="w-4 h-4" /> Upload Photo
+                    </button>
+                    {listing.google_place_id && (
+                      <button
+                        onClick={toggleGooglePhotos}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium"
+                      >
+                        <ImagePlus className="w-4 h-4" /> Browse Google Photos
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
           </div>
+
+          {/* Google Place Photos panel */}
+          {googlePhotosOpen && listing.google_place_id && (
+            <div className="px-6 pb-4">
+              <button
+                onClick={toggleGooglePhotos}
+                className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 hover:text-gray-700 transition-colors"
+              >
+                <ImagePlus className="w-3.5 h-3.5 text-green-600" />
+                Google Place Photos
+                {googlePhotos && <span className="text-gray-400 normal-case font-normal">({googlePhotos.length})</span>}
+                <ChevronUp className="w-3.5 h-3.5 ml-auto" />
+              </button>
+              {googlePhotosLoading ? (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="w-6 h-6 text-green-500 animate-spin" />
+                  <span className="ml-2 text-sm text-gray-500">Loading Google photos…</span>
+                </div>
+              ) : googlePhotos && googlePhotos.length === 0 ? (
+                <p className="text-sm text-gray-400 py-4 text-center">No Google Place photos available</p>
+              ) : googlePhotos ? (
+                <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
+                  {googlePhotos.map((photo) => {
+                    const isSaving = savingGooglePhoto === photo.url;
+                    const alreadySaved = (listing.photos ?? []).some(p => p.includes('google-'));
+                    return (
+                      <div key={photo.name} className="relative flex-shrink-0 group">
+                        <div className="w-[160px] h-[120px] rounded-lg overflow-hidden bg-gray-100">
+                          <img
+                            src={photo.url}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                          {isSaving && (
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-lg">
+                              <Loader2 className="w-6 h-6 text-white animate-spin" />
+                            </div>
+                          )}
+                        </div>
+                        {/* Overlay action buttons */}
+                        {!isSaving && (
+                          <div className="absolute bottom-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => saveGooglePhoto(photo.name, photo.url, false)}
+                              disabled={!!savingGooglePhoto}
+                              className="w-7 h-7 rounded-full bg-green-500 hover:bg-green-600 text-white flex items-center justify-center shadow-lg"
+                              title="Add to gallery"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => saveGooglePhoto(photo.name, photo.url, true)}
+                              disabled={!!savingGooglePhoto}
+                              className="w-7 h-7 rounded-full bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center shadow-lg"
+                              title="Set as hero image"
+                            >
+                              <Star className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+          )}
 
           {/* Equipment section */}
           <div className="px-6 pb-4">
