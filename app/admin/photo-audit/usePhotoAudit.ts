@@ -186,20 +186,27 @@ export function usePhotoAudit() {
   }, []);
 
   // Fire the next chunk for an in-progress job (frontend-triggered chaining)
+  // Sets continuingRef=true until the edge function responds (chunk done)
   const continueJob = useCallback(async (jobId: string) => {
     if (continuingRef.current) return; // already firing
     continuingRef.current = true;
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/batch-photo-audit`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/batch-photo-audit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ job_id: jobId }),
-      }).catch(() => {}); // fire-and-forget; poll will pick up results
+      });
+      const data = await res.json().catch(() => null);
+      if (data) {
+        console.log(`[ContinueJob] Response:`, data);
+      }
+    } catch (err) {
+      console.error('[ContinueJob] Error:', err);
     } finally {
       continuingRef.current = false;
     }
@@ -225,12 +232,16 @@ export function usePhotoAudit() {
       stopPolling();
       // Final refresh of results
       await loadResults();
-    } else if (job.status === 'running' && job.total_processed < job.total_requested) {
-      // Edge function finished its chunk — trigger the next one
-      // Only fire if updated_at is > 5 seconds ago (chunk is done, not mid-processing)
+    } else if (job.status === 'running' && job.total_processed < job.total_requested && !continuingRef.current) {
+      // Edge function finished its chunk (or job just created) — trigger the next chunk
+      // Check if enough time has passed since last update (avoids firing while a chunk is processing)
       const updatedAt = new Date(job.updated_at).getTime();
+      const createdAt = new Date(job.created_at).getTime();
       const now = Date.now();
-      if (now - updatedAt > 5000 && !continuingRef.current) {
+      const timeSinceUpdate = now - updatedAt;
+      const isNewJob = Math.abs(updatedAt - createdAt) < 2000 && job.total_processed === 0;
+      // Trigger if: new job (never processed), OR last update was >8s ago (chunk finished)
+      if (isNewJob || timeSinceUpdate > 8000) {
         console.log(`[Poll] Job ${jobId}: ${job.total_processed}/${job.total_requested} — triggering next chunk`);
         continueJob(jobId);
       }

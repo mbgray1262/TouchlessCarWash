@@ -666,8 +666,10 @@ async function processOneListing(
 
 // ---- Main handler (supports server-side job tracking + self-chaining) ----
 
-const CHUNK_SIZE_GOOGLE = 20;
-const CHUNK_SIZE_NO_GOOGLE = 50;
+// Chunk sizes tuned for Supabase gateway timeout (~150s)
+// Each Sonnet call ≈ 10-20s, enrichment adds ~15s/listing
+const CHUNK_SIZE_GOOGLE = 4;
+const CHUNK_SIZE_NO_GOOGLE = 8;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -693,18 +695,8 @@ Deno.serve(async (req) => {
 
   let jobId: string | null = body.job_id ?? null;
   let totalRequested: number = body.limit ?? body.total_requested ?? 50;
-  const dryRun: boolean = body.dry_run ?? false;
-  const includeGooglePhotos: boolean = body.include_google_photos ?? true;
-  const chunkSize = includeGooglePhotos ? CHUNK_SIZE_GOOGLE : CHUNK_SIZE_NO_GOOGLE;
-
-  // Get Google API key if needed
-  let googleApiKey = '';
-  if (includeGooglePhotos) {
-    googleApiKey = Deno.env.get('GOOGLE_PLACES_API_KEY') ?? await getSecret(supabaseUrl, serviceKey, 'GOOGLE_PLACES_API_KEY');
-    if (!googleApiKey) {
-      console.warn('Google Places API key not found — skipping photo enrichment');
-    }
-  }
+  let dryRun: boolean = body.dry_run ?? false;
+  let includeGooglePhotos: boolean = body.include_google_photos ?? true;
 
   // Load or create job
   interface JobRecord {
@@ -717,15 +709,17 @@ Deno.serve(async (req) => {
   let job: JobRecord | null = null;
 
   if (jobId) {
-    // Continue existing job
+    // Continue existing job — use job's settings, not body's
     const { data } = await supabase.from('batch_audit_jobs').select('*').eq('id', jobId).maybeSingle();
     job = data as JobRecord | null;
     if (!job || job.status !== 'running') {
       return Response.json({ error: 'Job not found or not running', job_id: jobId }, { headers: corsHeaders });
     }
     totalRequested = job.total_requested;
+    dryRun = job.dry_run;
+    includeGooglePhotos = job.include_google_photos;
   } else if (body.total_requested || body.limit) {
-    // Create a new job
+    // Create a new job and return immediately — frontend poll will trigger first chunk
     const { data, error: insertErr } = await supabase.from('batch_audit_jobs').insert({
       total_requested: totalRequested,
       dry_run: dryRun,
@@ -735,9 +729,19 @@ Deno.serve(async (req) => {
     if (insertErr || !data) {
       return Response.json({ error: `Failed to create job: ${insertErr?.message}` }, { status: 500, headers: corsHeaders });
     }
-    job = data as JobRecord;
-    jobId = job.id;
-    console.log(`Created job ${jobId} for ${totalRequested} listings`);
+    console.log(`Created job ${data.id} for ${totalRequested} listings — returning immediately`);
+    return Response.json({ job_id: data.id, status: 'running' }, { headers: corsHeaders });
+  }
+
+  // Now that job settings are resolved, compute chunk size and get API keys
+  const chunkSize = includeGooglePhotos ? CHUNK_SIZE_GOOGLE : CHUNK_SIZE_NO_GOOGLE;
+
+  let googleApiKey = '';
+  if (includeGooglePhotos) {
+    googleApiKey = Deno.env.get('GOOGLE_PLACES_API_KEY') ?? await getSecret(supabaseUrl, serviceKey, 'GOOGLE_PLACES_API_KEY');
+    if (!googleApiKey) {
+      console.warn('Google Places API key not found — skipping photo enrichment');
+    }
   }
 
   // Determine how many to process this chunk
