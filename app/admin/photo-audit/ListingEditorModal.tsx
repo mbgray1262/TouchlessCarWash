@@ -421,7 +421,7 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
     const isRealStreetView = listing.street_view_url &&
       listing.street_view_url.includes('google.com/maps') &&
       !listing.street_view_url.includes('googleusercontent.com');
-    if (isRealStreetView) {
+    if (isRealStreetView && listing.street_view_url) {
       window.open(listing.street_view_url, '_blank');
     } else if (listing.latitude && listing.longitude) {
       const url = `https://www.google.com/maps/@${listing.latitude},${listing.longitude},3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192`;

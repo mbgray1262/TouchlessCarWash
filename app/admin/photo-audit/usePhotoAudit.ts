@@ -90,7 +90,7 @@ export function usePhotoAudit() {
     setLoading(true);
 
     // Fetch ALL audit results in batches of 1000 to avoid Supabase row limits
-    let data: Record<string, unknown>[] = [];
+    let data: any[] = [];
     let offset = 0;
     const PAGE_SIZE = 1000;
     while (true) {
@@ -137,7 +137,7 @@ export function usePhotoAudit() {
     }
 
     // Filter out audit results for listings marked as not touchless
-    data = data.filter(r => !nonTouchlessIds.has(r.listing_id));
+    data = data.filter(r => !nonTouchlessIds.has(r.listing_id as string));
 
     const enrichedAll: AuditResult[] = data.map(r => ({
       ...r,
