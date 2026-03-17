@@ -1085,8 +1085,7 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
               {listing.google_place_id && (
                 <button
                   onClick={() => {
-                    const query = encodeURIComponent(`${listing.name}, ${listing.city}, ${listing.state}`);
-                    window.open(`https://www.google.com/maps/search/${query}/photos`, '_blank');
+                    window.open(`https://www.google.com/maps/place/?q=place_id:${listing.google_place_id}`, '_blank');
                   }}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-100 hover:bg-green-200 text-green-700 text-sm font-medium transition-colors"
                   title="Browse Google Photos in new tab"
