@@ -90,13 +90,15 @@ export function usePhotoAudit() {
     setLoading(true);
 
     // Fetch ALL audit results in batches of 1000 to avoid Supabase row limits
+    // Only select columns we need (skip raw_response which is large)
+    const COLUMNS = 'id,listing_id,equipment_brand,equipment_model,equipment_confidence,equipment_source_photo,hero_quality,suggested_hero_url,suggested_hero_reason,photos_to_remove,reviewed,applied,google_photos_added,google_photos_screened,created_at';
     let data: any[] = [];
     let offset = 0;
     const PAGE_SIZE = 1000;
     while (true) {
       const { data: page, error } = await supabase
         .from('photo_audit_results')
-        .select('*')
+        .select(COLUMNS)
         .order('created_at', { ascending: false })
         .range(offset, offset + PAGE_SIZE - 1);
 
@@ -122,12 +124,17 @@ export function usePhotoAudit() {
     const listings: Record<string, { name: string; hero_image: string | null; city: string; state: string; slug: string; is_touchless: boolean | null }> = {};
     const nonTouchlessIds = new Set<string>();
 
+    // Fetch listing details in parallel (batches of 50)
+    const chunks: string[][] = [];
     for (let i = 0; i < listingIds.length; i += 50) {
-      const chunk = listingIds.slice(i, i + 50);
-      const { data: listingData } = await supabase
-        .from('listings')
-        .select('id, name, hero_image, city, state, slug, is_touchless')
-        .in('id', chunk);
+      chunks.push(listingIds.slice(i, i + 50));
+    }
+    const chunkResults = await Promise.all(
+      chunks.map(chunk =>
+        supabase.from('listings').select('id, name, hero_image, city, state, slug, is_touchless').in('id', chunk)
+      )
+    );
+    for (const { data: listingData } of chunkResults) {
       if (listingData) {
         for (const l of listingData) {
           listings[l.id] = { name: l.name, hero_image: l.hero_image, city: l.city, state: l.state, slug: l.slug, is_touchless: l.is_touchless };
