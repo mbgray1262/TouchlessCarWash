@@ -924,14 +924,10 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
                       </button>
                       {listing.google_place_id && (
                         <button
-                          onClick={() => {
-                            if (listing.google_place_id) {
-                              window.open(`https://www.google.com/maps/place/?q=place_id:${listing.google_place_id}`, '_blank');
-                            }
-                          }}
+                          onClick={toggleGooglePhotos}
                           className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium"
                         >
-                          <ExternalLink className="w-4 h-4" /> Browse Google Photos
+                          <ImagePlus className="w-4 h-4" /> Browse Google Photos
                         </button>
                       )}
                     </div>
