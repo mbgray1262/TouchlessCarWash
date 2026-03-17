@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { X, Star, Trash2, Crop, Wand2, ZoomIn, ChevronLeft, ChevronRight, ImageOff, ExternalLink, Check, Upload, Sparkles, Loader2, ImagePlus, Plus, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Star, Trash2, Crop, Wand2, ZoomIn, ChevronLeft, ChevronRight, ImageOff, ExternalLink, Check, Upload, Sparkles, Loader2, ImagePlus, Plus, ChevronDown, ChevronUp, Ban, MapPin } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { CropModal } from '../hero-review/CropModal';
@@ -24,6 +24,8 @@ interface ListingData {
   equipment_brand: string | null;
   equipment_model: string | null;
   google_place_id: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 interface Props {
@@ -55,7 +57,7 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
   const loadListing = useCallback(async () => {
     const { data } = await supabase
       .from('listings')
-      .select('id, name, hero_image, hero_image_source, photos, city, state, slug, google_photo_url, street_view_url, blocked_photos, equipment_brand, equipment_model, google_place_id')
+      .select('id, name, hero_image, hero_image_source, photos, city, state, slug, google_photo_url, street_view_url, blocked_photos, equipment_brand, equipment_model, google_place_id, latitude, longitude')
       .eq('id', listingId)
       .maybeSingle();
     if (data) setListing(data as ListingData);
@@ -376,6 +378,39 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
       setClassifyResult('Classification failed — try again');
     } finally {
       setClassifying(false);
+    }
+  };
+
+  const markNotTouchless = async () => {
+    if (!listing || !confirm(`Mark "${listing.name}" as NOT touchless? It will be removed from the site.`)) return;
+    setSaving(true);
+    await supabase.from('listings').update({ is_touchless: false }).eq('id', listing.id);
+    onUpdate?.();
+    setSaving(false);
+    onClose();
+  };
+
+  const deleteListing = async () => {
+    if (!listing || !confirm(`Permanently DELETE "${listing.name}"? This cannot be undone.`)) return;
+    setSaving(true);
+    await supabase.from('listings').delete().eq('id', listing.id);
+    onUpdate?.();
+    setSaving(false);
+    onClose();
+  };
+
+  const openStreetView = () => {
+    if (!listing) return;
+    // Use stored street_view_url if available, otherwise construct from lat/lng
+    if (listing.street_view_url) {
+      window.open(listing.street_view_url, '_blank');
+    } else if (listing.latitude && listing.longitude) {
+      const url = `https://www.google.com/maps/@${listing.latitude},${listing.longitude},3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192`;
+      window.open(url, '_blank');
+    } else {
+      // Fallback: search by name + city
+      const query = encodeURIComponent(`${listing.name}, ${listing.city}, ${listing.state}`);
+      window.open(`https://www.google.com/maps/search/${query}`, '_blank');
     }
   };
 
@@ -969,9 +1004,33 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
             )}
           </div>
 
-          {/* Footer with dismiss action */}
-          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex items-center justify-between">
-            <p className="text-xs text-gray-400">Dismiss this listing from the review queue</p>
+          {/* Footer with actions */}
+          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={markNotTouchless}
+                disabled={saving}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-700 text-sm font-medium disabled:opacity-50 transition-colors"
+                title="Mark as not touchless"
+              >
+                <Ban className="w-4 h-4" /> Not Touchless
+              </button>
+              <button
+                onClick={deleteListing}
+                disabled={saving}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 text-sm font-medium disabled:opacity-50 transition-colors"
+                title="Delete this listing"
+              >
+                <Trash2 className="w-4 h-4" /> Delete
+              </button>
+              <button
+                onClick={openStreetView}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-700 text-sm font-medium transition-colors"
+                title="Open Google Street View"
+              >
+                <MapPin className="w-4 h-4" /> Street View
+              </button>
+            </div>
             <button
               onClick={dismissAudit}
               disabled={saving}
