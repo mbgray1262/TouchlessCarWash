@@ -345,6 +345,7 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
           'Authorization': `Bearer ${supabaseKey}`,
         },
         body: JSON.stringify({ listing_id: listingId }),
+        signal: AbortSignal.timeout(45_000),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -375,7 +376,8 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
       }
     } catch (err) {
       console.error('AI classification failed:', err);
-      setClassifyResult('Classification failed — try again');
+      const isTimeout = err instanceof DOMException && err.name === 'TimeoutError';
+      setClassifyResult(isTimeout ? 'Classification timed out — try again' : 'Classification failed — try again');
     } finally {
       setClassifying(false);
     }

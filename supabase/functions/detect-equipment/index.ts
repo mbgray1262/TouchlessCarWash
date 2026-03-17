@@ -146,12 +146,12 @@ async function detectWithGemini(
   imageUrls: string[],
   geminiKey: string,
 ): Promise<DetectionAttempt> {
-  // Fetch all images as base64
+  // Fetch all images as base64 in parallel for speed
   const imageBlocks: Array<{ inline_data: { mime_type: string; data: string } }> = [];
   let totalBytes = 0;
 
-  for (const url of imageUrls) {
-    const img = await fetchImageAsBase64(url);
+  const results = await Promise.all(imageUrls.map(url => fetchImageAsBase64(url)));
+  for (const img of results) {
     if (img) {
       imageBlocks.push({ inline_data: { mime_type: img.mediaType, data: img.base64 } });
       totalBytes += Math.ceil(img.base64.length * 3 / 4);
