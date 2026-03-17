@@ -190,11 +190,74 @@ Deno.serve(async (req) => {
   }
 
   const body = await req.json().catch(() => ({}));
+  const listingId = body.listing_id ?? null; // Single listing mode
   const limit = body.limit ?? 500;
   const offset = body.offset ?? 0;
   const dryRun = body.dry_run ?? false;
   const skipExisting = body.skip_existing ?? true;
 
+  // ── Single-listing mode ────────────────────────────────────────
+  if (listingId) {
+    const { data: single, error: singleErr } = await supabase
+      .from('listings')
+      .select('id, name, hero_image, photos, google_photo_url, street_view_url, equipment_brand')
+      .eq('id', listingId)
+      .maybeSingle();
+
+    if (singleErr || !single) {
+      return new Response(JSON.stringify({ error: singleErr?.message ?? 'Listing not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Collect all images
+    const imageUrls: string[] = [];
+    if (single.hero_image) imageUrls.push(single.hero_image);
+    if (single.google_photo_url && single.google_photo_url !== single.hero_image) imageUrls.push(single.google_photo_url);
+    if (single.street_view_url && !imageUrls.includes(single.street_view_url)) imageUrls.push(single.street_view_url);
+    const gallery = (single.photos ?? []).filter((p: string) => !imageUrls.includes(p));
+    imageUrls.push(...gallery.slice(0, 3));
+
+    let bestResult: DetectionResult | null = null;
+    for (const url of imageUrls) {
+      const result = await detectEquipmentInImage(url, anthropicKey);
+      if (result) {
+        if (!bestResult ||
+            (result.confidence === 'high' && bestResult.confidence !== 'high') ||
+            (result.confidence === 'medium' && bestResult.confidence === 'low')) {
+          bestResult = result;
+        }
+        if (result.confidence === 'high') break;
+      }
+      await new Promise(r => setTimeout(r, 200));
+    }
+
+    if (bestResult && !dryRun && (bestResult.confidence === 'high' || bestResult.confidence === 'medium')) {
+      await supabase
+        .from('listings')
+        .update({ equipment_brand: bestResult.brand, equipment_model: bestResult.model })
+        .eq('id', single.id);
+    }
+
+    return new Response(JSON.stringify({
+      listing_id: single.id,
+      name: single.name,
+      images_scanned: imageUrls.length,
+      detection: bestResult ? {
+        brand: bestResult.brand,
+        model: bestResult.model,
+        confidence: bestResult.confidence,
+        source_image: bestResult.source_image,
+        raw_text: bestResult.raw_text,
+      } : null,
+      saved: bestResult && !dryRun && (bestResult.confidence === 'high' || bestResult.confidence === 'medium'),
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // ── Batch mode (original behavior) ─────────────────────────────
   // Fetch touchless listings with images but no equipment_brand yet
   // Order by photo_enrichment_attempted_at DESC so we get the most photo-rich listings first
   let query = supabase

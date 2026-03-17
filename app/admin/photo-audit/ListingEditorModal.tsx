@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { X, Star, Trash2, Crop, Wand2, ZoomIn, ChevronLeft, ChevronRight, ImageOff, ExternalLink, Check, Upload } from 'lucide-react';
+import { X, Star, Trash2, Crop, Wand2, ZoomIn, ChevronLeft, ChevronRight, ImageOff, ExternalLink, Check, Upload, Sparkles, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { CropModal } from '../hero-review/CropModal';
 import { autoEnhanceImage } from '../hero-review/autoEnhance';
 import { getStateSlug, slugify } from '@/lib/constants';
+import { EQUIPMENT_BRANDS, EQUIPMENT_MODELS } from '../hero-review/types';
 
 interface ListingData {
   id: string;
@@ -20,6 +21,8 @@ interface ListingData {
   google_photo_url: string | null;
   street_view_url: string | null;
   blocked_photos: string[] | null;
+  equipment_brand: string | null;
+  equipment_model: string | null;
 }
 
 interface Props {
@@ -37,12 +40,14 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
   const [preEnhance, setPreEnhance] = useState<{ url: string; source: string | null } | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [classifying, setClassifying] = useState(false);
+  const [classifyResult, setClassifyResult] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadListing = useCallback(async () => {
     const { data } = await supabase
       .from('listings')
-      .select('id, name, hero_image, hero_image_source, photos, city, state, slug, google_photo_url, street_view_url, blocked_photos')
+      .select('id, name, hero_image, hero_image_source, photos, city, state, slug, google_photo_url, street_view_url, blocked_photos, equipment_brand, equipment_model')
       .eq('id', listingId)
       .maybeSingle();
     if (data) setListing(data as ListingData);
@@ -285,6 +290,55 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
     }
   };
 
+  const setEquipment = async (brand: string | null, model: string | null) => {
+    await supabase.from('listings').update({
+      equipment_brand: brand,
+      equipment_model: model,
+    }).eq('id', listingId);
+    setListing(prev => prev ? { ...prev, equipment_brand: brand, equipment_model: model } : prev);
+    onUpdate?.();
+  };
+
+  const classifyWithAI = async () => {
+    if (!listing || classifying) return;
+    setClassifying(true);
+    setClassifyResult(null);
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+      const res = await fetch(`${supabaseUrl}/functions/v1/detect-equipment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({ listing_id: listingId }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.detection) {
+        const brandLabel = EQUIPMENT_BRANDS.find(b => b.value === data.detection.brand)?.label ?? data.detection.brand;
+        const modelText = data.detection.model ? ` — ${data.detection.model}` : '';
+        setClassifyResult(`${brandLabel}${modelText} (${data.detection.confidence} confidence)`);
+        // Reload listing to pick up saved brand/model
+        if (data.saved) {
+          await loadListing();
+          onUpdate?.();
+        } else {
+          // Low confidence — show result but let user decide
+          setClassifyResult(`${brandLabel}${modelText} (${data.detection.confidence} — not auto-saved)`);
+        }
+      } else {
+        setClassifyResult('No equipment detected');
+      }
+    } catch (err) {
+      console.error('AI classification failed:', err);
+      setClassifyResult('Classification failed — try again');
+    } finally {
+      setClassifying(false);
+    }
+  };
+
   const dismissAudit = async () => {
     setSaving(true);
     // Mark the latest audit result for this listing as reviewed + applied
@@ -485,6 +539,115 @@ export function ListingEditorModal({ listingId, onClose, onUpdate }: Props) {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Equipment section */}
+          <div className="px-6 pb-4">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Equipment</p>
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Brand selector */}
+              <select
+                value={listing.equipment_brand ?? ''}
+                onChange={(e) => {
+                  const val = e.target.value || null;
+                  setEquipment(val, val ? listing.equipment_model : null);
+                }}
+                className={`text-sm px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
+                  listing.equipment_brand
+                    ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+                    : 'bg-white border-gray-300 text-gray-500'
+                }`}
+              >
+                <option value="">Select manufacturer…</option>
+                {EQUIPMENT_BRANDS.map(b => (
+                  <option key={b.value} value={b.value}>{b.label}</option>
+                ))}
+              </select>
+
+              {/* Model selector — only show when brand is selected */}
+              {listing.equipment_brand && (() => {
+                const models = EQUIPMENT_MODELS[listing.equipment_brand] ?? [];
+                const currentModel = listing.equipment_model ?? '';
+                const isKnownModel = models.includes(currentModel);
+                return (
+                  <>
+                    {models.length > 0 ? (
+                      <select
+                        value={isKnownModel ? currentModel : (currentModel ? '__other__' : '')}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '__other__') {
+                            // Will show text input — don't save yet
+                            setListing(prev => prev ? { ...prev, equipment_model: '__other__' } : prev);
+                          } else {
+                            setEquipment(listing.equipment_brand, val || null);
+                          }
+                        }}
+                        className={`text-sm px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
+                          listing.equipment_model && listing.equipment_model !== '__other__'
+                            ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+                            : 'bg-white border-gray-300 text-gray-500'
+                        }`}
+                      >
+                        <option value="">Select model…</option>
+                        {models.map(m => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                        <option value="__other__">Other…</option>
+                      </select>
+                    ) : null}
+                    {(currentModel === '__other__' || (currentModel && !isKnownModel) || models.length === 0) && (
+                      <input
+                        type="text"
+                        placeholder="Enter model name…"
+                        defaultValue={currentModel === '__other__' ? '' : currentModel}
+                        onBlur={(e) => {
+                          const val = e.target.value.trim() || null;
+                          setEquipment(listing.equipment_brand, val);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                          if (e.key === 'Escape') onClose();
+                        }}
+                        className="text-sm px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 w-40 bg-white focus:border-indigo-400 focus:outline-none"
+                        autoFocus
+                      />
+                    )}
+                  </>
+                );
+              })()}
+
+              {/* Classify with AI button */}
+              <button
+                onClick={classifyWithAI}
+                disabled={classifying}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm transition-colors ${
+                  classifying
+                    ? 'bg-violet-100 text-violet-500 cursor-wait'
+                    : 'bg-violet-600 hover:bg-violet-700 text-white'
+                }`}
+              >
+                {classifying ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4" />
+                )}
+                {classifying ? 'Classifying…' : 'Classify with AI'}
+              </button>
+
+              {/* AI result feedback */}
+              {classifyResult && (
+                <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                  classifyResult.includes('not auto-saved') || classifyResult.includes('No equipment')
+                    ? 'bg-amber-100 text-amber-700'
+                    : classifyResult.includes('failed')
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-green-100 text-green-700'
+                }`}>
+                  {classifyResult}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Gallery section */}
