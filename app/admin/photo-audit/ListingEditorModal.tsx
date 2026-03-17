@@ -364,15 +364,24 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
     setPasteUrlLoading(true);
     try {
       // Extract image URL from Google Maps URLs
-      // Google Maps photo URLs contain embedded lh3.googleusercontent.com URLs
       if (url.includes('google.com/maps')) {
-        const match = url.match(/6shttps?:%2F%2F([^!]+)/);
-        if (match) {
-          url = decodeURIComponent('https://' + match[1]);
-          // Remove size constraints to get full res
-          url = url.replace(/=w\d+-h\d+-k-no/, '=w1600-h1200-k-no');
+        // Check if it's a Street View link (contains panoid)
+        const panoidMatch = url.match(/!1s([a-zA-Z0-9_-]+)!2e/);
+        if (panoidMatch && url.includes('streetviewpixels')) {
+          // Street View — use panoid to build a static API URL (edge function will add the API key)
+          const yawMatch = url.match(/yaw%3D([\d.]+)/i) || url.match(/,(\d+\.?\d*)h,/);
+          const heading = yawMatch ? yawMatch[1] : '0';
+          url = `streetview:${panoidMatch[1]}:${heading}`;
         } else {
-          throw new Error('Could not extract image URL from Google Maps link. Try right-clicking the photo and selecting "Copy image address" instead.');
+          // Google Place photo — extract embedded lh3.googleusercontent.com URL
+          const match = url.match(/6shttps?:%2F%2F([^!]+)/);
+          if (match) {
+            url = decodeURIComponent('https://' + match[1]);
+            // Remove size constraints to get full res
+            url = url.replace(/=w\d+-h\d+-k-no/, '=w1600-h1200-k-no');
+          } else {
+            throw new Error('Could not extract image URL from Google Maps link. Try right-clicking the photo and selecting "Copy image address" instead.');
+          }
         }
       }
 

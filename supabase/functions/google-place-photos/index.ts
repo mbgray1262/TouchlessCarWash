@@ -119,9 +119,15 @@ Deno.serve(async (req) => {
       return json({ error: 'photo_name or photo_url, and listing_id required' }, 400);
     }
 
-    // 1. Fetch full-resolution image (from direct URL or Places API photo name)
+    // 1. Fetch full-resolution image (from direct URL, Street View panoid, or Places API photo name)
     let fullUrl: string | null;
-    if (photo_url) {
+    if (photo_url?.startsWith('streetview:')) {
+      // Street View panoid — use Google Street View Static API
+      const parts = photo_url.split(':');
+      const panoid = parts[1];
+      const heading = parts[2] || '0';
+      fullUrl = `https://maps.googleapis.com/maps/api/streetview?size=1200x800&pano=${panoid}&heading=${heading}&pitch=0&key=${googleApiKey}`;
+    } else if (photo_url) {
       fullUrl = photo_url;
     } else {
       fullUrl = await resolveMediaUrl(photo_name, googleApiKey, 1600);
@@ -129,7 +135,7 @@ Deno.serve(async (req) => {
     }
 
     const imgRes = await fetch(fullUrl);
-    if (!imgRes.ok) return json({ error: 'Failed to fetch image' }, 500);
+    if (!imgRes.ok) return json({ error: `Failed to fetch image (${imgRes.status})` }, 500);
 
     const contentType = imgRes.headers.get('content-type') ?? 'image/jpeg';
     const ext = contentType.includes('png') ? 'png' : 'jpg';
