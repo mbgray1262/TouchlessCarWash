@@ -92,29 +92,22 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
     try {
       const enhanced = await autoEnhanceImage(photo.url);
       if (enhanced) {
-        // Convert Blob to base64 data URL
-        const reader = new FileReader();
-        const dataUrl = await new Promise<string>((resolve, reject) => {
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(enhanced);
-        });
+        // Upload as FormData (the API expects a file upload)
+        const formData = new FormData();
+        formData.append('file', enhanced, `enhanced-${Date.now()}.jpg`);
+        formData.append('type', 'gallery');
+        if (listing?.id) formData.append('listingId', listing.id);
 
-        // Upload enhanced image
         const res = await fetch('/api/upload-image', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            image: dataUrl,
-            listing_id: listing?.id,
-            type: 'enhanced',
-          }),
+          body: formData,
         });
         if (res.ok) {
           const data = await res.json();
           replaceUrl(photo.id, data.url);
         } else {
-          console.error('Upload failed:', res.status);
+          const errData = await res.json().catch(() => ({}));
+          console.error('Upload failed:', res.status, errData);
           alert('Failed to upload enhanced image');
         }
       }
