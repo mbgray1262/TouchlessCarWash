@@ -5,7 +5,7 @@ import { usePhotoAudit, AuditResult } from './usePhotoAudit';
 import { Camera, Wrench, Trash2, Play, Loader2, Check, X, Undo2, ChevronDown, ChevronUp, ExternalLink, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 import { getStateSlug, slugify } from '@/lib/constants';
-import { ListingEditorModal } from './ListingEditorModal';
+import { FastCurationModal } from './FastCurationModal';
 
 const CONFIDENCE_COLORS: Record<string, string> = {
   high: 'bg-green-100 text-green-700',
@@ -532,7 +532,7 @@ export default function PhotoAuditPage() {
 
       {/* Listing editor modal */}
       {editorListingId && (
-        <ListingEditorModal
+        <FastCurationModal
           listingId={editorListingId}
           onClose={() => setEditorListingId(null)}
           onUpdate={reload}
@@ -548,6 +548,7 @@ export default function PhotoAuditPage() {
           }}
         />
       )}
+      {/* Keep old modal import for reference — can remove later */}
     </div>
   );
 }
