@@ -36,7 +36,7 @@ interface ListingData {
   blocked_photos: string[] | null;
   equipment_brand: string | null;
   equipment_model: string | null;
-  equipment_photo: string | null;
+  equipment_photo?: string | null;
 }
 
 interface SourceCounts {
@@ -64,7 +64,7 @@ export function useFastCuration(listingId: string) {
   const loadListing = useCallback(async () => {
     const { data } = await supabase
       .from('listings')
-      .select('id, name, city, state, slug, latitude, longitude, google_place_id, website, hero_image, hero_image_source, photos, street_view_url, blocked_photos, equipment_brand, equipment_model, equipment_photo')
+      .select('id, name, city, state, slug, latitude, longitude, google_place_id, website, hero_image, hero_image_source, photos, street_view_url, blocked_photos, equipment_brand, equipment_model')
       .eq('id', listingId)
       .maybeSingle();
     if (data) setListing(data as ListingData);
