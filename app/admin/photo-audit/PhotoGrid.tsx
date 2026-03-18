@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import { Star, Image as ImageIcon, Cpu, X, Crop, Wand2, ZoomIn } from 'lucide-react';
 import type { CandidatePhoto, PhotoTag } from './useFastCuration';
 
@@ -101,13 +100,12 @@ export function PhotoGrid({ candidates, selectedId, onSelect, onTag, onCrop, onE
             >
               {/* Photo */}
               <div className="aspect-[4/3] relative bg-gray-100">
-                <Image
+                <img
                   src={photo.url}
                   alt=""
-                  fill
-                  className="object-cover"
-                  sizes="150px"
-                  unoptimized
+                  className="absolute inset-0 w-full h-full object-cover"
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
                 />
               </div>
 
