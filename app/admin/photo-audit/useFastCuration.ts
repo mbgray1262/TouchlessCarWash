@@ -308,26 +308,33 @@ export function useFastCuration(listingId: string) {
     setSaving(true);
 
     try {
+      const t0 = performance.now();
       const heroPhoto = candidates.find(c => c.tag === 'hero');
       const equipPhoto = candidates.find(c => c.tag === 'equipment');
       const galleryPhotos = candidates.filter(c => c.tag === 'gallery');
       // skippedUrls tracks photos removed with X button
 
-      // Rehost all tagged external photos in parallel
-      const toRehost = [heroPhoto, equipPhoto, ...galleryPhotos].filter(Boolean) as CandidatePhoto[];
+      // Only rehost external (non-Supabase) photos
+      const toRehost = [heroPhoto, equipPhoto, ...galleryPhotos]
+        .filter(Boolean)
+        .filter(p => !p!.url.includes('supabase.co')) as CandidatePhoto[];
       const rehostedMap = new Map<string, string>();
 
-      const results = await Promise.allSettled(
-        toRehost.map(async (p) => {
-          const url = await rehostPhoto(p);
-          rehostedMap.set(p.id, url);
-        }),
-      );
-
-      // Check for failures
-      const failures = results.filter(r => r.status === 'rejected');
-      if (failures.length > 0) {
-        console.error('Some photos failed to rehost:', failures);
+      if (toRehost.length > 0) {
+        console.log(`[SaveAll] Rehosting ${toRehost.length} external photos...`);
+        const results = await Promise.allSettled(
+          toRehost.map(async (p) => {
+            const url = await rehostPhoto(p);
+            rehostedMap.set(p.id, url);
+          }),
+        );
+        const failures = results.filter(r => r.status === 'rejected');
+        if (failures.length > 0) {
+          console.error('Some photos failed to rehost:', failures);
+        }
+        console.log(`[SaveAll] Rehost done in ${Math.round(performance.now() - t0)}ms`);
+      } else {
+        console.log('[SaveAll] No external photos to rehost — fast save');
       }
 
       // Build update payload
@@ -340,7 +347,7 @@ export function useFastCuration(listingId: string) {
       const blockedUrls = [...(listing.blocked_photos ?? []), ...skippedUrls];
 
       console.log('[SaveAll] hero tagged:', heroPhoto?.id, 'heroUrl:', heroUrl?.slice(0, 80), 'old hero:', listing.hero_image?.slice(0, 80));
-      console.log('[SaveAll] gallery:', galleryUrls.length, 'skipped:', skippedUrls.length, 'rehosted:', rehostedMap.size, 'failures:', failures.length);
+      console.log('[SaveAll] gallery:', galleryUrls.length, 'skipped:', skippedUrls.length, 'rehosted:', rehostedMap.size);
 
       // Combine hero + gallery into photos array (hero first if present)
       // Only include photos that were explicitly tagged — don't carry over untagged old photos
@@ -369,40 +376,34 @@ export function useFastCuration(listingId: string) {
       // equipment_photo column doesn't exist yet — store in classification_source for now
       // TODO: add equipment_photo column to listings table if needed
 
-      const { error: updateError } = await supabase.from('listings').update(updateData).eq('id', listing.id);
-      if (updateError) {
-        console.error('[SaveAll] Update failed:', updateError);
-        alert(`Save failed: ${updateError.message}`);
+      // Run listing update and audit dismiss in parallel
+      const [updateResult] = await Promise.all([
+        supabase.from('listings').update(updateData).eq('id', listing.id),
+        // Dismiss audit result
+        supabase
+          .from('photo_audit_results')
+          .update({ reviewed: true, applied: true })
+          .eq('listing_id', listing.id)
+          .eq('reviewed', false),
+      ]);
+
+      if (updateResult.error) {
+        console.error('[SaveAll] Update failed:', updateResult.error);
+        alert(`Save failed: ${updateResult.error.message}`);
         setSaving(false);
         return false;
       }
 
-      // Dismiss audit result
-      const { data: auditRows } = await supabase
-        .from('photo_audit_results')
-        .select('id')
-        .eq('listing_id', listing.id)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (auditRows && auditRows.length > 0) {
-        await supabase
-          .from('photo_audit_results')
-          .update({ reviewed: true, applied: true })
-          .eq('id', auditRows[0].id);
-      }
-
-      // Revalidate page cache
+      // Revalidate page cache (fire-and-forget, don't wait)
       const stateSlug = getStateSlug(listing.state);
       const citySlug = slugify(listing.city);
-      try {
-        await fetch('/api/revalidate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ path: `/state/${stateSlug}/${citySlug}/${listing.slug}` }),
-        });
-      } catch {}
+      fetch('/api/revalidate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: `/state/${stateSlug}/${citySlug}/${listing.slug}` }),
+      }).catch(() => {});
 
+      console.log(`[SaveAll] Total save time: ${Math.round(performance.now() - t0)}ms`);
       return true;
     } catch (err) {
       console.error('Save failed:', err);
