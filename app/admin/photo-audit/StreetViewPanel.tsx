@@ -79,7 +79,7 @@ export function StreetViewPanel({ latitude, longitude, apiKey, onCapture }: Stre
     const pitch = Math.round(pov.pitch * 100) / 100;
 
     // Construct a high-res Street View Static API URL for preview
-    const thumbUrl = `https://maps.googleapis.com/maps/api/streetview?size=800x600&pano=${pano}&heading=${heading}&pitch=${pitch}&key=${apiKey}`;
+    const thumbUrl = `https://maps.googleapis.com/maps/api/streetview?size=1600x1200&pano=${pano}&heading=${heading}&pitch=${pitch}&key=${apiKey}`;
 
     onCapture(pano, heading, thumbUrl);
     setCapturing(false);

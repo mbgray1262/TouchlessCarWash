@@ -135,7 +135,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
           const heading = yawMatch ? yawMatch[1] : '0';
           const panoId = panoidMatch[1];
           const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
-          const thumbUrl = `https://maps.googleapis.com/maps/api/streetview?size=800x600&pano=${panoId}&heading=${heading}&pitch=0&key=${apiKey}`;
+          const thumbUrl = `https://maps.googleapis.com/maps/api/streetview?size=1600x1200&pano=${panoId}&heading=${heading}&pitch=0&key=${apiKey}`;
           addCapture(panoId, parseFloat(heading), thumbUrl);
           setPasteValue('');
           setPasteOpen(false);

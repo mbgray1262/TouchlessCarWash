@@ -36,15 +36,20 @@ interface GooglePhoto {
 }
 
 // Fetch photo references from Google Places API
-async function fetchPhotoReferences(placeId: string, apiKey: string): Promise<GooglePhoto[]> {
+async function fetchPhotoReferences(placeId: string, apiKey: string): Promise<{ photos: GooglePhoto[]; debug?: string }> {
   const url = `https://places.googleapis.com/v1/places/${placeId}?fields=photos&key=${apiKey}`;
   const res = await fetch(url);
+  const text = await res.text();
   if (!res.ok) {
-    console.error(`Places API error: ${res.status}`);
-    return [];
+    console.error(`Places API error: ${res.status} — ${text.slice(0, 300)}`);
+    return { photos: [], debug: `HTTP ${res.status}: ${text.slice(0, 200)}` };
   }
-  const data = await res.json();
-  return data.photos ?? [];
+  try {
+    const data = JSON.parse(text);
+    return { photos: data.photos ?? [], debug: data.photos ? undefined : `No photos field. Keys: ${Object.keys(data).join(',')}` };
+  } catch {
+    return { photos: [], debug: `JSON parse error: ${text.slice(0, 200)}` };
+  }
 }
 
 // Resolve a Google Places media URL to its final CDN URL
@@ -83,8 +88,8 @@ Deno.serve(async (req) => {
     const offset = parseInt(url.searchParams.get('offset') ?? '0', 10);
     const limit = parseInt(url.searchParams.get('limit') ?? '5', 10);
 
-    const photoRefs = await fetchPhotoReferences(placeId, googleApiKey);
-    if (photoRefs.length === 0) return json({ photos: [], total: 0, hasMore: false });
+    const { photos: photoRefs, debug } = await fetchPhotoReferences(placeId, googleApiKey);
+    if (photoRefs.length === 0) return json({ photos: [], total: 0, hasMore: false, debug });
 
     // Slice the page we need
     const page = photoRefs.slice(offset, offset + limit);
@@ -126,7 +131,7 @@ Deno.serve(async (req) => {
       const parts = photo_url.split(':');
       const panoid = parts[1];
       const heading = parts[2] || '0';
-      fullUrl = `https://maps.googleapis.com/maps/api/streetview?size=1200x800&pano=${panoid}&heading=${heading}&pitch=0&key=${googleApiKey}`;
+      fullUrl = `https://maps.googleapis.com/maps/api/streetview?size=1600x1200&pano=${panoid}&heading=${heading}&pitch=0&key=${googleApiKey}`;
     } else if (photo_url) {
       fullUrl = photo_url;
     } else {
