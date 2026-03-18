@@ -103,10 +103,12 @@ export function useFastCuration(listingId: string) {
         }),
       );
 
-      // Auto-tag existing hero
+      // Auto-tag existing hero and gallery photos
       for (const c of newCandidates) {
         if (c.source === 'existing' && c.label?.startsWith('Hero')) {
           c.tag = 'hero';
+        } else if (c.source === 'existing' && c.label?.startsWith('Gallery')) {
+          c.tag = 'gallery';
         }
       }
 
