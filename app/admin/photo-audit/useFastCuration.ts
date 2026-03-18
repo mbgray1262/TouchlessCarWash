@@ -155,6 +155,41 @@ export function useFastCuration(listingId: string) {
     }));
   }, []);
 
+  // WYSIWYG helpers
+  const setAsHero = useCallback((photoId: string) => {
+    setCandidates(prev => prev.map(c => {
+      if (c.id === photoId) return { ...c, tag: 'hero' as PhotoTag };
+      if (c.tag === 'hero') return { ...c, tag: null }; // clear old hero
+      return c;
+    }));
+  }, []);
+
+  const addToGallery = useCallback((photoId: string) => {
+    setCandidates(prev => {
+      const galleryCount = prev.filter(c => c.tag === 'gallery').length;
+      if (galleryCount >= 8) return prev; // max 8 gallery photos
+      return prev.map(c => c.id === photoId ? { ...c, tag: 'gallery' as PhotoTag } : c);
+    });
+  }, []);
+
+  const removeFromGallery = useCallback((photoId: string) => {
+    setCandidates(prev => prev.map(c =>
+      c.id === photoId && c.tag === 'gallery' ? { ...c, tag: null } : c,
+    ));
+  }, []);
+
+  const removeHero = useCallback(() => {
+    setCandidates(prev => prev.map(c =>
+      c.tag === 'hero' ? { ...c, tag: null } : c,
+    ));
+  }, []);
+
+  const skipPhoto = useCallback((photoId: string) => {
+    setCandidates(prev => prev.map(c =>
+      c.id === photoId ? { ...c, tag: 'skip' as PhotoTag } : c,
+    ));
+  }, []);
+
   // Add a captured street view photo
   const addCapture = useCallback((panoId: string, heading: number, url: string) => {
     const newPhoto: CandidatePhoto = {
@@ -395,6 +430,11 @@ export function useFastCuration(listingId: string) {
     classifyResult,
     classifyEvidence,
     tagPhoto,
+    setAsHero,
+    addToGallery,
+    removeFromGallery,
+    removeHero,
+    skipPhoto,
     addCapture,
     addUpload,
     replaceUrl,

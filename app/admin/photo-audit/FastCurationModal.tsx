@@ -22,7 +22,8 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
     listing, loading, candidates, discovering, saving, sourceCounts,
     selectedId, setSelectedId,
     classifying, classifyResult, classifyEvidence,
-    tagPhoto, addCapture, addUpload, replaceUrl,
+    tagPhoto, setAsHero, addToGallery, removeFromGallery, removeHero, skipPhoto,
+    addCapture, addUpload, replaceUrl,
     saveAll, discoverPhotos, classifyEquipment,
     markNotTouchless, deleteListing,
   } = useFastCuration(listingId);
@@ -164,10 +165,6 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
     );
   }
 
-  const heroCount = candidates.filter(c => c.tag === 'hero').length;
-  const galleryCount = candidates.filter(c => c.tag === 'gallery').length;
-  const equipCount = candidates.filter(c => c.tag === 'equipment').length;
-
   const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
   return (
@@ -248,27 +245,18 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
               </div>
             )}
 
-            {/* Photo grid */}
+            {/* WYSIWYG Photo Layout */}
             <div className="px-6 py-4">
-              <div className="flex items-center gap-4 mb-3">
-                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-                  Photo Candidates ({candidates.length})
-                </h3>
-                <div className="flex gap-2 text-xs">
-                  {heroCount > 0 && <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">Hero: {heroCount}</span>}
-                  {galleryCount > 0 && <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">Gallery: {galleryCount}</span>}
-                  {equipCount > 0 && <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Equipment: {equipCount}</span>}
-                </div>
-                <span className="text-xs text-gray-400 ml-auto">
-                  Keys: 1=Hero 2=Gallery 3=Equipment X=Skip Enter=Save
-                </span>
-              </div>
-
               <PhotoGrid
                 candidates={candidates}
                 selectedId={selectedId}
                 onSelect={setSelectedId}
                 onTag={tagPhoto}
+                onSetAsHero={setAsHero}
+                onAddToGallery={addToGallery}
+                onRemoveFromGallery={removeFromGallery}
+                onRemoveHero={removeHero}
+                onSkipPhoto={skipPhoto}
                 onCrop={handleCrop}
                 onEnhance={handleEnhance}
                 discovering={discovering}
