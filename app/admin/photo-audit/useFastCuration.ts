@@ -160,11 +160,15 @@ export function useFastCuration(listingId: string) {
 
   // WYSIWYG helpers
   const setAsHero = useCallback((photoId: string) => {
-    setCandidates(prev => prev.map(c => {
-      if (c.id === photoId) return { ...c, tag: 'hero' as PhotoTag };
-      if (c.tag === 'hero') return { ...c, tag: null }; // clear old hero
-      return c;
-    }));
+    setCandidates(prev => {
+      const galleryCount = prev.filter(c => c.tag === 'gallery').length;
+      return prev.map(c => {
+        if (c.id === photoId) return { ...c, tag: 'hero' as PhotoTag };
+        // Move old hero to gallery (if gallery not full, otherwise to candidates)
+        if (c.tag === 'hero') return { ...c, tag: galleryCount < 8 ? 'gallery' as PhotoTag : null };
+        return c;
+      });
+    });
   }, []);
 
   const addToGallery = useCallback((photoId: string) => {

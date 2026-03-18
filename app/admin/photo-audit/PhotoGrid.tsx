@@ -147,6 +147,13 @@ export function PhotoGrid({
                 {/* Tools */}
                 <div className="absolute bottom-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
+                    onClick={(e) => { e.stopPropagation(); onSetAsHero(photo.id); }}
+                    className="w-6 h-6 rounded-full bg-black/50 hover:bg-amber-500 text-white flex items-center justify-center"
+                    title="Set as hero (current hero moves to gallery)"
+                  >
+                    <Star className="w-3 h-3" />
+                  </button>
+                  <button
                     onClick={(e) => { e.stopPropagation(); onCrop(photo); }}
                     className="w-6 h-6 rounded-full bg-black/50 hover:bg-blue-600 text-white flex items-center justify-center"
                     title="Crop"
