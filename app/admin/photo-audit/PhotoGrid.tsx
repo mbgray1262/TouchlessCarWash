@@ -91,11 +91,8 @@ export function PhotoGrid({ candidates, selectedId, onSelect, onTag, onCrop, onE
                 isSelected ? 'ring-4 ring-violet-500 scale-105 z-10' : ''
               }`}
               onClick={() => {
-                if (expandedId === photo.id) {
-                  setExpandedId(null);
-                } else {
-                  onSelect(photo.id);
-                }
+                onSelect(photo.id);
+                setExpandedId(photo.id);
               }}
             >
               {/* Photo */}
@@ -175,12 +172,30 @@ export function PhotoGrid({ candidates, selectedId, onSelect, onTag, onCrop, onE
           >
             <div className="relative max-w-4xl max-h-[80vh]" onClick={e => e.stopPropagation()}>
               <img src={photo.url} alt="" className="max-w-full max-h-[80vh] object-contain rounded-lg" />
-              <button
-                onClick={() => setExpandedId(null)}
-                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              {/* Top toolbar */}
+              <div className="absolute top-2 right-2 flex gap-2">
+                <button
+                  onClick={() => { setExpandedId(null); onCrop(photo); }}
+                  className="w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-blue-600"
+                  title="Crop"
+                >
+                  <Crop className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => { setExpandedId(null); onEnhance(photo); }}
+                  className="w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-purple-600"
+                  title="Enhance"
+                >
+                  <Wand2 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setExpandedId(null)}
+                  className="w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-red-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              {/* Bottom tag buttons */}
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
                 {(['hero', 'gallery', 'equipment', 'skip'] as const).map(tag => (
                   <button
