@@ -147,6 +147,9 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
         const encodedUrl = imageUrl.match(/6shttps?:%2F%2F[^!]+/);
         if (encodedUrl) {
           imageUrl = decodeURIComponent(encodedUrl[0].slice(2));
+          // Replace low-res thumbnail params with high-res
+          imageUrl = imageUrl.replace(/=w\d+-h\d+-k-no/, '=w1600-h1200-k-no');
+          imageUrl = imageUrl.replace(/=s\d+/, '=s1600');
         }
       }
 

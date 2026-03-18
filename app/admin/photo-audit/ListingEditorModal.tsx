@@ -381,7 +381,9 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
         const match = url.match(/6shttps?:%2F%2F([^!]+)/);
         if (match) {
           url = decodeURIComponent('https://' + match[1]);
-          return url.replace(/=w\d+-h\d+-k-no/, '=w1600-h1200-k-no');
+          url = url.replace(/=w\d+-h\d+-k-no/, '=w1600-h1200-k-no');
+          url = url.replace(/=s\d+/, '=s1600');
+          return url;
         }
         throw new Error('Could not extract image URL from Google Maps link. Try right-clicking the photo and selecting "Copy image address" instead.');
       }
