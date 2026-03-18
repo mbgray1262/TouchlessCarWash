@@ -92,24 +92,23 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
     try {
       const enhanced = await autoEnhanceImage(photo.url);
       if (enhanced) {
-        // Upload as FormData (the API expects a file upload)
-        const formData = new FormData();
-        formData.append('file', enhanced, `enhanced-${Date.now()}.jpg`);
-        formData.append('type', 'gallery');
-        if (listing?.id) formData.append('listingId', listing.id);
-
-        const res = await fetch('/api/upload-image', {
-          method: 'POST',
-          body: formData,
-        });
-        if (res.ok) {
-          const data = await res.json();
-          replaceUrl(photo.id, data.url);
-        } else {
-          const errData = await res.json().catch(() => ({}));
-          console.error('Upload failed:', res.status, errData);
-          alert('Failed to upload enhanced image');
+        // Upload directly to Supabase Storage
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+        const { createClient } = await import('@supabase/supabase-js');
+        const sb = createClient(supabaseUrl, supabaseKey);
+        const filename = `${listing!.id}/enhanced-${Date.now()}.jpg`;
+        const buffer = new Uint8Array(await enhanced.arrayBuffer());
+        const { error: uploadError } = await sb.storage
+          .from('listing-photos')
+          .upload(filename, buffer, { contentType: 'image/jpeg', upsert: false });
+        if (uploadError) {
+          console.error('Upload failed:', uploadError);
+          alert('Failed to upload enhanced image: ' + uploadError.message);
+          return;
         }
+        const { data: urlData } = sb.storage.from('listing-photos').getPublicUrl(filename);
+        replaceUrl(photo.id, urlData.publicUrl);
       }
     } catch (err) {
       console.error('Enhance failed:', err);
