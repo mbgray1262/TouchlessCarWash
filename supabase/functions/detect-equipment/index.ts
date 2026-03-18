@@ -164,41 +164,52 @@ const EQUIPMENT_PROMPT = `You are an expert at identifying touchless and automat
 
 Identify the WASH EQUIPMENT manufacturer and model visible in this car wash photo.
 
-IDENTIFICATION METHODS (use ALL of these):
-1. Direct branding: Text/logos on the wash gantry, spray arms, side booms, or control panel
-2. Visual design recognition: Identify equipment by its distinctive shape, color scheme, arm configuration, and design features
-3. Integrated component branding: Some manufacturers brand their dryers/accessories — these identify the WASH system too:
-   - "MaxAir" dryer = WashWorld Razor system
-   - "PDQ" on any component = PDQ system
-   - Website URLs (pdqinc.com = PDQ, washworldinc.com = WashWorld)
+CRITICAL RULES — READ CAREFULLY:
+- You MUST be able to clearly see the wash equipment (gantry, spray arms, boom arms) in the photo to make any identification.
+- If the photo only shows the EXTERIOR of a building, a parking lot, a sign, or is too far away to see equipment details, respond with BRAND: NONE.
+- NEVER guess based on the business name, signage, or what brand is "most common." Only identify what you can ACTUALLY SEE in the image.
+- If you can see equipment but cannot read any branding or confidently match its design to a known manufacturer, use LOW confidence.
+- HIGH confidence requires: readable text/branding on the equipment, OR multiple unmistakable design features that uniquely identify the manufacturer.
+- MEDIUM confidence requires: clear view of the equipment with distinctive design features that strongly suggest a specific brand, even without readable text.
+- LOW confidence: you can see equipment but identification is uncertain — use this freely when unsure.
+
+IDENTIFICATION METHODS (in priority order):
+1. Direct branding: Text/logos on the wash gantry, spray arms, side booms, or control panel (STRONGEST evidence)
+2. Integrated component branding: "MaxAir" dryer = WashWorld, "PDQ" on any component = PDQ, website URLs on signs
+3. Visual design recognition: ONLY when equipment is clearly visible and has distinctive, unmistakable features
 
 KNOWN MANUFACTURERS, MODELS, AND VISUAL IDENTIFICATION:
-- PDQ: Models: LaserWash 360, LaserWash 360 Plus, LaserWash 4000, LaserWash G5, LaserWash M5, LaserWash Sentry, ProTouch, Tandem Surfline, Access. Silver/gray gantry, distinctive curved top arch, "LaserWash" text usually on front. Square-ish gantry profile. IMPORTANT: Do NOT just say "LaserWash" — specify which LaserWash model (360, G5, M5, etc). If you can't tell the specific model, say NONE for MODEL.
-- WashWorld: Models: Razor, Razor Edge, Razor Touch, Razor XR, Profile. Blue and silver T-bar header, blue protective shrouds on spray arms, L-arm design, MaxAir integrated dryer with blue housing. Distinctive angular arm design.
+- PDQ: Models: LaserWash 360, LaserWash 360 Plus, LaserWash 4000, LaserWash G5, LaserWash M5, LaserWash Sentry, ProTouch, Tandem Surfline, Access. Silver/gray gantry, distinctive curved top arch, "LaserWash" text usually on front. IMPORTANT: Do NOT just say "LaserWash" — specify which model (360, G5, M5, etc). If you can't tell, say NONE for MODEL.
+- WashWorld: Models: Razor, Razor Edge, Razor Touch, Razor XR, Profile. Blue and silver T-bar header, blue protective shrouds on spray arms, L-arm design, MaxAir integrated dryer.
 - Belanger: Models: Kondor, Eclipse, FreeStyler, SpinLite, Vector. Sleek modern design, often white/gray.
 - Ryko: Models: SoftGloss, SoftGloss Maxx, Radius. Rounded gantry design.
 - Istobal: Models: M'NEX 22, M'NEX 25, M'NEX 32, ISTOBAL 1900. European design, often blue/white.
 - D&S: Models: IQ 2.0 Touch Free, Carwash Systems. Green branding, "IQ 2.0" on header.
-- Petit AutoWash: Models: Accutrac 360i, Accutrac 360t, Accutrac Mini. Track-based system with equipment on rails.
+- Petit AutoWash: Models: Accutrac 360i, Accutrac 360t, Accutrac Mini. Track-based system on rails.
 - Mark VII: Models: ChoiceWash XT, ChoiceWash CT, AquaJet, SoftLine. Distinctive overhead design.
-- Kärcher: Models: CWB 3, CB 1/28, CB 2/28, CB 3/32. German engineering, often yellow/black branding.
-- Autec: Models: Evolution, EV-1 Evolution, AES-425, Express Automatic.
-- Super Wash: Models: Supermatic, Supermatic II. "SUPER WASH" text on gantry header, "SUPERMATIC" model name often visible. Older-style touchless systems.
+- Kärcher: Models: CWB 3, CB 1/28, CB 2/28, CB 3/32. German engineering, yellow/black branding.
+- Autec: Models: Evolution, EV-1 Evolution, AES-425, Express Automatic. "Evolution" text on vertical towers.
+- Super Wash: Models: Supermatic, Supermatic II. "SUPER WASH" text on gantry header.
 - Also: Saber, Broadway, NS Corporation, Oasis, Washman, MAXAR, Delta Sonic
 
 IMPORTANT:
 - Do NOT confuse the business/franchise name with the equipment manufacturer
-- Car wash businesses often paint their own name on equipment — look past that to the equipment design
-- Focus on the WASH MACHINE shape, arm design, and structural features
+- Car wash businesses often paint their own name on equipment — look past that
+- An exterior-only photo with no visible equipment = BRAND: NONE
+- A photo where equipment is too small or blurry to identify = BRAND: NONE
+- When in doubt, use LOW confidence or NONE — do NOT guess
 
 Respond in this exact format:
 BRAND: [manufacturer name, or NONE]
 MODEL: [model name if identifiable, or NONE]
-CONFIDENCE: [HIGH if certain, MEDIUM if likely, LOW if uncertain]
-TEXT: [what visual clues or text you used to identify it]
+CONFIDENCE: [HIGH, MEDIUM, or LOW]
+TEXT: [specific visual evidence you used — cite readable text, specific design features, or explain why you chose NONE]
 
-If you truly cannot identify the equipment, respond:
-BRAND: NONE`;
+If you cannot clearly see wash equipment in the photo, respond:
+BRAND: NONE
+MODEL: NONE
+CONFIDENCE: LOW
+TEXT: [explain what you see instead — exterior only, too far away, etc.]`;
 
 // ── Gemini-based detection ──────────────────────────────────────
 async function detectWithGemini(
@@ -408,7 +419,7 @@ Deno.serve(async (req) => {
         }
 
         const attempt = await detectWithGemini(imageUrls, geminiKey);
-        if (attempt.result && (attempt.result.confidence === 'high' || attempt.result.confidence === 'medium')) {
+        if (attempt.result && (attempt.result.confidence === 'high')) {
           if (!dryRun) {
             await supabase
               .from('listings')
@@ -515,7 +526,7 @@ Deno.serve(async (req) => {
 
     const bestResult = attempt.result;
 
-    if (bestResult && !dryRun && (bestResult.confidence === 'high' || bestResult.confidence === 'medium')) {
+    if (bestResult && !dryRun && (bestResult.confidence === 'high')) {
       await supabase
         .from('listings')
         .update({
@@ -546,7 +557,7 @@ Deno.serve(async (req) => {
         source_image: bestResult.source_image,
         raw_text: bestResult.raw_text,
       } : null,
-      saved: bestResult && !dryRun && (bestResult.confidence === 'high' || bestResult.confidence === 'medium'),
+      saved: bestResult && !dryRun && (bestResult.confidence === 'high'),
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -640,7 +651,7 @@ Deno.serve(async (req) => {
         raw_text: bestResult.raw_text,
       });
 
-      if (!dryRun && (bestResult.confidence === 'high' || bestResult.confidence === 'medium')) {
+      if (!dryRun && (bestResult.confidence === 'high')) {
         await supabase
           .from('listings')
           .update({
