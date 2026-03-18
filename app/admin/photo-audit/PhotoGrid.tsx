@@ -181,7 +181,7 @@ export function PhotoGrid({
           {discovering && (
             <div className="animate-spin w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full" />
           )}
-          <span className="text-xs text-gray-400 ml-auto">Click = Hero | Shift+Click = Gallery | X = Skip</span>
+          <span className="text-xs text-gray-400 ml-auto">Click = Preview | Star = Hero | Gallery = Gallery | X = Skip</span>
         </div>
         {untaggedPhotos.length > 0 ? (
           <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 gap-2">
@@ -191,12 +191,8 @@ export function PhotoGrid({
                 <div
                   key={photo.id}
                   className="relative group rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-gray-400 transition-all"
-                  onClick={(e) => {
-                    if (e.shiftKey) {
-                      onAddToGallery(photo.id);
-                    } else {
-                      onSetAsHero(photo.id);
-                    }
+                  onClick={() => {
+                    setExpandedId(photo.id);
                   }}
                 >
                   <div className="aspect-[4/3] relative bg-gray-100">
