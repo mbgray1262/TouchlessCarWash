@@ -14,9 +14,10 @@ interface Props {
   onClose: () => void;
   onUpdate?: () => void;
   onNext?: () => void;
+  onPrev?: () => void;
 }
 
-export function FastCurationModal({ listingId, onClose, onUpdate, onNext }: Props) {
+export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev }: Props) {
   const {
     listing, loading, candidates, discovering, saving, sourceCounts,
     selectedId, setSelectedId,
@@ -59,6 +60,11 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext }: Prop
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [selectedId, cropPhoto, onClose]);
+
+  const handleSaveOnly = async () => {
+    const ok = await saveAll();
+    if (ok) onUpdate?.();
+  };
 
   const handleSaveAndNext = async () => {
     const ok = await saveAll();
@@ -348,13 +354,30 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext }: Prop
               </button>
             )}
 
+            {onPrev && (
+              <button
+                onClick={onPrev}
+                disabled={saving}
+                className="flex items-center gap-1 px-3 py-2.5 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium disabled:opacity-50 transition-colors"
+              >
+                ← Prev
+              </button>
+            )}
+            <button
+              onClick={handleSaveOnly}
+              disabled={saving}
+              className="flex items-center gap-1 px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium shadow-sm disabled:opacity-50 transition-colors"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+              {saving ? 'Saving...' : 'Save'}
+            </button>
             <button
               onClick={handleSaveAndNext}
               disabled={saving}
               className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-semibold shadow-sm disabled:opacity-50 transition-colors"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-              {saving ? 'Saving...' : 'Save All & Next'}
+              {saving ? 'Saving...' : 'Save & Next →'}
             </button>
           </div>
         </div>

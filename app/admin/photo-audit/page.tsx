@@ -537,13 +537,17 @@ export default function PhotoAuditPage() {
           onClose={() => setEditorListingId(null)}
           onUpdate={reload}
           onNext={() => {
-            // Find next listing in the current filtered view
             const currentIdx = filteredResults.findIndex(r => r.listing_id === editorListingId);
             if (currentIdx >= 0 && currentIdx < filteredResults.length - 1) {
               setEditorListingId(filteredResults[currentIdx + 1].listing_id);
             } else {
-              // No more listings — close the modal
               setEditorListingId(null);
+            }
+          }}
+          onPrev={() => {
+            const currentIdx = filteredResults.findIndex(r => r.listing_id === editorListingId);
+            if (currentIdx > 0) {
+              setEditorListingId(filteredResults[currentIdx - 1].listing_id);
             }
           }}
         />
