@@ -169,10 +169,10 @@ CRITICAL RULES — READ CAREFULLY:
 - If the photo only shows the EXTERIOR of a building, a parking lot, a sign, or is too far away to see equipment details, respond with BRAND: NONE.
 - NEVER guess based on the business name, signage, or what brand is "most common." Only identify what you can ACTUALLY SEE in the image.
 - If you can see equipment but cannot read any branding or confidently match its design to a known manufacturer, use LOW confidence.
-- HIGH confidence requires: you can ACTUALLY READ text/branding on the equipment in this specific photo. Do NOT claim you can read text that is not clearly legible.
-- MEDIUM confidence requires: the equipment gantry/arch is clearly visible at close range with distinctive design features that strongly suggest a specific brand.
+- HIGH confidence requires EITHER: (a) readable text/branding on the equipment, OR (b) a clear close-up view of the equipment showing multiple unmistakable design features unique to that manufacturer (e.g., WashWorld's T-bar header with purple lights and L-arm design, PDQ's silver curved arch with side booms).
+- MEDIUM confidence: the equipment gantry/arch is clearly visible with distinctive design features that strongly suggest a specific brand, but you're not 100% certain.
 - LOW confidence: you can see equipment but identification is uncertain — use this freely when unsure.
-- NEVER fabricate or hallucinate text — if you cannot clearly read text in the image, do not claim it is there.
+- NEVER fabricate or hallucinate text — if you cannot clearly read text in the image, do not claim it is there. But you CAN identify equipment by its distinctive physical design without reading text.
 
 IDENTIFICATION METHODS (in priority order):
 1. Direct branding: Text/logos on the wash gantry, spray arms, side booms, or control panel (STRONGEST evidence)
