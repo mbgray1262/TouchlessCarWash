@@ -206,6 +206,11 @@ export function PhotoGrid({
                       className="absolute inset-0 w-full h-full object-cover"
                       loading="lazy"
                       referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        const img = e.currentTarget;
+                        img.style.display = 'none';
+                        img.parentElement!.innerHTML = '<div class="absolute inset-0 flex items-center justify-center text-gray-400 text-xs text-center p-2">Image blocked<br/>by source</div>';
+                      }}
                     />
                   </div>
                   {/* Source badge */}
