@@ -50,6 +50,7 @@ interface SourceCounts {
 export function useFastCuration(listingId: string) {
   const [listing, setListing] = useState<ListingData | null>(null);
   const [candidates, setCandidates] = useState<CandidatePhoto[]>([]);
+  const [skippedUrls, setSkippedUrls] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [discovering, setDiscovering] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -187,9 +188,14 @@ export function useFastCuration(listingId: string) {
   }, []);
 
   const skipPhoto = useCallback((photoId: string) => {
-    setCandidates(prev => prev.map(c =>
-      c.id === photoId ? { ...c, tag: 'skip' as PhotoTag } : c,
-    ));
+    // Remove from candidates and add URL to skipped list for blocked_photos
+    setCandidates(prev => {
+      const photo = prev.find(c => c.id === photoId);
+      if (photo) {
+        setSkippedUrls(s => [...s, photo.url]);
+      }
+      return prev.filter(c => c.id !== photoId);
+    });
   }, []);
 
   // Add a captured street view photo
@@ -269,7 +275,7 @@ export function useFastCuration(listingId: string) {
       const heroPhoto = candidates.find(c => c.tag === 'hero');
       const equipPhoto = candidates.find(c => c.tag === 'equipment');
       const galleryPhotos = candidates.filter(c => c.tag === 'gallery');
-      const skipPhotos = candidates.filter(c => c.tag === 'skip');
+      // skippedUrls tracks photos removed with X button
 
       // Rehost all tagged external photos in parallel
       const toRehost = [heroPhoto, equipPhoto, ...galleryPhotos].filter(Boolean) as CandidatePhoto[];
@@ -295,18 +301,22 @@ export function useFastCuration(listingId: string) {
       const heroUrl = getUrl(heroPhoto) ?? listing.hero_image;
       const equipUrl = equipPhoto ? (rehostedMap.get(equipPhoto.id) ?? equipPhoto.url) : null;
       const galleryUrls = galleryPhotos.map(p => rehostedMap.get(p.id) ?? p.url);
-      const blockedUrls = [...(listing.blocked_photos ?? []), ...skipPhotos.map(p => p.url)];
+      const blockedUrls = [...(listing.blocked_photos ?? []), ...skippedUrls];
 
       console.log('[SaveAll] hero tagged:', heroPhoto?.id, 'heroUrl:', heroUrl?.slice(0, 80), 'old hero:', listing.hero_image?.slice(0, 80));
-      console.log('[SaveAll] gallery:', galleryUrls.length, 'skip:', skipPhotos.length, 'rehosted:', rehostedMap.size, 'failures:', failures.length);
+      console.log('[SaveAll] gallery:', galleryUrls.length, 'skipped:', skippedUrls.length, 'rehosted:', rehostedMap.size, 'failures:', failures.length);
 
       // Combine hero + gallery into photos array (hero first if present)
+      // Only include photos that were explicitly tagged — don't carry over untagged old photos
       const allPhotos = new Set<string>();
       if (heroUrl) allPhotos.add(heroUrl);
       for (const url of galleryUrls) allPhotos.add(url);
-      // Keep existing gallery photos that weren't explicitly skipped
-      for (const url of (listing.photos ?? [])) {
-        if (!blockedUrls.includes(url)) allPhotos.add(url);
+      // Keep existing gallery photos that are still tagged as gallery
+      const taggedGalleryUrls = new Set(galleryUrls);
+      const existingGallery = candidates.filter(c => c.source === 'existing' && c.tag === 'gallery');
+      for (const p of existingGallery) {
+        const url = rehostedMap.get(p.id) ?? p.url;
+        allPhotos.add(url);
       }
 
       const updateData: Record<string, unknown> = {
