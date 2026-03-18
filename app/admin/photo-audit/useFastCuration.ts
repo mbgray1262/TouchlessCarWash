@@ -113,7 +113,14 @@ export function useFastCuration(listingId: string) {
         }
       }
 
-      setCandidates(newCandidates);
+      // Merge with any pre-loaded candidates (avoid duplicates by URL)
+      setCandidates(prev => {
+        if (prev.length === 0) return newCandidates;
+        const existingUrls = new Set(prev.map(c => c.url));
+        const newOnly = newCandidates.filter(c => !existingUrls.has(c.url));
+        // Keep pre-loaded items (with user tags), add new discovered ones
+        return [...prev, ...newOnly];
+      });
       setSourceCounts(data.sources);
     } catch (err) {
       console.error('Photo discovery failed:', err);
@@ -137,12 +144,37 @@ export function useFastCuration(listingId: string) {
     }
   }, [listingId, loadListing]);
 
-  // Auto-discover after listing loads
+  // Load existing photos immediately, then discover external sources
   useEffect(() => {
     if (listing && candidates.length === 0 && !discovering) {
+      // First: show existing photos instantly from listing data
+      const existing: CandidatePhoto[] = [];
+      if (listing.hero_image) {
+        existing.push({
+          id: 'existing-hero',
+          url: listing.hero_image,
+          source: 'existing',
+          label: `Hero (${listing.hero_image_source ?? 'rehosted'})`,
+          tag: 'hero' as PhotoTag,
+        });
+      }
+      (listing.photos ?? []).forEach((url, i) => {
+        if (url !== listing.hero_image) {
+          existing.push({
+            id: `existing-gallery-${i}`,
+            url,
+            source: 'existing',
+            label: `Gallery`,
+            tag: 'gallery' as PhotoTag,
+          });
+        }
+      });
+      if (existing.length > 0) setCandidates(existing);
+      // Then: discover external photos (adds to candidates)
       discoverPhotos();
     }
-  }, [listing, candidates.length, discovering, discoverPhotos]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listing?.id]);
 
   // Tag a photo (enforces single hero / single equipment)
   const tagPhoto = useCallback((photoId: string, tag: PhotoTag) => {
