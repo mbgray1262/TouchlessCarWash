@@ -248,15 +248,18 @@ async function detectWithGemini(
     ];
 
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${geminiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts }],
-          generationConfig: { maxOutputTokens: 500 },
+          generationConfig: {
+            maxOutputTokens: 500,
+            thinkingConfig: { thinkingBudget: 0 },
+          },
         }),
-        signal: AbortSignal.timeout(20_000),
+        signal: AbortSignal.timeout(30_000),
       },
     );
 
