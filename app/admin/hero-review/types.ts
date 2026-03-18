@@ -49,7 +49,7 @@ export const EQUIPMENT_BRANDS = [
 /** Common models per brand — shown as dropdown options. "Other" allows free-text entry. */
 export const EQUIPMENT_MODELS: Record<string, string[]> = {
   pdq: ['LaserWash 360', 'LaserWash 360 Plus', 'LaserWash 4000', 'LaserWash G5', 'LaserWash M5', 'LaserWash Sentry', 'ProTouch', 'Tandem Surfline', 'Access'],
-  washworld: ['Razor', 'Razor Edge', 'Razor Touch', 'Razor XR', 'Profile'],
+  washworld: ['Razor', 'Razor Edge', 'Razor Touch', 'Razor XR', 'Profile', 'Profile Max'],
   belanger: ['Kondor', 'Eclipse', 'FreeStyler', 'SpinLite', 'Vector'],
   ryko: ['SoftGloss', 'SoftGloss Maxx', 'Radius'],
   istobal: ['M\'NEX 22', 'M\'NEX 25', 'M\'NEX 32', 'ISTOBAL 1900'],
