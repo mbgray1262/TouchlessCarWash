@@ -169,9 +169,10 @@ CRITICAL RULES — READ CAREFULLY:
 - If the photo only shows the EXTERIOR of a building, a parking lot, a sign, or is too far away to see equipment details, respond with BRAND: NONE.
 - NEVER guess based on the business name, signage, or what brand is "most common." Only identify what you can ACTUALLY SEE in the image.
 - If you can see equipment but cannot read any branding or confidently match its design to a known manufacturer, use LOW confidence.
-- HIGH confidence requires: readable text/branding on the equipment, OR multiple unmistakable design features that uniquely identify the manufacturer.
-- MEDIUM confidence requires: clear view of the equipment with distinctive design features that strongly suggest a specific brand, even without readable text.
+- HIGH confidence requires: you can ACTUALLY READ text/branding on the equipment in this specific photo. Do NOT claim you can read text that is not clearly legible.
+- MEDIUM confidence requires: the equipment gantry/arch is clearly visible at close range with distinctive design features that strongly suggest a specific brand.
 - LOW confidence: you can see equipment but identification is uncertain — use this freely when unsure.
+- NEVER fabricate or hallucinate text — if you cannot clearly read text in the image, do not claim it is there.
 
 IDENTIFICATION METHODS (in priority order):
 1. Direct branding: Text/logos on the wash gantry, spray arms, side booms, or control panel (STRONGEST evidence)
@@ -192,12 +193,16 @@ KNOWN MANUFACTURERS, MODELS, AND VISUAL IDENTIFICATION:
 - Super Wash: Models: Supermatic, Supermatic II. "SUPER WASH" text on gantry header.
 - Also: Saber, Broadway, NS Corporation, Oasis, Washman, MAXAR, Delta Sonic
 
-IMPORTANT:
+CRITICAL RULES:
+- SELF-SERVE BAYS are NOT touchless automatics. If you see a manual spray wand/gun, coin-operated controls on the wall, or an open bay with no overhead gantry/arch — this is a self-serve bay. Respond BRAND: NONE.
+- TUNNEL/CONVEYOR washes with brushes, wraps, or cloth strips are NOT touchless. Respond BRAND: NONE.
+- Only identify touchless IN-BAY AUTOMATIC equipment — these have a motorized gantry or arch that moves over a stationary car.
 - Do NOT confuse the business/franchise name with the equipment manufacturer
 - Car wash businesses often paint their own name on equipment — look past that
 - An exterior-only photo with no visible equipment = BRAND: NONE
 - A photo where equipment is too small or blurry to identify = BRAND: NONE
 - When in doubt, use LOW confidence or NONE — do NOT guess
+- A photo of a car being washed by water jets does NOT mean you can identify the equipment brand
 
 Respond in this exact format:
 BRAND: [manufacturer name, or NONE]
