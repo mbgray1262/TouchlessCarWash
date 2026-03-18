@@ -377,17 +377,24 @@ Deno.serve(async (req) => {
   const offset = body.offset ?? 0;
   const dryRun = body.dry_run ?? false;
   const skipExisting = body.skip_existing ?? true;
-  const reclassify = body.reclassify ?? false; // reclassify old Claude results with Gemini
+  const reclassify = body.reclassify ?? false;
+  const reclassifyAll = body.reclassify_all ?? false;
 
-  // ── Reclassify mode: re-run Claude classifications through Gemini ──
-  if (reclassify && geminiKey) {
+  // ── Reclassify mode: re-run classifications through Gemini ──
+  if ((reclassify || reclassifyAll) && geminiKey) {
     const batchLimit = body.limit ?? 50;
-    const { data: listings, error } = await supabase
+    let query = supabase
       .from('listings')
       .select('id, name, hero_image')
-      .eq('classification_source', 'claude')
       .eq('is_touchless', true)
-      .not('hero_image', 'is', null)
+      .not('hero_image', 'is', null);
+
+    if (!reclassifyAll) {
+      // Only reclassify old Claude results
+      query = query.eq('classification_source', 'claude');
+    }
+
+    const { data: listings, error } = await query
       .order('name')
       .range(offset, offset + batchLimit - 1);
 
@@ -399,7 +406,7 @@ Deno.serve(async (req) => {
     }
 
     if (!listings || listings.length === 0) {
-      return new Response(JSON.stringify({ message: 'No more Claude-classified listings to reclassify', processed: 0 }), {
+      return new Response(JSON.stringify({ message: 'No more listings to reclassify', processed: 0 }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -441,14 +448,19 @@ Deno.serve(async (req) => {
             status: 'reclassified',
           });
         } else {
-          // Low confidence or no detection — mark as attempted but don't overwrite
+          // No detection or low/medium confidence — clear brand/model to remove hallucinations
           if (!dryRun) {
             await supabase
               .from('listings')
-              .update({ classification_source: 'gemini_attempted' })
+              .update({
+                equipment_brand: null,
+                equipment_model: null,
+                classification_source: 'gemini_attempted',
+                classification_confidence: attempt.result ? confidenceToInt(attempt.result.confidence) : null,
+              })
               .eq('id', listing.id);
           }
-          results.push({ id: listing.id, name: listing.name, status: 'low_confidence_or_no_detection' });
+          results.push({ id: listing.id, name: listing.name, status: 'cleared_no_confident_detection' });
         }
       } catch (err) {
         failed++;
