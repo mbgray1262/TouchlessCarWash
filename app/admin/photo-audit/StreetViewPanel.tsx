@@ -77,9 +77,12 @@ export function StreetViewPanel({ latitude, longitude, apiKey, onCapture }: Stre
     const pov = panoramaRef.current.getPov();
     const heading = Math.round(pov.heading * 100) / 100;
     const pitch = Math.round(pov.pitch * 100) / 100;
+    const zoom = panoramaRef.current.getZoom?.() ?? (pov as unknown as Record<string, number>).zoom ?? 1;
+    // Convert zoom level to field of view: default FOV is 90°, each zoom level halves it
+    const fov = Math.round(180 / Math.pow(2, zoom));
 
-    // Construct a high-res Street View Static API URL for preview
-    const thumbUrl = `https://maps.googleapis.com/maps/api/streetview?size=1600x1200&pano=${pano}&heading=${heading}&pitch=${pitch}&key=${apiKey}`;
+    // Construct a high-res Street View Static API URL with zoom preserved
+    const thumbUrl = `https://maps.googleapis.com/maps/api/streetview?size=1600x1200&pano=${pano}&heading=${heading}&pitch=${pitch}&fov=${fov}&key=${apiKey}`;
 
     onCapture(pano, heading, thumbUrl);
     setCapturing(false);
