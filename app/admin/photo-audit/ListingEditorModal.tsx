@@ -59,8 +59,14 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
   const [pasteUrlOpen, setPasteUrlOpen] = useState(false);
   const [pasteUrlValue, setPasteUrlValue] = useState('');
   const [pasteUrlLoading, setPasteUrlLoading] = useState(false);
+  const [galleryPasteOpen, setGalleryPasteOpen] = useState(false);
+  const [galleryPasteValue, setGalleryPasteValue] = useState('');
+  const [galleryPasteLoading, setGalleryPasteLoading] = useState(false);
+  const [cropGalleryUrl, setCropGalleryUrl] = useState<string | null>(null);
+  const [enhancingGalleryUrl, setEnhancingGalleryUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pasteInputRef = useRef<HTMLInputElement>(null);
+  const galleryPasteInputRef = useRef<HTMLInputElement>(null);
 
   const loadListing = useCallback(async () => {
     const { data } = await supabase
@@ -95,6 +101,11 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
     setSavingGooglePhoto(null);
     setGoogleLightboxIndex(null);
     setClassifyEvidence(null);
+    setGalleryPasteOpen(false);
+    setGalleryPasteValue('');
+    setGalleryPasteLoading(false);
+    setCropGalleryUrl(null);
+    setEnhancingGalleryUrl(null);
     setPasteUrlOpen(false);
     setPasteUrlValue('');
     setPasteUrlLoading(false);
@@ -358,68 +369,122 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
     }
   };
 
+  const parseGoogleUrl = (rawUrl: string): string => {
+    let url = rawUrl;
+    if (url.includes('google.com/maps')) {
+      const panoidMatch = url.match(/!1s([a-zA-Z0-9_-]+)!2e/);
+      if (panoidMatch && url.includes('streetviewpixels')) {
+        const yawMatch = url.match(/yaw%3D([\d.]+)/i) || url.match(/,(\d+\.?\d*)h,/);
+        const heading = yawMatch ? yawMatch[1] : '0';
+        return `streetview:${panoidMatch[1]}:${heading}`;
+      } else {
+        const match = url.match(/6shttps?:%2F%2F([^!]+)/);
+        if (match) {
+          url = decodeURIComponent('https://' + match[1]);
+          return url.replace(/=w\d+-h\d+-k-no/, '=w1600-h1200-k-no');
+        }
+        throw new Error('Could not extract image URL from Google Maps link. Try right-clicking the photo and selecting "Copy image address" instead.');
+      }
+    }
+    return url;
+  };
+
+  const importPhotoFromUrl = async (rawUrl: string, asHero: boolean) => {
+    if (!listing) return;
+    const url = parseGoogleUrl(rawUrl);
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const res = await fetch(`${supabaseUrl}/functions/v1/google-place-photos`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseKey}`,
+      },
+      body: JSON.stringify({
+        listing_id: listing.id,
+        photo_url: url,
+        set_as_hero: asHero,
+      }),
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(errText || `HTTP ${res.status}`);
+    }
+    await loadListing();
+    revalidate();
+    onUpdate?.();
+  };
+
   const handlePasteUrl = async () => {
-    let url = pasteUrlValue.trim();
+    const url = pasteUrlValue.trim();
     if (!url || !listing) return;
     setPasteUrlLoading(true);
     try {
-      // Extract image URL from Google Maps URLs
-      if (url.includes('google.com/maps')) {
-        // Check if it's a Street View link (contains panoid)
-        const panoidMatch = url.match(/!1s([a-zA-Z0-9_-]+)!2e/);
-        if (panoidMatch && url.includes('streetviewpixels')) {
-          // Street View — use panoid to build a static API URL (edge function will add the API key)
-          const yawMatch = url.match(/yaw%3D([\d.]+)/i) || url.match(/,(\d+\.?\d*)h,/);
-          const heading = yawMatch ? yawMatch[1] : '0';
-          url = `streetview:${panoidMatch[1]}:${heading}`;
-        } else {
-          // Google Place photo — extract embedded lh3.googleusercontent.com URL
-          const match = url.match(/6shttps?:%2F%2F([^!]+)/);
-          if (match) {
-            url = decodeURIComponent('https://' + match[1]);
-            // Remove size constraints to get full res
-            url = url.replace(/=w\d+-h\d+-k-no/, '=w1600-h1200-k-no');
-          } else {
-            throw new Error('Could not extract image URL from Google Maps link. Try right-clicking the photo and selecting "Copy image address" instead.');
-          }
-        }
-      }
-
-      // Use the edge function to download server-side (avoids CORS)
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-      const res = await fetch(`${supabaseUrl}/functions/v1/google-place-photos`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
-        },
-        body: JSON.stringify({
-          listing_id: listing.id,
-          photo_url: url,
-          set_as_hero: true,
-        }),
-        signal: AbortSignal.timeout(30_000),
-      });
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(errText || `HTTP ${res.status}`);
-      }
-      const data = await res.json();
-
-      // Reload listing to pick up the new hero
-      await loadListing();
+      await importPhotoFromUrl(url, true);
       setPasteUrlValue('');
       setPasteUrlOpen(false);
       setPreEnhance(null);
       setEnhancedPreview(null);
-      revalidate();
-      onUpdate?.();
     } catch (err) {
       console.error('Paste URL failed:', err);
       alert(`Failed to save image: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setPasteUrlLoading(false);
+    }
+  };
+
+  const handleGalleryPasteUrl = async () => {
+    const url = galleryPasteValue.trim();
+    if (!url || !listing) return;
+    setGalleryPasteLoading(true);
+    try {
+      await importPhotoFromUrl(url, false);
+      setGalleryPasteValue('');
+      setGalleryPasteOpen(false);
+    } catch (err) {
+      console.error('Gallery paste URL failed:', err);
+      alert(`Failed to save image: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setGalleryPasteLoading(false);
+    }
+  };
+
+  const handleGalleryCropSave = async (croppedUrl: string) => {
+    if (!listing || !cropGalleryUrl) return;
+    setSaving(true);
+    const currentPhotos = listing.photos ?? [];
+    const updatedPhotos = currentPhotos.map(p => p === cropGalleryUrl ? croppedUrl : p);
+    await supabase.from('listings').update({ photos: updatedPhotos }).eq('id', listing.id);
+    setListing(prev => prev ? { ...prev, photos: updatedPhotos } : prev);
+    setCropGalleryUrl(null);
+    revalidate();
+    onUpdate?.();
+    setSaving(false);
+  };
+
+  const enhanceGalleryPhoto = async (url: string) => {
+    if (!listing || enhancingGalleryUrl) return;
+    setEnhancingGalleryUrl(url);
+    try {
+      const blob = await autoEnhanceImage(url);
+      const formData = new FormData();
+      formData.append('file', blob, 'enhanced-gallery.jpg');
+      formData.append('listingId', listing.id);
+      formData.append('type', 'gallery');
+      const uploadRes = await fetch('/api/upload-image', { method: 'POST', body: formData });
+      if (!uploadRes.ok) throw new Error(await uploadRes.text());
+      const { url: newUrl } = await uploadRes.json() as { url: string };
+      const currentPhotos = listing.photos ?? [];
+      const updatedPhotos = currentPhotos.map(p => p === url ? newUrl : p);
+      await supabase.from('listings').update({ photos: updatedPhotos }).eq('id', listing.id);
+      setListing(prev => prev ? { ...prev, photos: updatedPhotos } : prev);
+      revalidate();
+      onUpdate?.();
+    } catch (err) {
+      console.error('Gallery enhance failed:', err);
+    } finally {
+      setEnhancingGalleryUrl(null);
     }
   };
 
@@ -686,6 +751,19 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
                 className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold shadow-lg"
               >
                 <Star className="w-3.5 h-3.5" /> Use as hero
+              </button>
+              <button
+                onClick={() => { setCropGalleryUrl(galleryPhotos[lightboxIndex]); setLightboxIndex(null); }}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold shadow-lg"
+              >
+                <Crop className="w-3.5 h-3.5" /> Crop
+              </button>
+              <button
+                onClick={() => { enhanceGalleryPhoto(galleryPhotos[lightboxIndex]); setLightboxIndex(null); }}
+                disabled={!!enhancingGalleryUrl}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold shadow-lg disabled:opacity-50"
+              >
+                <Wand2 className="w-3.5 h-3.5" /> Enhance
               </button>
               <button
                 onClick={() => {
@@ -1202,6 +1280,12 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
                         <ZoomIn className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 drop-shadow-lg transition-opacity" />
                       </div>
                     </div>
+                    {/* Enhancing overlay */}
+                    {enhancingGalleryUrl === url && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-lg z-10">
+                        <Loader2 className="w-5 h-5 text-white animate-spin" />
+                      </div>
+                    )}
                     {/* Quick action buttons */}
                     <div className="absolute -bottom-1 left-0 right-0 flex gap-1 justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
@@ -1210,6 +1294,20 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
                         title="Use as hero"
                       >
                         <Star className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); enhanceGalleryPhoto(url); }}
+                        className="w-6 h-6 rounded-full bg-purple-500 hover:bg-purple-600 text-white flex items-center justify-center shadow-md"
+                        title="Enhance photo"
+                      >
+                        <Wand2 className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setCropGalleryUrl(url); }}
+                        className="w-6 h-6 rounded-full bg-blue-500 hover:bg-blue-600 text-white flex items-center justify-center shadow-md"
+                        title="Crop photo"
+                      >
+                        <Crop className="w-3 h-3" />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); removeGalleryPhoto(url); }}
@@ -1221,6 +1319,45 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+            {/* Gallery add photo controls */}
+            <div className="mt-3 flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setGalleryPasteOpen(!galleryPasteOpen);
+                  if (!galleryPasteOpen) setTimeout(() => galleryPasteInputRef.current?.focus(), 100);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  galleryPasteOpen ? 'bg-violet-100 text-violet-700' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                }`}
+              >
+                <Plus className="w-3.5 h-3.5" /> Add Photo URL
+              </button>
+            </div>
+            {galleryPasteOpen && (
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  ref={galleryPasteInputRef}
+                  type="text"
+                  value={galleryPasteValue}
+                  onChange={(e) => setGalleryPasteValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleGalleryPasteUrl();
+                    if (e.key === 'Escape') setGalleryPasteOpen(false);
+                  }}
+                  placeholder="Paste image or Google Maps URL..."
+                  className="flex-1 px-3 py-1.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                  disabled={galleryPasteLoading}
+                />
+                <button
+                  onClick={handleGalleryPasteUrl}
+                  disabled={!galleryPasteValue.trim() || galleryPasteLoading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium disabled:opacity-50"
+                >
+                  {galleryPasteLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                  Add to Gallery
+                </button>
               </div>
             )}
           </div>
@@ -1290,6 +1427,18 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
           listingId={listing.id}
           onSave={handleCropSave}
           onClose={() => setCropOpen(false)}
+          zIndex={60}
+        />
+      )}
+
+      {/* Gallery crop modal */}
+      {cropGalleryUrl && (
+        <CropModal
+          imageUrl={cropGalleryUrl}
+          listingId={listing.id}
+          uploadType="gallery"
+          onSave={handleGalleryCropSave}
+          onClose={() => setCropGalleryUrl(null)}
           zIndex={60}
         />
       )}
