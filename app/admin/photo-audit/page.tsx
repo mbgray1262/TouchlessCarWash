@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { usePhotoAudit, AuditResult } from './usePhotoAudit';
+import { usePhotoAudit, AuditResult, ViewFilter } from './usePhotoAudit';
 import { Camera, Wrench, Trash2, Play, Loader2, Check, X, Undo2, ChevronDown, ChevronUp, ExternalLink, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 import { getStateSlug, slugify } from '@/lib/constants';
@@ -193,7 +193,7 @@ function HeroRow({ result }: { result: AuditResult }) {
       {modalUrl && <PhotoModal url={modalUrl} onClose={() => setModalUrl(null)} />}
       <div className="flex items-center gap-2">
         {result.listing_hero && <PhotoThumb url={result.listing_hero} onClick={() => setModalUrl(result.listing_hero!)} />}
-        <span className="text-gray-400 text-sm">→</span>
+        <span className="text-gray-400 text-sm">&rarr;</span>
         {result.suggested_hero_url && <PhotoThumb url={result.suggested_hero_url} onClick={() => setModalUrl(result.suggested_hero_url!)} />}
       </div>
       <div className="flex-1 min-w-0">
@@ -263,59 +263,19 @@ function CleanupRow({ result }: { result: AuditResult }) {
   );
 }
 
-const PAGE_SIZE = 25;
-
-type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup';
-
 export default function PhotoAuditPage() {
   const {
-    results, loading, tab, setTab, running, runProgress, stats, queueStats,
+    results, loading, running, runProgress, stats, queueStats,
     includeGooglePhotos, setIncludeGooglePhotos, activeJob,
+    viewFilter, page, filteredTotal, totalPages, pageSize,
+    changeFilter, changePage,
     runBatch, applyEquipment, rejectResult, applyAllHighConfidence, undoApply, reload,
   } = usePhotoAudit();
 
   const [batchLimit, setBatchLimit] = useState(100);
-  const [viewFilter, setViewFilter] = useState<ViewFilter>('all');
-  const [page, setPage] = useState(1);
   const [editorListingId, setEditorListingId] = useState<string | null>(null);
 
-  // Derived lists
-  const equipmentDetected = results.filter(r => r.equipment_brand);
-  const pendingEquipment = equipmentDetected.filter(r => !r.applied && !r.reviewed);
-  const poorHeroes = results.filter(r => r.hero_quality === 'poor' && r.suggested_hero_url && !r.applied);
-  const cleanupResults = results.filter(r => r.photos_to_remove.length > 0);
-  const pendingCleanup = cleanupResults.filter(r => !r.applied);
-  // Need Review = anything with an unresolved action (pending equipment, poor heroes, or flagged-not-removed photos)
-  const needsReviewSet = new Set<string>();
-  const needsReview = results.filter(r => {
-    const needs = (r.equipment_brand && !r.applied && !r.reviewed) ||
-      (r.hero_quality === 'poor' && r.suggested_hero_url && !r.applied) ||
-      (r.photos_to_remove.length > 0 && !r.applied);
-    if (needs && !needsReviewSet.has(r.id)) {
-      needsReviewSet.add(r.id);
-      return true;
-    }
-    return false;
-  });
-
-  // Filtered results
-  const filteredResults = (() => {
-    switch (viewFilter) {
-      case 'review': return needsReview;
-      case 'equipment': return equipmentDetected;
-      case 'heroes': return results.filter(r => r.hero_quality === 'poor' && r.suggested_hero_url);
-      case 'cleanup': return cleanupResults;
-      default: return results;
-    }
-  })();
-
-  // Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredResults.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-  const paginatedResults = filteredResults.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-
-  // Reset page when filter changes
-  const setFilterAndReset = (f: ViewFilter) => { setViewFilter(f); setPage(1); };
 
   // Progress percentage — totalUntagged is the full universe of touchless listings with images
   const totalListings = queueStats.totalUntagged;
@@ -420,21 +380,21 @@ export default function PhotoAuditPage() {
           <div className="flex items-center gap-1.5">
             <Filter className="w-3.5 h-3.5 text-gray-400" />
             {([
-              { key: 'all', label: `All (${results.length})` },
-              { key: 'review', label: `Need Review (${needsReview.length})` },
-              { key: 'equipment', label: `Equipment (${equipmentDetected.length})` },
-              { key: 'heroes', label: `Poor Heroes (${poorHeroes.length})` },
-              { key: 'cleanup', label: `Cleanup (${cleanupResults.length})` },
-            ] as { key: ViewFilter; label: string }[]).map(f => (
+              { key: 'all' as ViewFilter, label: `All (${stats.total})` },
+              { key: 'review' as ViewFilter, label: `Need Review (${stats.needs_review})` },
+              { key: 'equipment' as ViewFilter, label: `Equipment (${stats.equipment_total})` },
+              { key: 'heroes' as ViewFilter, label: `Poor Heroes (${stats.heroes_total})` },
+              { key: 'cleanup' as ViewFilter, label: `Cleanup (${stats.cleanup_total})` },
+            ]).map(f => (
               <button
                 key={f.key}
-                onClick={() => setFilterAndReset(f.key)}
+                onClick={() => changeFilter(f.key)}
                 className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
                   viewFilter === f.key
-                    ? f.key === 'review' && needsReview.length > 0
+                    ? f.key === 'review' && stats.needs_review > 0
                       ? 'bg-amber-500 text-white shadow-sm'
                       : 'bg-white text-gray-900 shadow-sm'
-                    : f.key === 'review' && needsReview.length > 0
+                    : f.key === 'review' && stats.needs_review > 0
                       ? 'text-amber-600 font-semibold'
                       : 'text-gray-500 hover:text-gray-700'
                 }`}
@@ -443,7 +403,7 @@ export default function PhotoAuditPage() {
               </button>
             ))}
           </div>
-          {pendingEquipment.length > 0 && (
+          {stats.equipment > 0 && (
             <button
               onClick={applyAllHighConfidence}
               className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded hover:bg-green-700"
@@ -458,15 +418,15 @@ export default function PhotoAuditPage() {
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
           </div>
-        ) : filteredResults.length === 0 ? (
+        ) : filteredTotal === 0 ? (
           <p className="px-4 py-12 text-center text-sm text-gray-500">
-            {results.length === 0 ? 'No audit results yet. Run a batch to get started.' : 'No results match this filter.'}
+            {stats.total === 0 ? 'No audit results yet. Run a batch to get started.' : 'No results match this filter.'}
           </p>
         ) : (
           <>
-            {(viewFilter === 'heroes' ? paginatedResults.map(r => <HeroRow key={r.id} result={r} />) :
-              viewFilter === 'cleanup' ? paginatedResults.map(r => <CleanupRow key={r.id} result={r} />) :
-              paginatedResults.map(r => (
+            {(viewFilter === 'heroes' ? results.map(r => <HeroRow key={r.id} result={r} />) :
+              viewFilter === 'cleanup' ? results.map(r => <CleanupRow key={r.id} result={r} />) :
+              results.map(r => (
                 <EquipmentRow
                   key={r.id}
                   result={r}
@@ -482,11 +442,11 @@ export default function PhotoAuditPage() {
             {totalPages > 1 && (
               <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
                 <p className="text-xs text-gray-500">
-                  Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filteredResults.length)} of {filteredResults.length}
+                  Showing {(safePage - 1) * pageSize + 1}&ndash;{Math.min(safePage * pageSize, filteredTotal)} of {filteredTotal}
                 </p>
                 <div className="flex items-center gap-1">
                   <button
-                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    onClick={() => changePage(Math.max(1, safePage - 1))}
                     disabled={safePage <= 1}
                     className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
                   >
@@ -507,7 +467,7 @@ export default function PhotoAuditPage() {
                     return (
                       <button
                         key={pageNum}
-                        onClick={() => setPage(pageNum)}
+                        onClick={() => changePage(pageNum)}
                         className={`w-8 h-8 rounded text-xs font-medium ${
                           pageNum === safePage ? 'bg-orange-500 text-white' : 'text-gray-600 hover:bg-gray-100'
                         }`}
@@ -517,7 +477,7 @@ export default function PhotoAuditPage() {
                     );
                   })}
                   <button
-                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    onClick={() => changePage(Math.min(totalPages, safePage + 1))}
                     disabled={safePage >= totalPages}
                     className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
                   >
@@ -537,22 +497,21 @@ export default function PhotoAuditPage() {
           onClose={() => setEditorListingId(null)}
           onUpdate={reload}
           onNext={() => {
-            const currentIdx = filteredResults.findIndex(r => r.listing_id === editorListingId);
-            if (currentIdx >= 0 && currentIdx < filteredResults.length - 1) {
-              setEditorListingId(filteredResults[currentIdx + 1].listing_id);
+            const currentIdx = results.findIndex(r => r.listing_id === editorListingId);
+            if (currentIdx >= 0 && currentIdx < results.length - 1) {
+              setEditorListingId(results[currentIdx + 1].listing_id);
             } else {
               setEditorListingId(null);
             }
           }}
           onPrev={() => {
-            const currentIdx = filteredResults.findIndex(r => r.listing_id === editorListingId);
+            const currentIdx = results.findIndex(r => r.listing_id === editorListingId);
             if (currentIdx > 0) {
-              setEditorListingId(filteredResults[currentIdx - 1].listing_id);
+              setEditorListingId(results[currentIdx - 1].listing_id);
             }
           }}
         />
       )}
-      {/* Keep old modal import for reference — can remove later */}
     </div>
   );
 }

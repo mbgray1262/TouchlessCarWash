@@ -46,22 +46,41 @@ export interface BatchJob {
   updated_at: string;
 }
 
-type Tab = 'equipment' | 'heroes' | 'cleanup';
+export interface AuditStats {
+  total: number;
+  applied: number;
+  pending: number;
+  equipment: number;
+  heroes: number;
+  cleanup: number;
+  needs_review: number;
+  equipment_total: number;
+  heroes_total: number;
+  cleanup_total: number;
+}
+
+export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup';
 
 const POLL_INTERVAL = 5000; // 5 seconds
+const PAGE_SIZE = 25;
 
 export function usePhotoAudit() {
   const [results, setResults] = useState<AuditResult[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<Tab>('equipment');
   const [running, setRunning] = useState(false);
   const [runProgress, setRunProgress] = useState('');
   const [includeGooglePhotos, setIncludeGooglePhotos] = useState(true);
-  const [stats, setStats] = useState({ total: 0, applied: 0, pending: 0, equipment: 0, heroes: 0, cleanup: 0 });
+  const [stats, setStats] = useState<AuditStats>({
+    total: 0, applied: 0, pending: 0, equipment: 0, heroes: 0, cleanup: 0,
+    needs_review: 0, equipment_total: 0, heroes_total: 0, cleanup_total: 0,
+  });
   const [queueStats, setQueueStats] = useState({ totalUntagged: 0, alreadyAudited: 0, remaining: 0 });
   const [activeJob, setActiveJob] = useState<BatchJob | null>(null);
+  const [viewFilter, setViewFilter] = useState<ViewFilter>('all');
+  const [page, setPage] = useState(1);
+  const [filteredTotal, setFilteredTotal] = useState(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const continuingRef = useRef(false); // prevent double-firing continuations
+  const continuingRef = useRef(false);
 
   const loadQueueStats = useCallback(async () => {
     const { count: totalTouchless } = await supabase
@@ -86,96 +105,80 @@ export function usePhotoAudit() {
     });
   }, []);
 
-  const loadResults = useCallback(async () => {
-    setLoading(true);
-
-    // Fetch ALL audit results in batches of 1000 to avoid Supabase row limits
-    // Only select columns we need (skip raw_response which is large)
-    const COLUMNS = 'id,listing_id,equipment_brand,equipment_model,equipment_confidence,equipment_source_photo,hero_quality,suggested_hero_url,suggested_hero_reason,photos_to_remove,reviewed,applied,google_photos_added,google_photos_screened,created_at';
-    let data: any[] = [];
-    let offset = 0;
-    const PAGE_SIZE = 1000;
-    while (true) {
-      const { data: page, error } = await supabase
-        .from('photo_audit_results')
-        .select(COLUMNS)
-        .order('created_at', { ascending: false })
-        .range(offset, offset + PAGE_SIZE - 1);
-
-      if (error) {
-        console.error('Error loading audit results:', error);
-        setLoading(false);
-        return;
-      }
-      if (!page || page.length === 0) break;
-      data = data.concat(page);
-      if (page.length < PAGE_SIZE) break; // last page
-      offset += PAGE_SIZE;
+  // Load stats using the server-side RPC (avoids loading all rows)
+  const loadStats = useCallback(async () => {
+    const { data, error } = await supabase.rpc('get_photo_audit_stats');
+    if (error) {
+      console.error('Error loading audit stats:', error);
+      return;
     }
+    if (data) {
+      setStats(data as AuditStats);
+    }
+  }, []);
 
-    if (data.length === 0) {
-      setResults([]);
-      setStats({ total: 0, applied: 0, pending: 0, equipment: 0, heroes: 0, cleanup: 0 });
+  // Load a single page of results using the server-side RPC
+  const loadPage = useCallback(async (filter: ViewFilter, pageNum: number) => {
+    setLoading(true);
+    const offset = (pageNum - 1) * PAGE_SIZE;
+
+    const { data, error } = await supabase.rpc('get_photo_audit_page', {
+      p_filter: filter,
+      p_offset: offset,
+      p_limit: PAGE_SIZE,
+    });
+
+    if (error) {
+      console.error('Error loading audit page:', error);
       setLoading(false);
       return;
     }
 
-    const listingIds = Array.from(new Set(data.map(r => r.listing_id)));
-    const listings: Record<string, { name: string; hero_image: string | null; city: string; state: string; slug: string; is_touchless: boolean | null }> = {};
-    const nonTouchlessIds = new Set<string>();
-
-    // Fetch listing details in parallel (batches of 50)
-    const chunks: string[][] = [];
-    for (let i = 0; i < listingIds.length; i += 50) {
-      chunks.push(listingIds.slice(i, i + 50));
+    if (data) {
+      const pageData = data as { total: number; results: AuditResult[] };
+      // Ensure photos_to_remove is always an array
+      const enriched = (pageData.results ?? []).map((r: AuditResult) => ({
+        ...r,
+        photos_to_remove: r.photos_to_remove ?? [],
+      }));
+      setResults(enriched);
+      setFilteredTotal(pageData.total ?? 0);
     }
-    const chunkResults = await Promise.all(
-      chunks.map(chunk =>
-        supabase.from('listings').select('id, name, hero_image, city, state, slug, is_touchless').in('id', chunk)
-      )
-    );
-    for (const { data: listingData } of chunkResults) {
-      if (listingData) {
-        for (const l of listingData) {
-          listings[l.id] = { name: l.name, hero_image: l.hero_image, city: l.city, state: l.state, slug: l.slug, is_touchless: l.is_touchless };
-          if (l.is_touchless === false) nonTouchlessIds.add(l.id);
-        }
-      }
-    }
-
-    // Filter out audit results for listings marked as not touchless
-    data = data.filter(r => !nonTouchlessIds.has(r.listing_id as string));
-
-    const enrichedAll: AuditResult[] = data.map(r => ({
-      ...r,
-      photos_to_remove: r.photos_to_remove ?? [],
-      listing_name: listings[r.listing_id]?.name,
-      listing_hero: listings[r.listing_id]?.hero_image,
-      listing_city: listings[r.listing_id]?.city,
-      listing_state: listings[r.listing_id]?.state,
-      listing_slug: listings[r.listing_id]?.slug,
-    }));
-
-    const seenListings = new Set<string>();
-    const enriched = enrichedAll.filter(r => {
-      if (seenListings.has(r.listing_id)) return false;
-      seenListings.add(r.listing_id);
-      return true;
-    });
-
-    setResults(enriched);
-
-    const total = enriched.length;
-    const applied = enriched.filter(r => r.applied).length;
-    const pending = total - applied;
-    const equipment = enriched.filter(r => r.equipment_brand && !r.applied).length;
-    const heroes = enriched.filter(r => r.hero_quality === 'poor' && r.suggested_hero_url && !r.applied).length;
-    const cleanup = enriched.filter(r => r.photos_to_remove.length > 0 && !r.applied).length;
-
-    setStats({ total, applied, pending, equipment, heroes, cleanup });
     setLoading(false);
-    await loadQueueStats();
-  }, [loadQueueStats]);
+  }, []);
+
+  // Combined load: stats + current page + queue stats
+  const loadResults = useCallback(async () => {
+    await Promise.all([
+      loadStats(),
+      loadPage(viewFilter, page),
+      loadQueueStats(),
+    ]);
+  }, [loadStats, loadPage, loadQueueStats, viewFilter, page]);
+
+  // Reload just the current page (after an action like apply/reject)
+  const reloadCurrentPage = useCallback(async () => {
+    await Promise.all([
+      loadStats(),
+      loadPage(viewFilter, page),
+    ]);
+  }, [loadStats, loadPage, viewFilter, page]);
+
+  // Change filter and reset to page 1
+  const changeFilter = useCallback((filter: ViewFilter) => {
+    setViewFilter(filter);
+    setPage(1);
+  }, []);
+
+  // Change page
+  const changePage = useCallback((newPage: number) => {
+    setPage(newPage);
+  }, []);
+
+  // Load page when filter or page changes
+  useEffect(() => {
+    loadPage(viewFilter, page);
+  }, [viewFilter, page, loadPage]);
 
   // ─── Job polling ──────────────────────────────────────────────────
 
@@ -207,10 +210,8 @@ export function usePhotoAudit() {
     return details ? `${statusLabel} ${details}.` : statusLabel;
   }, []);
 
-  // Fire the next chunk for an in-progress job (frontend-triggered chaining)
-  // Sets continuingRef=true until the edge function responds (chunk done)
   const continueJob = useCallback(async (jobId: string) => {
-    if (continuingRef.current) return; // already firing
+    if (continuingRef.current) return;
     continuingRef.current = true;
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -246,23 +247,18 @@ export function usePhotoAudit() {
     setActiveJob(job);
     setRunProgress(formatJobProgress(job));
 
-    // Also refresh queue stats periodically
     await loadQueueStats();
 
     if (job.status === 'completed' || job.status === 'failed') {
       setRunning(false);
       stopPolling();
-      // Final refresh of results
       await loadResults();
     } else if (job.status === 'running' && job.total_processed < job.total_requested && !continuingRef.current) {
-      // Edge function finished its chunk (or job just created) — trigger the next chunk
-      // Check if enough time has passed since last update (avoids firing while a chunk is processing)
       const updatedAt = new Date(job.updated_at).getTime();
       const createdAt = new Date(job.created_at).getTime();
       const now = Date.now();
       const timeSinceUpdate = now - updatedAt;
       const isNewJob = Math.abs(updatedAt - createdAt) < 2000 && job.total_processed === 0;
-      // Trigger if: new job (never processed), OR last update was >8s ago (chunk finished)
       if (isNewJob || timeSinceUpdate > 8000) {
         console.log(`[Poll] Job ${jobId}: ${job.total_processed}/${job.total_requested} — triggering next chunk`);
         continueJob(jobId);
@@ -272,9 +268,7 @@ export function usePhotoAudit() {
 
   const startPolling = useCallback((jobId: string) => {
     stopPolling();
-    // Immediate first poll
     pollJob(jobId);
-    // Then poll every 5s
     pollRef.current = setInterval(() => pollJob(jobId), POLL_INTERVAL);
   }, [pollJob, stopPolling]);
 
@@ -305,11 +299,13 @@ export function usePhotoAudit() {
     return () => stopPolling();
   }, [stopPolling]);
 
+  // Initial load of stats and queue stats
   useEffect(() => {
-    loadResults();
-  }, [loadResults]);
+    loadStats();
+    loadQueueStats();
+  }, [loadStats, loadQueueStats]);
 
-  // ─── Run batch (now creates a server-side job) ────────────────────
+  // ─── Run batch (creates a server-side job) ────────────────────
 
   const runBatch = useCallback(async (limit: number, dryRun: boolean, includeGoogle: boolean) => {
     setRunning(true);
@@ -341,11 +337,9 @@ export function usePhotoAudit() {
       }
 
       if (data.job_id) {
-        // Job created — start polling
         setRunProgress(`Job started! Processing ${limit} listings in the background...`);
         startPolling(data.job_id);
       } else {
-        // Legacy response (shouldn't happen with new function)
         setRunProgress(`Done! Processed ${data.listings_processed ?? 0} listings.`);
         setRunning(false);
         await loadResults();
@@ -367,8 +361,11 @@ export function usePhotoAudit() {
       .update({ applied: true, reviewed: true })
       .eq('id', auditId);
 
+    // Update local state optimistically
     setResults(prev => prev.map(r => r.id === auditId ? { ...r, applied: true, reviewed: true } : r));
-  }, []);
+    // Refresh stats in background
+    loadStats();
+  }, [loadStats]);
 
   const rejectResult = useCallback(async (auditId: string) => {
     await supabase
@@ -377,7 +374,8 @@ export function usePhotoAudit() {
       .eq('id', auditId);
 
     setResults(prev => prev.map(r => r.id === auditId ? { ...r, reviewed: true } : r));
-  }, []);
+    loadStats();
+  }, [loadStats]);
 
   const applyAllHighConfidence = useCallback(async () => {
     const highConf = results.filter(
@@ -388,8 +386,8 @@ export function usePhotoAudit() {
       await applyEquipment(r.id, r.listing_id, r.equipment_brand!, r.equipment_model);
     }
 
-    await loadResults();
-  }, [results, applyEquipment, loadResults]);
+    await reloadCurrentPage();
+  }, [results, applyEquipment, reloadCurrentPage]);
 
   const undoApply = useCallback(async (auditId: string, listingId: string) => {
     await supabase
@@ -403,13 +401,14 @@ export function usePhotoAudit() {
       .eq('id', auditId);
 
     setResults(prev => prev.map(r => r.id === auditId ? { ...r, applied: false, reviewed: false } : r));
-  }, []);
+    loadStats();
+  }, [loadStats]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredTotal / PAGE_SIZE));
 
   return {
     results,
     loading,
-    tab,
-    setTab,
     running,
     runProgress,
     includeGooglePhotos,
@@ -417,6 +416,13 @@ export function usePhotoAudit() {
     stats,
     queueStats,
     activeJob,
+    viewFilter,
+    page,
+    filteredTotal,
+    totalPages,
+    pageSize: PAGE_SIZE,
+    changeFilter,
+    changePage,
     runBatch,
     applyEquipment,
     rejectResult,
