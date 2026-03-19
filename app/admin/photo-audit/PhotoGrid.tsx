@@ -79,6 +79,18 @@ export function PhotoGrid({
                 alt=""
                 className="absolute inset-0 w-full h-full object-cover"
                 referrerPolicy="no-referrer"
+                onLoad={(e) => {
+                  const img = e.currentTarget;
+                  if (img.naturalWidth < 600 || img.naturalHeight < 400) {
+                    const warn = img.parentElement?.querySelector('.low-res-warn');
+                    if (!warn) {
+                      const el = document.createElement('div');
+                      el.className = 'low-res-warn absolute bottom-2 left-2 px-2 py-1 bg-red-600 text-white text-xs font-bold rounded';
+                      el.textContent = `⚠ Low res (${img.naturalWidth}×${img.naturalHeight})`;
+                      img.parentElement?.appendChild(el);
+                    }
+                  }
+                }}
               />
             </div>
             {/* Source badge */}
