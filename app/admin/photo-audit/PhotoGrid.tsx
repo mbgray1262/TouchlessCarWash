@@ -19,6 +19,7 @@ interface PhotoGridProps {
   discovering: boolean;
   enhancingId?: string | null;
   enhancedIds?: string[];
+  equipmentSlot?: React.ReactNode;
 }
 
 const SOURCE_BADGES: Record<string, { label: string; color: string }> = {
@@ -34,7 +35,7 @@ const SOURCE_BADGES: Record<string, { label: string; color: string }> = {
 export function PhotoGrid({
   candidates, selectedId, onSelect, onTag,
   onSetAsHero, onAddToGallery, onRemoveFromGallery, onRemoveHero, onSkipPhoto,
-  onCrop, onEnhance, discovering, enhancingId, enhancedIds = [],
+  onCrop, onEnhance, discovering, enhancingId, enhancedIds = [], equipmentSlot,
 }: PhotoGridProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -120,6 +121,9 @@ export function PhotoGrid({
           </div>
         )}
       </div>
+
+      {/* ═══ EQUIPMENT (injected slot) ═══ */}
+      {equipmentSlot}
 
       {/* ═══ GALLERY SECTION ═══ */}
       <div>
