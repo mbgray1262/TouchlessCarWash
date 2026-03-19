@@ -407,6 +407,21 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                 Google Maps
               </button>
             )}
+            <button
+              onClick={() => {
+                if (listing.google_place_id) {
+                  // Open directly to reviews tab via place_id
+                  window.open(`https://www.google.com/maps/place/?q=place_id:${listing.google_place_id}&hl=en#reviews`, '_blank');
+                } else {
+                  const query = encodeURIComponent(`${listing.name}, ${listing.city}, ${listing.state}`);
+                  window.open(`https://www.google.com/maps/search/${query}`, '_blank');
+                }
+              }}
+              className="flex items-center gap-1 px-3 py-2 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 text-sm"
+              title="Open Google Reviews — search 'touch' to verify touchless"
+            >
+              Reviews
+            </button>
 
             {onPrev && (
               <button
