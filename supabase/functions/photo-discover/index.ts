@@ -61,29 +61,38 @@ async function fetchGooglePlacesPhotos(placeId: string, apiKey: string): Promise
   } catch { return []; }
 }
 
-// ── Google Custom Search Images ─────────────────────────────────
-async function fetchGoogleSearchImages(
+// ── SerpAPI Image Search ─────────────────────────────────
+async function fetchSerpApiImages(
   name: string, city: string, state: string,
-  apiKey: string, cseId: string,
+  serpApiKey: string,
 ): Promise<CandidatePhoto[]> {
-  if (!cseId) return [];
+  if (!serpApiKey) return [];
   try {
-    const query = encodeURIComponent(`"${name}" ${city} ${state} car wash`);
+    const query = encodeURIComponent(`${name} ${city} ${state} car wash`);
     const res = await fetch(
-      `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cseId}&q=${query}&searchType=image&num=10&imgSize=medium`,
-      { signal: AbortSignal.timeout(8000) },
+      `https://serpapi.com/search.json?q=${query}&tbm=isch&api_key=${serpApiKey}&num=10`,
+      { signal: AbortSignal.timeout(10000) },
     );
     if (!res.ok) return [];
     const data = await res.json();
-    const items = data.items ?? [];
+    const results = data.images_results ?? [];
 
-    return items.map((item: { link: string; displayLink: string; image?: { width: number; height: number } }) => ({
-      url: item.link,
-      source: 'google_search' as const,
-      label: item.displayLink, // e.g. "facebook.com", "yelp.com"
-      width: item.image?.width,
-      height: item.image?.height,
-    }));
+    return results
+      .filter((r: { original?: string; width?: number; height?: number }) => {
+        // Filter out tiny images (logos, icons)
+        const w = r.width ?? 0;
+        const h = r.height ?? 0;
+        if (w > 0 && h > 0 && (w < 200 || h < 200)) return false;
+        return !!r.original;
+      })
+      .slice(0, 10)
+      .map((r: { original: string; source?: string; width?: number; height?: number }) => ({
+        url: r.original,
+        source: 'google_search' as const,
+        label: r.source ?? 'Web',
+        width: r.width,
+        height: r.height,
+      }));
   } catch { return []; }
 }
 
@@ -203,7 +212,7 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, serviceKey);
 
   const googleApiKey = Deno.env.get('GOOGLE_PLACES_API_KEY') ?? '';
-  const cseId = Deno.env.get('GOOGLE_CSE_ID') ?? '';
+  const serpApiKey = Deno.env.get('SERPAPI_KEY') ?? '';
 
   // Fetch listing data
   const { data: listing } = await supabase
@@ -219,7 +228,7 @@ Deno.serve(async (req) => {
   // Fire all sources in parallel
   const [googlePlaces, googleSearch, websitePhotos, streetView] = await Promise.allSettled([
     listing.google_place_id ? fetchGooglePlacesPhotos(listing.google_place_id, googleApiKey) : Promise.resolve([]),
-    fetchGoogleSearchImages(listing.name, listing.city, listing.state, googleApiKey, cseId),
+    fetchSerpApiImages(listing.name, listing.city, listing.state, serpApiKey),
     Promise.resolve([]), // Website photos disabled — too much junk (logos, icons, illustrations)
     (listing.latitude && listing.longitude) ? fetchStreetViewThumbnail(listing.latitude, listing.longitude, googleApiKey) : Promise.resolve(null),
   ]);
