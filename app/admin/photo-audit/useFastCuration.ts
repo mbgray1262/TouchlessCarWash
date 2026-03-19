@@ -70,7 +70,47 @@ export function useFastCuration(listingId: string) {
       .select('id, name, city, state, slug, latitude, longitude, google_place_id, website, hero_image, hero_image_source, photos, street_view_url, blocked_photos, equipment_brand, equipment_model, touchless_verified, touchless_evidence')
       .eq('id', listingId)
       .maybeSingle();
-    if (data) setListing(data as ListingData);
+    if (data) {
+      // Clean up broken gallery images on load
+      const photos = (data.photos as string[] | null) ?? [];
+      if (photos.length > 0) {
+        const validPhotos: string[] = [];
+        const broken: string[] = [];
+        await Promise.all(photos.map(async (url: string) => {
+          try {
+            const r = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(5000) });
+            if (r.ok) validPhotos.push(url);
+            else broken.push(url);
+          } catch {
+            broken.push(url);
+          }
+        }));
+        if (broken.length > 0) {
+          // Remove broken photos from DB
+          await supabase.from('listings').update({ photos: validPhotos }).eq('id', data.id);
+          data.photos = validPhotos;
+          console.log(`Cleaned ${broken.length} broken gallery photos from ${data.name}`);
+        }
+      }
+      // Also check hero image
+      if (data.hero_image) {
+        try {
+          const r = await fetch(data.hero_image, { method: 'HEAD', signal: AbortSignal.timeout(5000) });
+          if (!r.ok) {
+            await supabase.from('listings').update({ hero_image: null, hero_image_source: null }).eq('id', data.id);
+            data.hero_image = null;
+            data.hero_image_source = null;
+            console.log(`Cleaned broken hero image from ${data.name}`);
+          }
+        } catch {
+          await supabase.from('listings').update({ hero_image: null, hero_image_source: null }).eq('id', data.id);
+          data.hero_image = null;
+          data.hero_image_source = null;
+          console.log(`Cleaned broken hero image from ${data.name}`);
+        }
+      }
+      setListing(data as ListingData);
+    }
     setLoading(false);
   }, [listingId]);
 
