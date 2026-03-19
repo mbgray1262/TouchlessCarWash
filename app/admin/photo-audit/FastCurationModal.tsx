@@ -24,7 +24,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
     classifying, classifyResult, classifyEvidence,
     tagPhoto, setAsHero, addToGallery, removeFromGallery, removeHero, skipPhoto,
     addCapture, addUpload, replaceUrl,
-    saveAll, discoverPhotos, classifyEquipment,
+    saveAll, discoverPhotos, classifyEquipment, setEquipment,
     markNotTouchless, deleteListing,
   } = useFastCuration(listingId);
 
@@ -286,11 +286,31 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
             <div className="px-6 pb-4">
               <div className="flex items-center gap-3 flex-wrap">
                 <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Equipment</h3>
-                <span className="text-sm text-gray-500">
-                  {listing.equipment_brand
-                    ? `${EQUIPMENT_BRANDS.find(b => b.value === listing.equipment_brand)?.label ?? listing.equipment_brand}${listing.equipment_model ? ` — ${listing.equipment_model}` : ''}`
-                    : 'Not classified'}
-                </span>
+                <select
+                  value={listing.equipment_brand ?? ''}
+                  onChange={(e) => setEquipment(e.target.value || null, e.target.value ? listing.equipment_model : null)}
+                  className={`text-sm px-3 py-1.5 rounded-lg border cursor-pointer ${
+                    listing.equipment_brand ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-white border-gray-300 text-gray-500'
+                  }`}
+                >
+                  <option value="">Select manufacturer…</option>
+                  {EQUIPMENT_BRANDS.map(b => <option key={b.value} value={b.value}>{b.label}</option>)}
+                </select>
+                {listing.equipment_brand && (() => {
+                  const models = EQUIPMENT_MODELS[listing.equipment_brand] ?? [];
+                  return models.length > 0 ? (
+                    <select
+                      value={models.includes(listing.equipment_model ?? '') ? (listing.equipment_model ?? '') : ''}
+                      onChange={(e) => setEquipment(listing.equipment_brand, e.target.value || null)}
+                      className={`text-sm px-3 py-1.5 rounded-lg border cursor-pointer ${
+                        listing.equipment_model ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-white border-gray-300 text-gray-500'
+                      }`}
+                    >
+                      <option value="">Select model…</option>
+                      {models.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  ) : null;
+                })()}
                 <button
                   onClick={classifyEquipment}
                   disabled={classifying}

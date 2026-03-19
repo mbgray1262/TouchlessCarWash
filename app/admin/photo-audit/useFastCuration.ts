@@ -413,6 +413,17 @@ export function useFastCuration(listingId: string) {
     }
   };
 
+  // Manually set equipment brand/model
+  const setEquipment = useCallback(async (brand: string | null, model: string | null) => {
+    if (!listing) return;
+    await supabase.from('listings').update({
+      equipment_brand: brand,
+      equipment_model: model,
+      classification_source: 'manual',
+    }).eq('id', listing.id);
+    setListing(prev => prev ? { ...prev, equipment_brand: brand, equipment_model: model } : prev);
+  }, [listing]);
+
   // Classify equipment using AI
   const classifyEquipment = useCallback(async () => {
     if (!listing || classifying) return;
@@ -490,6 +501,7 @@ export function useFastCuration(listingId: string) {
     saveAll,
     discoverPhotos,
     classifyEquipment,
+    setEquipment,
     markNotTouchless,
     deleteListing,
     loadListing,
