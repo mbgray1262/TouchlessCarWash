@@ -78,14 +78,33 @@ async function fetchSerpApiImages(
     const results = data.images_results ?? [];
 
     return results
-      .filter((r: { original?: string; width?: number; height?: number }) => {
-        // Filter out tiny images (logos, icons)
+      .filter((r: { original?: string; width?: number; height?: number; thumbnail?: string }) => {
+        if (!r.original) return false;
+        const url = r.original.toLowerCase();
         const w = r.width ?? 0;
         const h = r.height ?? 0;
-        if (w > 0 && h > 0 && (w < 200 || h < 200)) return false;
-        return !!r.original;
+
+        // Filter out tiny images (logos, icons, buttons)
+        if (w > 0 && h > 0 && (w < 300 || h < 200)) return false;
+
+        // Filter out nearly square images (likely logos) — photos are usually wider
+        if (w > 0 && h > 0) {
+          const ratio = w / h;
+          if (ratio > 0.85 && ratio < 1.15 && w < 500) return false; // small square = logo
+        }
+
+        // Filter out common non-photo file types
+        if (url.endsWith('.svg') || url.endsWith('.gif') || url.endsWith('.ico')) return false;
+        if (url.includes('/logo') || url.includes('_logo') || url.includes('-logo')) return false;
+        if (url.includes('/icon') || url.includes('favicon')) return false;
+        if (url.includes('badge') || url.includes('coupon') || url.includes('banner')) return false;
+
+        // Filter out known logo/branding domains
+        if (url.includes('fbsbx.com/lookaside') && w < 400) return false; // small FB thumbnails
+
+        return true;
       })
-      .slice(0, 10)
+      .slice(0, 8)
       .map((r: { original: string; source?: string; width?: number; height?: number }) => ({
         url: r.original,
         source: 'google_search' as const,
