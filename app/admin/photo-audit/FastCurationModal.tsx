@@ -154,8 +154,24 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
           const yawMatch = imageUrl.match(/yaw%3D([\d.]+)/i) || imageUrl.match(/,(\d+\.?\d*)h,/);
           const heading = yawMatch ? yawMatch[1] : '0';
           const panoId = panoidMatch[1];
-          const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
-          const thumbUrl = `https://maps.googleapis.com/maps/api/streetview?size=1600x1200&pano=${panoId}&heading=${heading}&pitch=0&key=${apiKey}`;
+
+          // Get a signed high-res Street View URL via edge function (unlocks 2048x2048)
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+          const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+          let thumbUrl: string;
+          try {
+            const params = new URLSearchParams({ pano: panoId, heading, pitch: '0', fov: '90' });
+            const res = await fetch(`${supabaseUrl}/functions/v1/streetview-signed?${params}`, {
+              headers: supabaseAnonKey ? { Authorization: `Bearer ${supabaseAnonKey}` } : {},
+            });
+            const data = await res.json();
+            const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+            thumbUrl = data.url ?? `https://maps.googleapis.com/maps/api/streetview?size=1600x1200&pano=${panoId}&heading=${heading}&pitch=0&key=${apiKey}`;
+          } catch {
+            const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+            thumbUrl = `https://maps.googleapis.com/maps/api/streetview?size=1600x1200&pano=${panoId}&heading=${heading}&pitch=0&key=${apiKey}`;
+          }
+
           addCapture(panoId, parseFloat(heading), thumbUrl);
           setPasteValue('');
           setPasteOpen(false);

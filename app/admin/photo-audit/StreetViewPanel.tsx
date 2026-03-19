@@ -69,7 +69,7 @@ export function StreetViewPanel({ latitude, longitude, apiKey, onCapture }: Stre
     };
   }, []);
 
-  const handleCapture = useCallback(() => {
+  const handleCapture = useCallback(async () => {
     if (!panoramaRef.current) return;
     setCapturing(true);
 
@@ -81,8 +81,22 @@ export function StreetViewPanel({ latitude, longitude, apiKey, onCapture }: Stre
     // Convert zoom level to field of view: default FOV is 90°, each zoom level halves it
     const fov = Math.round(180 / Math.pow(2, zoom));
 
-    // Construct a high-res Street View Static API URL with zoom preserved
-    const thumbUrl = `https://maps.googleapis.com/maps/api/streetview?size=1600x1200&pano=${pano}&heading=${heading}&pitch=${pitch}&fov=${fov}&key=${apiKey}`;
+    // Get a signed high-res Street View URL via edge function (unlocks 2048x2048)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    let thumbUrl: string;
+    try {
+      const params = new URLSearchParams({ pano, heading: String(heading), pitch: String(pitch), fov: String(fov) });
+      const res = await fetch(`${supabaseUrl}/functions/v1/streetview-signed?${params}`, {
+        headers: supabaseAnonKey ? { Authorization: `Bearer ${supabaseAnonKey}` } : {},
+      });
+      const data = await res.json();
+      thumbUrl = data.url ?? `https://maps.googleapis.com/maps/api/streetview?size=1600x1200&pano=${pano}&heading=${heading}&pitch=${pitch}&fov=${fov}&key=${apiKey}`;
+    } catch {
+      // Fallback to unsigned URL if edge function fails
+      thumbUrl = `https://maps.googleapis.com/maps/api/streetview?size=1600x1200&pano=${pano}&heading=${heading}&pitch=${pitch}&fov=${fov}&key=${apiKey}`;
+    }
 
     onCapture(pano, heading, thumbUrl);
     setCapturing(false);
