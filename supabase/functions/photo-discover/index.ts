@@ -82,33 +82,53 @@ async function fetchSerpApiImages(
     const results = data.images_results ?? [];
 
     return results
-      .filter((r: { original?: string; width?: number; height?: number; thumbnail?: string }) => {
+      .filter((r: { original?: string; width?: number; height?: number; thumbnail?: string; title?: string; source?: string }) => {
         if (!r.original) return false;
         const url = r.original.toLowerCase();
+        const title = (r.title ?? '').toLowerCase();
+        const source = (r.source ?? '').toLowerCase();
         const w = r.width ?? 0;
         const h = r.height ?? 0;
 
         // Filter out tiny images (logos, icons, buttons)
-        if (w > 0 && h > 0 && (w < 300 || h < 200)) return false;
+        if (w > 0 && h > 0 && (w < 400 || h < 300)) return false;
 
-        // Filter out nearly square images (likely logos) — photos are usually wider
+        // Filter out nearly square images (likely logos/graphics)
         if (w > 0 && h > 0) {
           const ratio = w / h;
-          if (ratio > 0.85 && ratio < 1.15 && w < 500) return false; // small square = logo
+          if (ratio > 0.85 && ratio < 1.15 && w < 800) return false;
         }
 
         // Filter out common non-photo file types
-        if (url.endsWith('.svg') || url.endsWith('.gif') || url.endsWith('.ico')) return false;
+        if (url.endsWith('.svg') || url.endsWith('.gif') || url.endsWith('.ico') || url.endsWith('.png')) return false;
         if (url.includes('/logo') || url.includes('_logo') || url.includes('-logo')) return false;
-        if (url.includes('/icon') || url.includes('favicon')) return false;
+        if (url.includes('/icon') || url.includes('favicon') || url.includes('/brand')) return false;
         if (url.includes('badge') || url.includes('coupon') || url.includes('banner')) return false;
+        if (url.includes('graphic') || url.includes('clipart') || url.includes('vector')) return false;
 
-        // Filter out known logo/branding domains
-        if (url.includes('fbsbx.com/lookaside') && w < 400) return false; // small FB thumbnails
+        // Filter out app store / social media icons
+        if (url.includes('play.google.com') || url.includes('apps.apple.com')) return false;
+        if (url.includes('play-lh.googleusercontent')) return false;
+        if (url.includes('yelp.com/biz_photos') === false && url.includes('yelp') && w < 600) return false;
+
+        // Filter out known junk sources
+        if (source.includes('google play') || source.includes('app store')) return false;
+        if (source.includes('facebook') && w < 600) return false;
+
+        // Filter out images with junk titles
+        if (title.includes('logo') || title.includes('app') || title.includes('download')) return false;
+        if (title.includes('coupon') || title.includes('deal') || title.includes('gift card')) return false;
+        if (title.includes('membership') || title.includes('price') || title.includes('menu')) return false;
+
+        // Only keep JPEGs and large PNGs (photos are almost always JPEG)
+        const isJpeg = url.includes('.jpg') || url.includes('.jpeg') || url.includes('format=jpg');
+        const isLargePng = url.includes('.png') && w > 800 && h > 600;
+        const isGoogleusercontent = url.includes('googleusercontent.com');
+        if (!isJpeg && !isLargePng && !isGoogleusercontent) return false;
 
         return true;
       })
-      .slice(0, 8)
+      .slice(0, 6)
       .map((r: { original: string; source?: string; width?: number; height?: number }) => ({
         url: r.original,
         source: 'google_search' as const,
