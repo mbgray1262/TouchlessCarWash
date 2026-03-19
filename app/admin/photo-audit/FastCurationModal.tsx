@@ -92,23 +92,19 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
     try {
       const enhanced = await autoEnhanceImage(photo.url);
       if (enhanced) {
-        // Upload directly to Supabase Storage
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-        const { createClient } = await import('@supabase/supabase-js');
-        const sb = createClient(supabaseUrl, supabaseKey);
-        const filename = `${listing!.id}/enhanced-${Date.now()}.jpg`;
-        const buffer = new Uint8Array(await enhanced.arrayBuffer());
-        const { error: uploadError } = await sb.storage
-          .from('listing-photos')
-          .upload(filename, buffer, { contentType: 'image/jpeg', upsert: false });
-        if (uploadError) {
-          console.error('Upload failed:', uploadError);
-          alert('Failed to upload enhanced image: ' + uploadError.message);
+        // Upload via API route (uses service role key, bypasses RLS)
+        const formData = new FormData();
+        formData.append('file', enhanced, 'enhanced.jpg');
+        formData.append('type', 'gallery');
+        formData.append('listingId', listing!.id);
+        const res = await fetch('/api/upload-image', { method: 'POST', body: formData });
+        if (!res.ok) {
+          const err = await res.json();
+          alert('Failed to upload enhanced image: ' + (err.error || 'Unknown error'));
           return;
         }
-        const { data: urlData } = sb.storage.from('listing-photos').getPublicUrl(filename);
-        replaceUrl(photo.id, urlData.publicUrl);
+        const { url } = await res.json();
+        replaceUrl(photo.id, url);
       }
     } catch (err) {
       console.error('Enhance failed:', err);
