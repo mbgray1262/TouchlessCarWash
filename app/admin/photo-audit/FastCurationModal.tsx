@@ -443,6 +443,16 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                 ← Prev
               </button>
             )}
+            {onNext && (
+              <button
+                onClick={onNext}
+                disabled={saving}
+                className="flex items-center gap-1 px-3 py-2.5 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium disabled:opacity-50 transition-colors"
+                title="Skip to next without saving"
+              >
+                Next →
+              </button>
+            )}
             <button
               onClick={handleSaveOnly}
               disabled={saving}
