@@ -380,6 +380,7 @@ Deno.serve(async (req) => {
 
   const body = await req.json().catch(() => ({}));
   const listingId = body.listing_id ?? null;
+  const overrideImageUrl = body.image_url ?? null; // Optional: classify this URL instead of DB hero
   const limit = body.limit ?? 500;
   const offset = body.offset ?? 0;
   const dryRun = body.dry_run ?? false;
@@ -516,9 +517,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Only classify the hero image — the user has already selected the best equipment shot
+    // Use override URL if provided (from modal's current hero), otherwise use saved hero
     const imageUrls: string[] = [];
-    if (single.hero_image) imageUrls.push(single.hero_image);
+    if (overrideImageUrl) {
+      imageUrls.push(overrideImageUrl);
+    } else if (single.hero_image) {
+      imageUrls.push(single.hero_image);
+    }
 
     // Use Gemini (preferred) or fall back to Claude
     let attempt: DetectionAttempt;

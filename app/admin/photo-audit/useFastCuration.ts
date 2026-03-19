@@ -432,6 +432,13 @@ export function useFastCuration(listingId: string) {
   // Classify equipment using AI
   const classifyEquipment = useCallback(async () => {
     if (!listing || classifying) return;
+    // Use the current hero in the modal, not the saved one in DB
+    const currentHero = candidates.find(c => c.tag === 'hero');
+    const imageUrl = currentHero?.url ?? listing.hero_image;
+    if (!imageUrl) {
+      setClassifyResult('No hero image to classify');
+      return;
+    }
     setClassifying(true);
     setClassifyResult(null);
     setClassifyEvidence(null);
@@ -444,7 +451,7 @@ export function useFastCuration(listingId: string) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${supabaseKey}`,
         },
-        body: JSON.stringify({ listing_id: listingId }),
+        body: JSON.stringify({ listing_id: listingId, image_url: imageUrl }),
         signal: AbortSignal.timeout(45_000),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
