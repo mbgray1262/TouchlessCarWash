@@ -85,18 +85,8 @@ export function StreetViewPanel({ latitude, longitude, apiKey, onCapture }: Stre
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    let thumbUrl: string;
-    try {
-      const params = new URLSearchParams({ pano, heading: String(heading), pitch: String(pitch), fov: String(fov) });
-      const res = await fetch(`${supabaseUrl}/functions/v1/streetview-signed?${params}`, {
-        headers: supabaseAnonKey ? { Authorization: `Bearer ${supabaseAnonKey}` } : {},
-      });
-      const data = await res.json();
-      thumbUrl = data.url ?? `https://maps.googleapis.com/maps/api/streetview?size=1600x1200&pano=${pano}&heading=${heading}&pitch=${pitch}&fov=${fov}&key=${apiKey}`;
-    } catch {
-      // Fallback to unsigned URL if edge function fails
-      thumbUrl = `https://maps.googleapis.com/maps/api/streetview?size=1600x1200&pano=${pano}&heading=${heading}&pitch=${pitch}&fov=${fov}&key=${apiKey}`;
-    }
+    // Use max unsigned size (640x640) — signing secret is unreliable
+    const thumbUrl = `https://maps.googleapis.com/maps/api/streetview?size=640x640&pano=${pano}&heading=${heading}&pitch=${pitch}&fov=${fov}&key=${apiKey}`;
 
     onCapture(pano, heading, thumbUrl);
     setCapturing(false);
