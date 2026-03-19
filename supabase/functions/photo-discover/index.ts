@@ -34,12 +34,12 @@ async function fetchGooglePlacesPhotos(placeId: string, apiKey: string): Promise
     const data = await res.json();
     const photoRefs = data.photos ?? [];
 
-    // Resolve thumbnail URLs in parallel (400px for grid preview)
+    // Resolve photo URLs in parallel (1600px for good quality)
     const resolved = await Promise.all(
       photoRefs.slice(0, 10).map(async (photo: { name: string; widthPx: number; heightPx: number; authorAttributions?: Array<{ displayName: string }> }) => {
         try {
           const mediaRes = await fetch(
-            `https://places.googleapis.com/v1/${photo.name}/media?maxHeightPx=400&maxWidthPx=400&key=${apiKey}&skipHttpRedirect=true`,
+            `https://places.googleapis.com/v1/${photo.name}/media?maxHeightPx=1600&maxWidthPx=1600&key=${apiKey}&skipHttpRedirect=true`,
             { signal: AbortSignal.timeout(5000) },
           );
           if (!mediaRes.ok) return null;
