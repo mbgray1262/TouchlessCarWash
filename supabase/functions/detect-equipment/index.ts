@@ -164,45 +164,44 @@ const EQUIPMENT_PROMPT = `You are an expert at identifying touchless and automat
 
 Identify the WASH EQUIPMENT manufacturer and model visible in this car wash photo.
 
-CRITICAL RULES — READ CAREFULLY:
-- You MUST be able to clearly see the wash equipment (gantry, spray arms, boom arms) in the photo to make any identification.
-- If the photo only shows the EXTERIOR of a building, a parking lot, a sign, or is too far away to see equipment details, respond with BRAND: NONE.
-- NEVER guess based on the business name, signage, or what brand is "most common." Only identify what you can ACTUALLY SEE in the image.
-- If you can see equipment but cannot read any branding or confidently match its design to a known manufacturer, use LOW confidence.
-- HIGH confidence requires EITHER: (a) readable text/branding on the equipment, OR (b) a clear close-up view of the equipment showing multiple unmistakable design features unique to that manufacturer (e.g., WashWorld's T-bar header with purple lights and L-arm design, PDQ's silver curved arch with side booms).
-- MEDIUM confidence: the equipment gantry/arch is clearly visible with distinctive design features that strongly suggest a specific brand, but you're not 100% certain.
-- LOW confidence: you can see equipment but identification is uncertain — use this freely when unsure.
-- NEVER fabricate or hallucinate text — if you cannot clearly read text in the image, do not claim it is there. But you CAN identify equipment by its distinctive physical design without reading text.
+You are an expert at identifying touchless car wash equipment by its PHYSICAL DESIGN — shape, structure, color scheme, arm configuration, gantry profile, and component layout. You do NOT need to read text to identify equipment. Each manufacturer has a unique, recognizable design.
 
-IDENTIFICATION METHODS (in priority order):
-1. Direct branding: Text/logos on the wash gantry, spray arms, side booms, or control panel (STRONGEST evidence)
-2. Integrated component branding: "MaxAir" dryer = WashWorld, "PDQ" on any component = PDQ, website URLs on signs
-3. Visual design recognition: ONLY when equipment is clearly visible and has distinctive, unmistakable features
+IDENTIFICATION METHODS (use ALL of these):
+1. SHAPE & STRUCTURE: Gantry profile (curved arch vs T-bar vs overhead rail), arm design (L-arms vs side booms vs rotating), mounting style
+2. COLOR SCHEME: Each brand uses distinctive colors (PDQ=silver/gray, WashWorld=blue/silver, D&S=green, Autec=blue towers, Kärcher=yellow/black)
+3. COMPONENT LAYOUT: Position of spray arms, dryer placement, boom configuration, control panel location
+4. TEXT/BRANDING: Readable text on equipment (bonus confirmation, but NOT required for identification)
 
-KNOWN MANUFACTURERS, MODELS, AND VISUAL IDENTIFICATION:
-- PDQ: Models: LaserWash 360, LaserWash 360 Plus, LaserWash 4000, LaserWash G5, LaserWash M5, LaserWash Sentry, ProTouch, Tandem Surfline, Access. Silver/gray gantry, distinctive curved top arch, "LaserWash" text usually on front. IMPORTANT: Do NOT just say "LaserWash" — specify which model (360, G5, M5, etc). If you can't tell, say NONE for MODEL.
-- WashWorld: Models: Razor, Razor Edge, Razor Touch, Razor XR, Profile. Blue and silver T-bar header, blue protective shrouds on spray arms, L-arm design, MaxAir integrated dryer.
-- Belanger: Models: Kondor, Eclipse, FreeStyler, SpinLite, Vector. Sleek modern design, often white/gray.
-- Ryko: Models: SoftGloss, SoftGloss Maxx, Radius. Rounded gantry design.
-- Istobal: Models: M'NEX 22, M'NEX 25, M'NEX 32, ISTOBAL 1900. European design, often blue/white.
-- D&S: Models: IQ 2.0 Touch Free, Carwash Systems. Green branding, "IQ 2.0" on header.
-- Petit AutoWash: Models: Accutrac 360i, Accutrac 360t, Accutrac Mini. Track-based system on rails.
-- Mark VII: Models: ChoiceWash XT, ChoiceWash CT, AquaJet, SoftLine. Distinctive overhead design.
-- Kärcher: Models: CWB 3, CB 1/28, CB 2/28, CB 3/32. German engineering, yellow/black branding.
-- Autec: Models: Evolution, EV-1 Evolution, AES-425, Express Automatic. "Evolution" text on vertical towers.
-- Super Wash: Models: Supermatic, Supermatic II. "SUPER WASH" text on gantry header.
-- Also: Saber, Broadway, NS Corporation, Oasis, Washman, MAXAR, Delta Sonic
+KNOWN MANUFACTURERS AND THEIR VISUAL SIGNATURES:
+- PDQ: Silver/gray gantry with distinctive CURVED TOP ARCH (rounded like an inverted U). Side-mounted boom arms. Models: LaserWash 360 (most common, single arch), LaserWash 360 Plus, LaserWash 4000, LaserWash G5 (newer, angular), LaserWash M5, LaserWash Sentry, ProTouch, Access. If you can't determine the specific model, use NONE for MODEL.
+- WashWorld: Blue and silver T-BAR HEADER (flat horizontal top beam, not curved). Blue protective shrouds on spray arms. L-shaped arm design. MaxAir integrated dryer on top. Often has purple/blue LED accent lights. Models: Razor, Razor Edge, Razor Touch, Razor XR, Profile, Profile Max.
+- Belanger: Sleek MODERN design, often white/gray with clean lines. Compact overhead unit. Models: Kondor, Eclipse, FreeStyler, SpinLite, Vector.
+- Ryko: ROUNDED gantry design, bulkier profile. Models: SoftGloss, SoftGloss Maxx, Radius.
+- D&S: GREEN branding/color scheme. "IQ" header design. Models: IQ 2.0 Touch Free, Carwash Systems.
+- Autec: Distinctive VERTICAL BLUE TOWERS on either side of the bay with "Evolution" text. Models: Evolution, EV-1 Evolution, AES-425, Express Automatic.
+- Mark VII: Overhead rail-mounted design. Models: ChoiceWash XT, ChoiceWash CT, AquaJet, SoftLine.
+- Istobal: European design, often blue/white, compact. Models: M'NEX 22, M'NEX 25, M'NEX 32, ISTOBAL 1900.
+- Petit AutoWash: Track-based system on RAILS (equipment slides on floor track). Models: Accutrac 360i, Accutrac 360t, Accutrac Mini.
+- Kärcher: German engineering, YELLOW/BLACK color scheme. Models: CWB 3, CB 1/28, CB 2/28, CB 3/32.
+- Super Wash: Models: Supermatic, Supermatic II. Often has "SUPER WASH" on gantry header.
+- Also known: Saber, Broadway, NS Corporation, Oasis, Washman, MAXAR, Delta Sonic, Coleman Hanna
 
-CRITICAL RULES:
-- SELF-SERVE BAYS are NOT touchless automatics. If you see a manual spray wand/gun, coin-operated controls on the wall, or an open bay with no overhead gantry/arch — this is a self-serve bay. Respond BRAND: NONE.
-- TUNNEL/CONVEYOR washes with brushes, wraps, or cloth strips are NOT touchless. Respond BRAND: NONE.
-- Only identify touchless IN-BAY AUTOMATIC equipment — these have a motorized gantry or arch that moves over a stationary car.
-- Do NOT confuse the business/franchise name with the equipment manufacturer
-- Car wash businesses often paint their own name on equipment — look past that
-- An exterior-only photo with no visible equipment = BRAND: NONE
-- A photo where equipment is too small or blurry to identify = BRAND: NONE
-- When in doubt, use LOW confidence or NONE — do NOT guess
-- A photo of a car being washed by water jets does NOT mean you can identify the equipment brand
+CONFIDENCE LEVELS:
+- HIGH: You can clearly see the equipment AND confidently identify the manufacturer by its distinctive design features (shape, color, structure) OR by readable text. The equipment must be the main subject or clearly visible.
+- MEDIUM: You can see equipment with some distinctive features but aren't fully certain of the brand. Or the equipment is partially obscured but recognizable.
+- LOW: You can see something that might be wash equipment but can't confidently identify it.
+
+WHAT IS NOT TOUCHLESS EQUIPMENT (respond BRAND: NONE):
+- SELF-SERVE BAYS: Manual spray wand/gun, coin-operated wall controls, open bay with no overhead gantry
+- TUNNEL/CONVEYOR: Brushes, wraps, cloth strips, conveyor belt
+- EXTERIOR-ONLY photos: Building facade, parking lot, signs only — no visible equipment inside a bay
+- TOO FAR AWAY: Equipment is tiny/blurry in the background
+
+IMPORTANT:
+- Do NOT confuse the business name with the equipment manufacturer
+- Do NOT fabricate text you cannot actually read
+- If you can see equipment shape/design but no text, that's fine — identify by design
+- A payment kiosk, entrance sign, or bay entrance alone is NOT enough to identify equipment — you need to see the actual gantry/arch
 
 Respond in this exact format:
 BRAND: [manufacturer name, or NONE]
