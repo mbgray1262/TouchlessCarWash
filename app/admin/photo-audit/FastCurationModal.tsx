@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useCallback, useState, useRef } from 'react';
-import { X, ExternalLink, Check, Ban, Trash2, Sparkles, Loader2, Plus, RefreshCw } from 'lucide-react';
+import { X, ExternalLink, Check, Ban, Trash2, Sparkles, Loader2, Plus, RefreshCw, Upload } from 'lucide-react';
 import { useFastCuration, type CandidatePhoto } from './useFastCuration';
 import { PhotoGrid } from './PhotoGrid';
 import { StreetViewPanel } from './StreetViewPanel';
@@ -31,6 +31,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
   const [cropPhoto, setCropPhoto] = useState<CandidatePhoto | null>(null);
   const [enhancing, setEnhancing] = useState<string | null>(null);
   const [pasteOpen, setPasteOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [pasteValue, setPasteValue] = useState('');
   const [pasteLoading, setPasteLoading] = useState(false);
   const pasteRef = useRef<HTMLInputElement>(null);
@@ -210,6 +211,37 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                 </div>
               )}
               <div className="flex gap-2 ml-auto">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  className="hidden"
+                  onChange={async (e) => {
+                    const files = e.target.files;
+                    if (!files) return;
+                    for (const file of Array.from(files)) {
+                      const formData = new FormData();
+                      formData.append('file', file);
+                      formData.append('type', 'gallery');
+                      formData.append('listingId', listing!.id);
+                      try {
+                        const res = await fetch('/api/upload-image', { method: 'POST', body: formData });
+                        if (res.ok) {
+                          const { url } = await res.json();
+                          addUpload(url);
+                        }
+                      } catch {}
+                    }
+                    e.target.value = '';
+                  }}
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm text-gray-700"
+                >
+                  <Upload className="w-3.5 h-3.5" /> Upload
+                </button>
                 <button
                   onClick={() => { setPasteOpen(!pasteOpen); setTimeout(() => pasteRef.current?.focus(), 100); }}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm text-gray-700"

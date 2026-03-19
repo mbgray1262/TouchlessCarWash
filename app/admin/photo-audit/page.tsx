@@ -508,6 +508,9 @@ export default function PhotoAuditPage() {
             const currentIdx = results.findIndex(r => r.listing_id === editorListingId);
             if (currentIdx > 0) {
               setEditorListingId(results[currentIdx - 1].listing_id);
+            } else if (currentIdx === -1 && results.length > 0) {
+              // Current listing not in results (already processed) — go to first result
+              setEditorListingId(results[0].listing_id);
             }
           }}
         />
