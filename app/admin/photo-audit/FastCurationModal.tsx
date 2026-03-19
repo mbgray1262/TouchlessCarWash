@@ -31,6 +31,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
   const [cropPhoto, setCropPhoto] = useState<CandidatePhoto | null>(null);
   const [enhancing, setEnhancing] = useState<string | null>(null);
   const [enhancedIds, setEnhancedIds] = useState<string[]>([]);
+  const [originalUrls, setOriginalUrls] = useState<Record<string, string>>({}); // id -> original URL before enhance
 
   // Reset local state when listing changes
   useEffect(() => {
@@ -97,10 +98,20 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
   };
 
   const handleEnhance = async (photo: CandidatePhoto) => {
+    // Toggle: if already enhanced, revert to original
+    if (enhancedIds.includes(photo.id) && originalUrls[photo.id]) {
+      replaceUrl(photo.id, originalUrls[photo.id]);
+      setEnhancedIds(prev => prev.filter(id => id !== photo.id));
+      return;
+    }
+
     setEnhancing(photo.id);
     try {
       const enhanced = await autoEnhanceImage(photo.url);
       if (enhanced) {
+        // Save original URL before replacing
+        setOriginalUrls(prev => ({ ...prev, [photo.id]: photo.url }));
+
         // Upload via API route (uses service role key, bypasses RLS)
         const formData = new FormData();
         formData.append('file', enhanced, 'enhanced.jpg');
