@@ -233,6 +233,14 @@ export function PhotoGrid({
                       className="absolute inset-0 w-full h-full object-cover"
                       loading="lazy"
                       referrerPolicy="no-referrer"
+                      onLoad={(e) => {
+                        const img = e.currentTarget;
+                        // Auto-hide low-res images (under 400x300)
+                        if (img.naturalWidth < 400 || img.naturalHeight < 300) {
+                          const card = img.closest('[data-photo-card]') as HTMLElement;
+                          if (card) card.style.display = 'none';
+                        }
+                      }}
                       onError={(e) => {
                         // Hide the entire card when image fails to load
                         const card = e.currentTarget.closest('[data-photo-card]') as HTMLElement;
