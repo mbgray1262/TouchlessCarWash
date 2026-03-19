@@ -471,7 +471,7 @@ export function useFastCuration(listingId: string) {
     } finally {
       setClassifying(false);
     }
-  }, [listing, classifying, listingId, loadListing]);
+  }, [listing, classifying, listingId, loadListing, candidates]);
 
   // Toggle admin touchless verification
   const toggleTouchlessVerified = useCallback(async () => {
