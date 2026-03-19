@@ -107,13 +107,29 @@ async function fetchWebsitePhotos(websiteUrl: string): Promise<CandidatePhoto[]>
     while ((match = imgRegex.exec(html)) !== null) urls.add(match[1]);
     while ((match = ogRegex.exec(html)) !== null) urls.add(match[1]);
 
-    // Filter to likely real photos
-    const skipPatterns = /favicon|logo|icon|badge|sprite|spacer|pixel|tracking|social|widget|banner|button|nav|arrow|tiny|1x1|blank|svg/i;
+    // Filter to likely real PHOTOS (not logos, icons, graphics)
+    const skipPatterns = /favicon|logo|icon|badge|sprite|spacer|pixel|tracking|social|widget|banner|button|nav|arrow|tiny|1x1|blank|svg|emoji|smiley|star-rating|rating|checkbox|radio|toggle|spinner|loader|placeholder|avatar|profile-pic|thumbnail-placeholder|gradient|pattern|divider/i;
+    const skipExtensions = /\.(svg|gif|ico|bmp|cur)(\?|$)/i;
     const imageExts = /\.(jpg|jpeg|png|webp)/i;
 
+    // Also extract image dimensions from HTML to filter tiny images
+    const imgWithSizeRegex = /<img[^>]+src=["']([^"']+)["'][^>]*(width|height)=["']?(\d+)/gi;
+    const smallImages = new Set<string>();
+    let sizeMatch;
+    while ((sizeMatch = imgWithSizeRegex.exec(html)) !== null) {
+      const dim = parseInt(sizeMatch[3]);
+      if (dim > 0 && dim < 150) smallImages.add(sizeMatch[1]);
+    }
+
+    const hostname = new URL(websiteUrl).hostname.replace('www.', '');
     const photos: CandidatePhoto[] = [];
     for (const rawUrl of urls) {
       if (skipPatterns.test(rawUrl)) continue;
+      if (skipExtensions.test(rawUrl)) continue;
+      if (smallImages.has(rawUrl)) continue;
+
+      // Skip data URIs
+      if (rawUrl.startsWith('data:')) continue;
 
       // Resolve relative URLs
       let fullUrl = rawUrl;
@@ -122,13 +138,17 @@ async function fetchWebsitePhotos(websiteUrl: string): Promise<CandidatePhoto[]>
         try { fullUrl = new URL(rawUrl, websiteUrl).href; } catch { continue; }
       } else if (!rawUrl.startsWith('http')) continue;
 
-      // Must look like an image
-      if (!imageExts.test(fullUrl) && !fullUrl.includes('image') && !fullUrl.includes('photo')) continue;
+      // Must have a photo extension (skip extensionless CDN URLs that are often icons)
+      if (!imageExts.test(fullUrl)) continue;
+
+      // Skip very short filenames (likely icons/logos)
+      const filename = fullUrl.split('/').pop()?.split('?')[0] ?? '';
+      if (filename.length < 5) continue;
 
       photos.push({
         url: fullUrl,
         source: 'website',
-        label: new URL(websiteUrl).hostname.replace('www.', ''),
+        label: hostname,
       });
 
       if (photos.length >= 10) break;
