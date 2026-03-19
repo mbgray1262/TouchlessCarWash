@@ -10,6 +10,7 @@ export type PhotoSource = 'google_places' | 'google_search' | 'website' | 'stree
 export interface CandidatePhoto {
   id: string;
   url: string;
+  fullResUrl?: string;
   source: PhotoSource;
   label?: string;
   googlePhotoName?: string;
@@ -133,9 +134,10 @@ export function useFastCuration(listingId: string) {
       const data = await res.json();
 
       const newCandidates: CandidatePhoto[] = (data.candidates ?? []).map(
-        (c: { url: string; source: PhotoSource; label?: string; googlePhotoName?: string; streetviewPano?: string; width?: number; height?: number }, i: number) => ({
+        (c: { url: string; fullResUrl?: string; source: PhotoSource; label?: string; googlePhotoName?: string; streetviewPano?: string; width?: number; height?: number }, i: number) => ({
           id: `photo-${i}-${Date.now()}`,
           url: c.url,
+          fullResUrl: c.fullResUrl,
           source: c.source,
           label: c.label,
           googlePhotoName: c.googlePhotoName,
@@ -310,8 +312,11 @@ export function useFastCuration(listingId: string) {
 
   // Rehost a single external photo to Supabase storage
   const rehostPhoto = async (photo: CandidatePhoto): Promise<string> => {
+    // Use full-res URL for rehosting (thumbnail is only for display)
+    const sourceUrl = photo.fullResUrl || photo.url;
+
     // Already hosted on Supabase
-    if (photo.url.includes('supabase.co')) return photo.url;
+    if (sourceUrl.includes('supabase.co')) return sourceUrl;
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -326,7 +331,7 @@ export function useFastCuration(listingId: string) {
     } else if (photo.streetviewPano) {
       body.photo_url = `streetview:${photo.streetviewPano}`;
     } else {
-      body.photo_url = photo.url;
+      body.photo_url = sourceUrl;
     }
 
     const res = await fetch(`${supabaseUrl}/functions/v1/google-place-photos`, {
@@ -356,16 +361,19 @@ export function useFastCuration(listingId: string) {
       const galleryPhotos = candidates.filter(c => c.tag === 'gallery');
       // skippedUrls tracks photos removed with X button
 
-      // Save immediately with current URLs (external or Supabase)
+      // Save immediately with full-res URLs (external or Supabase)
       // Then rehost external photos in the background after save completes
-      const heroUrl = heroPhoto?.url ?? listing.hero_image;
-      const equipUrl = equipPhoto?.url ?? null;
-      const galleryUrls = galleryPhotos.map(p => p.url);
+      const heroUrl = (heroPhoto?.fullResUrl || heroPhoto?.url) ?? listing.hero_image;
+      const equipUrl = (equipPhoto?.fullResUrl || equipPhoto?.url) ?? null;
+      const galleryUrls = galleryPhotos.map(p => p.fullResUrl || p.url);
 
-      // Collect external photos to rehost after save
+      // Collect external photos to rehost after save (check fullResUrl too since url may be thumbnail)
       const toRehost = [heroPhoto, equipPhoto, ...galleryPhotos]
         .filter(Boolean)
-        .filter(p => !p!.url.includes('supabase.co')) as CandidatePhoto[];
+        .filter(p => {
+          const saveUrl = p!.fullResUrl || p!.url;
+          return !saveUrl.includes('supabase.co');
+        }) as CandidatePhoto[];
       const blockedUrls = [...(listing.blocked_photos ?? []), ...skippedUrls];
 
       console.log('[SaveAll] hero tagged:', heroPhoto?.id, 'heroUrl:', heroUrl?.slice(0, 80), 'old hero:', listing.hero_image?.slice(0, 80));
@@ -434,6 +442,7 @@ export function useFastCuration(listingId: string) {
           toRehost.map(async (p) => {
             try {
               const rehostedUrl = await rehostPhoto(p);
+              const savedUrl = p.fullResUrl || p.url;
               // Update the URL in the DB (hero or photos array)
               if (p.tag === 'hero') {
                 await supabase.from('listings').update({ hero_image: rehostedUrl }).eq('id', listingId);
@@ -441,7 +450,7 @@ export function useFastCuration(listingId: string) {
               // For gallery photos, update the photos array
               const { data: current } = await supabase.from('listings').select('photos').eq('id', listingId).single();
               if (current?.photos) {
-                const updated = (current.photos as string[]).map((u: string) => u === p.url ? rehostedUrl : u);
+                const updated = (current.photos as string[]).map((u: string) => u === savedUrl ? rehostedUrl : u);
                 await supabase.from('listings').update({ photos: updated }).eq('id', listingId);
               }
             } catch (e) {

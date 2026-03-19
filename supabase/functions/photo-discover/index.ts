@@ -15,6 +15,7 @@ function json(data: unknown, status = 200) {
 
 interface CandidatePhoto {
   url: string;
+  fullResUrl?: string;    // high-res version for saving (url is thumbnail for fast display)
   source: 'google_places' | 'google_search' | 'website' | 'street_view' | 'existing';
   label?: string;         // author, domain, etc.
   googlePhotoName?: string; // for Google Places rehosting
@@ -34,19 +35,29 @@ async function fetchGooglePlacesPhotos(placeId: string, apiKey: string): Promise
     const data = await res.json();
     const photoRefs = data.photos ?? [];
 
-    // Resolve photo URLs in parallel (1600px for good quality)
+    // Resolve photo URLs in parallel (w400 thumbnail for fast display, w1600 for saving)
     const resolved = await Promise.all(
       photoRefs.slice(0, 10).map(async (photo: { name: string; widthPx: number; heightPx: number; authorAttributions?: Array<{ displayName: string }> }) => {
         try {
-          const mediaRes = await fetch(
+          // Fetch thumbnail (400px) for fast grid display
+          const thumbRes = await fetch(
+            `https://places.googleapis.com/v1/${photo.name}/media?maxHeightPx=400&maxWidthPx=400&key=${apiKey}&skipHttpRedirect=true`,
+            { signal: AbortSignal.timeout(5000) },
+          );
+          if (!thumbRes.ok) return null;
+          const thumbData = await thumbRes.json();
+          if (!thumbData.photoUri) return null;
+
+          // Build full-res URL (1600px) for saving — same pattern, just larger
+          const fullRes = await fetch(
             `https://places.googleapis.com/v1/${photo.name}/media?maxHeightPx=1600&maxWidthPx=1600&key=${apiKey}&skipHttpRedirect=true`,
             { signal: AbortSignal.timeout(5000) },
           );
-          if (!mediaRes.ok) return null;
-          const mediaData = await mediaRes.json();
-          if (!mediaData.photoUri) return null;
+          const fullResData = fullRes.ok ? await fullRes.json() : null;
+
           return {
-            url: mediaData.photoUri,
+            url: thumbData.photoUri,
+            fullResUrl: fullResData?.photoUri ?? thumbData.photoUri,
             source: 'google_places' as const,
             label: photo.authorAttributions?.[0]?.displayName ?? 'Google Places',
             googlePhotoName: photo.name,
@@ -129,8 +140,9 @@ async function fetchSerpApiImages(
         return true;
       })
       .slice(0, 6)
-      .map((r: { original: string; source?: string; width?: number; height?: number }) => ({
-        url: r.original,
+      .map((r: { original: string; thumbnail?: string; source?: string; width?: number; height?: number }) => ({
+        url: r.thumbnail ?? r.original,
+        fullResUrl: r.original,
         source: 'google_search' as const,
         label: r.source ?? 'Web',
         width: r.width,
