@@ -77,6 +77,7 @@ export function usePhotoAudit() {
   const [queueStats, setQueueStats] = useState({ totalUntagged: 0, alreadyAudited: 0, remaining: 0 });
   const [activeJob, setActiveJob] = useState<BatchJob | null>(null);
   const [viewFilter, setViewFilter] = useState<ViewFilter>('all');
+  const [unreviewedOnly, setUnreviewedOnly] = useState(false);
   const [page, setPage] = useState(1);
   const [filteredTotal, setFilteredTotal] = useState(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -118,7 +119,7 @@ export function usePhotoAudit() {
   }, []);
 
   // Load a single page of results using the server-side RPC
-  const loadPage = useCallback(async (filter: ViewFilter, pageNum: number) => {
+  const loadPage = useCallback(async (filter: ViewFilter, pageNum: number, unreviewed: boolean = false) => {
     setLoading(true);
     const offset = (pageNum - 1) * PAGE_SIZE;
 
@@ -126,6 +127,7 @@ export function usePhotoAudit() {
       p_filter: filter,
       p_offset: offset,
       p_limit: PAGE_SIZE,
+      p_unreviewed_only: unreviewed,
     });
 
     if (error) {
@@ -151,18 +153,18 @@ export function usePhotoAudit() {
   const loadResults = useCallback(async () => {
     await Promise.all([
       loadStats(),
-      loadPage(viewFilter, page),
+      loadPage(viewFilter, page, unreviewedOnly),
       loadQueueStats(),
     ]);
-  }, [loadStats, loadPage, loadQueueStats, viewFilter, page]);
+  }, [loadStats, loadPage, loadQueueStats, viewFilter, page, unreviewedOnly]);
 
   // Reload just the current page (after an action like apply/reject)
   const reloadCurrentPage = useCallback(async () => {
     await Promise.all([
       loadStats(),
-      loadPage(viewFilter, page),
+      loadPage(viewFilter, page, unreviewedOnly),
     ]);
-  }, [loadStats, loadPage, viewFilter, page]);
+  }, [loadStats, loadPage, viewFilter, page, unreviewedOnly]);
 
   // Change filter and reset to page 1
   const changeFilter = useCallback((filter: ViewFilter) => {
@@ -175,10 +177,10 @@ export function usePhotoAudit() {
     setPage(newPage);
   }, []);
 
-  // Load page when filter or page changes
+  // Load page when filter, page, or unreviewedOnly changes
   useEffect(() => {
-    loadPage(viewFilter, page);
-  }, [viewFilter, page, loadPage]);
+    loadPage(viewFilter, page, unreviewedOnly);
+  }, [viewFilter, page, unreviewedOnly, loadPage]);
 
   // ─── Job polling ──────────────────────────────────────────────────
 
@@ -417,6 +419,8 @@ export function usePhotoAudit() {
     queueStats,
     activeJob,
     viewFilter,
+    unreviewedOnly,
+    setUnreviewedOnly,
     page,
     filteredTotal,
     totalPages,

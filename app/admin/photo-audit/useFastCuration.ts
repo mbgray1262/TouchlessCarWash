@@ -468,6 +468,24 @@ export function useFastCuration(listingId: string) {
     setSaving(false);
   }, [listing]);
 
+  // Approve listing (save + mark reviewed_at)
+  const approveAndNext = async (onUpdate?: () => void, onNext?: () => void, onClose?: () => void): Promise<void> => {
+    const ok = await saveAll();
+    if (!ok) return;
+
+    // Set reviewed_at timestamp on the listing
+    if (listing) {
+      await supabase
+        .from('listings')
+        .update({ reviewed_at: new Date().toISOString() })
+        .eq('id', listing.id);
+    }
+
+    onUpdate?.();
+    if (onNext) onNext();
+    else onClose?.();
+  };
+
   // Delete listing
   const deleteListing = useCallback(async () => {
     if (!listing) return;
@@ -499,6 +517,7 @@ export function useFastCuration(listingId: string) {
     addUpload,
     replaceUrl,
     saveAll,
+    approveAndNext,
     discoverPhotos,
     classifyEquipment,
     setEquipment,

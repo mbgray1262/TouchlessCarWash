@@ -267,7 +267,7 @@ export default function PhotoAuditPage() {
   const {
     results, loading, running, runProgress, stats, queueStats,
     includeGooglePhotos, setIncludeGooglePhotos, activeJob,
-    viewFilter, page, filteredTotal, totalPages, pageSize,
+    viewFilter, unreviewedOnly, setUnreviewedOnly, page, filteredTotal, totalPages, pageSize,
     changeFilter, changePage,
     runBatch, applyEquipment, rejectResult, applyAllHighConfidence, undoApply, reload,
   } = usePhotoAudit();
@@ -403,6 +403,15 @@ export default function PhotoAuditPage() {
               </button>
             ))}
           </div>
+          <label className="flex items-center gap-1.5 text-xs cursor-pointer ml-2">
+            <input
+              type="checkbox"
+              checked={unreviewedOnly}
+              onChange={e => setUnreviewedOnly(e.target.checked)}
+              className="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
+            />
+            <span className={unreviewedOnly ? 'text-violet-700 font-semibold' : 'text-gray-500'}>Unreviewed only</span>
+          </label>
           {stats.equipment > 0 && (
             <button
               onClick={applyAllHighConfidence}

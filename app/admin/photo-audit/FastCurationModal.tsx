@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useCallback, useState, useRef } from 'react';
-import { X, ExternalLink, Check, Ban, Trash2, Sparkles, Loader2, Plus, RefreshCw, Upload } from 'lucide-react';
+import { X, ExternalLink, Check, CheckCheck, Ban, Trash2, Sparkles, Loader2, Plus, RefreshCw, Upload } from 'lucide-react';
 import { useFastCuration, type CandidatePhoto } from './useFastCuration';
 import { PhotoGrid } from './PhotoGrid';
 import { StreetViewPanel } from './StreetViewPanel';
@@ -24,7 +24,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
     classifying, classifyResult, classifyEvidence,
     tagPhoto, setAsHero, addToGallery, removeFromGallery, removeHero, skipPhoto,
     addCapture, addUpload, replaceUrl,
-    saveAll, discoverPhotos, classifyEquipment, setEquipment,
+    saveAll, approveAndNext, discoverPhotos, classifyEquipment, setEquipment,
     markNotTouchless, deleteListing,
   } = useFastCuration(listingId);
 
@@ -84,6 +84,10 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
       if (onNext) onNext();
       else onClose();
     }
+  };
+
+  const handleApproveAndNext = async () => {
+    await approveAndNext(onUpdate, onNext, onClose);
   };
 
   const handleCrop = (photo: CandidatePhoto) => {
@@ -468,6 +472,14 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
               {saving ? 'Saving...' : 'Save & Next →'}
+            </button>
+            <button
+              onClick={handleApproveAndNext}
+              disabled={saving}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold shadow-sm disabled:opacity-50 transition-colors"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCheck className="w-4 h-4" />}
+              {saving ? 'Saving...' : 'Approve & Next →'}
             </button>
           </div>
         </div>
