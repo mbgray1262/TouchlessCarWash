@@ -65,10 +65,14 @@ async function fetchGooglePlacesPhotos(placeId: string, apiKey: string): Promise
 async function fetchSerpApiImages(
   name: string, city: string, state: string,
   serpApiKey: string,
+  address?: string,
 ): Promise<CandidatePhoto[]> {
   if (!serpApiKey) return [];
   try {
-    const query = encodeURIComponent(`${name} ${city} ${state} car wash`);
+    // Use address for specificity, skip redundant "car wash" if name already contains it
+    const nameHasCarWash = name.toLowerCase().includes('car wash') || name.toLowerCase().includes('carwash');
+    const locationPart = address ? `"${address}"` : `${city} ${state}`;
+    const query = encodeURIComponent(`${name} ${locationPart}${nameHasCarWash ? '' : ' car wash'}`);
     const res = await fetch(
       `https://serpapi.com/search.json?q=${query}&tbm=isch&api_key=${serpApiKey}&num=10`,
       { signal: AbortSignal.timeout(10000) },
@@ -236,7 +240,7 @@ Deno.serve(async (req) => {
   // Fetch listing data
   const { data: listing } = await supabase
     .from('listings')
-    .select('id, name, city, state, google_place_id, website, latitude, longitude, hero_image, hero_image_source, photos, street_view_url, blocked_photos')
+    .select('id, name, address, city, state, google_place_id, website, latitude, longitude, hero_image, hero_image_source, photos, street_view_url, blocked_photos')
     .eq('id', listing_id)
     .maybeSingle();
 
@@ -247,7 +251,7 @@ Deno.serve(async (req) => {
   // Fire all sources in parallel
   const [googlePlaces, googleSearch, websitePhotos, streetView] = await Promise.allSettled([
     listing.google_place_id ? fetchGooglePlacesPhotos(listing.google_place_id, googleApiKey) : Promise.resolve([]),
-    fetchSerpApiImages(listing.name, listing.city, listing.state, serpApiKey),
+    fetchSerpApiImages(listing.name, listing.city, listing.state, serpApiKey, listing.address),
     Promise.resolve([]), // Website photos disabled — too much junk (logos, icons, illustrations)
     (listing.latitude && listing.longitude) ? fetchStreetViewThumbnail(listing.latitude, listing.longitude, googleApiKey) : Promise.resolve(null),
   ]);
