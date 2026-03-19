@@ -1148,7 +1148,17 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
 
           {/* Equipment section */}
           <div className="px-6 pb-4">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Equipment</p>
+            <div className="flex items-center gap-2 mb-3">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Equipment</p>
+              {listing.equipment_brand ? (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-medium">
+                  {EQUIPMENT_BRANDS.find(b => b.value === listing.equipment_brand)?.label ?? listing.equipment_brand}
+                  {listing.equipment_model ? ` — ${listing.equipment_model}` : ''}
+                </span>
+              ) : (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Not classified</span>
+              )}
+            </div>
             <div className="flex items-center gap-3 flex-wrap">
               {/* Brand selector */}
               <select
