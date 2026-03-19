@@ -623,18 +623,23 @@ async function processOneListing(
     equipmentDetected++;
   }
 
-  // AUTO-APPLY: Replace poor hero
+  // AUTO-APPLY: Replace poor hero (skip if suggested is same as current)
   if (!dryRun && result.hero_assessment?.current_hero_quality === 'poor' && suggestedHeroUrl) {
     const oldHero = listing.hero_image as string;
-    const currentPhotos = (listing.photos as string[]) ?? [];
-    const newPhotos = [...currentPhotos];
-    if (oldHero && !newPhotos.includes(oldHero)) newPhotos.unshift(oldHero);
-    const filteredPhotos = newPhotos.filter(p => p !== suggestedHeroUrl);
-    await supabase.from('listings').update({
-      hero_image: suggestedHeroUrl, hero_image_source: 'gallery', photos: filteredPhotos,
-    }).eq('id', listing.id);
-    heroReplaced++;
-    didAutoApply = true;
+    // Don't replace if suggested URL is the same image (same filename or both from same source)
+    const isSameImage = oldHero === suggestedHeroUrl ||
+      (oldHero && suggestedHeroUrl && oldHero.split('/').pop() === suggestedHeroUrl.split('/').pop());
+    if (!isSameImage) {
+      const currentPhotos = (listing.photos as string[]) ?? [];
+      const newPhotos = [...currentPhotos];
+      if (oldHero && !newPhotos.includes(oldHero)) newPhotos.unshift(oldHero);
+      const filteredPhotos = newPhotos.filter(p => p !== suggestedHeroUrl);
+      await supabase.from('listings').update({
+        hero_image: suggestedHeroUrl, hero_image_source: 'gallery', photos: filteredPhotos,
+      }).eq('id', listing.id);
+      heroReplaced++;
+      didAutoApply = true;
+    }
   }
 
   // AUTO-APPLY: Remove bad photos
