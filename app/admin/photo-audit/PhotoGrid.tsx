@@ -197,6 +197,7 @@ export function PhotoGrid({
               return (
                 <div
                   key={photo.id}
+                  data-photo-card
                   className="relative group rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-gray-400 transition-all"
                   onClick={() => {
                     setExpandedId(photo.id);
@@ -210,9 +211,9 @@ export function PhotoGrid({
                       loading="lazy"
                       referrerPolicy="no-referrer"
                       onError={(e) => {
-                        const img = e.currentTarget;
-                        img.style.display = 'none';
-                        img.parentElement!.innerHTML = '<div class="absolute inset-0 flex items-center justify-center text-gray-400 text-xs text-center p-2">Image blocked<br/>by source</div>';
+                        // Hide the entire card when image fails to load
+                        const card = e.currentTarget.closest('[data-photo-card]') as HTMLElement;
+                        if (card) card.style.display = 'none';
                       }}
                     />
                   </div>

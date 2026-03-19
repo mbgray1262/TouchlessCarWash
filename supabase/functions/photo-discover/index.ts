@@ -220,7 +220,7 @@ Deno.serve(async (req) => {
   const [googlePlaces, googleSearch, websitePhotos, streetView] = await Promise.allSettled([
     listing.google_place_id ? fetchGooglePlacesPhotos(listing.google_place_id, googleApiKey) : Promise.resolve([]),
     fetchGoogleSearchImages(listing.name, listing.city, listing.state, googleApiKey, cseId),
-    fetchWebsitePhotos(listing.website),
+    Promise.resolve([]), // Website photos disabled — too much junk (logos, icons, illustrations)
     (listing.latitude && listing.longitude) ? fetchStreetViewThumbnail(listing.latitude, listing.longitude, googleApiKey) : Promise.resolve(null),
   ]);
 
