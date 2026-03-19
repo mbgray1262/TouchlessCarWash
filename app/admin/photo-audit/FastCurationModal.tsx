@@ -30,6 +30,14 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
 
   const [cropPhoto, setCropPhoto] = useState<CandidatePhoto | null>(null);
   const [enhancing, setEnhancing] = useState<string | null>(null);
+  const [enhancedIds, setEnhancedIds] = useState<string[]>([]);
+
+  // Reset local state when listing changes
+  useEffect(() => {
+    setEnhancing(null);
+    setEnhancedIds([]);
+    setCropPhoto(null);
+  }, [listingId]);
   const [pasteOpen, setPasteOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pasteValue, setPasteValue] = useState('');
@@ -106,6 +114,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
         }
         const { url } = await res.json();
         replaceUrl(photo.id, url);
+        setEnhancedIds(prev => [...prev, photo.id]);
       }
     } catch (err) {
       console.error('Enhance failed:', err);
@@ -294,6 +303,8 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                 onSkipPhoto={skipPhoto}
                 onCrop={handleCrop}
                 onEnhance={handleEnhance}
+                enhancingId={enhancing}
+                enhancedIds={enhancedIds}
                 discovering={discovering}
               />
             </div>

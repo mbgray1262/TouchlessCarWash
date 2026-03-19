@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Star, Image as ImageIcon, Cpu, X, Crop, Wand2, ZoomIn, ImageOff, Plus, Trash2 } from 'lucide-react';
+import { Star, Image as ImageIcon, Cpu, X, Crop, Wand2, ZoomIn, ImageOff, Plus, Trash2, Loader2 } from 'lucide-react';
 import type { CandidatePhoto, PhotoTag } from './useFastCuration';
 
 interface PhotoGridProps {
@@ -17,6 +17,8 @@ interface PhotoGridProps {
   onCrop: (photo: CandidatePhoto) => void;
   onEnhance: (photo: CandidatePhoto) => void;
   discovering: boolean;
+  enhancingId?: string | null;
+  enhancedIds?: string[];
 }
 
 const SOURCE_BADGES: Record<string, { label: string; color: string }> = {
@@ -32,7 +34,7 @@ const SOURCE_BADGES: Record<string, { label: string; color: string }> = {
 export function PhotoGrid({
   candidates, selectedId, onSelect, onTag,
   onSetAsHero, onAddToGallery, onRemoveFromGallery, onRemoveHero, onSkipPhoto,
-  onCrop, onEnhance, discovering,
+  onCrop, onEnhance, discovering, enhancingId, enhancedIds = [],
 }: PhotoGridProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -91,10 +93,15 @@ export function PhotoGrid({
               </button>
               <button
                 onClick={() => onEnhance(heroPhoto)}
-                className="w-8 h-8 rounded-full bg-black/50 hover:bg-purple-600 text-white flex items-center justify-center transition-colors"
-                title="Enhance"
+                disabled={enhancingId === heroPhoto.id}
+                className={`w-8 h-8 rounded-full text-white flex items-center justify-center transition-colors ${
+                  enhancingId === heroPhoto.id ? 'bg-purple-600 animate-pulse' :
+                  enhancedIds.includes(heroPhoto.id) ? 'bg-purple-600' :
+                  'bg-black/50 hover:bg-purple-600'
+                }`}
+                title={enhancingId === heroPhoto.id ? 'Enhancing...' : enhancedIds.includes(heroPhoto.id) ? 'Enhanced' : 'Enhance'}
               >
-                <Wand2 className="w-4 h-4" />
+                {enhancingId === heroPhoto.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
               </button>
               <button
                 onClick={onRemoveHero}
