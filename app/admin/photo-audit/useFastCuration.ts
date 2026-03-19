@@ -37,6 +37,8 @@ interface ListingData {
   equipment_brand: string | null;
   equipment_model: string | null;
   equipment_photo?: string | null;
+  touchless_verified: string | null;
+  touchless_evidence: string | null;
 }
 
 interface SourceCounts {
@@ -65,7 +67,7 @@ export function useFastCuration(listingId: string) {
   const loadListing = useCallback(async () => {
     const { data } = await supabase
       .from('listings')
-      .select('id, name, city, state, slug, latitude, longitude, google_place_id, website, hero_image, hero_image_source, photos, street_view_url, blocked_photos, equipment_brand, equipment_model')
+      .select('id, name, city, state, slug, latitude, longitude, google_place_id, website, hero_image, hero_image_source, photos, street_view_url, blocked_photos, equipment_brand, equipment_model, touchless_verified, touchless_evidence')
       .eq('id', listingId)
       .maybeSingle();
     if (data) setListing(data as ListingData);
@@ -471,6 +473,14 @@ export function useFastCuration(listingId: string) {
     }
   }, [listing, classifying, listingId, loadListing]);
 
+  // Toggle admin touchless verification
+  const toggleTouchlessVerified = useCallback(async () => {
+    if (!listing) return;
+    const newValue = listing.touchless_verified === 'admin' ? null : 'admin';
+    await supabase.from('listings').update({ touchless_verified: newValue }).eq('id', listing.id);
+    setListing(prev => prev ? { ...prev, touchless_verified: newValue } : prev);
+  }, [listing]);
+
   // Mark as not touchless
   const markNotTouchless = useCallback(async () => {
     if (!listing) return;
@@ -533,6 +543,7 @@ export function useFastCuration(listingId: string) {
     discoverPhotos,
     classifyEquipment,
     setEquipment,
+    toggleTouchlessVerified,
     markNotTouchless,
     deleteListing,
     loadListing,

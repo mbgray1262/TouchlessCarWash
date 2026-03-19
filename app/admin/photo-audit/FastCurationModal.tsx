@@ -25,7 +25,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
     tagPhoto, setAsHero, addToGallery, removeFromGallery, removeHero, skipPhoto,
     addCapture, addUpload, replaceUrl,
     saveAll, approveAndNext, discoverPhotos, classifyEquipment, setEquipment,
-    markNotTouchless, deleteListing,
+    toggleTouchlessVerified, markNotTouchless, deleteListing,
   } = useFastCuration(listingId);
 
   const [cropPhoto, setCropPhoto] = useState<CandidatePhoto | null>(null);
@@ -203,7 +203,24 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-3 border-b bg-gray-50">
             <div>
-              <h2 className="text-lg font-bold text-gray-900">{listing.name}</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-bold text-gray-900">{listing.name}</h2>
+                {listing.touchless_verified === 'user_review' && (
+                  <span
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 cursor-help"
+                    title={listing.touchless_evidence ?? 'Detected from user review'}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-green-500" />
+                    User Verified
+                  </span>
+                )}
+                {listing.touchless_verified === 'admin' && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                    <span className="w-2 h-2 rounded-full bg-blue-500" />
+                    Admin Verified
+                  </span>
+                )}
+              </div>
               <p className="text-sm text-gray-500">{listing.city}, {listing.state}</p>
             </div>
             <div className="flex items-center gap-3">
@@ -438,6 +455,18 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
               title="Open Google Reviews — search 'touch' to verify touchless"
             >
               Reviews
+            </button>
+            <button
+              onClick={toggleTouchlessVerified}
+              className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                listing.touchless_verified === 'admin'
+                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              }`}
+              title={listing.touchless_verified === 'admin' ? 'Click to un-verify' : 'Mark as admin verified touchless'}
+            >
+              <Check className="w-4 h-4" />
+              {listing.touchless_verified === 'admin' ? 'Verified' : 'Verify'}
             </button>
 
             {onPrev && (
