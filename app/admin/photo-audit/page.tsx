@@ -274,6 +274,36 @@ export default function PhotoAuditPage() {
 
   const [batchLimit, setBatchLimit] = useState(100);
   const [editorListingId, setEditorListingId] = useState<string | null>(null);
+  // Stable navigation list — snapshot of listing IDs when modal opens
+  const [navList, setNavList] = useState<string[]>([]);
+  const [navIndex, setNavIndex] = useState(0);
+
+  // Open the editor modal and snapshot the navigation list
+  const openEditor = (listingId: string) => {
+    const ids = results.map(r => r.listing_id);
+    const idx = ids.indexOf(listingId);
+    setNavList(ids);
+    setNavIndex(idx >= 0 ? idx : 0);
+    setEditorListingId(listingId);
+  };
+
+  const navigateNext = () => {
+    if (navIndex < navList.length - 1) {
+      const nextIdx = navIndex + 1;
+      setNavIndex(nextIdx);
+      setEditorListingId(navList[nextIdx]);
+    } else {
+      setEditorListingId(null);
+    }
+  };
+
+  const navigatePrev = () => {
+    if (navIndex > 0) {
+      const prevIdx = navIndex - 1;
+      setNavIndex(prevIdx);
+      setEditorListingId(navList[prevIdx]);
+    }
+  };
 
   const safePage = Math.min(page, totalPages);
 
@@ -442,7 +472,7 @@ export default function PhotoAuditPage() {
                   onApply={() => applyEquipment(r.id, r.listing_id, r.equipment_brand!, r.equipment_model)}
                   onReject={() => rejectResult(r.id)}
                   onUndo={() => undoApply(r.id, r.listing_id)}
-                  onOpenEditor={() => setEditorListingId(r.listing_id)}
+                  onOpenEditor={() => openEditor(r.listing_id)}
                 />
               ))
             )}
@@ -505,23 +535,8 @@ export default function PhotoAuditPage() {
           listingId={editorListingId}
           onClose={() => setEditorListingId(null)}
           onUpdate={reload}
-          onNext={() => {
-            const currentIdx = results.findIndex(r => r.listing_id === editorListingId);
-            if (currentIdx >= 0 && currentIdx < results.length - 1) {
-              setEditorListingId(results[currentIdx + 1].listing_id);
-            } else {
-              setEditorListingId(null);
-            }
-          }}
-          onPrev={() => {
-            const currentIdx = results.findIndex(r => r.listing_id === editorListingId);
-            if (currentIdx > 0) {
-              setEditorListingId(results[currentIdx - 1].listing_id);
-            } else if (currentIdx === -1 && results.length > 0) {
-              // Current listing not in results (already processed) — go to first result
-              setEditorListingId(results[0].listing_id);
-            }
-          }}
+          onNext={navigateNext}
+          onPrev={navIndex > 0 ? navigatePrev : undefined}
         />
       )}
     </div>
