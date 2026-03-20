@@ -107,6 +107,17 @@ export function PhotoGrid({
                     }
                   }
                 }}
+                onError={(e) => {
+                  // Replace broken hero image with a placeholder
+                  e.currentTarget.style.display = 'none';
+                  const parent = e.currentTarget.parentElement;
+                  if (parent && !parent.querySelector('.broken-placeholder')) {
+                    const el = document.createElement('div');
+                    el.className = 'broken-placeholder absolute inset-0 flex items-center justify-center bg-gray-200 text-gray-400 text-sm';
+                    el.textContent = '⚠ Image failed to load';
+                    parent.appendChild(el);
+                  }
+                }}
               />
             </div>
             {/* Source badge */}
@@ -172,6 +183,16 @@ export function PhotoGrid({
                     className="absolute inset-0 w-full h-full object-cover"
                     loading="lazy"
                     referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      const parent = e.currentTarget.parentElement;
+                      if (parent && !parent.querySelector('.broken-placeholder')) {
+                        const el = document.createElement('div');
+                        el.className = 'broken-placeholder absolute inset-0 flex items-center justify-center bg-gray-200 text-gray-400 text-xs';
+                        el.textContent = '⚠ Broken';
+                        parent.appendChild(el);
+                      }
+                    }}
                   />
                 </div>
                 <div className="absolute top-1 left-1">{renderBadge(photo)}</div>

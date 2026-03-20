@@ -170,7 +170,9 @@ export function CropModal({ imageUrl, listingId, uploadType = 'hero', onSave, on
               src={imageUrl}
               alt="Crop preview"
               onLoad={onImageLoad}
+              onError={() => setError('Image failed to load. The source may be unavailable or blocked.')}
               crossOrigin="anonymous"
+              referrerPolicy="no-referrer"
               className="max-w-full max-h-[55vh] object-contain"
             />
           </ReactCrop>

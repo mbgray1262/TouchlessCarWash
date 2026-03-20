@@ -601,8 +601,22 @@ Deno.serve(async (req) => {
   const allCandidates: CandidatePhoto[] = [];
   const seenUrls = new Set<string>();
 
+  function isValidPhotoUrl(url: string): boolean {
+    if (!url || url.length < 10) return false;
+    // Must be a proper HTTP(S) URL
+    if (!url.startsWith('http://') && !url.startsWith('https://')) return false;
+    // Skip data URIs that are tiny (base64 placeholders/spacers)
+    if (url.startsWith('data:') && url.length < 500) return false;
+    // Skip obvious non-photo files
+    if (/\.(svg|gif|ico|webp)(\?|$)/i.test(url)) return false;
+    // Skip tracking pixels, spacers, and tiny placeholder images
+    if (/1x1|pixel|spacer|blank|transparent|placeholder/i.test(url)) return false;
+    return true;
+  }
+
   function addPhotos(photos: CandidatePhoto[]) {
     for (const p of photos) {
+      if (!isValidPhotoUrl(p.url)) continue;
       const key = p.url.split('?')[0];
       if (seenUrls.has(key) || blocked.has(p.url)) continue;
       seenUrls.add(key);

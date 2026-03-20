@@ -162,11 +162,37 @@ export function useFastCuration(listingId: string) {
         }
       }
 
+      // Pre-validate image URLs: probe each non-existing image to filter out broken/tiny ones
+      const validatedCandidates = await Promise.all(
+        newCandidates.map(async (c) => {
+          // Always keep existing photos (they're already in the DB)
+          if (c.source === 'existing') return c;
+          try {
+            const valid = await new Promise<boolean>((resolve) => {
+              const img = new window.Image();
+              img.referrerPolicy = 'no-referrer';
+              img.onload = () => {
+                // Reject tiny images (icons, spacers, tracking pixels)
+                resolve(img.naturalWidth >= 100 && img.naturalHeight >= 100);
+              };
+              img.onerror = () => resolve(false);
+              // Timeout after 5 seconds
+              setTimeout(() => resolve(false), 5000);
+              img.src = c.url;
+            });
+            return valid ? c : null;
+          } catch {
+            return null;
+          }
+        })
+      );
+      const filteredCandidates = validatedCandidates.filter((c): c is CandidatePhoto => c !== null);
+
       // Merge with any pre-loaded candidates (avoid duplicates by URL)
       setCandidates(prev => {
-        if (prev.length === 0) return newCandidates;
+        if (prev.length === 0) return filteredCandidates;
         const existingUrls = new Set(prev.map(c => c.url));
-        const newOnly = newCandidates.filter(c => !existingUrls.has(c.url));
+        const newOnly = filteredCandidates.filter(c => !existingUrls.has(c.url));
         // Keep pre-loaded items (with user tags), add new discovered ones
         return [...prev, ...newOnly];
       });

@@ -209,8 +209,6 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
     );
   }
 
-  const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -415,8 +413,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                 <StreetViewPanel
                   latitude={listing.latitude}
                   longitude={listing.longitude}
-                  apiKey={googleMapsApiKey}
-                  onCapture={(panoId, heading, url) => addCapture(panoId, heading, url)}
+                  businessName={listing.name}
                 />
               </div>
             )}
