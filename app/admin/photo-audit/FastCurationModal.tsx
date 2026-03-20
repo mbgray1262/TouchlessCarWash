@@ -45,6 +45,36 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
   const [pasteLoading, setPasteLoading] = useState(false);
   const pasteRef = useRef<HTMLInputElement>(null);
 
+  // Clipboard paste handler — paste screenshots directly (⌘V)
+  useEffect(() => {
+    const handlePasteImage = async (e: ClipboardEvent) => {
+      if (!listing) return;
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (!file) continue;
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('type', 'gallery');
+          formData.append('listingId', listing.id);
+          try {
+            const res = await fetch('/api/upload-image', { method: 'POST', body: formData });
+            if (res.ok) {
+              const { url } = await res.json();
+              addUpload(url);
+            }
+          } catch {}
+          return; // Only handle the first image
+        }
+      }
+    };
+    window.addEventListener('paste', handlePasteImage);
+    return () => window.removeEventListener('paste', handlePasteImage);
+  }, [listing, addUpload]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
