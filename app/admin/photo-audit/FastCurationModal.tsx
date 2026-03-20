@@ -46,6 +46,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
   const pasteRef = useRef<HTMLInputElement>(null);
 
   const [pasteStatus, setPasteStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
+  const [pasteError, setPasteError] = useState<string>('');
 
   // Clipboard paste handler — paste screenshots directly (⌘V)
   useEffect(() => {
@@ -353,23 +354,28 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                           formData.append('type', 'gallery');
                           formData.append('listingId', listing.id);
                           const res = await fetch('/api/upload-image', { method: 'POST', body: formData });
-                          if (res.ok) {
-                            const { url } = await res.json();
-                            addUpload(url);
+                          const data = await res.json();
+                          if (res.ok && data.url) {
+                            addUpload(data.url);
                             setPasteStatus('success');
                           } else {
+                            console.error('Upload failed:', data);
+                            setPasteError(data.error || 'Upload failed');
                             setPasteStatus('error');
                           }
-                          setTimeout(() => setPasteStatus('idle'), 2000);
+                          setTimeout(() => setPasteStatus('idle'), 4000);
                           return;
                         }
                       }
                       // No image found in clipboard
+                      setPasteError('No image found in clipboard');
                       setPasteStatus('error');
-                      setTimeout(() => setPasteStatus('idle'), 2000);
-                    } catch {
+                      setTimeout(() => setPasteStatus('idle'), 4000);
+                    } catch (err) {
+                      console.error('Paste error:', err);
+                      setPasteError(err instanceof Error ? err.message : 'Clipboard access denied');
                       setPasteStatus('error');
-                      setTimeout(() => setPasteStatus('idle'), 2000);
+                      setTimeout(() => setPasteStatus('idle'), 4000);
                     }
                   }}
                   disabled={pasteStatus === 'uploading'}
@@ -619,7 +625,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
         }`}>
           {pasteStatus === 'uploading' && '⏳ Uploading pasted image...'}
           {pasteStatus === 'success' && '✅ Screenshot added to candidates!'}
-          {pasteStatus === 'error' && '❌ Failed to upload image'}
+          {pasteStatus === 'error' && `❌ ${pasteError || 'Failed to upload image'}`}
         </div>
       )}
 
