@@ -16,7 +16,7 @@ function json(data: unknown, status = 200) {
 interface CandidatePhoto {
   url: string;
   fullResUrl?: string;    // high-res version for saving (url is thumbnail for fast display)
-  source: 'google_places' | 'google_search' | 'website' | 'street_view' | 'existing';
+  source: 'google_places' | 'google_search' | 'bing_search' | 'website' | 'street_view' | 'existing';
   label?: string;         // author, domain, etc.
   googlePhotoName?: string; // for Google Places rehosting
   streetviewPano?: string;  // pano:heading for Street View capture
@@ -72,82 +72,71 @@ async function fetchGooglePlacesPhotos(placeId: string, apiKey: string): Promise
   } catch { return []; }
 }
 
-// ── SerpAPI Image Search ─────────────────────────────────
-async function fetchSerpApiImages(
+// ── Bing Image Search (free, no API key needed) ─────────────────────────────────
+async function fetchBingImages(
   name: string, city: string, state: string,
-  serpApiKey: string,
   address?: string,
 ): Promise<CandidatePhoto[]> {
-  if (!serpApiKey) return [];
   try {
-    // Use address for specificity, skip redundant "car wash" if name already contains it
     const nameHasCarWash = name.toLowerCase().includes('car wash') || name.toLowerCase().includes('carwash');
     const locationPart = address ? `"${address}"` : `${city} ${state}`;
     const query = encodeURIComponent(`${name} ${locationPart}${nameHasCarWash ? '' : ' car wash'}`);
     const res = await fetch(
-      `https://serpapi.com/search.json?q=${query}&tbm=isch&api_key=${serpApiKey}&num=10`,
-      { signal: AbortSignal.timeout(10000) },
+      `https://www.bing.com/images/search?q=${query}&first=1`,
+      {
+        signal: AbortSignal.timeout(10000),
+        headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36' },
+      },
     );
     if (!res.ok) return [];
-    const data = await res.json();
-    const results = data.images_results ?? [];
+    const html = await res.text();
 
+    // Extract full-res media URLs from Bing's encoded data attributes
+    const mediaUrlMatches = html.matchAll(/murl&quot;:&quot;(https?:\/\/[^&]+?)&quot;/g);
+    const results: Array<{ original: string; width?: number; height?: number; source?: string }> = [];
+    for (const match of mediaUrlMatches) {
+      const decoded = decodeURIComponent(match[1]);
+      // Try to extract dimensions from nearby data
+      results.push({ original: decoded });
+    }
+
+    const seen = new Set<string>();
     return results
-      .filter((r: { original?: string; width?: number; height?: number; thumbnail?: string; title?: string; source?: string }) => {
+      .filter((r) => {
         if (!r.original) return false;
+        if (seen.has(r.original)) return false;
+        seen.add(r.original);
         const url = r.original.toLowerCase();
-        const title = (r.title ?? '').toLowerCase();
-        const source = (r.source ?? '').toLowerCase();
-        const w = r.width ?? 0;
-        const h = r.height ?? 0;
 
-        // Filter out tiny images (logos, icons, buttons)
-        if (w > 0 && h > 0 && (w < 400 || h < 300)) return false;
-
-        // Filter out nearly square images (likely logos/graphics)
-        if (w > 0 && h > 0) {
-          const ratio = w / h;
-          if (ratio > 0.85 && ratio < 1.15 && w < 800) return false;
-        }
-
-        // Filter out common non-photo file types
-        if (url.endsWith('.svg') || url.endsWith('.gif') || url.endsWith('.ico') || url.endsWith('.png')) return false;
+        // Filter out non-photo file types
+        if (url.endsWith('.svg') || url.endsWith('.gif') || url.endsWith('.ico')) return false;
         if (url.includes('/logo') || url.includes('_logo') || url.includes('-logo')) return false;
         if (url.includes('/icon') || url.includes('favicon') || url.includes('/brand')) return false;
         if (url.includes('badge') || url.includes('coupon') || url.includes('banner')) return false;
         if (url.includes('graphic') || url.includes('clipart') || url.includes('vector')) return false;
-
-        // Filter out app store / social media icons
         if (url.includes('play.google.com') || url.includes('apps.apple.com')) return false;
         if (url.includes('play-lh.googleusercontent')) return false;
-        if (url.includes('yelp.com/biz_photos') === false && url.includes('yelp') && w < 600) return false;
-
-        // Filter out known junk sources
-        if (source.includes('google play') || source.includes('app store')) return false;
-        if (source.includes('facebook') && w < 600) return false;
-
-        // Filter out images with junk titles
-        if (title.includes('logo') || title.includes('app') || title.includes('download')) return false;
-        if (title.includes('coupon') || title.includes('deal') || title.includes('gift card')) return false;
-        if (title.includes('membership') || title.includes('price') || title.includes('menu')) return false;
-
-        // Only keep JPEGs and large PNGs (photos are almost always JPEG)
-        const isJpeg = url.includes('.jpg') || url.includes('.jpeg') || url.includes('format=jpg');
-        const isLargePng = url.includes('.png') && w > 800 && h > 600;
-        const isGoogleusercontent = url.includes('googleusercontent.com');
-        if (!isJpeg && !isLargePng && !isGoogleusercontent) return false;
 
         return true;
       })
-      .slice(0, 6)
-      .map((r: { original: string; thumbnail?: string; source?: string; width?: number; height?: number }) => ({
-        url: r.thumbnail ?? r.original,
-        fullResUrl: r.original,
-        source: 'google_search' as const,
-        label: r.source ?? 'Web',
-        width: r.width,
-        height: r.height,
-      }));
+      .slice(0, 8)
+      .map((r) => {
+        // Determine source label from URL domain
+        const domain = new URL(r.original).hostname.replace('www.', '');
+        let label = domain.length > 20 ? domain.slice(0, 20) : domain;
+        if (domain.includes('yelp')) label = 'Yelp';
+        if (domain.includes('facebook') || domain.includes('fbsbx')) label = 'Facebook';
+        if (domain.includes('instagram')) label = 'Instagram';
+
+        return {
+          url: r.original,
+          fullResUrl: r.original,
+          source: 'bing_search' as const,
+          label,
+          width: r.width,
+          height: r.height,
+        };
+      });
   } catch { return []; }
 }
 
@@ -267,7 +256,6 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, serviceKey);
 
   const googleApiKey = Deno.env.get('GOOGLE_PLACES_API_KEY') ?? '';
-  const serpApiKey = Deno.env.get('SERPAPI_KEY') ?? '';
 
   // Fetch listing data
   const { data: listing } = await supabase
@@ -280,12 +268,12 @@ Deno.serve(async (req) => {
 
   const blocked = new Set(listing.blocked_photos ?? []);
 
-  // Fire all sources in parallel
-  const [googlePlaces, googleSearch, websitePhotos, streetView] = await Promise.allSettled([
-    listing.google_place_id ? fetchGooglePlacesPhotos(listing.google_place_id, googleApiKey) : Promise.resolve([]),
-    fetchSerpApiImages(listing.name, listing.city, listing.state, serpApiKey, listing.address),
-    Promise.resolve([]), // Website photos disabled — too much junk (logos, icons, illustrations)
-    (listing.latitude && listing.longitude) ? fetchStreetViewThumbnail(listing.latitude, listing.longitude, googleApiKey) : Promise.resolve(null),
+  // Fire all sources in parallel (Bing is free, Google Places only if key is set)
+  const [googlePlaces, bingSearch, websitePhotos, streetView] = await Promise.allSettled([
+    (listing.google_place_id && googleApiKey) ? fetchGooglePlacesPhotos(listing.google_place_id, googleApiKey) : Promise.resolve([]),
+    fetchBingImages(listing.name, listing.city, listing.state, listing.address),
+    Promise.resolve([]), // Website photos disabled — too much junk
+    (listing.latitude && listing.longitude && googleApiKey) ? fetchStreetViewThumbnail(listing.latitude, listing.longitude, googleApiKey) : Promise.resolve(null),
   ]);
 
   // Collect existing photos
@@ -320,7 +308,7 @@ Deno.serve(async (req) => {
   // Add in priority order: existing first, then google places, search, website, street view
   addPhotos(existing);
   addPhotos(googlePlaces.status === 'fulfilled' ? googlePlaces.value : []);
-  addPhotos(googleSearch.status === 'fulfilled' ? googleSearch.value : []);
+  addPhotos(bingSearch.status === 'fulfilled' ? bingSearch.value : []);
   addPhotos(websitePhotos.status === 'fulfilled' ? websitePhotos.value : []);
 
   const svResult = streetView.status === 'fulfilled' ? streetView.value : null;
@@ -332,7 +320,7 @@ Deno.serve(async (req) => {
     sources: {
       existing: existing.length,
       google_places: googlePlaces.status === 'fulfilled' ? googlePlaces.value.length : 0,
-      google_search: googleSearch.status === 'fulfilled' ? googleSearch.value.length : 0,
+      bing_search: bingSearch.status === 'fulfilled' ? bingSearch.value.length : 0,
       website: websitePhotos.status === 'fulfilled' ? websitePhotos.value.length : 0,
       street_view: svResult ? 1 : 0,
     },
