@@ -577,7 +577,7 @@ Deno.serve(async (req) => {
     fetchYelpPhotos(listing.name, listing.city, listing.state),
     listing.google_place_id ? fetchGoogleMapsPhotos(listing.google_place_id, listing.name, listing.city, listing.state) : Promise.resolve([]),
     (listing.google_place_id && googleApiKey) ? fetchGooglePlacesPhotos(listing.google_place_id, googleApiKey) : Promise.resolve([]),
-    fetchBingImages(listing.name, listing.city, listing.state, listing.address),
+    Promise.resolve([]), // Generic Bing search DISABLED — returned too many irrelevant photos (houses, other businesses)
     listing.website ? fetchWebsitePhotos(listing.website) : Promise.resolve([]),
     (listing.latitude && listing.longitude && googleApiKey) ? fetchStreetViewThumbnail(listing.latitude, listing.longitude, googleApiKey) : Promise.resolve(null),
   ]);
