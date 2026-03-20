@@ -70,31 +70,18 @@ export function StreetViewPanel({ latitude, longitude, apiKey, onCapture }: Stre
   }, []);
 
   const handleCapture = useCallback(async () => {
-    if (!panoramaRef.current || !containerRef.current) return;
+    if (!panoramaRef.current) return;
     setCapturing(true);
 
     const pano = panoramaRef.current.getPano();
     const pov = panoramaRef.current.getPov();
     const heading = Math.round(pov.heading * 100) / 100;
-
-    // Try to capture the canvas directly from the interactive panorama (high-res)
-    const canvas = containerRef.current.querySelector('canvas') as HTMLCanvasElement | null;
-    if (canvas) {
-      try {
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-        onCapture(pano, heading, dataUrl);
-        setCapturing(false);
-        return;
-      } catch {
-        // Canvas capture failed (tainted by cross-origin) — fall back to Static API
-      }
-    }
-
-    // Fallback: use Static API at max unsigned size
     const pitch = Math.round(pov.pitch * 100) / 100;
     const zoom = panoramaRef.current.getZoom?.() ?? (pov as unknown as Record<string, number>).zoom ?? 1;
     const fov = Math.round(180 / Math.pow(2, zoom));
-    const thumbUrl = `https://maps.googleapis.com/maps/api/streetview?size=640x640&pano=${pano}&heading=${heading}&pitch=${pitch}&fov=${fov}&key=${apiKey}`;
+
+    // Max unsigned Street View Static API size is 640x640
+    const thumbUrl = `https://maps.googleapis.com/maps/api/streetview?size=640x480&pano=${pano}&heading=${heading}&pitch=${pitch}&fov=${fov}&key=${apiKey}`;
 
     onCapture(pano, heading, thumbUrl);
     setCapturing(false);
