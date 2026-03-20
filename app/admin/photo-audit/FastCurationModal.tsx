@@ -45,6 +45,8 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
   const [pasteLoading, setPasteLoading] = useState(false);
   const pasteRef = useRef<HTMLInputElement>(null);
 
+  const [pasteStatus, setPasteStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
+
   // Clipboard paste handler — paste screenshots directly (⌘V)
   useEffect(() => {
     const handlePasteImage = async (e: ClipboardEvent) => {
@@ -56,6 +58,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
           e.preventDefault();
           const file = item.getAsFile();
           if (!file) continue;
+          setPasteStatus('uploading');
           const formData = new FormData();
           formData.append('file', file);
           formData.append('type', 'gallery');
@@ -65,9 +68,15 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
             if (res.ok) {
               const { url } = await res.json();
               addUpload(url);
+              setPasteStatus('success');
+            } else {
+              setPasteStatus('error');
             }
-          } catch {}
-          return; // Only handle the first image
+          } catch {
+            setPasteStatus('error');
+          }
+          setTimeout(() => setPasteStatus('idle'), 2000);
+          return;
         }
       }
     };
@@ -560,6 +569,19 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
           </div>
         </div>
       </div>
+
+      {/* Paste status toast */}
+      {pasteStatus !== 'idle' && (
+        <div className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] px-4 py-2 rounded-lg text-white text-sm font-medium shadow-lg transition-all ${
+          pasteStatus === 'uploading' ? 'bg-blue-600' :
+          pasteStatus === 'success' ? 'bg-green-600' :
+          'bg-red-600'
+        }`}>
+          {pasteStatus === 'uploading' && '⏳ Uploading pasted image...'}
+          {pasteStatus === 'success' && '✅ Screenshot added to candidates!'}
+          {pasteStatus === 'error' && '❌ Failed to upload image'}
+        </div>
+      )}
 
       {/* Crop modal */}
       {cropPhoto && (

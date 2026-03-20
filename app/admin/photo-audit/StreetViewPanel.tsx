@@ -39,7 +39,11 @@ export function StreetViewPanel({ latitude, longitude, businessName }: StreetVie
             referrerPolicy="no-referrer-when-downgrade"
           />
           <div className="flex items-center justify-between px-4 py-2 bg-white border-t">
-            <span className="text-xs text-gray-500">Navigate to best view, then <kbd className="px-1 py-0.5 bg-gray-200 rounded text-[10px] font-mono">⌘+Shift+4</kbd> to screenshot &amp; <kbd className="px-1 py-0.5 bg-gray-200 rounded text-[10px] font-mono">⌘V</kbd> to paste</span>
+            <span className="text-xs text-gray-500">
+              <kbd className="px-1 py-0.5 bg-gray-200 rounded text-[10px] font-mono">⌘+Ctrl+Shift+4</kbd> screenshot
+              → click here
+              → <kbd className="px-1 py-0.5 bg-gray-200 rounded text-[10px] font-mono">⌘V</kbd> to add photo
+            </span>
             <a
               href={fullViewUrl}
               target="_blank"
