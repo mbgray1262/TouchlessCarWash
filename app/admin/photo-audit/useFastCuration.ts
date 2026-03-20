@@ -11,6 +11,7 @@ export interface CandidatePhoto {
   id: string;
   url: string;
   fullResUrl?: string;
+  sourceUrl?: string;
   source: PhotoSource;
   label?: string;
   googlePhotoName?: string;
@@ -135,10 +136,11 @@ export function useFastCuration(listingId: string) {
       const data = await res.json();
 
       const newCandidates: CandidatePhoto[] = (data.candidates ?? []).map(
-        (c: { url: string; fullResUrl?: string; source: PhotoSource; label?: string; googlePhotoName?: string; streetviewPano?: string; width?: number; height?: number }, i: number) => ({
+        (c: { url: string; fullResUrl?: string; sourceUrl?: string; source: PhotoSource; label?: string; googlePhotoName?: string; streetviewPano?: string; width?: number; height?: number }, i: number) => ({
           id: `photo-${i}-${Date.now()}`,
           url: c.url,
           fullResUrl: c.fullResUrl,
+          sourceUrl: c.sourceUrl,
           source: c.source,
           label: c.label,
           googlePhotoName: c.googlePhotoName,

@@ -57,6 +57,20 @@ export function PhotoGrid({
 
   const renderBadge = (photo: CandidatePhoto) => {
     const badge = SOURCE_BADGES[photo.source] ?? { label: photo.source, color: 'bg-gray-500' };
+    if (photo.sourceUrl) {
+      return (
+        <a
+          href={photo.sourceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className={`px-1.5 py-0.5 rounded text-[10px] font-medium text-white ${badge.color} hover:opacity-80 cursor-pointer`}
+          title={`View source: ${photo.sourceUrl}`}
+        >
+          {badge.label}
+        </a>
+      );
+    }
     return (
       <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium text-white ${badge.color}`}>
         {badge.label}

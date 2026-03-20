@@ -80,10 +80,43 @@ export function StreetViewPanel({ latitude, longitude, apiKey, onCapture }: Stre
     const zoom = panoramaRef.current.getZoom?.() ?? (pov as unknown as Record<string, number>).zoom ?? 1;
     const fov = Math.round(180 / Math.pow(2, zoom));
 
-    // Max unsigned Street View Static API size is 640x640
-    const thumbUrl = `https://maps.googleapis.com/maps/api/streetview?size=640x480&pano=${pano}&heading=${heading}&pitch=${pitch}&fov=${fov}&key=${apiKey}`;
+    // Stitch 3 tiles side-by-side for a high-res panoramic capture (~1920x640)
+    const tileW = 640;
+    const tileH = 480;
+    const tileFov = Math.min(fov, 60); // Each tile covers 60° FOV for sharp detail
+    const offsets = [-tileFov, 0, tileFov]; // Left, center, right
+    const tiles = offsets.map(off => {
+      const h = ((heading + off) % 360 + 360) % 360;
+      return `https://maps.googleapis.com/maps/api/streetview?size=${tileW}x${tileH}&pano=${pano}&heading=${h}&pitch=${pitch}&fov=${tileFov}&key=${apiKey}`;
+    });
 
-    onCapture(pano, heading, thumbUrl);
+    try {
+      // Load all 3 tiles
+      const imgs = await Promise.all(tiles.map(url =>
+        new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = url;
+        })
+      ));
+
+      // Stitch onto a canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = tileW * 3;
+      canvas.height = tileH;
+      const ctx = canvas.getContext('2d')!;
+      imgs.forEach((img, i) => ctx.drawImage(img, i * tileW, 0));
+
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+      onCapture(pano, heading, dataUrl);
+    } catch {
+      // Fallback to single tile if stitching fails
+      const thumbUrl = `https://maps.googleapis.com/maps/api/streetview?size=640x480&pano=${pano}&heading=${heading}&pitch=${pitch}&fov=${fov}&key=${apiKey}`;
+      onCapture(pano, heading, thumbUrl);
+    }
+
     setCapturing(false);
   }, [apiKey, onCapture]);
 

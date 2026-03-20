@@ -18,6 +18,7 @@ interface CandidatePhoto {
   fullResUrl?: string;    // high-res version for saving (url is thumbnail for fast display)
   source: 'google_places' | 'google_search' | 'bing_search' | 'website' | 'street_view' | 'existing';
   label?: string;         // author, domain, etc.
+  sourceUrl?: string;      // link to the page where the photo was found
   googlePhotoName?: string; // for Google Places rehosting
   streetviewPano?: string;  // pano:heading for Street View capture
   width?: number;
@@ -91,13 +92,17 @@ async function fetchBingImages(
     if (!res.ok) return [];
     const html = await res.text();
 
-    // Extract full-res media URLs from Bing's encoded data attributes
+    // Extract full-res media URLs AND source page URLs from Bing's encoded data
     const mediaUrlMatches = html.matchAll(/murl&quot;:&quot;(https?:\/\/[^&]+?)&quot;/g);
-    const results: Array<{ original: string; width?: number; height?: number; source?: string }> = [];
-    for (const match of mediaUrlMatches) {
-      const decoded = decodeURIComponent(match[1]);
-      // Try to extract dimensions from nearby data
-      results.push({ original: decoded });
+    const pageUrlMatches = html.matchAll(/purl&quot;:&quot;(https?:\/\/[^&]+?)&quot;/g);
+    const mediaUrls: string[] = [];
+    const pageUrls: string[] = [];
+    for (const match of mediaUrlMatches) mediaUrls.push(decodeURIComponent(match[1]));
+    for (const match of pageUrlMatches) pageUrls.push(decodeURIComponent(match[1]));
+
+    const results: Array<{ original: string; pageUrl?: string }> = [];
+    for (let i = 0; i < mediaUrls.length; i++) {
+      results.push({ original: mediaUrls[i], pageUrl: pageUrls[i] });
     }
 
     const seen = new Set<string>();
@@ -133,8 +138,7 @@ async function fetchBingImages(
           fullResUrl: r.original,
           source: 'bing_search' as const,
           label,
-          width: r.width,
-          height: r.height,
+          sourceUrl: r.pageUrl,
         };
       });
   } catch { return []; }
@@ -272,7 +276,7 @@ Deno.serve(async (req) => {
   const [googlePlaces, bingSearch, websitePhotos, streetView] = await Promise.allSettled([
     (listing.google_place_id && googleApiKey) ? fetchGooglePlacesPhotos(listing.google_place_id, googleApiKey) : Promise.resolve([]),
     fetchBingImages(listing.name, listing.city, listing.state, listing.address),
-    Promise.resolve([]), // Website photos disabled — too much junk
+    listing.website ? fetchWebsitePhotos(listing.website) : Promise.resolve([]),
     (listing.latitude && listing.longitude && googleApiKey) ? fetchStreetViewThumbnail(listing.latitude, listing.longitude, googleApiKey) : Promise.resolve(null),
   ]);
 
