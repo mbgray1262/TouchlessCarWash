@@ -133,6 +133,24 @@ async function fetchBingImages(
         if (url.includes('play.google.com') || url.includes('apps.apple.com')) return false;
         if (url.includes('play-lh.googleusercontent')) return false;
 
+        // Filter out real estate / housing sites (Bing often matches addresses to house listings)
+        if (url.includes('zillow') || url.includes('zillowstatic')) return false;
+        if (url.includes('redfin') || url.includes('rdcpix')) return false;
+        if (url.includes('trulia')) return false;
+        if (url.includes('realtor.com') || url.includes('ar.rdcpix')) return false;
+        if (url.includes('apartments.com') || url.includes('apartmentfinder')) return false;
+        if (url.includes('hotpads') || url.includes('rent.com')) return false;
+        if (url.includes('homesnap') || url.includes('homes.com')) return false;
+        if (url.includes('movoto') || url.includes('estately')) return false;
+        if (url.includes('compass.com') || url.includes('coldwellbanker')) return false;
+        if (url.includes('century21') || url.includes('keller') || url.includes('remax')) return false;
+
+        // Filter out other irrelevant domains
+        if (url.includes('shutterstock') || url.includes('istockphoto') || url.includes('gettyimages') || url.includes('dreamstime') || url.includes('alamy')) return false;
+        if (url.includes('amazon.com') || url.includes('ebay.com') || url.includes('walmart.com') || url.includes('target.com')) return false;
+        if (url.includes('linkedin.com') || url.includes('twitter.com') || url.includes('tiktok.com')) return false;
+        if (url.includes('pinterest.com') || url.includes('pinimg.com')) return false;
+
         // Location relevance: if the page URL or title mentions a different city, skip it
         // Only apply this check for generic names (car wash names that exist in many cities)
         const pageUrl = (r.pageUrl ?? '').toLowerCase();
