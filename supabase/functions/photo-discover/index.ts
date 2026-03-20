@@ -15,17 +15,50 @@ function json(data: unknown, status = 200) {
 
 interface CandidatePhoto {
   url: string;
-  fullResUrl?: string;    // high-res version for saving (url is thumbnail for fast display)
-  source: 'google_places' | 'google_search' | 'bing_search' | 'website' | 'street_view' | 'existing';
-  label?: string;         // author, domain, etc.
-  sourceUrl?: string;      // link to the page where the photo was found
-  googlePhotoName?: string; // for Google Places rehosting
-  streetviewPano?: string;  // pano:heading for Street View capture
+  fullResUrl?: string;
+  source: 'google_places' | 'google_maps' | 'google_search' | 'bing_search' | 'website' | 'street_view' | 'existing';
+  label?: string;
+  sourceUrl?: string;
+  googlePhotoName?: string;
+  streetviewPano?: string;
   width?: number;
   height?: number;
 }
 
-// ── Google Places photos ────────────────────────────────────────
+const BROWSER_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
+
+// ── Blocked domains (real estate, stock photos, irrelevant) ──────────────────
+const BLOCKED_DOMAINS = [
+  // Real estate
+  'zillow', 'zillowstatic', 'redfin', 'rdcpix', 'trulia', 'realtor.com',
+  'apartments.com', 'apartmentfinder', 'hotpads', 'rent.com', 'homesnap',
+  'homes.com', 'movoto', 'estately', 'compass.com', 'coldwellbanker',
+  'century21', 'keller', 'remax',
+  // Stock photos
+  'shutterstock', 'istockphoto', 'gettyimages', 'dreamstime', 'alamy',
+  'depositphotos', 'stock.adobe', '123rf',
+  // E-commerce
+  'amazon.com', 'ebay.com', 'walmart.com', 'target.com',
+  // Social (not useful for car wash photos)
+  'linkedin.com', 'twitter.com', 'tiktok.com', 'pinterest.com', 'pinimg.com',
+  // App stores
+  'play.google.com', 'apps.apple.com', 'play-lh.googleusercontent',
+];
+
+const BLOCKED_URL_PATTERNS = [
+  '/logo', '_logo', '-logo', '/icon', 'favicon', '/brand',
+  'badge', 'coupon', 'banner', 'graphic', 'clipart', 'vector',
+];
+
+function isBlockedUrl(url: string): boolean {
+  const lower = url.toLowerCase();
+  if (lower.endsWith('.svg') || lower.endsWith('.gif') || lower.endsWith('.ico')) return true;
+  for (const d of BLOCKED_DOMAINS) { if (lower.includes(d)) return true; }
+  for (const p of BLOCKED_URL_PATTERNS) { if (lower.includes(p)) return true; }
+  return false;
+}
+
+// ── Google Places photos (paid API — only if key is set) ─────────────────────
 async function fetchGooglePlacesPhotos(placeId: string, apiKey: string): Promise<CandidatePhoto[]> {
   try {
     const res = await fetch(
@@ -36,11 +69,9 @@ async function fetchGooglePlacesPhotos(placeId: string, apiKey: string): Promise
     const data = await res.json();
     const photoRefs = data.photos ?? [];
 
-    // Resolve photo URLs in parallel (w400 thumbnail for fast display, w1600 for saving)
     const resolved = await Promise.all(
       photoRefs.slice(0, 10).map(async (photo: { name: string; widthPx: number; heightPx: number; authorAttributions?: Array<{ displayName: string }> }) => {
         try {
-          // Fetch thumbnail (400px) for fast grid display
           const thumbRes = await fetch(
             `https://places.googleapis.com/v1/${photo.name}/media?maxHeightPx=400&maxWidthPx=400&key=${apiKey}&skipHttpRedirect=true`,
             { signal: AbortSignal.timeout(5000) },
@@ -49,7 +80,6 @@ async function fetchGooglePlacesPhotos(placeId: string, apiKey: string): Promise
           const thumbData = await thumbRes.json();
           if (!thumbData.photoUri) return null;
 
-          // Build full-res URL (1600px) for saving — same pattern, just larger
           const fullRes = await fetch(
             `https://places.googleapis.com/v1/${photo.name}/media?maxHeightPx=1600&maxWidthPx=1600&key=${apiKey}&skipHttpRedirect=true`,
             { signal: AbortSignal.timeout(5000) },
@@ -73,15 +103,175 @@ async function fetchGooglePlacesPhotos(placeId: string, apiKey: string): Promise
   } catch { return []; }
 }
 
-// ── Bing Image Search (free, no API key needed) ─────────────────────────────────
+// ── Google Maps Photos scraping (FREE — no API key) ──────────────────────────
+// Scrapes the Google Maps page for a place to extract user-uploaded photos
+async function fetchGoogleMapsPhotos(placeId: string): Promise<CandidatePhoto[]> {
+  try {
+    // Fetch the Google Maps place page
+    const mapsUrl = `https://www.google.com/maps/place/?q=place_id:${placeId}`;
+    const res = await fetch(mapsUrl, {
+      signal: AbortSignal.timeout(10000),
+      headers: {
+        'User-Agent': BROWSER_UA,
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+    });
+    if (!res.ok) return [];
+    const html = await res.text();
+
+    // Google Maps embeds photo URLs in various formats in the HTML/JS
+    // Look for googleusercontent.com photo URLs (these are the actual photos)
+    const photoUrls = new Set<string>();
+
+    // Pattern 1: lh5/lh3.googleusercontent.com URLs with photo paths
+    const gucRegex = /https:\/\/lh[35]\.googleusercontent\.com\/p\/[A-Za-z0-9_-]+/g;
+    let match;
+    while ((match = gucRegex.exec(html)) !== null) {
+      photoUrls.add(match[0]);
+    }
+
+    // Pattern 2: Google Maps photo CDN URLs
+    const cdnRegex = /https:\/\/streetviewpixels-pa\.googleapis\.com\/v1\/thumbnail\?[^"'\s]+/g;
+    while ((match = cdnRegex.exec(html)) !== null) {
+      // Skip actual street view thumbnails
+      if (!match[0].includes('cb_client=maps_sv')) {
+        photoUrls.add(match[0]);
+      }
+    }
+
+    // Pattern 3: Another common photo URL pattern in maps data
+    const altRegex = /https:\/\/lh[35]\.googleusercontent\.com\/gps-proxy\/[A-Za-z0-9_=-]+/g;
+    while ((match = altRegex.exec(html)) !== null) {
+      photoUrls.add(match[0]);
+    }
+
+    const photos: CandidatePhoto[] = [];
+    for (const url of photoUrls) {
+      if (photos.length >= 10) break;
+      // Create thumbnail (w400) and full-res (w1600) versions
+      const thumbUrl = url.includes('=') ? url.replace(/=.*$/, '=w400-h300') : `${url}=w400-h300`;
+      const fullUrl = url.includes('=') ? url.replace(/=.*$/, '=w1600-h1200') : `${url}=w1600-h1200`;
+      photos.push({
+        url: thumbUrl,
+        fullResUrl: fullUrl,
+        source: 'google_maps' as const,
+        label: 'Google Maps',
+        sourceUrl: `https://www.google.com/maps/place/?q=place_id:${placeId}`,
+      });
+    }
+
+    return photos;
+  } catch (err) {
+    console.error('Google Maps scrape failed:', err);
+    return [];
+  }
+}
+
+// ── Google Image Search (FREE — HTML scraping) ───────────────────────────────
+async function fetchGoogleImages(
+  name: string, city: string, state: string,
+  address?: string,
+): Promise<CandidatePhoto[]> {
+  try {
+    const nameHasCarWash = name.toLowerCase().includes('car wash') || name.toLowerCase().includes('carwash');
+    const locationParts = [city, state];
+    if (address) locationParts.unshift(address);
+    const searchTerms = `"${name}" ${locationParts.join(' ')}${nameHasCarWash ? '' : ' car wash'}`;
+    const query = encodeURIComponent(searchTerms);
+
+    const res = await fetch(
+      `https://www.google.com/search?q=${query}&tbm=isch&hl=en`,
+      {
+        signal: AbortSignal.timeout(10000),
+        headers: {
+          'User-Agent': BROWSER_UA,
+          'Accept': 'text/html,application/xhtml+xml',
+          'Accept-Language': 'en-US,en;q=0.9',
+        },
+      },
+    );
+    if (!res.ok) return [];
+    const html = await res.text();
+
+    // Google Images embeds image data in script tags as JSON arrays
+    // Extract image URLs from various patterns
+    const imageUrls: Array<{ url: string; sourceUrl?: string }> = [];
+
+    // Pattern 1: Direct image URLs in data attributes and scripts
+    // Google uses base64 thumbnails inline but links to original images
+    const imgRegex = /\["(https?:\/\/[^"]+\.(?:jpg|jpeg|png|webp)[^"]*)",\s*(\d+),\s*(\d+)\]/gi;
+    let match;
+    while ((match = imgRegex.exec(html)) !== null) {
+      const url = match[1].replace(/\\u003d/g, '=').replace(/\\u0026/g, '&');
+      const width = parseInt(match[2]);
+      const height = parseInt(match[3]);
+      // Skip tiny images (thumbnails, icons)
+      if (width > 200 && height > 200) {
+        imageUrls.push({ url });
+      }
+    }
+
+    // Pattern 2: og-image style URLs embedded in the page
+    const altImgRegex = /\["(https?:\/\/(?:lh[35]\.googleusercontent|encrypted-tbn0\.gstatic)\.com\/[^"]+)"/g;
+    while ((match = altImgRegex.exec(html)) !== null) {
+      const url = match[1].replace(/\\u003d/g, '=').replace(/\\u0026/g, '&');
+      if (!url.includes('=s') || url.includes('=s1') || url.includes('=w')) {
+        imageUrls.push({ url });
+      }
+    }
+
+    // Pattern 3: Source page URLs paired with images
+    const sourceRegex = /\["(https?:\/\/(?!(?:www\.)?google\.com)[^"]+)",\s*\d+,\s*\d+,\s*null,\s*null,\s*null,\s*null,\s*null,\s*null,\s*null,\s*null,\s*null,\s*null,\s*null,\s*null,\s*null,\s*"([^"]+)"/g;
+    while ((match = sourceRegex.exec(html)) !== null) {
+      // match[2] is often the source page
+    }
+
+    const seen = new Set<string>();
+    const cityLower = city.toLowerCase();
+    const stateLower = state.toLowerCase();
+
+    return imageUrls
+      .filter((r) => {
+        if (!r.url || seen.has(r.url)) return false;
+        seen.add(r.url);
+        if (isBlockedUrl(r.url)) return false;
+        // Skip Google's own thumbnail proxy URLs (they're low res)
+        if (r.url.includes('encrypted-tbn0.gstatic.com')) return false;
+        return true;
+      })
+      .slice(0, 8)
+      .map((r) => {
+        let label = 'Google';
+        try {
+          const domain = new URL(r.url).hostname.replace('www.', '');
+          label = domain.length > 20 ? domain.slice(0, 20) : domain;
+          if (domain.includes('yelp')) label = 'Yelp';
+          if (domain.includes('facebook') || domain.includes('fbsbx')) label = 'Facebook';
+          if (domain.includes('instagram')) label = 'Instagram';
+          if (domain.includes('googleusercontent')) label = 'Google';
+        } catch { /* ignore */ }
+
+        return {
+          url: r.url,
+          fullResUrl: r.url,
+          source: 'google_search' as const,
+          label,
+          sourceUrl: r.sourceUrl,
+        };
+      });
+  } catch (err) {
+    console.error('Google Image Search failed:', err);
+    return [];
+  }
+}
+
+// ── Bing Image Search (FREE fallback) ────────────────────────────────────────
 async function fetchBingImages(
   name: string, city: string, state: string,
   address?: string,
 ): Promise<CandidatePhoto[]> {
   try {
     const nameHasCarWash = name.toLowerCase().includes('car wash') || name.toLowerCase().includes('carwash');
-    // Always include city+state for location specificity, plus address if available
-    // Quote the business name to force exact match (prevents "Westside Car Wash" in TX matching one in SD)
     const locationParts = [city, state];
     if (address) locationParts.unshift(address);
     const query = encodeURIComponent(`"${name}" ${locationParts.join(' ')}${nameHasCarWash ? '' : ' car wash'}`);
@@ -89,13 +279,12 @@ async function fetchBingImages(
       `https://www.bing.com/images/search?q=${query}&first=1`,
       {
         signal: AbortSignal.timeout(10000),
-        headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36' },
+        headers: { 'User-Agent': BROWSER_UA },
       },
     );
     if (!res.ok) return [];
     const html = await res.text();
 
-    // Extract full-res media URLs AND source page URLs from Bing's encoded data
     const mediaUrlMatches = html.matchAll(/murl&quot;:&quot;(https?:\/\/[^&]+?)&quot;/g);
     const pageUrlMatches = html.matchAll(/purl&quot;:&quot;(https?:\/\/[^&]+?)&quot;/g);
     const mediaUrls: string[] = [];
@@ -108,69 +297,17 @@ async function fetchBingImages(
       results.push({ original: mediaUrls[i], pageUrl: pageUrls[i] });
     }
 
-    // Also extract page titles for location relevance filtering
-    const titleMatches = html.matchAll(/t&quot;:&quot;([^&]*?)&quot;/g);
-    const titles: string[] = [];
-    for (const match of titleMatches) titles.push(decodeURIComponent(match[1]));
-
     const seen = new Set<string>();
-    const cityLower = city.toLowerCase();
-    const stateLower = state.toLowerCase();
 
     return results
-      .filter((r, idx) => {
-        if (!r.original) return false;
-        if (seen.has(r.original)) return false;
+      .filter((r) => {
+        if (!r.original || seen.has(r.original)) return false;
         seen.add(r.original);
-        const url = r.original.toLowerCase();
-
-        // Filter out non-photo file types
-        if (url.endsWith('.svg') || url.endsWith('.gif') || url.endsWith('.ico')) return false;
-        if (url.includes('/logo') || url.includes('_logo') || url.includes('-logo')) return false;
-        if (url.includes('/icon') || url.includes('favicon') || url.includes('/brand')) return false;
-        if (url.includes('badge') || url.includes('coupon') || url.includes('banner')) return false;
-        if (url.includes('graphic') || url.includes('clipart') || url.includes('vector')) return false;
-        if (url.includes('play.google.com') || url.includes('apps.apple.com')) return false;
-        if (url.includes('play-lh.googleusercontent')) return false;
-
-        // Filter out real estate / housing sites (Bing often matches addresses to house listings)
-        if (url.includes('zillow') || url.includes('zillowstatic')) return false;
-        if (url.includes('redfin') || url.includes('rdcpix')) return false;
-        if (url.includes('trulia')) return false;
-        if (url.includes('realtor.com') || url.includes('ar.rdcpix')) return false;
-        if (url.includes('apartments.com') || url.includes('apartmentfinder')) return false;
-        if (url.includes('hotpads') || url.includes('rent.com')) return false;
-        if (url.includes('homesnap') || url.includes('homes.com')) return false;
-        if (url.includes('movoto') || url.includes('estately')) return false;
-        if (url.includes('compass.com') || url.includes('coldwellbanker')) return false;
-        if (url.includes('century21') || url.includes('keller') || url.includes('remax')) return false;
-
-        // Filter out other irrelevant domains
-        if (url.includes('shutterstock') || url.includes('istockphoto') || url.includes('gettyimages') || url.includes('dreamstime') || url.includes('alamy')) return false;
-        if (url.includes('amazon.com') || url.includes('ebay.com') || url.includes('walmart.com') || url.includes('target.com')) return false;
-        if (url.includes('linkedin.com') || url.includes('twitter.com') || url.includes('tiktok.com')) return false;
-        if (url.includes('pinterest.com') || url.includes('pinimg.com')) return false;
-
-        // Location relevance: if the page URL or title mentions a different city, skip it
-        // Only apply this check for generic names (car wash names that exist in many cities)
-        const pageUrl = (r.pageUrl ?? '').toLowerCase();
-        const pageTitle = (titles[idx] ?? '').toLowerCase();
-        const combined = `${pageUrl} ${pageTitle}`;
-
-        // Skip results from Yelp/Google/Facebook that clearly reference a different location
-        // by checking if the page mentions a different well-known city but NOT our city
-        if (pageUrl.includes('yelp.com') || pageUrl.includes('facebook.com') || pageUrl.includes('google.com')) {
-          if (combined.length > 0 && !combined.includes(cityLower) && !combined.includes(stateLower)) {
-            // The page doesn't mention our city or state at all — likely wrong location
-            return false;
-          }
-        }
-
+        if (isBlockedUrl(r.original)) return false;
         return true;
       })
-      .slice(0, 8)
+      .slice(0, 6)
       .map((r) => {
-        // Determine source label from URL domain
         const domain = new URL(r.original).hostname.replace('www.', '');
         let label = domain.length > 20 ? domain.slice(0, 20) : domain;
         if (domain.includes('yelp')) label = 'Yelp';
@@ -188,7 +325,7 @@ async function fetchBingImages(
   } catch { return []; }
 }
 
-// ── Website photos (lightweight HTML scrape) ────────────────────
+// ── Website photos (lightweight HTML scrape) ─────────────────────────────────
 async function fetchWebsitePhotos(websiteUrl: string): Promise<CandidatePhoto[]> {
   if (!websiteUrl) return [];
   try {
@@ -199,7 +336,6 @@ async function fetchWebsitePhotos(websiteUrl: string): Promise<CandidatePhoto[]>
     if (!res.ok) return [];
     const html = await res.text();
 
-    // Extract image URLs from <img> tags and og:image meta tags
     const imgRegex = /<img[^>]+src=["']([^"']+)["']/gi;
     const ogRegex = /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/gi;
     const urls = new Set<string>();
@@ -208,12 +344,10 @@ async function fetchWebsitePhotos(websiteUrl: string): Promise<CandidatePhoto[]>
     while ((match = imgRegex.exec(html)) !== null) urls.add(match[1]);
     while ((match = ogRegex.exec(html)) !== null) urls.add(match[1]);
 
-    // Filter to likely real PHOTOS (not logos, icons, graphics)
     const skipPatterns = /favicon|logo|icon|badge|sprite|spacer|pixel|tracking|social|widget|banner|button|nav|arrow|tiny|1x1|blank|svg|emoji|smiley|star-rating|rating|checkbox|radio|toggle|spinner|loader|placeholder|avatar|profile-pic|thumbnail-placeholder|gradient|pattern|divider/i;
     const skipExtensions = /\.(svg|gif|ico|bmp|cur)(\?|$)/i;
     const imageExts = /\.(jpg|jpeg|png|webp)/i;
 
-    // Also extract image dimensions from HTML to filter tiny images
     const imgWithSizeRegex = /<img[^>]+src=["']([^"']+)["'][^>]*(width|height)=["']?(\d+)/gi;
     const smallImages = new Set<string>();
     let sizeMatch;
@@ -228,21 +362,16 @@ async function fetchWebsitePhotos(websiteUrl: string): Promise<CandidatePhoto[]>
       if (skipPatterns.test(rawUrl)) continue;
       if (skipExtensions.test(rawUrl)) continue;
       if (smallImages.has(rawUrl)) continue;
-
-      // Skip data URIs
       if (rawUrl.startsWith('data:')) continue;
 
-      // Resolve relative URLs
       let fullUrl = rawUrl;
       if (rawUrl.startsWith('//')) fullUrl = 'https:' + rawUrl;
       else if (rawUrl.startsWith('/')) {
         try { fullUrl = new URL(rawUrl, websiteUrl).href; } catch { continue; }
       } else if (!rawUrl.startsWith('http')) continue;
 
-      // Must have a photo extension (skip extensionless CDN URLs that are often icons)
       if (!imageExts.test(fullUrl)) continue;
 
-      // Skip very short filenames (likely icons/logos)
       const filename = fullUrl.split('/').pop()?.split('?')[0] ?? '';
       if (filename.length < 5) continue;
 
@@ -250,6 +379,7 @@ async function fetchWebsitePhotos(websiteUrl: string): Promise<CandidatePhoto[]>
         url: fullUrl,
         source: 'website',
         label: hostname,
+        sourceUrl: websiteUrl,
       });
 
       if (photos.length >= 10) break;
@@ -259,12 +389,11 @@ async function fetchWebsitePhotos(websiteUrl: string): Promise<CandidatePhoto[]>
   } catch { return []; }
 }
 
-// ── Street View thumbnail ───────────────────────────────────────
+// ── Street View thumbnail ────────────────────────────────────────────────────
 async function fetchStreetViewThumbnail(
   lat: number, lng: number, apiKey: string,
 ): Promise<CandidatePhoto | null> {
   try {
-    // Check if Street View is available at this location
     const metaRes = await fetch(
       `https://maps.googleapis.com/maps/api/streetview/metadata?location=${lat},${lng}&key=${apiKey}`,
       { signal: AbortSignal.timeout(5000) },
@@ -273,7 +402,6 @@ async function fetchStreetViewThumbnail(
     const meta = await metaRes.json();
     if (meta.status !== 'OK' || !meta.pano_id) return null;
 
-    // Return a thumbnail at heading 0 (user will navigate in the panel)
     const thumbUrl = `https://maps.googleapis.com/maps/api/streetview?size=400x300&pano=${meta.pano_id}&heading=0&pitch=0&key=${apiKey}`;
 
     return {
@@ -285,7 +413,7 @@ async function fetchStreetViewThumbnail(
   } catch { return null; }
 }
 
-// ── Main handler ────────────────────────────────────────────────
+// ── Main handler ─────────────────────────────────────────────────────────────
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -316,9 +444,12 @@ Deno.serve(async (req) => {
 
   const blocked = new Set(listing.blocked_photos ?? []);
 
-  // Fire all sources in parallel (Bing is free, Google Places only if key is set)
-  const [googlePlaces, bingSearch, websitePhotos, streetView] = await Promise.allSettled([
+  // Fire all sources in parallel
+  // Priority: Google Maps scraping (free) > Google Places API (paid, only if key set) > Google Image Search > Bing > Website
+  const [googleMaps, googlePlaces, googleSearch, bingSearch, websitePhotos, streetView] = await Promise.allSettled([
+    listing.google_place_id ? fetchGoogleMapsPhotos(listing.google_place_id) : Promise.resolve([]),
     (listing.google_place_id && googleApiKey) ? fetchGooglePlacesPhotos(listing.google_place_id, googleApiKey) : Promise.resolve([]),
+    fetchGoogleImages(listing.name, listing.city, listing.state, listing.address),
     fetchBingImages(listing.name, listing.city, listing.state, listing.address),
     listing.website ? fetchWebsitePhotos(listing.website) : Promise.resolve([]),
     (listing.latitude && listing.longitude && googleApiKey) ? fetchStreetViewThumbnail(listing.latitude, listing.longitude, googleApiKey) : Promise.resolve(null),
@@ -345,7 +476,6 @@ Deno.serve(async (req) => {
 
   function addPhotos(photos: CandidatePhoto[]) {
     for (const p of photos) {
-      // Normalize URL for dedup (strip query params for comparison)
       const key = p.url.split('?')[0];
       if (seenUrls.has(key) || blocked.has(p.url)) continue;
       seenUrls.add(key);
@@ -353,22 +483,32 @@ Deno.serve(async (req) => {
     }
   }
 
-  // Add in priority order: existing first, then google places, search, website, street view
+  // Add in priority order: existing > Google Maps (free) > Google Places (paid) > Google Search > Bing > Website > Street View
   addPhotos(existing);
+  addPhotos(googleMaps.status === 'fulfilled' ? googleMaps.value : []);
   addPhotos(googlePlaces.status === 'fulfilled' ? googlePlaces.value : []);
+  addPhotos(googleSearch.status === 'fulfilled' ? googleSearch.value : []);
   addPhotos(bingSearch.status === 'fulfilled' ? bingSearch.value : []);
   addPhotos(websitePhotos.status === 'fulfilled' ? websitePhotos.value : []);
 
   const svResult = streetView.status === 'fulfilled' ? streetView.value : null;
   if (svResult) addPhotos([svResult]);
 
+  // Log source counts for debugging
+  const gMapsCount = googleMaps.status === 'fulfilled' ? googleMaps.value.length : 0;
+  const gSearchCount = googleSearch.status === 'fulfilled' ? googleSearch.value.length : 0;
+  const bingCount = bingSearch.status === 'fulfilled' ? bingSearch.value.length : 0;
+  console.log(`[photo-discover] ${listing.name}: maps=${gMapsCount} search=${gSearchCount} bing=${bingCount} website=${websitePhotos.status === 'fulfilled' ? websitePhotos.value.length : 0}`);
+
   return json({
     candidates: allCandidates,
     total: allCandidates.length,
     sources: {
       existing: existing.length,
+      google_maps: gMapsCount,
       google_places: googlePlaces.status === 'fulfilled' ? googlePlaces.value.length : 0,
-      bing_search: bingSearch.status === 'fulfilled' ? bingSearch.value.length : 0,
+      google_search: gSearchCount,
+      bing_search: bingCount,
       website: websitePhotos.status === 'fulfilled' ? websitePhotos.value.length : 0,
       street_view: svResult ? 1 : 0,
     },

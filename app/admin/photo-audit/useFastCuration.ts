@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { getStateSlug, slugify } from '@/lib/constants';
 
 export type PhotoTag = 'hero' | 'gallery' | 'equipment' | 'skip' | null;
-export type PhotoSource = 'google_places' | 'google_search' | 'bing_search' | 'website' | 'street_view' | 'existing' | 'capture' | 'upload';
+export type PhotoSource = 'google_places' | 'google_maps' | 'google_search' | 'bing_search' | 'website' | 'street_view' | 'existing' | 'capture' | 'upload';
 
 export interface CandidatePhoto {
   id: string;
@@ -45,6 +45,7 @@ interface ListingData {
 
 interface SourceCounts {
   existing: number;
+  google_maps: number;
   google_places: number;
   google_search: number;
   bing_search: number;

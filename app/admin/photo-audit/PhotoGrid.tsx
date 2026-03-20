@@ -25,8 +25,9 @@ interface PhotoGridProps {
 const SOURCE_BADGES: Record<string, { label: string; color: string }> = {
   existing: { label: 'Existing', color: 'bg-gray-600' },
   google_places: { label: 'Google', color: 'bg-blue-600' },
-  google_search: { label: 'Search', color: 'bg-purple-600' },
-  bing_search: { label: 'Search', color: 'bg-purple-600' },
+  google_maps: { label: 'Google Maps', color: 'bg-blue-500' },
+  google_search: { label: 'Google', color: 'bg-purple-600' },
+  bing_search: { label: 'Bing', color: 'bg-cyan-600' },
   website: { label: 'Website', color: 'bg-teal-600' },
   street_view: { label: 'Street View', color: 'bg-orange-600' },
   capture: { label: 'Captured', color: 'bg-orange-500' },
