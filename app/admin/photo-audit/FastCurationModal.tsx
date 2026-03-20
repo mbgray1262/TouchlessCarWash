@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useCallback, useState, useRef } from 'react';
-import { X, ExternalLink, Check, CheckCheck, Ban, Trash2, Sparkles, Loader2, Plus, RefreshCw, Upload } from 'lucide-react';
+import { X, ExternalLink, Check, CheckCheck, Ban, Trash2, Sparkles, Loader2, Plus, RefreshCw, Upload, ClipboardPaste } from 'lucide-react';
 import { useFastCuration, type CandidatePhoto } from './useFastCuration';
 import { PhotoGrid } from './PhotoGrid';
 import { StreetViewPanel } from './StreetViewPanel';
@@ -337,6 +337,46 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                   className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm text-gray-700"
                 >
                   <Upload className="w-3.5 h-3.5" /> Upload
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!listing) return;
+                    setPasteStatus('uploading');
+                    try {
+                      const clipboardItems = await navigator.clipboard.read();
+                      for (const item of clipboardItems) {
+                        const imageType = item.types.find(t => t.startsWith('image/'));
+                        if (imageType) {
+                          const blob = await item.getType(imageType);
+                          const formData = new FormData();
+                          formData.append('file', new File([blob], 'screenshot.png', { type: imageType }));
+                          formData.append('type', 'gallery');
+                          formData.append('listingId', listing.id);
+                          const res = await fetch('/api/upload-image', { method: 'POST', body: formData });
+                          if (res.ok) {
+                            const { url } = await res.json();
+                            addUpload(url);
+                            setPasteStatus('success');
+                          } else {
+                            setPasteStatus('error');
+                          }
+                          setTimeout(() => setPasteStatus('idle'), 2000);
+                          return;
+                        }
+                      }
+                      // No image found in clipboard
+                      setPasteStatus('error');
+                      setTimeout(() => setPasteStatus('idle'), 2000);
+                    } catch {
+                      setPasteStatus('error');
+                      setTimeout(() => setPasteStatus('idle'), 2000);
+                    }
+                  }}
+                  disabled={pasteStatus === 'uploading'}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-sm text-blue-700 border border-blue-200 disabled:opacity-50"
+                >
+                  <ClipboardPaste className="w-3.5 h-3.5" />
+                  {pasteStatus === 'uploading' ? 'Pasting...' : 'Paste Screenshot'}
                 </button>
                 <button
                   onClick={() => { setPasteOpen(!pasteOpen); setTimeout(() => pasteRef.current?.focus(), 100); }}
