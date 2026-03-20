@@ -45,6 +45,7 @@ interface ListingData {
 
 interface SourceCounts {
   existing: number;
+  yelp: number;
   google_maps: number;
   google_places: number;
   google_search: number;

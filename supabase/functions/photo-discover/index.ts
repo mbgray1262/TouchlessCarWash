@@ -370,6 +370,88 @@ async function fetchBingImages(
   } catch { return []; }
 }
 
+// ── Yelp Photos via Bing (FREE — location-specific user photos) ──────────────
+// Uses Bing Image Search with site:yelp.com to find Yelp photos for the business
+async function fetchYelpPhotos(
+  name: string, city: string, state: string,
+): Promise<CandidatePhoto[]> {
+  try {
+    const nameHasCarWash = name.toLowerCase().includes('car wash') || name.toLowerCase().includes('carwash');
+    const query = encodeURIComponent(`"${name}" ${city} ${state}${nameHasCarWash ? '' : ' car wash'} site:yelp.com`);
+    const res = await fetch(
+      `https://www.bing.com/images/search?q=${query}&first=1`,
+      {
+        signal: AbortSignal.timeout(10000),
+        headers: { 'User-Agent': BROWSER_UA },
+      },
+    );
+    if (!res.ok) return [];
+    const html = await res.text();
+
+    // Extract media URLs and page URLs
+    const mediaUrlMatches = html.matchAll(/murl&quot;:&quot;(https?:\/\/[^&]+?)&quot;/g);
+    const pageUrlMatches = html.matchAll(/purl&quot;:&quot;(https?:\/\/[^&]+?)&quot;/g);
+    const mediaUrls: string[] = [];
+    const pageUrls: string[] = [];
+    let match;
+    for (match of mediaUrlMatches) mediaUrls.push(decodeURIComponent(match[1]));
+    for (match of pageUrlMatches) pageUrls.push(decodeURIComponent(match[1]));
+
+    // Build the expected Yelp biz slug from the name
+    // e.g., "Blue Wave Car Wash" + "Middletown" -> "blue-wave-car-wash-middletown"
+    const nameSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    const citySlug = city.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+
+    const seen = new Set<string>();
+    const photos: CandidatePhoto[] = [];
+
+    for (let i = 0; i < mediaUrls.length; i++) {
+      const url = mediaUrls[i];
+      const pageUrl = pageUrls[i] ?? '';
+
+      if (!url || seen.has(url)) continue;
+      seen.add(url);
+
+      // Must be a Yelp CDN photo
+      if (!url.includes('yelpcdn.com/bphoto/')) continue;
+
+      // Must be from the correct business Yelp page
+      // Check that the page URL contains the business name slug
+      if (pageUrl && pageUrl.includes('yelp.com/biz/')) {
+        const bizPath = pageUrl.split('yelp.com/biz/')[1]?.split('?')[0] ?? '';
+        // The biz path should contain ALL significant words from the name
+        const nameWords = name.toLowerCase().split(/\s+/).filter(w => w.length > 2 && !['car', 'wash', 'the', 'and'].includes(w));
+        const matchingWords = nameWords.filter(w => bizPath.includes(w));
+        // Require ALL distinctive name words to match (strict filtering)
+        if (nameWords.length > 0 && matchingWords.length < nameWords.length) continue;
+      } else {
+        // No page URL — can't verify, skip
+        continue;
+      }
+
+      // Upgrade to original size
+      const fullResUrl = url.replace(/\/[a-z0-9]+\.jpg$/, '/o.jpg');
+      const thumbUrl = url.replace(/\/[a-z0-9]+\.jpg$/, '/l.jpg');
+
+      photos.push({
+        url: thumbUrl.includes('yelpcdn') ? thumbUrl : url,
+        fullResUrl: fullResUrl,
+        source: 'google_search' as const,
+        label: 'Yelp',
+        sourceUrl: pageUrl || undefined,
+      });
+
+      if (photos.length >= 8) break;
+    }
+
+    console.log(`[Yelp via Bing] ${name}: found ${photos.length} photos`);
+    return photos;
+  } catch (err) {
+    console.error('Yelp via Bing failed:', err);
+    return [];
+  }
+}
+
 // ── Website photos (lightweight HTML scrape) ─────────────────────────────────
 async function fetchWebsitePhotos(websiteUrl: string): Promise<CandidatePhoto[]> {
   if (!websiteUrl) return [];
@@ -490,11 +572,11 @@ Deno.serve(async (req) => {
   const blocked = new Set(listing.blocked_photos ?? []);
 
   // Fire all sources in parallel
-  // Priority: Google Maps scraping (free) > Google Places API (paid, only if key set) > Google Image Search > Bing > Website
-  const [googleMaps, googlePlaces, googleSearch, bingSearch, websitePhotos, streetView] = await Promise.allSettled([
+  // Priority: Yelp (location-specific) > Google Maps > Google Places API (paid) > Bing > Website
+  const [yelpPhotos, googleMaps, googlePlaces, bingSearch, websitePhotos, streetView] = await Promise.allSettled([
+    fetchYelpPhotos(listing.name, listing.city, listing.state),
     listing.google_place_id ? fetchGoogleMapsPhotos(listing.google_place_id, listing.name, listing.city, listing.state) : Promise.resolve([]),
     (listing.google_place_id && googleApiKey) ? fetchGooglePlacesPhotos(listing.google_place_id, googleApiKey) : Promise.resolve([]),
-    fetchGoogleImages(listing.name, listing.city, listing.state, listing.address),
     fetchBingImages(listing.name, listing.city, listing.state, listing.address),
     listing.website ? fetchWebsitePhotos(listing.website) : Promise.resolve([]),
     (listing.latitude && listing.longitude && googleApiKey) ? fetchStreetViewThumbnail(listing.latitude, listing.longitude, googleApiKey) : Promise.resolve(null),
@@ -528,11 +610,11 @@ Deno.serve(async (req) => {
     }
   }
 
-  // Add in priority order: existing > Google Maps (free) > Google Places (paid) > Google Search > Bing > Website > Street View
+  // Add in priority order: existing > Yelp (location-specific) > Google Maps > Google Places (paid) > Bing > Website > Street View
   addPhotos(existing);
+  addPhotos(yelpPhotos.status === 'fulfilled' ? yelpPhotos.value : []);
   addPhotos(googleMaps.status === 'fulfilled' ? googleMaps.value : []);
   addPhotos(googlePlaces.status === 'fulfilled' ? googlePlaces.value : []);
-  addPhotos(googleSearch.status === 'fulfilled' ? googleSearch.value : []);
   addPhotos(bingSearch.status === 'fulfilled' ? bingSearch.value : []);
   addPhotos(websitePhotos.status === 'fulfilled' ? websitePhotos.value : []);
 
@@ -540,21 +622,25 @@ Deno.serve(async (req) => {
   if (svResult) addPhotos([svResult]);
 
   // Log source counts for debugging
+  const yelpCount = yelpPhotos.status === 'fulfilled' ? yelpPhotos.value.length : 0;
   const gMapsCount = googleMaps.status === 'fulfilled' ? googleMaps.value.length : 0;
-  const gSearchCount = googleSearch.status === 'fulfilled' ? googleSearch.value.length : 0;
   const bingCount = bingSearch.status === 'fulfilled' ? bingSearch.value.length : 0;
-  console.log(`[photo-discover] ${listing.name}: maps=${gMapsCount} search=${gSearchCount} bing=${bingCount} website=${websitePhotos.status === 'fulfilled' ? websitePhotos.value.length : 0}`);
+  const websiteCount = websitePhotos.status === 'fulfilled' ? websitePhotos.value.length : 0;
+  console.log(`[photo-discover] ${listing.name}: yelp=${yelpCount} maps=${gMapsCount} bing=${bingCount} website=${websiteCount}`);
+  if (yelpPhotos.status === 'rejected') console.error('[photo-discover] Yelp error:', yelpPhotos.reason);
+  if (googleMaps.status === 'rejected') console.error('[photo-discover] Google Maps error:', googleMaps.reason);
 
   return json({
     candidates: allCandidates,
     total: allCandidates.length,
     sources: {
       existing: existing.length,
+      yelp: yelpCount,
       google_maps: gMapsCount,
       google_places: googlePlaces.status === 'fulfilled' ? googlePlaces.value.length : 0,
-      google_search: gSearchCount,
+      google_search: 0, // Removed — wasn't working (Google blocks server scraping)
       bing_search: bingCount,
-      website: websitePhotos.status === 'fulfilled' ? websitePhotos.value.length : 0,
+      website: websiteCount,
       street_view: svResult ? 1 : 0,
     },
     listing: {

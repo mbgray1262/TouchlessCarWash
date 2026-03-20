@@ -261,9 +261,9 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
               {sourceCounts && (
                 <div className="flex gap-3 text-xs text-gray-500">
                   {sourceCounts.existing > 0 && <span className="bg-gray-100 px-2 py-1 rounded">{sourceCounts.existing} existing</span>}
+                  {sourceCounts.yelp > 0 && <span className="bg-red-50 text-red-600 px-2 py-1 rounded">{sourceCounts.yelp} Yelp</span>}
                   {sourceCounts.google_maps > 0 && <span className="bg-blue-50 text-blue-600 px-2 py-1 rounded">{sourceCounts.google_maps} Google Maps</span>}
                   {sourceCounts.google_places > 0 && <span className="bg-blue-50 text-blue-600 px-2 py-1 rounded">{sourceCounts.google_places} Google API</span>}
-                  {sourceCounts.google_search > 0 && <span className="bg-purple-50 text-purple-600 px-2 py-1 rounded">{sourceCounts.google_search} Google Search</span>}
                   {sourceCounts.bing_search > 0 && <span className="bg-cyan-50 text-cyan-600 px-2 py-1 rounded">{sourceCounts.bing_search} Bing</span>}
                   {sourceCounts.website > 0 && <span className="bg-teal-50 text-teal-600 px-2 py-1 rounded">{sourceCounts.website} Website</span>}
                   {sourceCounts.street_view > 0 && <span className="bg-orange-50 text-orange-600 px-2 py-1 rounded">Street View</span>}
