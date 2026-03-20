@@ -23,7 +23,7 @@ const ASPECT_OPTIONS = [
 
 function centerAspectCrop(width: number, height: number, aspect: number): Crop {
   return centerCrop(
-    makeAspectCrop({ unit: '%', width: 90 }, aspect, width, height),
+    makeAspectCrop({ unit: '%', width: 100 }, aspect, width, height),
     width,
     height,
   );
@@ -37,29 +37,30 @@ async function getCroppedBlob(
   const scaleX = image.naturalWidth / image.width;
   const scaleY = image.naturalHeight / image.height;
 
-  canvas.width = pixelCrop.width * scaleX;
-  canvas.height = pixelCrop.height * scaleY;
+  // Use Math.round to avoid sub-pixel sizing issues
+  const srcX = Math.round(pixelCrop.x * scaleX);
+  const srcY = Math.round(pixelCrop.y * scaleY);
+  const srcW = Math.round(pixelCrop.width * scaleX);
+  const srcH = Math.round(pixelCrop.height * scaleY);
+
+  // Output at full source resolution
+  canvas.width = srcW;
+  canvas.height = srcH;
 
   const ctx = canvas.getContext('2d')!;
+  ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
 
   ctx.drawImage(
     image,
-    pixelCrop.x * scaleX,
-    pixelCrop.y * scaleY,
-    pixelCrop.width * scaleX,
-    pixelCrop.height * scaleY,
-    0,
-    0,
-    canvas.width,
-    canvas.height,
+    srcX, srcY, srcW, srcH,
+    0, 0, srcW, srcH,
   );
 
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) => { if (blob) resolve(blob); else reject(new Error('Canvas is empty')); },
-      'image/jpeg',
-      0.92,
+      'image/png',  // Use PNG for lossless quality — no re-compression artifacts
     );
   });
 }
@@ -77,7 +78,7 @@ export function CropModal({ imageUrl, listingId, uploadType = 'hero', onSave, on
     if (aspect) {
       setCrop(centerAspectCrop(width, height, aspect));
     } else {
-      setCrop({ unit: '%', x: 5, y: 5, width: 90, height: 90 });
+      setCrop({ unit: '%', x: 0, y: 0, width: 100, height: 100 });
     }
   }, [aspect]);
 
@@ -88,7 +89,7 @@ export function CropModal({ imageUrl, listingId, uploadType = 'hero', onSave, on
       if (newAspect) {
         setCrop(centerAspectCrop(width, height, newAspect));
       } else {
-        setCrop({ unit: '%', x: 5, y: 5, width: 90, height: 90 });
+        setCrop({ unit: '%', x: 0, y: 0, width: 100, height: 100 });
       }
     }
   };
@@ -101,7 +102,7 @@ export function CropModal({ imageUrl, listingId, uploadType = 'hero', onSave, on
     try {
       const blob = await getCroppedBlob(imgRef.current, completedCrop);
       const formData = new FormData();
-      formData.append('file', blob, 'cropped-hero.jpg');
+      formData.append('file', blob, 'cropped-hero.png');
       formData.append('listingId', listingId);
       formData.append('type', uploadType);
 
