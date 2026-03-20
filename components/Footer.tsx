@@ -140,6 +140,11 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/contact" className="text-white/70 hover:text-[#22C55E] transition-colors py-1.5 inline-block">
+                  Contact
+                </Link>
+              </li>
+              <li>
                 <Link href="/add-listing" className="text-white/70 hover:text-[#22C55E] transition-colors py-1.5 inline-block">
                   Add Your Business
                 </Link>
@@ -204,7 +209,7 @@ export function Footer() {
             <Link href="/terms-of-service" className="text-white/70 hover:text-[#22C55E] transition-colors py-1.5 inline-block">
               Terms of Service
             </Link>
-            <Link href="mailto:hello@touchlesscarwashfinder.com" className="text-white/70 hover:text-[#22C55E] transition-colors py-1.5 inline-block">
+            <Link href="/contact" className="text-white/70 hover:text-[#22C55E] transition-colors py-1.5 inline-block">
               Contact
             </Link>
           </div>

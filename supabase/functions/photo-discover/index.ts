@@ -80,8 +80,11 @@ async function fetchBingImages(
 ): Promise<CandidatePhoto[]> {
   try {
     const nameHasCarWash = name.toLowerCase().includes('car wash') || name.toLowerCase().includes('carwash');
-    const locationPart = address ? `"${address}"` : `${city} ${state}`;
-    const query = encodeURIComponent(`${name} ${locationPart}${nameHasCarWash ? '' : ' car wash'}`);
+    // Always include city+state for location specificity, plus address if available
+    // Quote the business name to force exact match (prevents "Westside Car Wash" in TX matching one in SD)
+    const locationParts = [city, state];
+    if (address) locationParts.unshift(address);
+    const query = encodeURIComponent(`"${name}" ${locationParts.join(' ')}${nameHasCarWash ? '' : ' car wash'}`);
     const res = await fetch(
       `https://www.bing.com/images/search?q=${query}&first=1`,
       {
@@ -105,9 +108,17 @@ async function fetchBingImages(
       results.push({ original: mediaUrls[i], pageUrl: pageUrls[i] });
     }
 
+    // Also extract page titles for location relevance filtering
+    const titleMatches = html.matchAll(/t&quot;:&quot;([^&]*?)&quot;/g);
+    const titles: string[] = [];
+    for (const match of titleMatches) titles.push(decodeURIComponent(match[1]));
+
     const seen = new Set<string>();
+    const cityLower = city.toLowerCase();
+    const stateLower = state.toLowerCase();
+
     return results
-      .filter((r) => {
+      .filter((r, idx) => {
         if (!r.original) return false;
         if (seen.has(r.original)) return false;
         seen.add(r.original);
@@ -121,6 +132,21 @@ async function fetchBingImages(
         if (url.includes('graphic') || url.includes('clipart') || url.includes('vector')) return false;
         if (url.includes('play.google.com') || url.includes('apps.apple.com')) return false;
         if (url.includes('play-lh.googleusercontent')) return false;
+
+        // Location relevance: if the page URL or title mentions a different city, skip it
+        // Only apply this check for generic names (car wash names that exist in many cities)
+        const pageUrl = (r.pageUrl ?? '').toLowerCase();
+        const pageTitle = (titles[idx] ?? '').toLowerCase();
+        const combined = `${pageUrl} ${pageTitle}`;
+
+        // Skip results from Yelp/Google/Facebook that clearly reference a different location
+        // by checking if the page mentions a different well-known city but NOT our city
+        if (pageUrl.includes('yelp.com') || pageUrl.includes('facebook.com') || pageUrl.includes('google.com')) {
+          if (combined.length > 0 && !combined.includes(cityLower) && !combined.includes(stateLower)) {
+            // The page doesn't mention our city or state at all — likely wrong location
+            return false;
+          }
+        }
 
         return true;
       })

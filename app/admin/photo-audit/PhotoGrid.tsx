@@ -263,9 +263,24 @@ export function PhotoGrid({
                       }}
                     />
                   </div>
-                  {/* Source badge */}
-                  <div className={`absolute top-1 left-1 px-1.5 py-0.5 rounded text-[10px] font-medium text-white ${badge.color}`}>
-                    {badge.label}
+                  {/* Source badge (clickable if sourceUrl exists) */}
+                  <div className="absolute top-1 left-1">
+                    {photo.sourceUrl ? (
+                      <a
+                        href={photo.sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-medium text-white ${badge.color} hover:opacity-80 cursor-pointer underline decoration-white/50`}
+                        title={`View source: ${photo.sourceUrl}`}
+                      >
+                        {badge.label}
+                      </a>
+                    ) : (
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium text-white ${badge.color}`}>
+                        {badge.label}
+                      </span>
+                    )}
                   </div>
                   {/* Action buttons on hover */}
                   <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
