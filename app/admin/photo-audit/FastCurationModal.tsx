@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useCallback, useState, useRef } from 'react';
-import { X, ExternalLink, Check, CheckCheck, Ban, Trash2, Sparkles, Loader2, Plus, RefreshCw, Upload, ClipboardPaste } from 'lucide-react';
+import { X, ExternalLink, Check, CheckCheck, Ban, Trash2, Sparkles, Loader2, Plus, RefreshCw, Upload } from 'lucide-react';
 import { useFastCuration, type CandidatePhoto } from './useFastCuration';
 import { PhotoGrid } from './PhotoGrid';
 import { StreetViewPanel } from './StreetViewPanel';
@@ -47,6 +47,8 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
 
   const [pasteStatus, setPasteStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   const [pasteError, setPasteError] = useState<string>('');
+  const [dragging, setDragging] = useState(false);
+  const dragCounter = useRef(0);
 
   // Clipboard paste handler — paste screenshots directly (⌘V)
   useEffect(() => {
@@ -291,8 +293,61 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
             </div>
           </div>
 
-          {/* Scrollable content */}
-          <div className="flex-1 overflow-y-auto">
+          {/* Scrollable content — supports drag-and-drop of image files */}
+          <div
+            className={`flex-1 overflow-y-auto relative ${dragging ? 'ring-4 ring-inset ring-blue-400' : ''}`}
+            onDragEnter={(e) => {
+              e.preventDefault();
+              dragCounter.current++;
+              setDragging(true);
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'copy';
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              dragCounter.current--;
+              if (dragCounter.current <= 0) {
+                dragCounter.current = 0;
+                setDragging(false);
+              }
+            }}
+            onDrop={async (e) => {
+              e.preventDefault();
+              dragCounter.current = 0;
+              setDragging(false);
+              if (!listing) return;
+              const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+              if (files.length === 0) return;
+              setPasteStatus('uploading');
+              for (const file of files) {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('type', 'gallery');
+                formData.append('listingId', listing.id);
+                try {
+                  const res = await fetch('/api/upload-image', { method: 'POST', body: formData });
+                  if (res.ok) {
+                    const { url } = await res.json();
+                    addUpload(url);
+                  }
+                } catch {}
+              }
+              setPasteStatus('success');
+              setTimeout(() => setPasteStatus('idle'), 2000);
+            }}
+          >
+            {/* Drop overlay */}
+            {dragging && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-blue-50/90 border-4 border-dashed border-blue-400 rounded-lg">
+                <div className="text-center">
+                  <Upload className="w-12 h-12 text-blue-500 mx-auto mb-2" />
+                  <p className="text-lg font-semibold text-blue-700">Drop screenshot here</p>
+                  <p className="text-sm text-blue-500">Image will be added to candidates</p>
+                </div>
+              </div>
+            )}
 
             {/* Source counts + actions bar */}
             <div className="px-6 py-3 border-b bg-white flex items-center gap-4 flex-wrap">
@@ -338,51 +393,6 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                   className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm text-gray-700"
                 >
                   <Upload className="w-3.5 h-3.5" /> Upload
-                </button>
-                <button
-                  onClick={async () => {
-                    if (!listing) return;
-                    setPasteStatus('uploading');
-                    try {
-                      const clipboardItems = await navigator.clipboard.read();
-                      for (const item of clipboardItems) {
-                        const imageType = item.types.find(t => t.startsWith('image/'));
-                        if (imageType) {
-                          const blob = await item.getType(imageType);
-                          const formData = new FormData();
-                          formData.append('file', new File([blob], 'screenshot.png', { type: imageType }));
-                          formData.append('type', 'gallery');
-                          formData.append('listingId', listing.id);
-                          const res = await fetch('/api/upload-image', { method: 'POST', body: formData });
-                          const data = await res.json();
-                          if (res.ok && data.url) {
-                            addUpload(data.url);
-                            setPasteStatus('success');
-                          } else {
-                            console.error('Upload failed:', data);
-                            setPasteError(data.error || 'Upload failed');
-                            setPasteStatus('error');
-                          }
-                          setTimeout(() => setPasteStatus('idle'), 4000);
-                          return;
-                        }
-                      }
-                      // No image found in clipboard
-                      setPasteError('No image found in clipboard');
-                      setPasteStatus('error');
-                      setTimeout(() => setPasteStatus('idle'), 4000);
-                    } catch (err) {
-                      console.error('Paste error:', err);
-                      setPasteError(err instanceof Error ? err.message : 'Clipboard access denied');
-                      setPasteStatus('error');
-                      setTimeout(() => setPasteStatus('idle'), 4000);
-                    }
-                  }}
-                  disabled={pasteStatus === 'uploading'}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-sm text-blue-700 border border-blue-200 disabled:opacity-50"
-                >
-                  <ClipboardPaste className="w-3.5 h-3.5" />
-                  {pasteStatus === 'uploading' ? 'Pasting...' : 'Paste Screenshot'}
                 </button>
                 <button
                   onClick={() => { setPasteOpen(!pasteOpen); setTimeout(() => pasteRef.current?.focus(), 100); }}
