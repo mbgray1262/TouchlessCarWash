@@ -34,6 +34,9 @@ const BLOCKED_DOMAINS = [
   'apartments.com', 'apartmentfinder', 'hotpads', 'rent.com', 'homesnap',
   'homes.com', 'movoto', 'estately', 'compass.com', 'coldwellbanker',
   'century21', 'keller', 'remax',
+  // Commercial real estate
+  'loopnet', 'crexi.com', 'commercialcafe', 'showcase', 'showcaseidx',
+  'costar', 'cityfeet', 'catylist', 'buildout.com', 'officespace.com',
   // Stock photos
   'shutterstock', 'istockphoto', 'gettyimages', 'dreamstime', 'alamy',
   'depositphotos', 'stock.adobe', '123rf',
@@ -43,6 +46,9 @@ const BLOCKED_DOMAINS = [
   'linkedin.com', 'twitter.com', 'tiktok.com', 'pinterest.com', 'pinimg.com',
   // App stores
   'play.google.com', 'apps.apple.com', 'play-lh.googleusercontent',
+  // Maps / directories that return generic images
+  'mapquest.com', 'yellowpages.com', 'whitepages.com', 'superpages.com',
+  'manta.com', 'bbb.org', 'chamberofcommerce',
 ];
 
 const BLOCKED_URL_PATTERNS = [
@@ -104,67 +110,106 @@ async function fetchGooglePlacesPhotos(placeId: string, apiKey: string): Promise
 }
 
 // ── Google Maps Photos scraping (FREE — no API key) ──────────────────────────
-// Scrapes the Google Maps page for a place to extract user-uploaded photos
-async function fetchGoogleMapsPhotos(placeId: string): Promise<CandidatePhoto[]> {
+// Uses multiple approaches to extract user-uploaded photos from Google Maps
+async function fetchGoogleMapsPhotos(
+  placeId: string, name: string, city: string, state: string,
+): Promise<CandidatePhoto[]> {
+  const photoUrls = new Set<string>();
+  const mapsPageUrl = `https://www.google.com/maps/place/?q=place_id:${placeId}`;
+
+  // Approach 1: Fetch the Maps place page and extract photo URLs from inline data
   try {
-    // Fetch the Google Maps place page
-    const mapsUrl = `https://www.google.com/maps/place/?q=place_id:${placeId}`;
-    const res = await fetch(mapsUrl, {
+    const res = await fetch(mapsPageUrl, {
       signal: AbortSignal.timeout(10000),
       headers: {
         'User-Agent': BROWSER_UA,
         'Accept-Language': 'en-US,en;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml',
       },
+      redirect: 'follow',
     });
-    if (!res.ok) return [];
-    const html = await res.text();
+    if (res.ok) {
+      const html = await res.text();
 
-    // Google Maps embeds photo URLs in various formats in the HTML/JS
-    // Look for googleusercontent.com photo URLs (these are the actual photos)
-    const photoUrls = new Set<string>();
+      // Google Maps includes photo data in APP_INITIALIZATION_STATE and other script blocks
+      // Look for all googleusercontent photo URLs
+      const patterns = [
+        /https:\/\/lh[35]\.googleusercontent\.com\/p\/[A-Za-z0-9_-]+/g,
+        /https:\/\/lh[35]\.googleusercontent\.com\/gps-proxy\/[A-Za-z0-9_=/-]+/g,
+        /https:\/\/lh[35]\.googleusercontent\.com\/proxy\/[A-Za-z0-9_=/-]+/g,
+        // Escaped URLs in JSON/JS (\\u003d = =, \\u0026 = &)
+        /https:\\u002F\\u002Flh[35]\.googleusercontent\.com\\u002Fp\\u002F[A-Za-z0-9_-]+/g,
+      ];
 
-    // Pattern 1: lh5/lh3.googleusercontent.com URLs with photo paths
-    const gucRegex = /https:\/\/lh[35]\.googleusercontent\.com\/p\/[A-Za-z0-9_-]+/g;
-    let match;
-    while ((match = gucRegex.exec(html)) !== null) {
-      photoUrls.add(match[0]);
-    }
-
-    // Pattern 2: Google Maps photo CDN URLs
-    const cdnRegex = /https:\/\/streetviewpixels-pa\.googleapis\.com\/v1\/thumbnail\?[^"'\s]+/g;
-    while ((match = cdnRegex.exec(html)) !== null) {
-      // Skip actual street view thumbnails
-      if (!match[0].includes('cb_client=maps_sv')) {
-        photoUrls.add(match[0]);
+      for (const pattern of patterns) {
+        let match;
+        while ((match = pattern.exec(html)) !== null) {
+          let url = match[0]
+            .replace(/\\u002F/g, '/')
+            .replace(/\\u003D/g, '=')
+            .replace(/\\u0026/g, '&');
+          // Clean any trailing escape chars
+          url = url.replace(/\\.*$/, '');
+          photoUrls.add(url);
+        }
       }
     }
-
-    // Pattern 3: Another common photo URL pattern in maps data
-    const altRegex = /https:\/\/lh[35]\.googleusercontent\.com\/gps-proxy\/[A-Za-z0-9_=-]+/g;
-    while ((match = altRegex.exec(html)) !== null) {
-      photoUrls.add(match[0]);
-    }
-
-    const photos: CandidatePhoto[] = [];
-    for (const url of photoUrls) {
-      if (photos.length >= 10) break;
-      // Create thumbnail (w400) and full-res (w1600) versions
-      const thumbUrl = url.includes('=') ? url.replace(/=.*$/, '=w400-h300') : `${url}=w400-h300`;
-      const fullUrl = url.includes('=') ? url.replace(/=.*$/, '=w1600-h1200') : `${url}=w1600-h1200`;
-      photos.push({
-        url: thumbUrl,
-        fullResUrl: fullUrl,
-        source: 'google_maps' as const,
-        label: 'Google Maps',
-        sourceUrl: `https://www.google.com/maps/place/?q=place_id:${placeId}`,
-      });
-    }
-
-    return photos;
   } catch (err) {
-    console.error('Google Maps scrape failed:', err);
-    return [];
+    console.error('Google Maps page fetch failed:', err);
   }
+
+  // Approach 2: Try Google Maps search results page (sometimes returns photos in a different format)
+  if (photoUrls.size === 0) {
+    try {
+      const searchQuery = encodeURIComponent(`${name} ${city} ${state}`);
+      const searchUrl = `https://www.google.com/maps/search/${searchQuery}/`;
+      const res = await fetch(searchUrl, {
+        signal: AbortSignal.timeout(8000),
+        headers: {
+          'User-Agent': BROWSER_UA,
+          'Accept-Language': 'en-US,en;q=0.9',
+        },
+        redirect: 'follow',
+      });
+      if (res.ok) {
+        const html = await res.text();
+        const pattern = /https:\/\/lh[35]\.googleusercontent\.com\/p\/[A-Za-z0-9_-]+/g;
+        let match;
+        while ((match = pattern.exec(html)) !== null) {
+          photoUrls.add(match[0]);
+        }
+        // Also check for gps-proxy pattern
+        const pattern2 = /https:\/\/lh[35]\.googleusercontent\.com\/gps-proxy\/[A-Za-z0-9_=/-]+/g;
+        while ((match = pattern2.exec(html)) !== null) {
+          photoUrls.add(match[0].replace(/\\.*$/, ''));
+        }
+      }
+    } catch {
+      // Silently fail — this is a backup approach
+    }
+  }
+
+  console.log(`[Google Maps] ${name}: found ${photoUrls.size} photo URLs`);
+
+  const photos: CandidatePhoto[] = [];
+  for (const url of photoUrls) {
+    if (photos.length >= 10) break;
+    // Skip street view URLs
+    if (url.includes('streetview') || url.includes('cbk0')) continue;
+    // Create thumbnail (w400) and full-res (w1600) versions
+    const baseUrl = url.replace(/=.*$/, '');
+    const thumbUrl = `${baseUrl}=w400-h300`;
+    const fullUrl = `${baseUrl}=w1600-h1200`;
+    photos.push({
+      url: thumbUrl,
+      fullResUrl: fullUrl,
+      source: 'google_maps' as const,
+      label: 'Google Maps',
+      sourceUrl: mapsPageUrl,
+    });
+  }
+
+  return photos;
 }
 
 // ── Google Image Search (FREE — HTML scraping) ───────────────────────────────
@@ -447,7 +492,7 @@ Deno.serve(async (req) => {
   // Fire all sources in parallel
   // Priority: Google Maps scraping (free) > Google Places API (paid, only if key set) > Google Image Search > Bing > Website
   const [googleMaps, googlePlaces, googleSearch, bingSearch, websitePhotos, streetView] = await Promise.allSettled([
-    listing.google_place_id ? fetchGoogleMapsPhotos(listing.google_place_id) : Promise.resolve([]),
+    listing.google_place_id ? fetchGoogleMapsPhotos(listing.google_place_id, listing.name, listing.city, listing.state) : Promise.resolve([]),
     (listing.google_place_id && googleApiKey) ? fetchGooglePlacesPhotos(listing.google_place_id, googleApiKey) : Promise.resolve([]),
     fetchGoogleImages(listing.name, listing.city, listing.state, listing.address),
     fetchBingImages(listing.name, listing.city, listing.state, listing.address),
