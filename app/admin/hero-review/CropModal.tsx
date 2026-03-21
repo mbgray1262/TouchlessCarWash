@@ -65,6 +65,19 @@ async function getCroppedBlob(
   });
 }
 
+// Proxy external URLs through our server to bypass CORS restrictions
+function getProxiedUrl(url: string): string {
+  if (!url) return url;
+  // Supabase storage URLs have CORS headers — no proxy needed
+  if (url.includes('supabase.co/')) return url;
+  // Data URLs don't need proxying
+  if (url.startsWith('data:')) return url;
+  // Blob URLs don't need proxying
+  if (url.startsWith('blob:')) return url;
+  // Everything else: proxy through our API
+  return `/api/image-proxy?url=${encodeURIComponent(url)}`;
+}
+
 export function CropModal({ imageUrl, listingId, uploadType = 'hero', onSave, onClose, zIndex }: Props) {
   const imgRef = useRef<HTMLImageElement>(null);
   const [crop, setCrop] = useState<Crop>();
@@ -72,6 +85,7 @@ export function CropModal({ imageUrl, listingId, uploadType = 'hero', onSave, on
   const [aspect, setAspect] = useState<number | undefined>(16 / 9);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const proxiedImageUrl = getProxiedUrl(imageUrl);
 
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const { width, height } = e.currentTarget;
@@ -168,7 +182,7 @@ export function CropModal({ imageUrl, listingId, uploadType = 'hero', onSave, on
           >
             <img
               ref={imgRef}
-              src={imageUrl}
+              src={proxiedImageUrl}
               alt="Crop preview"
               onLoad={onImageLoad}
               onError={() => setError('Image failed to load. The source may be unavailable or blocked.')}
