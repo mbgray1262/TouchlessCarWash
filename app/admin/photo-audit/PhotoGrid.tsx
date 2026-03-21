@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Star, Image as ImageIcon, Cpu, X, Crop, Wand2, ZoomIn, ImageOff, Plus, Trash2, Loader2 } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Star, Image as ImageIcon, Cpu, X, Crop, Wand2, ZoomIn, ImageOff, Plus, Trash2, Loader2, MapPin, Upload } from 'lucide-react';
 import type { CandidatePhoto, PhotoTag } from './useFastCuration';
 
 interface PhotoGridProps {
@@ -20,6 +20,10 @@ interface PhotoGridProps {
   enhancingId?: string | null;
   enhancedIds?: string[];
   equipmentSlot?: React.ReactNode;
+  // Street View hero shortcut
+  streetViewUrl?: string;
+  listingId?: string;
+  onHeroDropped?: (url: string) => void;
 }
 
 const SOURCE_BADGES: Record<string, { label: string; color: string }> = {
@@ -38,8 +42,65 @@ export function PhotoGrid({
   candidates, selectedId, onSelect, onTag,
   onSetAsHero, onAddToGallery, onRemoveFromGallery, onRemoveHero, onSkipPhoto,
   onCrop, onEnhance, discovering, enhancingId, enhancedIds = [], equipmentSlot,
+  streetViewUrl, listingId, onHeroDropped,
 }: PhotoGridProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [heroDragging, setHeroDragging] = useState(false);
+  const [heroUploading, setHeroUploading] = useState(false);
+  const heroDragCounter = useRef(0);
+  const heroFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-crop to 16:9 and upload as hero
+  const processHeroDrop = async (file: File) => {
+    if (!listingId || !onHeroDropped) return;
+    setHeroUploading(true);
+    try {
+      // Load the image to get dimensions
+      const bitmap = await createImageBitmap(file);
+      const { width, height } = bitmap;
+
+      // Calculate 16:9 crop (center crop)
+      const targetAspect = 16 / 9;
+      const currentAspect = width / height;
+      let srcX = 0, srcY = 0, srcW = width, srcH = height;
+      if (currentAspect > targetAspect) {
+        // Image is wider — crop sides
+        srcW = Math.round(height * targetAspect);
+        srcX = Math.round((width - srcW) / 2);
+      } else {
+        // Image is taller — crop top/bottom
+        srcH = Math.round(width / targetAspect);
+        srcY = Math.round((height - srcH) / 2);
+      }
+
+      // Draw cropped image to canvas at full resolution
+      const canvas = document.createElement('canvas');
+      canvas.width = srcW;
+      canvas.height = srcH;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(bitmap, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
+
+      // Export as PNG for lossless quality
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(b => b ? resolve(b) : reject(new Error('Canvas empty')), 'image/png');
+      });
+
+      // Upload
+      const formData = new FormData();
+      formData.append('file', blob, 'hero-streetview.png');
+      formData.append('listingId', listingId);
+      formData.append('type', 'hero');
+      const res = await fetch('/api/upload-image', { method: 'POST', body: formData });
+      if (!res.ok) throw new Error(await res.text());
+      const { url } = await res.json();
+      onHeroDropped(url);
+    } catch (err) {
+      console.error('Hero drop failed:', err);
+      alert('Failed to upload hero image. Please try again.');
+    } finally {
+      setHeroUploading(false);
+    }
+  };
 
   const heroPhoto = candidates.find(c => c.tag === 'hero');
   const galleryPhotos = candidates.filter(c => c.tag === 'gallery');
@@ -86,9 +147,74 @@ export function PhotoGrid({
         <div className="flex items-center gap-2 mb-2">
           <Star className="w-4 h-4 text-amber-500" />
           <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Hero Image</h3>
+          <div className="ml-auto flex items-center gap-2">
+            {streetViewUrl && (
+              <a
+                href={streetViewUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium transition-colors"
+                title="Open Street View, take a screenshot, then drag it onto the hero area"
+              >
+                <MapPin className="w-3.5 h-3.5" />
+                Street View
+              </a>
+            )}
+            {onHeroDropped && (
+              <>
+                <input
+                  ref={heroFileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) await processHeroDrop(file);
+                    e.target.value = '';
+                  }}
+                />
+                <button
+                  onClick={() => heroFileInputRef.current?.click()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium transition-colors"
+                  title="Upload a screenshot directly as hero image (auto-crops to 16:9)"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  Upload Hero
+                </button>
+              </>
+            )}
+          </div>
         </div>
         {heroPhoto ? (
-          <div className="relative group rounded-xl overflow-hidden bg-gray-100 border-2 border-amber-400">
+          <div
+            className={`relative group rounded-xl overflow-hidden bg-gray-100 border-2 ${heroDragging ? 'border-orange-400 ring-4 ring-orange-200' : 'border-amber-400'}`}
+            onDragEnter={(e) => { e.preventDefault(); heroDragCounter.current++; setHeroDragging(true); }}
+            onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
+            onDragLeave={(e) => { e.preventDefault(); heroDragCounter.current--; if (heroDragCounter.current <= 0) { heroDragCounter.current = 0; setHeroDragging(false); } }}
+            onDrop={async (e) => {
+              e.preventDefault(); e.stopPropagation();
+              heroDragCounter.current = 0; setHeroDragging(false);
+              const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
+              if (file) await processHeroDrop(file);
+            }}
+          >
+            {heroUploading && (
+              <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60">
+                <div className="flex items-center gap-2 text-white font-medium">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Cropping & uploading...
+                </div>
+              </div>
+            )}
+            {heroDragging && (
+              <div className="absolute inset-0 z-20 flex items-center justify-center bg-orange-50/90 border-4 border-dashed border-orange-400 rounded-xl">
+                <div className="text-center">
+                  <Upload className="w-10 h-10 text-orange-500 mx-auto mb-1" />
+                  <p className="text-sm font-semibold text-orange-700">Drop to replace hero</p>
+                  <p className="text-xs text-orange-500">Auto-crops to 16:9</p>
+                </div>
+              </div>
+            )}
             <div className="aspect-video relative">
               <img
                 src={heroPhoto.url}
@@ -108,7 +234,6 @@ export function PhotoGrid({
                   }
                 }}
                 onError={(e) => {
-                  // Replace broken hero image with a placeholder
                   e.currentTarget.style.display = 'none';
                   const parent = e.currentTarget.parentElement;
                   if (parent && !parent.querySelector('.broken-placeholder')) {
@@ -153,10 +278,36 @@ export function PhotoGrid({
             </div>
           </div>
         ) : (
-          <div className="aspect-video rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center text-gray-400">
-            <ImageOff className="w-10 h-10 mb-2" />
-            <p className="text-sm">No hero image selected</p>
-            <p className="text-xs mt-1">Click a photo below to set as hero</p>
+          <div
+            className={`aspect-video rounded-xl border-2 border-dashed ${heroDragging ? 'border-orange-400 bg-orange-50 ring-4 ring-orange-200' : 'border-gray-300 bg-gray-50'} flex flex-col items-center justify-center text-gray-400 transition-colors`}
+            onDragEnter={(e) => { e.preventDefault(); heroDragCounter.current++; setHeroDragging(true); }}
+            onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
+            onDragLeave={(e) => { e.preventDefault(); heroDragCounter.current--; if (heroDragCounter.current <= 0) { heroDragCounter.current = 0; setHeroDragging(false); } }}
+            onDrop={async (e) => {
+              e.preventDefault(); e.stopPropagation();
+              heroDragCounter.current = 0; setHeroDragging(false);
+              const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
+              if (file) await processHeroDrop(file);
+            }}
+          >
+            {heroUploading ? (
+              <div className="flex items-center gap-2 text-orange-600">
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <p className="text-sm font-medium">Cropping & uploading...</p>
+              </div>
+            ) : heroDragging ? (
+              <>
+                <Upload className="w-10 h-10 text-orange-500 mb-2" />
+                <p className="text-sm font-semibold text-orange-600">Drop screenshot here</p>
+                <p className="text-xs text-orange-400">Auto-crops to 16:9</p>
+              </>
+            ) : (
+              <>
+                <ImageOff className="w-10 h-10 mb-2" />
+                <p className="text-sm">No hero image selected</p>
+                <p className="text-xs mt-1">Drag a screenshot here, click Upload Hero, or select from candidates below</p>
+              </>
+            )}
           </div>
         )}
       </div>

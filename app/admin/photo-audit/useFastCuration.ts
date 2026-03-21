@@ -334,6 +334,25 @@ export function useFastCuration(listingId: string) {
     setCandidates(prev => [...prev, newPhoto]);
   }, []);
 
+  // Add a photo directly as hero (for drag-and-drop / upload hero shortcut)
+  const addHeroDirect = useCallback((url: string) => {
+    const newPhoto: CandidatePhoto = {
+      id: `hero-drop-${Date.now()}`,
+      url,
+      source: 'upload',
+      label: 'Street View Upload',
+      tag: 'hero' as PhotoTag,
+    };
+    setCandidates(prev => {
+      // Demote any existing hero to gallery
+      const galleryCount = prev.filter(c => c.tag === 'gallery').length;
+      const updated = prev.map(c =>
+        c.tag === 'hero' ? { ...c, tag: galleryCount < 8 ? 'gallery' as PhotoTag : null } : c,
+      );
+      return [...updated, newPhoto];
+    });
+  }, []);
+
   // Replace a candidate URL (after crop/enhance)
   const replaceUrl = useCallback((photoId: string, newUrl: string) => {
     setCandidates(prev => prev.map(c =>
@@ -617,6 +636,7 @@ export function useFastCuration(listingId: string) {
     skipPhoto,
     addCapture,
     addUpload,
+    addHeroDirect,
     replaceUrl,
     saveAll,
     approveAndNext,

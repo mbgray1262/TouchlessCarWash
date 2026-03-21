@@ -4,7 +4,6 @@ import { useEffect, useCallback, useState, useRef } from 'react';
 import { X, ExternalLink, Check, CheckCheck, Ban, Trash2, Sparkles, Loader2, Plus, RefreshCw, Upload } from 'lucide-react';
 import { useFastCuration, type CandidatePhoto } from './useFastCuration';
 import { PhotoGrid } from './PhotoGrid';
-import { StreetViewPanel } from './StreetViewPanel';
 import { CropModal } from '../hero-review/CropModal';
 import { autoEnhanceImage } from '../hero-review/autoEnhance';
 import { EQUIPMENT_BRANDS, EQUIPMENT_MODELS } from '../hero-review/types';
@@ -23,7 +22,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
     selectedId, setSelectedId,
     classifying, classifyResult, classifyEvidence,
     tagPhoto, setAsHero, addToGallery, removeFromGallery, removeHero, skipPhoto,
-    addCapture, addUpload, replaceUrl,
+    addCapture, addUpload, addHeroDirect, replaceUrl,
     saveAll, approveAndNext, discoverPhotos, classifyEquipment, setEquipment,
     toggleTouchlessVerified, markNotTouchless, deleteListing,
   } = useFastCuration(listingId);
@@ -51,6 +50,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
   const dragCounter = useRef(0);
 
   // Clipboard paste handler — paste screenshots directly (⌘V)
+  // Clipboard paste handler — ⌘V pastes screenshot, auto-crops to 16:9, sets as hero
   useEffect(() => {
     const handlePasteImage = async (e: ClipboardEvent) => {
       if (!listing) return;
@@ -62,21 +62,46 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
           const file = item.getAsFile();
           if (!file) continue;
           setPasteStatus('uploading');
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('type', 'gallery');
-          formData.append('listingId', listing.id);
           try {
+            // Auto-crop to 16:9 and upload as hero
+            const bitmap = await createImageBitmap(file);
+            const { width, height } = bitmap;
+            const targetAspect = 16 / 9;
+            const currentAspect = width / height;
+            let srcX = 0, srcY = 0, srcW = width, srcH = height;
+            if (currentAspect > targetAspect) {
+              srcW = Math.round(height * targetAspect);
+              srcX = Math.round((width - srcW) / 2);
+            } else {
+              srcH = Math.round(width / targetAspect);
+              srcY = Math.round((height - srcH) / 2);
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = srcW;
+            canvas.height = srcH;
+            const ctx = canvas.getContext('2d')!;
+            ctx.drawImage(bitmap, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
+            const blob = await new Promise<Blob>((resolve, reject) => {
+              canvas.toBlob(b => b ? resolve(b) : reject(new Error('Canvas empty')), 'image/png');
+            });
+
+            const formData = new FormData();
+            formData.append('file', blob, 'hero-pasted.png');
+            formData.append('type', 'hero');
+            formData.append('listingId', listing.id);
             const res = await fetch('/api/upload-image', { method: 'POST', body: formData });
             if (res.ok) {
               const { url } = await res.json();
-              addUpload(url);
+              addHeroDirect(url);
               setPasteStatus('success');
+              setPasteError('');
             } else {
               setPasteStatus('error');
+              setPasteError('Upload failed');
             }
-          } catch {
+          } catch (err) {
             setPasteStatus('error');
+            setPasteError(err instanceof Error ? err.message : 'Failed to process image');
           }
           setTimeout(() => setPasteStatus('idle'), 2000);
           return;
@@ -85,7 +110,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
     };
     window.addEventListener('paste', handlePasteImage);
     return () => window.removeEventListener('paste', handlePasteImage);
-  }, [listing, addUpload]);
+  }, [listing, addHeroDirect]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -449,6 +474,9 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                 enhancingId={enhancing}
                 enhancedIds={enhancedIds}
                 discovering={discovering}
+                streetViewUrl={listing.latitude && listing.longitude ? `https://www.google.com/maps/@${listing.latitude},${listing.longitude},3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192` : undefined}
+                listingId={listing.id}
+                onHeroDropped={addHeroDirect}
                 equipmentSlot={
                   <div className="my-3">
                     <div className="flex items-center gap-3 flex-wrap">
@@ -502,16 +530,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
               />
             </div>
 
-            {/* Street View */}
-            {listing.latitude && listing.longitude && (
-              <div className="px-6 pb-4">
-                <StreetViewPanel
-                  latitude={listing.latitude}
-                  longitude={listing.longitude}
-                  businessName={listing.name}
-                />
-              </div>
-            )}
+            {/* Street View — moved to hero section header as "Street View" button */}
 
             {/* Equipment section moved into PhotoGrid via equipmentSlot */}
           </div>
@@ -633,8 +652,8 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
           pasteStatus === 'success' ? 'bg-green-600' :
           'bg-red-600'
         }`}>
-          {pasteStatus === 'uploading' && '⏳ Uploading pasted image...'}
-          {pasteStatus === 'success' && '✅ Screenshot added to candidates!'}
+          {pasteStatus === 'uploading' && '⏳ Cropping & setting as hero...'}
+          {pasteStatus === 'success' && '✅ Screenshot set as hero!'}
           {pasteStatus === 'error' && `❌ ${pasteError || 'Failed to upload image'}`}
         </div>
       )}
