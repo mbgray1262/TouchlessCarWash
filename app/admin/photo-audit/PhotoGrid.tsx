@@ -20,8 +20,9 @@ interface PhotoGridProps {
   enhancingId?: string | null;
   enhancedIds?: string[];
   equipmentSlot?: React.ReactNode;
-  // Street View hero shortcut
+  // Street View / Google Photos hero shortcut
   streetViewUrl?: string;
+  googlePhotosUrl?: string;
   listingId?: string;
   onHeroDropped?: (url: string) => void;
   onStreetViewOpened?: () => void;
@@ -43,7 +44,7 @@ export function PhotoGrid({
   candidates, selectedId, onSelect, onTag,
   onSetAsHero, onAddToGallery, onRemoveFromGallery, onRemoveHero, onSkipPhoto,
   onCrop, onEnhance, discovering, enhancingId, enhancedIds = [], equipmentSlot,
-  streetViewUrl, listingId, onHeroDropped, onStreetViewOpened,
+  streetViewUrl, googlePhotosUrl, listingId, onHeroDropped, onStreetViewOpened,
 }: PhotoGridProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [heroDragging, setHeroDragging] = useState(false);
@@ -149,6 +150,19 @@ export function PhotoGrid({
           <Star className="w-4 h-4 text-amber-500" />
           <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Hero Image</h3>
           <div className="ml-auto flex items-center gap-2">
+            {googlePhotosUrl && (
+              <a
+                href={googlePhotosUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => onStreetViewOpened?.()}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium transition-colors"
+                title="Browse Google Maps photos, screenshot one (⌘+Ctrl+Shift+4), then switch back — hero is set automatically"
+              >
+                <ImageIcon className="w-3.5 h-3.5" />
+                Google Photos
+              </a>
+            )}
             {streetViewUrl && (
               <a
                 href={streetViewUrl}
