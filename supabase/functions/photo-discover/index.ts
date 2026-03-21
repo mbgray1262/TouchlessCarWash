@@ -472,6 +472,8 @@ async function fetchWebsitePhotos(websiteUrl: string): Promise<CandidatePhoto[]>
     while ((match = ogRegex.exec(html)) !== null) urls.add(match[1]);
 
     const skipPatterns = /favicon|logo|icon|badge|sprite|spacer|pixel|tracking|social|widget|banner|button|nav|arrow|tiny|1x1|blank|svg|emoji|smiley|star-rating|rating|checkbox|radio|toggle|spinner|loader|placeholder|avatar|profile-pic|thumbnail-placeholder|gradient|pattern|divider/i;
+    // Skip marketing junk: coupons, promos, "now open" graphics, app store badges, payment icons, social icons
+    const skipMarketingPatterns = /coupon|promo|offer|deal|discount|special|sale|now-open|grand-opening|coming-soon|gift-card|giftcard|app-store|google-play|apple-store|download-app|qr-code|qrcode|facebook|twitter|instagram|youtube|tiktok|linkedin|yelp-logo|google-logo|visa|mastercard|amex|discover|payment|credit-card|map-pin|map-marker|clipart|stock-photo|shutterstock|istock|getty|adobe-stock|dreamstime/i;
     const skipExtensions = /\.(svg|gif|ico|bmp|cur)(\?|$)/i;
     const imageExts = /\.(jpg|jpeg|png|webp)/i;
 
@@ -480,13 +482,14 @@ async function fetchWebsitePhotos(websiteUrl: string): Promise<CandidatePhoto[]>
     let sizeMatch;
     while ((sizeMatch = imgWithSizeRegex.exec(html)) !== null) {
       const dim = parseInt(sizeMatch[3]);
-      if (dim > 0 && dim < 150) smallImages.add(sizeMatch[1]);
+      if (dim > 0 && dim < 200) smallImages.add(sizeMatch[1]);
     }
 
     const hostname = new URL(websiteUrl).hostname.replace('www.', '');
     const photos: CandidatePhoto[] = [];
     for (const rawUrl of urls) {
       if (skipPatterns.test(rawUrl)) continue;
+      if (skipMarketingPatterns.test(rawUrl)) continue;
       if (skipExtensions.test(rawUrl)) continue;
       if (smallImages.has(rawUrl)) continue;
       if (rawUrl.startsWith('data:')) continue;
@@ -501,6 +504,10 @@ async function fetchWebsitePhotos(websiteUrl: string): Promise<CandidatePhoto[]>
 
       const filename = fullUrl.split('/').pop()?.split('?')[0] ?? '';
       if (filename.length < 5) continue;
+
+      // Skip tiny filenames that are likely icons (e.g., "x.png", "bg.jpg")
+      const nameOnly = filename.replace(/\.[^.]+$/, '');
+      if (nameOnly.length < 4) continue;
 
       photos.push({
         url: fullUrl,

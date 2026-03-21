@@ -233,6 +233,7 @@ export function PhotoGrid({
             )}
             <div className="aspect-video relative">
               <img
+                key={heroPhoto.id}
                 src={heroPhoto.url}
                 alt=""
                 className="absolute inset-0 w-full h-full object-cover"
