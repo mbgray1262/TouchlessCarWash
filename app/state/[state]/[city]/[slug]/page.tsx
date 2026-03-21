@@ -16,7 +16,6 @@ import SuggestEditModal from '@/components/SuggestEditModal';
 import { TrackableLink } from '@/components/TrackableLink';
 import { HoursStatusBadge } from '@/components/HoursStatusBadge';
 import { ListingBreadcrumb } from '@/components/ListingBreadcrumb';
-import { WhyVisitSection } from '@/components/WhyVisitSection';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
@@ -1081,8 +1080,6 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                 </div>
               )}
 
-              {/* Why Visit This Location */}
-              <WhyVisitSection listing={listing} reviewSnippets={reviewSnippets} />
 
               {/* Wash Type & Equipment */}
               {((listing.touchless_wash_types && listing.touchless_wash_types.length > 0) || listing.equipment_brand) && (
