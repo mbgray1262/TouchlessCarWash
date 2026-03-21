@@ -48,9 +48,88 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
   const [pasteError, setPasteError] = useState<string>('');
   const [dragging, setDragging] = useState(false);
   const dragCounter = useRef(0);
+  const awaitingClipboard = useRef(false);
 
-  // Clipboard paste handler — paste screenshots directly (⌘V)
-  // Clipboard paste handler — ⌘V pastes screenshot, auto-crops to 16:9, sets as hero
+  // Process a clipboard image: auto-crop to 16:9 and set as hero
+  const processClipboardImage = useCallback(async (blob: Blob) => {
+    if (!listing) return;
+    setPasteStatus('uploading');
+    try {
+      const bitmap = await createImageBitmap(blob);
+      const { width, height } = bitmap;
+      const targetAspect = 16 / 9;
+      const currentAspect = width / height;
+      let srcX = 0, srcY = 0, srcW = width, srcH = height;
+      if (currentAspect > targetAspect) {
+        srcW = Math.round(height * targetAspect);
+        srcX = Math.round((width - srcW) / 2);
+      } else {
+        srcH = Math.round(width / targetAspect);
+        srcY = Math.round((height - srcH) / 2);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = srcW;
+      canvas.height = srcH;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(bitmap, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
+      const cropped = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(b => b ? resolve(b) : reject(new Error('Canvas empty')), 'image/png');
+      });
+
+      const formData = new FormData();
+      formData.append('file', cropped, 'hero-streetview.png');
+      formData.append('type', 'hero');
+      formData.append('listingId', listing.id);
+      const res = await fetch('/api/upload-image', { method: 'POST', body: formData });
+      if (res.ok) {
+        const { url } = await res.json();
+        addHeroDirect(url);
+        setPasteStatus('success');
+        setPasteError('');
+      } else {
+        setPasteStatus('error');
+        setPasteError('Upload failed');
+      }
+    } catch (err) {
+      setPasteStatus('error');
+      setPasteError(err instanceof Error ? err.message : 'Failed to process image');
+    }
+    setTimeout(() => setPasteStatus('idle'), 3000);
+  }, [listing, addHeroDirect]);
+
+  // Auto-read clipboard when tab regains focus after Street View was opened
+  useEffect(() => {
+    const handleVisibility = async () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!awaitingClipboard.current) return;
+      awaitingClipboard.current = false;
+
+      // Small delay to let the tab fully activate
+      await new Promise(r => setTimeout(r, 300));
+
+      try {
+        const clipboardItems = await navigator.clipboard.read();
+        for (const item of clipboardItems) {
+          const imageType = item.types.find(t => t.startsWith('image/'));
+          if (imageType) {
+            const blob = await item.getType(imageType);
+            await processClipboardImage(blob);
+            return;
+          }
+        }
+        // No image in clipboard — no action, user may not have taken screenshot yet
+      } catch {
+        // Clipboard read failed (permission denied) — fall back to manual paste
+        // Show a hint that they can press ⌘V
+        console.log('Auto-clipboard read failed, use ⌘V to paste');
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [processClipboardImage]);
+
+  // Also keep ⌘V paste as fallback
   useEffect(() => {
     const handlePasteImage = async (e: ClipboardEvent) => {
       if (!listing) return;
@@ -61,56 +140,14 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
           e.preventDefault();
           const file = item.getAsFile();
           if (!file) continue;
-          setPasteStatus('uploading');
-          try {
-            // Auto-crop to 16:9 and upload as hero
-            const bitmap = await createImageBitmap(file);
-            const { width, height } = bitmap;
-            const targetAspect = 16 / 9;
-            const currentAspect = width / height;
-            let srcX = 0, srcY = 0, srcW = width, srcH = height;
-            if (currentAspect > targetAspect) {
-              srcW = Math.round(height * targetAspect);
-              srcX = Math.round((width - srcW) / 2);
-            } else {
-              srcH = Math.round(width / targetAspect);
-              srcY = Math.round((height - srcH) / 2);
-            }
-            const canvas = document.createElement('canvas');
-            canvas.width = srcW;
-            canvas.height = srcH;
-            const ctx = canvas.getContext('2d')!;
-            ctx.drawImage(bitmap, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
-            const blob = await new Promise<Blob>((resolve, reject) => {
-              canvas.toBlob(b => b ? resolve(b) : reject(new Error('Canvas empty')), 'image/png');
-            });
-
-            const formData = new FormData();
-            formData.append('file', blob, 'hero-pasted.png');
-            formData.append('type', 'hero');
-            formData.append('listingId', listing.id);
-            const res = await fetch('/api/upload-image', { method: 'POST', body: formData });
-            if (res.ok) {
-              const { url } = await res.json();
-              addHeroDirect(url);
-              setPasteStatus('success');
-              setPasteError('');
-            } else {
-              setPasteStatus('error');
-              setPasteError('Upload failed');
-            }
-          } catch (err) {
-            setPasteStatus('error');
-            setPasteError(err instanceof Error ? err.message : 'Failed to process image');
-          }
-          setTimeout(() => setPasteStatus('idle'), 2000);
+          await processClipboardImage(file);
           return;
         }
       }
     };
     window.addEventListener('paste', handlePasteImage);
     return () => window.removeEventListener('paste', handlePasteImage);
-  }, [listing, addHeroDirect]);
+  }, [listing, processClipboardImage]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -477,6 +514,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                 streetViewUrl={listing.latitude && listing.longitude ? `https://www.google.com/maps/@${listing.latitude},${listing.longitude},3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192` : undefined}
                 listingId={listing.id}
                 onHeroDropped={addHeroDirect}
+                onStreetViewOpened={() => { awaitingClipboard.current = true; }}
                 equipmentSlot={
                   <div className="my-3">
                     <div className="flex items-center gap-3 flex-wrap">

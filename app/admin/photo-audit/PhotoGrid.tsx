@@ -24,6 +24,7 @@ interface PhotoGridProps {
   streetViewUrl?: string;
   listingId?: string;
   onHeroDropped?: (url: string) => void;
+  onStreetViewOpened?: () => void;
 }
 
 const SOURCE_BADGES: Record<string, { label: string; color: string }> = {
@@ -42,7 +43,7 @@ export function PhotoGrid({
   candidates, selectedId, onSelect, onTag,
   onSetAsHero, onAddToGallery, onRemoveFromGallery, onRemoveHero, onSkipPhoto,
   onCrop, onEnhance, discovering, enhancingId, enhancedIds = [], equipmentSlot,
-  streetViewUrl, listingId, onHeroDropped,
+  streetViewUrl, listingId, onHeroDropped, onStreetViewOpened,
 }: PhotoGridProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [heroDragging, setHeroDragging] = useState(false);
@@ -153,8 +154,9 @@ export function PhotoGrid({
                 href={streetViewUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => onStreetViewOpened?.()}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium transition-colors"
-                title="Open Street View, take a screenshot, then drag it onto the hero area"
+                title="Open Street View, take screenshot (⌘+Ctrl+Shift+4), then switch back — hero is set automatically"
               >
                 <MapPin className="w-3.5 h-3.5" />
                 Street View
