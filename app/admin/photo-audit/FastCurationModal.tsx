@@ -125,10 +125,13 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
           return;
         }
       }
-      // No image found
+      // No image found — user probably used ⌘+Shift (saves file) instead of ⌘+Ctrl+Shift (clipboard)
       setPasteStatus('error');
-      setPasteError('No screenshot found in clipboard. Take a screenshot first (⌘+Ctrl+Shift+4)');
-      setTimeout(() => setPasteStatus('idle'), 3000);
+      setPasteError('No image in clipboard. Use ⌘+Ctrl+Shift+4 (with Ctrl!) to copy screenshot to clipboard');
+      setTimeout(() => setPasteStatus('idle'), 5000);
+      // Re-show banner so they can try again
+      awaitingClipboard.current = true;
+      setShowClipboardBanner(true);
     } catch {
       setPasteStatus('error');
       setPasteError('Clipboard access denied. Try ⌘V to paste instead.');
@@ -329,13 +332,17 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
             className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 cursor-pointer"
             onClick={handleClipboardClick}
           >
-            <div className="text-center animate-pulse">
+            <div className="text-center">
               <div className="text-6xl mb-4">📷</div>
-              <p className="text-2xl font-bold text-white mb-2">Click anywhere to apply screenshot as hero</p>
-              <p className="text-sm text-gray-300">Your clipboard will be read and the image will be auto-cropped to 16:9</p>
+              <p className="text-2xl font-bold text-white mb-3">Click here to apply screenshot as hero</p>
+              <div className="bg-white/10 rounded-xl px-6 py-4 mb-4 max-w-md mx-auto">
+                <p className="text-sm text-yellow-300 font-medium mb-1">Make sure you used the right shortcut:</p>
+                <p className="text-lg text-white font-mono">⌘ + Ctrl + Shift + 4</p>
+                <p className="text-xs text-gray-400 mt-1">The <strong>Ctrl</strong> key copies to clipboard instead of saving a file</p>
+              </div>
               <button
                 onClick={(e) => { e.stopPropagation(); setShowClipboardBanner(false); awaitingClipboard.current = false; }}
-                className="mt-4 px-4 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-white text-sm"
+                className="px-4 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-white text-sm"
               >
                 Dismiss
               </button>
