@@ -208,12 +208,15 @@ export function useFastCuration(listingId: string) {
   useEffect(() => {
     if (listingId !== prevListingId.current) {
       prevListingId.current = listingId;
+      setListing(null);       // Clear stale listing to prevent old hero from flashing
       setCandidates([]);
+      setSkippedUrls([]);
       setSourceCounts(null);
       setSelectedId(null);
       setClassifyResult(null);
       setClassifyEvidence(null);
       setSaving(false);
+      setDiscovering(false);
       setLoading(true);
       loadListing();
     }
