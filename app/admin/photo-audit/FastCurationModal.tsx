@@ -49,6 +49,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
   const [dragging, setDragging] = useState(false);
   const dragCounter = useRef(0);
   const awaitingClipboard = useRef(false);
+  const [showClipboardBanner, setShowClipboardBanner] = useState(false);
 
   // Process a clipboard image: auto-crop to 16:9 and set as hero
   const processClipboardImage = useCallback(async (blob: Blob) => {
@@ -97,37 +98,43 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
     setTimeout(() => setPasteStatus('idle'), 3000);
   }, [listing, addHeroDirect]);
 
-  // Auto-read clipboard when tab regains focus after Street View was opened
+  // When tab regains focus after Street View, show banner prompting a click
   useEffect(() => {
-    const handleVisibility = async () => {
+    const handleVisibility = () => {
       if (document.visibilityState !== 'visible') return;
       if (!awaitingClipboard.current) return;
-      awaitingClipboard.current = false;
-
-      // Small delay to let the tab fully activate
-      await new Promise(r => setTimeout(r, 300));
-
-      try {
-        const clipboardItems = await navigator.clipboard.read();
-        for (const item of clipboardItems) {
-          const imageType = item.types.find(t => t.startsWith('image/'));
-          if (imageType) {
-            const blob = await item.getType(imageType);
-            await processClipboardImage(blob);
-            return;
-          }
-        }
-        // No image in clipboard — no action, user may not have taken screenshot yet
-      } catch {
-        // Clipboard read failed (permission denied) — fall back to manual paste
-        // Show a hint that they can press ⌘V
-        console.log('Auto-clipboard read failed, use ⌘V to paste');
-      }
+      // Show the "click to apply" banner
+      setShowClipboardBanner(true);
     };
-
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [processClipboardImage]);
+  }, []);
+
+  // When banner is showing and user clicks anywhere, read clipboard and apply as hero
+  const handleClipboardClick = useCallback(async () => {
+    if (!showClipboardBanner) return;
+    awaitingClipboard.current = false;
+    setShowClipboardBanner(false);
+    try {
+      const clipboardItems = await navigator.clipboard.read();
+      for (const item of clipboardItems) {
+        const imageType = item.types.find(t => t.startsWith('image/'));
+        if (imageType) {
+          const blob = await item.getType(imageType);
+          await processClipboardImage(blob);
+          return;
+        }
+      }
+      // No image found
+      setPasteStatus('error');
+      setPasteError('No screenshot found in clipboard. Take a screenshot first (⌘+Ctrl+Shift+4)');
+      setTimeout(() => setPasteStatus('idle'), 3000);
+    } catch {
+      setPasteStatus('error');
+      setPasteError('Clipboard access denied. Try ⌘V to paste instead.');
+      setTimeout(() => setPasteStatus('idle'), 3000);
+    }
+  }, [showClipboardBanner, processClipboardImage]);
 
   // Also keep ⌘V paste as fallback
   useEffect(() => {
@@ -316,6 +323,25 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        {/* Clipboard banner — click anywhere to apply screenshot as hero */}
+        {showClipboardBanner && (
+          <div
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 cursor-pointer"
+            onClick={handleClipboardClick}
+          >
+            <div className="text-center animate-pulse">
+              <div className="text-6xl mb-4">📷</div>
+              <p className="text-2xl font-bold text-white mb-2">Click anywhere to apply screenshot as hero</p>
+              <p className="text-sm text-gray-300">Your clipboard will be read and the image will be auto-cropped to 16:9</p>
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowClipboardBanner(false); awaitingClipboard.current = false; }}
+                className="mt-4 px-4 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-white text-sm"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        )}
         <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[95vh] flex flex-col overflow-hidden">
 
           {/* Header */}
