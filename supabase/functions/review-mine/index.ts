@@ -1147,6 +1147,7 @@ Deno.serve(async (req: Request) => {
             await supabase.from('listings').update({
               is_touchless: true,
               is_approved: true,
+              touchless_verified: 'user_review',
               review_mine_status: 'touchless_found',
               review_extract_status: 'extracted',
               touchless_review_count: snippetCount,
@@ -1318,6 +1319,7 @@ Deno.serve(async (req: Request) => {
           await supabase.from('listings').update({
             is_touchless: true,
             is_approved: true,
+            touchless_verified: 'user_review',
             review_mine_status: 'touchless_found',
             review_extract_status: 'extracted',
             touchless_review_count: snippetCount,
