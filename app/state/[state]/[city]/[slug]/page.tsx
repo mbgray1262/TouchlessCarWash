@@ -1236,8 +1236,8 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                 </div>
               )}
 
-              {/* Touchless Sentiment — simple positive/negative/neutral badge */}
-              {listing.touchless_sentiment && (
+              {/* Touchless Sentiment — simple positive/negative/neutral badge (only show if there are actual reviews) */}
+              {listing.touchless_sentiment && reviewSnippets.length > 0 && (
                 <div className={`flex items-center gap-2 px-4 py-3 rounded-xl border ${
                   listing.touchless_sentiment === 'positive'
                     ? 'bg-green-50 border-green-200'
