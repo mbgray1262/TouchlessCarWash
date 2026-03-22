@@ -42,6 +42,7 @@ const navigation: NavEntry[] = [
       { href: '/admin/ai-photo-review', label: 'AI Photo QA', icon: Camera },
       { href: '/admin/photo-audit', label: 'Photo Audit', icon: Camera },
       { href: '/admin/bulk-verify', label: 'Bulk Verify', icon: ShieldCheck },
+      { href: '/admin/touchless-cleanup', label: 'Touchless Cleanup', icon: ShieldCheck },
       { href: '/admin/filters', label: 'Filters', icon: Filter },
     ],
   },
