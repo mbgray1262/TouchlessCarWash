@@ -103,7 +103,7 @@ async function fetchTier1(): Promise<CleanupListing[]> {
       .neq('touchless_verified', 'admin')
       .is('equipment_brand', null)
       .neq('touchless_confidence', 'high')
-      .or('is_touchless.is.null,is_touchless.eq.false');
+      .eq('is_touchless', true);
     if (data) {
       for (const listing of data) {
         allListings.push({
@@ -120,10 +120,10 @@ async function fetchTier2(): Promise<CleanupListing[]> {
   const { data } = await supabase
     .from('listings')
     .select(SELECT_COLS)
+    .eq('is_touchless', true)
     .is('touchless_verified', null)
     .is('equipment_brand', null)
     .eq('touchless_review_count', 0)
-    .or('is_touchless.is.null,is_touchless.eq.false')
     .or('classification_confidence.is.null,classification_confidence.lt.50')
     .order('state')
     .order('city')
