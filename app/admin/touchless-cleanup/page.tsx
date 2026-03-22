@@ -90,7 +90,7 @@ async function fetchTier1(): Promise<CleanupListing[]> {
       reasonMap.set(r.listing_id, snippet);
     }
   }
-  const negIds = [...reasonMap.keys()];
+  const negIds = Array.from(reasonMap.keys());
 
   // Step 2: Filter listings — only those without strong positive signals
   const allListings: CleanupListing[] = [];

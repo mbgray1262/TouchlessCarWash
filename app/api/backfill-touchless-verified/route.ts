@@ -29,7 +29,7 @@ export async function POST() {
       return NextResponse.json({ updated: 0, message: 'No positive review evidence found' });
     }
 
-    const positiveIds = [...new Set(snippets.map(s => s.listing_id))];
+    const positiveIds = Array.from(new Set(snippets.map(s => s.listing_id)));
 
     // Step 2: Update listings that don't already have admin verification
     // Only set user_review if touchless_verified is null (don't downgrade admin to user_review)
