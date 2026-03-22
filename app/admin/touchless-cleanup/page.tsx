@@ -350,7 +350,7 @@ export default function TouchlessCleanupPage() {
       const [t1, t2, countRes] = await Promise.all([
         fetchTier1(),
         fetchTier2(),
-        supabase.from('listings').select('id', { count: 'exact', head: true }),
+        supabase.from('listings').select('id', { count: 'exact', head: true }).eq('is_touchless', true),
       ]);
       setTier1(t1);
       setTier2(t2);
