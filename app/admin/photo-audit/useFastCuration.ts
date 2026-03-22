@@ -84,8 +84,15 @@ export function useFastCuration(listingId: string) {
         await Promise.all(photos.map(async (url: string) => {
           try {
             const r = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(5000) });
-            if (r.ok) validPhotos.push(url);
-            else broken.push(url);
+            if (!r.ok) { broken.push(url); return; }
+            const contentType = r.headers.get('content-type') || '';
+            const contentLength = parseInt(r.headers.get('content-length') || '0', 10);
+            // Remove non-images and tiny files (<5KB = likely icons/placeholders)
+            if (!contentType.startsWith('image/') || (contentLength > 0 && contentLength < 5000)) {
+              broken.push(url);
+            } else {
+              validPhotos.push(url);
+            }
           } catch {
             broken.push(url);
           }

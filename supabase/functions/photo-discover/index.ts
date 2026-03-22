@@ -614,11 +614,37 @@ Deno.serve(async (req) => {
     if (!url.startsWith('http://') && !url.startsWith('https://')) return false;
     // Skip data URIs that are tiny (base64 placeholders/spacers)
     if (url.startsWith('data:') && url.length < 500) return false;
-    // Skip obvious non-photo files
-    if (/\.(svg|gif|ico|webp)(\?|$)/i.test(url)) return false;
+    // Skip obvious non-photo files (svg, gif, ico are never location photos)
+    if (/\.(svg|gif|ico)(\?|$)/i.test(url)) return false;
     // Skip tracking pixels, spacers, and tiny placeholder images
     if (/1x1|pixel|spacer|blank|transparent|placeholder/i.test(url)) return false;
+    // Skip common junk patterns
+    if (/logo|icon|badge|favicon|spinner|loading|avatar|profile-pic|emoji/i.test(url)) return false;
     return true;
+  }
+
+  // Validate that a photo URL actually returns a real image (not a tiny placeholder or 404)
+  async function validatePhoto(photo: CandidatePhoto): Promise<boolean> {
+    // Skip validation for existing/uploaded photos (already in our storage)
+    if (photo.source === 'existing' || photo.source === 'upload' || photo.source === 'capture') return true;
+    // Skip validation for Supabase storage URLs
+    if (photo.url.includes('supabase.co/')) return true;
+    try {
+      const res = await fetch(photo.url, {
+        method: 'HEAD',
+        signal: AbortSignal.timeout(5000),
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; TouchlessCarWashFinder/1.0)' },
+      });
+      if (!res.ok) return false;
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.startsWith('image/')) return false;
+      const contentLength = parseInt(res.headers.get('content-length') || '0', 10);
+      // Skip images smaller than 5KB (likely icons, spacers, placeholders)
+      if (contentLength > 0 && contentLength < 5000) return false;
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   function addPhotos(photos: CandidatePhoto[]) {
@@ -642,17 +668,22 @@ Deno.serve(async (req) => {
   const svResult = streetView.status === 'fulfilled' ? streetView.value : null;
   if (svResult) addPhotos([svResult]);
 
+  // Validate all external candidates in parallel (HEAD check for real images)
+  const validationResults = await Promise.all(allCandidates.map(p => validatePhoto(p)));
+  const validCandidates = allCandidates.filter((_, i) => validationResults[i]);
+  const droppedCount = allCandidates.length - validCandidates.length;
+
   // Log source counts for debugging
   const yelpCount = yelpPhotos.status === 'fulfilled' ? yelpPhotos.value.length : 0;
   const gMapsCount = googleMaps.status === 'fulfilled' ? googleMaps.value.length : 0;
   const bingCount = bingSearch.status === 'fulfilled' ? bingSearch.value.length : 0;
   const websiteCount = websitePhotos.status === 'fulfilled' ? websitePhotos.value.length : 0;
-  console.log(`[photo-discover] ${listing.name}: yelp=${yelpCount} maps=${gMapsCount} bing=${bingCount} website=${websiteCount}`);
+  console.log(`[photo-discover] ${listing.name}: yelp=${yelpCount} maps=${gMapsCount} bing=${bingCount} website=${websiteCount} dropped=${droppedCount}`);
   if (yelpPhotos.status === 'rejected') console.error('[photo-discover] Yelp error:', yelpPhotos.reason);
   if (googleMaps.status === 'rejected') console.error('[photo-discover] Google Maps error:', googleMaps.reason);
 
   return json({
-    candidates: allCandidates,
+    candidates: validCandidates,
     total: allCandidates.length,
     sources: {
       existing: existing.length,
