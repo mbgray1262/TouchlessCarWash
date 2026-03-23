@@ -700,7 +700,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
 
             {onPrev && (
               <button
-                onClick={onPrev}
+                onClick={async () => { await saveAll(); onUpdate?.(); onPrev(); }}
                 disabled={saving}
                 className="flex items-center gap-1 px-3 py-2.5 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium disabled:opacity-50 transition-colors"
               >
@@ -709,10 +709,10 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
             )}
             {onNext && (
               <button
-                onClick={onNext}
+                onClick={async () => { await saveAll(); onUpdate?.(); onNext(); }}
                 disabled={saving}
                 className="flex items-center gap-1 px-3 py-2.5 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium disabled:opacity-50 transition-colors"
-                title="Skip to next without saving"
+                title="Save and go to next"
               >
                 Next →
               </button>
