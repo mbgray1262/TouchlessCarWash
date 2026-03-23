@@ -22,7 +22,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
     selectedId, setSelectedId,
     classifying, classifyResult, classifyEvidence,
     tagPhoto, setAsHero, addToGallery, removeFromGallery, removeHero, skipPhoto,
-    addCapture, addUpload, addHeroDirect, replaceUrl,
+    addCapture, addUpload, addHeroDirect, replaceUrl, updateWebsite,
     saveAll, approveAndNext, discoverPhotos, classifyEquipment, setEquipment,
     toggleTouchlessVerified, markNotTouchless, deleteListing,
   } = useFastCuration(listingId);
@@ -626,14 +626,42 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
 
             <div className="flex-1" />
 
-            {listing.website && (
+            <div className="relative group">
               <button
-                onClick={() => window.open(listing.website!, '_blank')}
-                className="flex items-center gap-1 px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm"
+                onClick={() => listing.website ? window.open(listing.website, '_blank') : null}
+                className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm ${
+                  listing.website
+                    ? 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    : 'bg-gray-50 text-gray-400 border border-dashed border-gray-300'
+                }`}
               >
-                Website
+                {listing.website ? 'Website' : 'No Website'}
               </button>
-            )}
+              {/* Edit/Delete dropdown on hover */}
+              <div className="absolute bottom-full left-0 mb-1 hidden group-hover:flex gap-1 bg-white border rounded-lg shadow-lg p-1 z-10">
+                <button
+                  onClick={() => {
+                    const newUrl = prompt('Enter website URL (or leave empty to remove):', listing.website || '');
+                    if (newUrl !== null) {
+                      updateWebsite(newUrl.trim() || null);
+                    }
+                  }}
+                  className="px-2 py-1 text-xs rounded bg-blue-50 hover:bg-blue-100 text-blue-700 whitespace-nowrap"
+                >
+                  ✏️ Edit
+                </button>
+                {listing.website && (
+                  <button
+                    onClick={() => {
+                      if (confirm('Remove website URL?')) updateWebsite(null);
+                    }}
+                    className="px-2 py-1 text-xs rounded bg-red-50 hover:bg-red-100 text-red-700 whitespace-nowrap"
+                  >
+                    🗑 Remove
+                  </button>
+                )}
+              </div>
+            </div>
             {listing.google_place_id && (
               <button
                 onClick={() => window.open(`https://www.google.com/maps/place/?q=place_id:${listing.google_place_id}`, '_blank')}

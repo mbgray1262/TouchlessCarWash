@@ -618,6 +618,12 @@ export function useFastCuration(listingId: string) {
   };
 
   // Delete listing
+  const updateWebsite = useCallback(async (newUrl: string | null) => {
+    if (!listing) return;
+    await supabase.from('listings').update({ website: newUrl }).eq('id', listing.id);
+    setListing(prev => prev ? { ...prev, website: newUrl } : prev);
+  }, [listing]);
+
   const deleteListing = useCallback(async () => {
     if (!listing) return;
     setSaving(true);
@@ -655,6 +661,7 @@ export function useFastCuration(listingId: string) {
     setEquipment,
     toggleTouchlessVerified,
     markNotTouchless,
+    updateWebsite,
     deleteListing,
     loadListing,
   };
