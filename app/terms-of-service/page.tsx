@@ -79,7 +79,24 @@ export default function TermsOfServicePage() {
           </ul>
 
           <h2 className="text-2xl font-bold text-[#0F2744] mt-10 mb-4">
-            3. Directory Listings and Accuracy
+            3. Directory Only — Not a Car Wash Operator
+          </h2>
+          <p className="text-gray-700">
+            <strong>{SITE_NAME} is an independent online directory.</strong> We do not own, operate,
+            manage, or have any affiliation with any of the car wash businesses listed on this Site.
+            We are not responsible for the quality of service, pricing, billing, refunds, customer
+            service, or any other aspect of any car wash listed in our directory.
+          </p>
+          <p className="text-gray-700 mt-3">
+            <strong>If you have a complaint, refund request, billing dispute, or service issue
+            with a specific car wash, you must contact that car wash business directly.</strong> We
+            cannot process refunds, mediate disputes, or intervene in any transaction between you
+            and a car wash business. Contact information for each car wash (phone number, website)
+            is provided on their listing page.
+          </p>
+
+          <h2 className="text-2xl font-bold text-[#0F2744] mt-10 mb-4">
+            4. Directory Listings and Accuracy
           </h2>
           <p className="text-gray-700">
             We make reasonable efforts to verify that each car wash listed in our directory is a
@@ -106,7 +123,7 @@ export default function TermsOfServicePage() {
           </ul>
 
           <h2 className="text-2xl font-bold text-[#0F2744] mt-10 mb-4">
-            4. Business Listing Submissions
+            5. Business Listing Submissions
           </h2>
           <p className="text-gray-700">
             If you submit a car wash for inclusion in our directory, you represent that:
@@ -126,7 +143,7 @@ export default function TermsOfServicePage() {
             discretion.
           </p>
 
-          <h2 className="text-2xl font-bold text-[#0F2744] mt-10 mb-4">5. Intellectual Property</h2>
+          <h2 className="text-2xl font-bold text-[#0F2744] mt-10 mb-4">6. Intellectual Property</h2>
           <p className="text-gray-700">
             All content on the Site — including text, graphics, logos, page layouts, and software
             — is the property of {SITE_NAME} or its licensors and is protected by applicable
@@ -138,7 +155,7 @@ export default function TermsOfServicePage() {
             respective owners and are used here for informational purposes.
           </p>
 
-          <h2 className="text-2xl font-bold text-[#0F2744] mt-10 mb-4">6. Third-Party Content and Links</h2>
+          <h2 className="text-2xl font-bold text-[#0F2744] mt-10 mb-4">7. Third-Party Content and Links</h2>
           <p className="text-gray-700">
             The Site may display content from or link to third-party websites, including Google
             Maps, car wash business websites, and advertising partners. We do not control and
@@ -146,7 +163,7 @@ export default function TermsOfServicePage() {
             Your use of third-party sites is governed by their respective terms and policies.
           </p>
 
-          <h2 className="text-2xl font-bold text-[#0F2744] mt-10 mb-4">7. Advertising</h2>
+          <h2 className="text-2xl font-bold text-[#0F2744] mt-10 mb-4">8. Advertising</h2>
           <p className="text-gray-700">
             The Site may display advertisements served by third-party ad networks. These ads may
             use cookies or similar technologies to deliver relevant content. Your interaction
@@ -154,7 +171,7 @@ export default function TermsOfServicePage() {
             for the content or accuracy of any advertisement or the practices of any advertiser.
           </p>
 
-          <h2 className="text-2xl font-bold text-[#0F2744] mt-10 mb-4">8. Disclaimer of Warranties</h2>
+          <h2 className="text-2xl font-bold text-[#0F2744] mt-10 mb-4">9. Disclaimer of Warranties</h2>
           <p className="text-gray-700">
             THE SITE AND ALL CONTENT ARE PROVIDED &ldquo;AS IS&rdquo; AND &ldquo;AS
             AVAILABLE&rdquo; WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED. TO THE FULLEST
@@ -166,7 +183,7 @@ export default function TermsOfServicePage() {
             harmful components, or that any listing information is accurate or current.
           </p>
 
-          <h2 className="text-2xl font-bold text-[#0F2744] mt-10 mb-4">9. Limitation of Liability</h2>
+          <h2 className="text-2xl font-bold text-[#0F2744] mt-10 mb-4">10. Limitation of Liability</h2>
           <p className="text-gray-700">
             TO THE FULLEST EXTENT PERMITTED BY LAW, {SITE_NAME.toUpperCase()} SHALL NOT BE
             LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES
@@ -179,7 +196,7 @@ export default function TermsOfServicePage() {
             the amount you paid to us (if any) in the twelve months preceding the claim.
           </p>
 
-          <h2 className="text-2xl font-bold text-[#0F2744] mt-10 mb-4">10. Indemnification</h2>
+          <h2 className="text-2xl font-bold text-[#0F2744] mt-10 mb-4">11. Indemnification</h2>
           <p className="text-gray-700">
             You agree to indemnify and hold harmless {SITE_NAME}, its owners, operators, and
             affiliates from any claims, damages, losses, or expenses (including reasonable
@@ -187,21 +204,21 @@ export default function TermsOfServicePage() {
             Terms, or your violation of any third-party rights.
           </p>
 
-          <h2 className="text-2xl font-bold text-[#0F2744] mt-10 mb-4">11. Changes to These Terms</h2>
+          <h2 className="text-2xl font-bold text-[#0F2744] mt-10 mb-4">12. Changes to These Terms</h2>
           <p className="text-gray-700">
             We may update these Terms from time to time. When we make changes, we will update
             the &ldquo;Effective date&rdquo; at the top of this page. Your continued use of the
             Site after changes are posted constitutes your acceptance of the updated Terms.
           </p>
 
-          <h2 className="text-2xl font-bold text-[#0F2744] mt-10 mb-4">12. Governing Law</h2>
+          <h2 className="text-2xl font-bold text-[#0F2744] mt-10 mb-4">13. Governing Law</h2>
           <p className="text-gray-700">
             These Terms are governed by and construed in accordance with the laws of the United
             States. Any disputes arising from these Terms or your use of the Site shall be
             resolved in the courts of competent jurisdiction.
           </p>
 
-          <h2 className="text-2xl font-bold text-[#0F2744] mt-10 mb-4">13. Contact Us</h2>
+          <h2 className="text-2xl font-bold text-[#0F2744] mt-10 mb-4">14. Contact Us</h2>
           <p className="text-gray-700">
             If you have questions about these Terms, please contact us at:
           </p>

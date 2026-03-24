@@ -215,8 +215,12 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="text-center text-sm text-white/50 mt-4">
+        <div className="text-center text-sm text-white/50 mt-4 space-y-2">
           <p>&copy; {currentYear} Touchless Car Wash Finder. All rights reserved.</p>
+          <p className="text-xs text-white/35 max-w-2xl mx-auto">
+            Touchless Car Wash Finder is an independent directory. We do not own or operate any car washes listed on this site.
+            For service issues, refunds, or complaints, please contact the car wash directly.
+          </p>
         </div>
       </div>
     </footer>
