@@ -135,6 +135,20 @@ export default function ContactPage() {
           </div>
         </div>
 
+        {/* Disclaimer */}
+        <div className="mt-12 p-6 rounded-xl bg-amber-50 border border-amber-200">
+          <h2 className="text-lg font-bold text-amber-900 mb-3">Important: We Are a Directory, Not a Car Wash</h2>
+          <p className="text-sm text-amber-800 mb-3">
+            Touchless Car Wash Finder is an independent online directory that helps consumers locate touchless car wash facilities. <strong>We do not own, operate, or manage any of the car washes listed on this site.</strong>
+          </p>
+          <p className="text-sm text-amber-800 mb-3">
+            We are not responsible for the quality of service, pricing, hours of operation, or any other aspect of any car wash listed in our directory. All information is provided for reference purposes and may not always be up to date.
+          </p>
+          <p className="text-sm text-amber-800">
+            <strong>If you have questions, concerns, or complaints about a specific car wash</strong> — including refund requests, service quality issues, or billing disputes — please contact that car wash directly using the phone number or website listed on their page. We are unable to process refunds or resolve service disputes on behalf of any car wash business.
+          </p>
+        </div>
+
         {/* CTA */}
         <div className="mt-12 p-8 rounded-2xl bg-[#0F2744] text-center">
           <h2 className="text-2xl font-bold text-white mb-3">
