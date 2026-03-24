@@ -86,7 +86,8 @@ const REVIEW_TOUCHLESS_KEYWORDS = [
   'no brush', 'no-brush', 'no brushes',
   'laser wash', 'laserwash',
   'no-touch', 'no touch', 'notouch',
-  'contactless', 'contact-free', 'contact free',
+  // NOTE: "contactless" REMOVED — almost always refers to contactless PAYMENT, not touchless washing
+  // Only "contactless wash" is kept as a valid compound signal (checked separately below)
   'frictionless', 'friction-free',
 ];
 
@@ -411,8 +412,8 @@ async function searchReviewsMultiKeyword(
   // "touch" catches: touchless, no-touch, touch-free, soft-touch, touch less
   // "brushless" catches: brushless, brush-free
   // "laser" catches: laser wash, laserwash
-  // "contactless" catches: contactless, contact-free
-  const result = await searchReviews(serpApiKey, placeId, 'touch OR brushless OR laser OR contactless');
+  // NOTE: "contactless" REMOVED — almost always refers to contactless payment, not touchless washing
+  const result = await searchReviews(serpApiKey, placeId, 'touch OR brushless OR laser OR frictionless');
 
   if (result.error) {
     return { reviews: [], apiCalls: result.apiCalls, error: result.error };
@@ -426,21 +427,17 @@ async function searchReviewsMultiKeyword(
 
 /**
  * Extract keyword matches from a review text.
- * Filters out "contactless" when it only refers to payment, not wash type.
+ * "contactless" is no longer in the keyword list — it was a major source of false positives
+ * (almost always refers to contactless payment, not touchless washing).
+ * Only "contactless wash" / "contactless car wash" are checked as valid compound signals.
  */
 function extractKeywords(text: string): string[] {
   const lower = text.toLowerCase();
   const matches = REVIEW_TOUCHLESS_KEYWORDS.filter((kw) => lower.includes(kw));
 
-  // If the only matched keywords are contactless-family, check for payment context
-  const CONTACTLESS_FAMILY = ['contactless', 'contact-free', 'contact free'];
-  const hasOnlyContactless = matches.length > 0 && matches.every((kw) => CONTACTLESS_FAMILY.includes(kw));
-
-  if (hasOnlyContactless) {
-    const isPaymentContext = CONTACTLESS_PAYMENT_PATTERNS.some((p) => p.test(text));
-    if (isPaymentContext) {
-      return []; // "contactless payment" — not about wash type
-    }
+  // Check for "contactless wash" as a valid compound signal (rare but legitimate)
+  if (matches.length === 0 && /contactless\s+(car\s+)?wash/i.test(text)) {
+    matches.push('contactless wash');
   }
 
   return matches;
