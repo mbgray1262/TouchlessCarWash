@@ -59,7 +59,7 @@ export const EQUIPMENT_MODELS: Record<string, string[]> = {
   mark_vii: ['ChoiceWash XT', 'ChoiceWash CT', 'AquaJet', 'SoftLine'],
   karcher: ['CWB 3', 'CB 1/28', 'CB 2/28', 'CB 3/32', 'Opti 6000 Professional', 'Opti 8000'],
   autec: ['Evolution', 'EV-1 Evolution', 'AES-425', 'Express Automatic'],
-  coleman_hanna: ['Wash Wizard 2.0'],
+  coleman_hanna: ['Water Wizard 2.0'],
   broadway: ['Wonder Bar'],
   hydrospray: ['In Bay Automatic (IBA)'],
   dencar: ['Dynawash Express'],
