@@ -553,30 +553,63 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                   <div className="my-3">
                     <div className="flex items-center gap-3 flex-wrap">
                       <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Equipment</h3>
-                      <select
-                        value={listing.equipment_brand ?? ''}
-                        onChange={(e) => setEquipment(e.target.value || null, e.target.value ? listing.equipment_model : null)}
-                        className={`text-sm px-3 py-1.5 rounded-lg border cursor-pointer ${
-                          listing.equipment_brand ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-white border-gray-300 text-gray-500'
-                        }`}
-                      >
-                        <option value="">Select manufacturer…</option>
-                        {EQUIPMENT_BRANDS.map(b => <option key={b.value} value={b.value}>{b.label}</option>)}
-                      </select>
+                      {/* Brand selector — known brands use dropdown, "other" shows free-text */}
+                      {(() => {
+                        const knownBrand = EQUIPMENT_BRANDS.find(b => b.value === listing.equipment_brand);
+                        const isCustomBrand = listing.equipment_brand && !knownBrand;
+                        return (
+                          <>
+                            <select
+                              value={isCustomBrand ? '__custom__' : (listing.equipment_brand ?? '')}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === '__custom__') {
+                                  const custom = prompt('Enter manufacturer name:');
+                                  if (custom?.trim()) setEquipment(custom.trim(), null);
+                                } else {
+                                  setEquipment(val || null, null);
+                                }
+                              }}
+                              className={`text-sm px-3 py-1.5 rounded-lg border cursor-pointer ${
+                                listing.equipment_brand ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-white border-gray-300 text-gray-500'
+                              }`}
+                            >
+                              <option value="">Select manufacturer…</option>
+                              {EQUIPMENT_BRANDS.map(b => <option key={b.value} value={b.value}>{b.label}</option>)}
+                              <option value="__custom__">{isCustomBrand ? `✏️ ${listing.equipment_brand}` : '✏️ Enter custom…'}</option>
+                            </select>
+                            {isCustomBrand && (
+                              <span className="text-xs text-indigo-600 bg-indigo-50 px-2 py-1 rounded">{listing.equipment_brand}</span>
+                            )}
+                          </>
+                        );
+                      })()}
+                      {/* Model selector — known models use dropdown + "Other" for free-text */}
                       {listing.equipment_brand && (() => {
                         const models = EQUIPMENT_MODELS[listing.equipment_brand] ?? [];
-                        return models.length > 0 ? (
+                        const currentModel = listing.equipment_model ?? '';
+                        const isCustomModel = currentModel && !models.includes(currentModel);
+                        return (
                           <select
-                            value={models.includes(listing.equipment_model ?? '') ? (listing.equipment_model ?? '') : ''}
-                            onChange={(e) => setEquipment(listing.equipment_brand, e.target.value || null)}
+                            value={isCustomModel ? '__custom__' : currentModel}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === '__custom__') {
+                                const custom = prompt('Enter model name:');
+                                if (custom?.trim()) setEquipment(listing.equipment_brand, custom.trim());
+                              } else {
+                                setEquipment(listing.equipment_brand, val || null);
+                              }
+                            }}
                             className={`text-sm px-3 py-1.5 rounded-lg border cursor-pointer ${
                               listing.equipment_model ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-white border-gray-300 text-gray-500'
                             }`}
                           >
                             <option value="">Select model…</option>
                             {models.map(m => <option key={m} value={m}>{m}</option>)}
+                            <option value="__custom__">{isCustomModel ? `✏️ ${currentModel}` : '✏️ Enter custom…'}</option>
                           </select>
-                        ) : null;
+                        );
                       })()}
                       <button
                         onClick={classifyEquipment}
