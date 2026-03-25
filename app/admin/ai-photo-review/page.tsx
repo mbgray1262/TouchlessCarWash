@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { CropModal } from '../hero-review/CropModal';
+import { FastCurationModal } from '../photo-audit/FastCurationModal';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -70,10 +71,11 @@ function StatCard({ label, value, icon: Icon, color }: {
   );
 }
 
-function PhotoCard({ listing, onImgError, onCrop }: {
+function PhotoCard({ listing, onImgError, onCrop, onOpenEditor }: {
   listing: Listing;
   onImgError: (id: string) => void;
   onCrop: (listingId: string, url: string, type: 'hero' | 'gallery') => void;
+  onOpenEditor: (listingId: string) => void;
 }) {
   const [imgErr, setImgErr] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -137,7 +139,13 @@ function PhotoCard({ listing, onImgError, onCrop }: {
       {/* Info */}
       <div className="p-2.5">
         <div className="flex items-center gap-1.5 min-w-0">
-          <p className="text-sm font-semibold text-gray-800 truncate flex-1">{listing.name}</p>
+          <button
+            onClick={() => onOpenEditor(listing.id)}
+            className="text-sm font-semibold text-gray-800 truncate flex-1 text-left hover:text-blue-600 transition-colors cursor-pointer"
+            title="Open in Photo Audit editor"
+          >
+            {listing.name}
+          </button>
           <a
             href={`https://touchlesscarwashfinder.com/state/${encodeURIComponent(listing.state.toLowerCase())}/${encodeURIComponent(listing.city.toLowerCase().replace(/\s+/g, '-'))}/${listing.slug}`}
             target="_blank"
@@ -198,6 +206,7 @@ export default function AIPhotoReviewPage() {
   const [stats, setStats] = useState({ total: 0, withHero: 0, rejected: 0, pending: 0 });
   const [brokenIds, setBrokenIds] = useState<Set<string>>(new Set());
   const [cropInfo, setCropInfo] = useState<{ listingId: string; url: string; type: 'hero' | 'gallery' } | null>(null);
+  const [editorListingId, setEditorListingId] = useState<string | null>(null);
 
   const handleCropSave = async (croppedUrl: string) => {
     if (!cropInfo) return;
@@ -415,6 +424,7 @@ export default function AIPhotoReviewPage() {
               listing={l}
               onImgError={(id) => setBrokenIds((s) => new Set(s).add(id))}
               onCrop={(listingId, url, type) => setCropInfo({ listingId, url, type })}
+              onOpenEditor={(id) => setEditorListingId(id)}
             />
           ))}
         </div>
@@ -454,6 +464,15 @@ export default function AIPhotoReviewPage() {
           onClose={() => setCropInfo(null)}
           onSave={handleCropSave}
           zIndex={60}
+        />
+      )}
+
+      {/* Photo Audit editor modal */}
+      {editorListingId && (
+        <FastCurationModal
+          listingId={editorListingId}
+          onClose={() => { setEditorListingId(null); fetchListings(); }}
+          onUpdate={() => fetchListings()}
         />
       )}
     </div>
