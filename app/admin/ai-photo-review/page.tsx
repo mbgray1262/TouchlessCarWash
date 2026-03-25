@@ -319,13 +319,18 @@ export default function AIPhotoReviewPage() {
       query = query.not('hero_image', 'is', null);
     }
 
-    // Filter to only listings with gallery photos
-    if (galleryOnly) {
-      query = query.not('photos', 'eq', '{}').not('photos', 'is', null);
-    }
-
     const { data, count } = await query;
-    setListings(data ?? []);
+
+    // Client-side filter: only show listings with actual gallery photos (not just the hero)
+    if (galleryOnly && data) {
+      const filtered = data.filter(l => {
+        const gallery = (l.photos ?? []).filter((p: string) => p !== l.hero_image);
+        return gallery.length > 0;
+      });
+      setListings(filtered);
+    } else {
+      setListings(data ?? []);
+    }
     setTotalCount(count ?? 0);
     setLoading(false);
   }, [view, page, galleryOnly]);
