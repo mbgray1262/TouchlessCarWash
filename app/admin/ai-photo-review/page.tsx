@@ -32,7 +32,7 @@ interface Listing {
 
 type ViewMode = 'recent' | 'rejected' | 'all';
 
-const PAGE_SIZE = 60;
+const PAGE_SIZE = 36;
 
 function FocalBadge({ fp }: { fp: string | null }) {
   const val = fp ?? 'center';
@@ -95,6 +95,9 @@ function PhotoCard({ listing, onImgError, onCrop, onOpenEditor }: {
               src={listing.hero_image}
               alt={listing.name}
               loading="lazy"
+              decoding="async"
+              width={320}
+              height={160}
               className="w-full h-full object-cover"
               style={{ objectPosition }}
               onError={() => { setImgErr(true); onImgError(listing.id); }}
@@ -178,6 +181,9 @@ function PhotoCard({ listing, onImgError, onCrop, onOpenEditor }: {
                   src={url}
                   alt={`Gallery ${i + 1}`}
                   loading="lazy"
+                  decoding="async"
+                  width={64}
+                  height={48}
                   className="w-16 h-12 object-cover rounded border border-gray-200"
                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                 />
