@@ -536,7 +536,7 @@ async function fetchStreetViewThumbnail(
     const meta = await metaRes.json();
     if (meta.status !== 'OK' || !meta.pano_id) return null;
 
-    const thumbUrl = `https://maps.googleapis.com/maps/api/streetview?size=400x300&pano=${meta.pano_id}&heading=0&pitch=0&key=${apiKey}`;
+    const thumbUrl = `https://maps.googleapis.com/maps/api/streetview?size=640x640&pano=${meta.pano_id}&heading=0&pitch=0&fov=90&key=${apiKey}`;
 
     return {
       url: thumbUrl,
