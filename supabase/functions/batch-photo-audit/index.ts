@@ -94,32 +94,33 @@ async function classifyPhotoWithClaude(
     ? '\nAlso reject this photo (as BAD_OTHER) if it shows essentially the same view as any of the already-approved photos shown above — we want visual variety, not multiple shots of the same angle.'
     : '';
 
-  const prompt = `You are selecting photos for a TOUCHLESS car wash directory listing. Be GENEROUS — having some photos is much better than having none.
+  const prompt = `You are selecting photos for a TOUCHLESS car wash directory listing. Be STRICT — quality over quantity. We only want photos that show the car wash FACILITY or touchless equipment in operation.
 
-GOOD_EQUIPMENT — Use this verdict (highest priority!) if you can see touchless car wash equipment:
+GOOD_EQUIPMENT — Use this verdict if you can see touchless car wash equipment:
 - Overhead wash gantries, arches, or spray arms (PDQ LaserWash, WashWorld Razor, Belanger, Ryko, etc.)
 - Visible manufacturer branding/logos on equipment (NOT the business sign)
 - A car inside a touchless wash bay with nozzles/spray arches visible
 - Close-up of touchless wash equipment showing identifiable features
-This is the MOST VALUABLE type of photo for our directory.
 
-GOOD — Accept if ANY of these are true:
-- A car wash building, bay, tunnel, canopy, or sign is visible anywhere in the photo (it does NOT need to be the main subject)
-- The photo is taken from a road or parking lot but you can see a car wash business in the scene
-- A car is entering, inside, or exiting a wash bay
-- A car wash sign, menu board, or price sign is shown
-- The photo shows the exterior of a business that is clearly a car wash
-When in doubt, lean toward GOOD. A mediocre photo of the right place is better than no photo.
+GOOD — Accept ONLY if:
+- A clear photo of the car wash building exterior (the facility itself is the main subject)
+- A car entering, inside, or exiting a touchless wash bay
+- A wide shot showing the car wash facility from the street or parking lot
+- A car wash sign showing the business name (1-2 max of these)
 
-BAD_CONTACT — Reject ONLY if you can clearly see brushes, cloth strips, foam rollers, or spinning mops physically making contact with a car's surface.
+BAD_CONTACT — Reject if you can see brushes, cloth strips, foam rollers, or spinning mops making contact with a car.
 
-BAD_OTHER — Reject ONLY if:
-- The photo has absolutely nothing to do with a car wash (food, random products, landscapes with no business)
-- It is a close-up of a car body (hood, bumper, wheel) with NO car wash facility visible at all
-- Interior of a car (dashboard, seats) with no wash visible
-- A selfie or group photo with no car wash visible
-- A logo, graphic, clip art, or promotional flyer (not a real photograph)
-- So blurry or dark that you cannot tell what is in the photo at all${dedupClause}
+BAD_OTHER — Reject if ANY of these are true:
+- A close-up of a car body (hood, bumper, wheel, paint) — even if taken at a car wash. We do NOT want car glamour shots.
+- A close-up of a car being washed where you can only see the car and water/soap, not the wash equipment or facility
+- Interior of a car (dashboard, seats)
+- A selfie or group photo
+- A logo, graphic, illustration, clip art, line art, or promotional flyer (not a real photograph)
+- A screenshot of a website or app
+- A receipt, coupon, or price graphic
+- A photo of a vacuum station, vending machine, or other non-wash amenity
+- So blurry or dark that you cannot tell what is in the photo
+- A duplicate angle of another photo already approved${dedupClause}
 
 Reply with ONLY: VERDICT: one-sentence reason`;
 
@@ -257,9 +258,9 @@ If the hero is poor, identify which other photo (if any) would make a better her
 HERO PREFERENCE ORDER: (1) A clear photo showing identifiable touchless equipment is the BEST hero — it serves double duty as both an attractive hero AND equipment identification. (2) A clear daytime exterior shot of the car wash facility. (3) Any other clear photo of the business.
 
 ## TASK 3: Photo Quality Assessment
-For EACH photo, determine if it should be kept or removed:
-- KEEP: Real photographs of the car wash facility, equipment, building, or cars being washed
-- REMOVE: Logos, graphics, illustrations, clip art, blurry/dark images, photos of wrong business, duplicate angles of same view, extremely low quality
+For EACH photo, determine if it should be kept or removed. Be STRICT — we want MAX 5 gallery photos.
+- KEEP: Real photographs showing the car wash FACILITY exterior, touchless equipment/bays, or a car inside a touchless bay with equipment visible. Keep 1-2 sign/menu photos max.
+- REMOVE: Close-ups of cars (hoods, bumpers, wheels, paint) even if at a car wash. Logos, graphics, illustrations, line art, clip art. Screenshots, receipts, coupons. Vacuum stations or non-wash amenities. Selfies, group photos. Blurry/dark images. Duplicate angles. Interior car shots. Promotional flyers.
 
 Respond ONLY with valid JSON in this exact format:
 {
