@@ -588,18 +588,17 @@ export default function AIPhotoReviewPage() {
           listingId={editorListingId}
           onClose={() => { setLastEditedId(editorListingId); setEditorListingId(null); }}
           onUpdate={async () => {
-            // Refresh just the current page data without changing page position
-            let query = supabase
+            // Refresh ONLY the edited listing in place — don't re-fetch the page
+            if (!editorListingId) return;
+            const { data } = await supabase
               .from('listings')
-              .select('id, name, slug, city, state, hero_image, hero_image_source, hero_focal_point, google_photo_url, street_view_url, photos, updated_at', { count: 'exact' })
-              .eq('is_touchless', true)
-              .order('updated_at', { ascending: false })
-              .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-            if (view === 'rejected') query = query.is('hero_image', null);
-            else if (view === 'recent') query = query.not('hero_image', 'is', null);
-            const { data, count } = await query;
-            if (data) setListings(data);
-            if (count != null) setTotalCount(count);
+              .select('id, name, slug, city, state, hero_image, hero_image_source, hero_focal_point, google_photo_url, street_view_url, photos, updated_at')
+              .eq('id', editorListingId)
+              .maybeSingle();
+            if (data) {
+              setListings(prev => prev.map(l => l.id === editorListingId ? data : l));
+              setLastEditedId(editorListingId);
+            }
           }}
         />
       )}
