@@ -269,7 +269,7 @@ export default function PhotoAuditPage() {
     viewFilter, unreviewedOnly, setUnreviewedOnly, page, filteredTotal, totalPages, pageSize,
     changeFilter, changePage,
     runBatch, applyEquipment, rejectResult, applyAllHighConfidence, undoApply, reload,
-    noHeroCount,
+    noHeroCount, removeFromResults,
   } = usePhotoAudit();
 
   const [batchLimit, setBatchLimit] = useState(100);
@@ -589,7 +589,10 @@ export default function PhotoAuditPage() {
           listingId={editorListingId}
           onClose={() => setEditorListingId(null)}
           onUpdate={() => {
-            // Small delay to let DB update propagate before reloading
+            // Immediately remove from results if on No Hero tab with unreviewed filter
+            if (viewFilter === 'no_hero' && unreviewedOnly && editorListingId) {
+              removeFromResults(editorListingId);
+            }
             setTimeout(() => reload(), 500);
           }}
           onNext={navigateNext}

@@ -521,5 +521,9 @@ export function usePhotoAudit() {
     undoApply,
     reload: loadResults,
     noHeroCount,
+    // Remove a listing from results by listing_id (used when approving from editor)
+    removeFromResults: (listingId: string) => {
+      setResults(prev => prev.filter(r => r.listing_id !== listingId));
+    },
   };
 }

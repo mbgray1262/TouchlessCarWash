@@ -562,7 +562,7 @@ async function processOneListing(
       suggested_hero_reason: hasHeroNow ? 'Hero set from Google Places photos' : 'No suitable photos found',
       photos_to_remove: [],
       raw_response: { no_hero_mode: true, google_photos_added: googlePhotosAdded },
-      reviewed: true,
+      reviewed: false,
       applied: true,
       google_photos_added: googlePhotosAdded,
       google_photos_screened: googlePhotosScreened,
