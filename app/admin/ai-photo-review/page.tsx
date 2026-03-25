@@ -279,7 +279,6 @@ export default function AIPhotoReviewPage() {
       .from('listings')
       .select('id, name, slug, city, state, hero_image, hero_image_source, hero_focal_point, google_photo_url, street_view_url, photos, updated_at', { count: 'exact' })
       .eq('is_touchless', true)
-      .eq('hero_image_source', 'gallery')
       .order('updated_at', { ascending: false })
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
