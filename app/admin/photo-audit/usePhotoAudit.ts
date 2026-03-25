@@ -130,14 +130,13 @@ export function usePhotoAudit() {
         .eq('is_touchless', true)
         .is('hero_image', null);
 
-      // Also get listings that got a hero from the most recent no_hero batch (last 30 min)
-      // so the user can review what the batch just did
+      // Also get ALL listings processed in the most recent no_hero batch (last 30 min)
+      // so the user can review what the batch did — both successes and failures
       const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
       const { data: recentlyFixed } = await supabase
         .from('listings')
         .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, photo_audited_at')
         .eq('is_touchless', true)
-        .not('hero_image', 'is', null)
         .gte('photo_audited_at', thirtyMinAgo)
         .order('photo_audited_at', { ascending: false })
         .limit(50);
@@ -174,16 +173,20 @@ export function usePhotoAudit() {
       });
 
       const allResults: AuditResult[] = [];
-      // Show recently fixed first (with green highlight)
+      const recentIds = new Set<string>();
+      // Show recently processed first — green for success, red for still no hero
       if (recentlyFixed && offset === 0) {
         for (const l of recentlyFixed) {
-          allResults.push(toResult(l, 'new'));
+          recentIds.add(l.id);
+          allResults.push(toResult(l, l.hero_image ? 'new' : 'no_photos'));
         }
       }
-      // Then show remaining no-hero listings
+      // Then show remaining no-hero listings (skip ones already shown as recent)
       if (listings) {
         for (const l of listings) {
-          allResults.push(toResult(l, 'missing'));
+          if (!recentIds.has(l.id)) {
+            allResults.push(toResult(l, 'missing'));
+          }
         }
       }
 

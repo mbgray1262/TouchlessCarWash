@@ -471,7 +471,10 @@ export default function PhotoAuditPage() {
             {(viewFilter === 'heroes' ? results.map(r => <HeroRow key={r.id} result={r} />) :
               viewFilter === 'cleanup' ? results.map(r => <CleanupRow key={r.id} result={r} />) :
               viewFilter === 'no_hero' ? results.map(r => (
-                <div key={r.id} className={`border-b border-gray-100 last:border-0 ${r.hero_quality === 'new' ? 'bg-green-50 border-l-4 border-l-green-500' : ''}`}>
+                <div key={r.id} className={`border-b border-gray-100 last:border-0 ${
+                  r.hero_quality === 'new' ? 'bg-green-50 border-l-4 border-l-green-500' :
+                  r.hero_quality === 'no_photos' ? 'bg-red-50 border-l-4 border-l-red-400' : ''
+                }`}>
                   <div className="flex items-center gap-4 px-4 py-3">
                     {r.listing_hero ? (
                       <img
@@ -496,6 +499,9 @@ export default function PhotoAuditPage() {
                         </button>
                         {r.hero_quality === 'new' && (
                           <span className="text-xs px-2 py-0.5 rounded-full bg-green-500 text-white font-medium">NEW</span>
+                        )}
+                        {r.hero_quality === 'no_photos' && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-red-500 text-white font-medium">NO PHOTOS FOUND</span>
                         )}
                       </div>
                       <p className="text-xs text-gray-500">{r.listing_city}, {r.listing_state}</p>
