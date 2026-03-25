@@ -2,6 +2,11 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle, MapPin, Star, Clock, Shield, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 export const metadata: Metadata = {
   title: 'About Us',
@@ -13,7 +18,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'About Us | Touchless Car Wash Finder',
     description:
-      'The only directory dedicated exclusively to verified touchless car washes. 3,465+ locations across all 50 states + DC.',
+      'The only directory dedicated exclusively to verified touchless car washes. 3,500+ locations across all 50 states + DC.',
     url: 'https://touchlesscarwashfinder.com/about',
     type: 'website',
   },
@@ -34,12 +39,22 @@ const organizationSchema = {
   knowsAbout: ['touchless car wash', 'brushless car wash', 'laser car wash', 'paint protection', 'ceramic coating care'],
 };
 
-const STATS = [
-  { label: 'Verified Locations', value: '3,465+', icon: MapPin },
-  { label: 'States + DC', value: '50', icon: CheckCircle },
-  { label: 'Google Reviews Indexed', value: '100K+', icon: Star },
-  { label: 'Hours Listings Updated', value: 'Weekly', icon: Clock },
-];
+async function getStats() {
+  const [listingRes, reviewRes] = await Promise.all([
+    supabase.from('listings').select('id', { count: 'exact', head: true }).eq('is_touchless', true),
+    supabase.from('listings').select('review_count').eq('is_touchless', true).not('review_count', 'is', null),
+  ]);
+  const totalListings = listingRes.count ?? 0;
+  const totalReviews = (reviewRes.data ?? []).reduce((sum, l) => sum + (l.review_count || 0), 0);
+  const roundedListings = Math.floor(totalListings / 10) * 10;
+  const roundedReviews = Math.floor(totalReviews / 100) * 100;
+  return [
+    { label: 'Verified Locations', value: `${roundedListings.toLocaleString()}+`, icon: MapPin },
+    { label: 'States + DC', value: '50', icon: CheckCircle },
+    { label: 'Google Reviews Indexed', value: `${roundedReviews.toLocaleString()}+`, icon: Star },
+    { label: 'Hours Listings Updated', value: 'Weekly', icon: Clock },
+  ];
+}
 
 const DIFFERENTIATORS = [
   {
@@ -50,7 +65,7 @@ const DIFFERENTIATORS = [
   },
   {
     icon: MapPin,
-    title: 'All 50 States + DC, 3,465+ Locations',
+    title: 'All 50 States + DC, 3,500+ Locations',
     description:
       'From rural towns to major metros, we have built the most comprehensive touchless-only directory in the country — and we add new locations every week.',
   },
@@ -95,7 +110,8 @@ const VERIFICATION_STEPS = [
   },
 ];
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const STATS = await getStats();
   return (
     <>
       <script
