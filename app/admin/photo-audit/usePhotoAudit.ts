@@ -79,26 +79,24 @@ export function usePhotoAudit() {
   const [viewFilter, setViewFilter] = useState<ViewFilter>('all');
   const [unreviewedOnly, setUnreviewedOnly] = useState(false);
   const [page, setPage] = useState(1);
+  const [noHeroCount, setNoHeroCount] = useState(0);
   const [filteredTotal, setFilteredTotal] = useState(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const continuingRef = useRef(false);
 
   const loadQueueStats = useCallback(async () => {
-    const { count: totalTouchless } = await supabase
-      .from('listings')
-      .select('id', { count: 'exact', head: true })
-      .eq('is_touchless', true)
-      .not('hero_image', 'is', null);
+    const [totalRes, auditedRes, noHeroRes] = await Promise.all([
+      supabase.from('listings').select('id', { count: 'exact', head: true })
+        .eq('is_touchless', true).not('hero_image', 'is', null),
+      supabase.from('listings').select('id', { count: 'exact', head: true })
+        .eq('is_touchless', true).not('hero_image', 'is', null).not('photo_audited_at', 'is', null),
+      supabase.from('listings').select('id', { count: 'exact', head: true })
+        .eq('is_touchless', true).is('hero_image', null),
+    ]);
 
-    const { count: alreadyAudited } = await supabase
-      .from('listings')
-      .select('id', { count: 'exact', head: true })
-      .eq('is_touchless', true)
-      .not('hero_image', 'is', null)
-      .not('photo_audited_at', 'is', null);
-
-    const total = totalTouchless ?? 0;
-    const audited = alreadyAudited ?? 0;
+    const total = totalRes.count ?? 0;
+    const audited = auditedRes.count ?? 0;
+    setNoHeroCount(noHeroRes.count ?? 0);
     setQueueStats({
       totalUntagged: total,
       alreadyAudited: audited,
@@ -480,5 +478,6 @@ export function usePhotoAudit() {
     applyAllHighConfidence,
     undoApply,
     reload: loadResults,
+    noHeroCount,
   };
 }

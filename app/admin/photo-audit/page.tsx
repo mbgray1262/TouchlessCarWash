@@ -269,6 +269,7 @@ export default function PhotoAuditPage() {
     viewFilter, unreviewedOnly, setUnreviewedOnly, page, filteredTotal, totalPages, pageSize,
     changeFilter, changePage,
     runBatch, applyEquipment, rejectResult, applyAllHighConfidence, undoApply, reload,
+    noHeroCount,
   } = usePhotoAudit();
 
   const [batchLimit, setBatchLimit] = useState(100);
@@ -414,7 +415,7 @@ export default function PhotoAuditPage() {
               { key: 'equipment' as ViewFilter, label: `Equipment (${stats.equipment_total})` },
               { key: 'heroes' as ViewFilter, label: `Poor Heroes (${stats.heroes_total})` },
               { key: 'cleanup' as ViewFilter, label: `Cleanup (${stats.cleanup_total})` },
-              { key: 'no_hero' as ViewFilter, label: 'No Hero' },
+              { key: 'no_hero' as ViewFilter, label: `No Hero (${viewFilter === 'no_hero' ? filteredTotal : noHeroCount})` },
             ]).map(f => (
               <button
                 key={f.key}
