@@ -501,16 +501,61 @@ export default function AIPhotoReviewPage() {
       )}
 
       {/* Crop modal */}
-      {cropInfo && (
-        <CropModal
-          imageUrl={cropInfo.url}
-          listingId={cropInfo.listingId}
-          uploadType={cropInfo.type}
-          onClose={() => setCropInfo(null)}
-          onSave={handleCropSave}
-          zIndex={60}
-        />
-      )}
+      {cropInfo && (() => {
+        const listing = listings.find(l => l.id === cropInfo.listingId);
+        const gallery = (listing?.photos ?? []).filter(p => p !== listing?.hero_image);
+        const currentGalleryIdx = gallery.indexOf(cropInfo.url);
+        const isGallery = cropInfo.type === 'gallery';
+
+        return (
+          <CropModal
+            imageUrl={cropInfo.url}
+            listingId={cropInfo.listingId}
+            uploadType={cropInfo.type}
+            onClose={() => setCropInfo(null)}
+            onSave={handleCropSave}
+            onDelete={isGallery ? () => {
+              handleDeleteGalleryPhoto(cropInfo.listingId, cropInfo.url);
+              // Navigate to next gallery image or close
+              if (gallery.length > 1 && currentGalleryIdx < gallery.length - 1) {
+                setCropInfo({ ...cropInfo, url: gallery[currentGalleryIdx + 1] });
+              } else if (gallery.length > 1 && currentGalleryIdx > 0) {
+                setCropInfo({ ...cropInfo, url: gallery[currentGalleryIdx - 1] });
+              } else {
+                setCropInfo(null);
+              }
+            } : undefined}
+            onPrev={isGallery && currentGalleryIdx > 0 ? () => {
+              setCropInfo({ ...cropInfo, url: gallery[currentGalleryIdx - 1] });
+            } : undefined}
+            onNext={isGallery && currentGalleryIdx < gallery.length - 1 ? () => {
+              setCropInfo({ ...cropInfo, url: gallery[currentGalleryIdx + 1] });
+            } : undefined}
+            onEnhance={async () => {
+              try {
+                const { autoEnhanceImage } = await import('../hero-review/autoEnhance');
+                const enhanced = await autoEnhanceImage(cropInfo.url);
+                if (enhanced) {
+                  const formData = new FormData();
+                  formData.append('file', enhanced, 'enhanced.jpg');
+                  formData.append('type', cropInfo.type);
+                  formData.append('listingId', cropInfo.listingId);
+                  const res = await fetch('/api/upload-image', { method: 'POST', body: formData });
+                  if (!res.ok) throw new Error('Upload failed');
+                  const { url } = await res.json();
+                  // Save the enhanced URL
+                  handleCropSave(url);
+                  setCropInfo(null);
+                }
+              } catch (err) {
+                console.error('Enhance failed:', err);
+                alert('Enhancement failed — the image may be from an external source that blocks editing.');
+              }
+            }}
+            zIndex={60}
+          />
+        );
+      })()}
 
       {/* Photo Audit editor modal */}
       {editorListingId && (

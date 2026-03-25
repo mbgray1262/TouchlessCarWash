@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from 'react';
 import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
-import { X, Crop as CropIcon, RotateCw, Check } from 'lucide-react';
+import { X, Crop as CropIcon, RotateCw, Check, Trash2, ChevronLeft, ChevronRight, Wand2 } from 'lucide-react';
 
 interface Props {
   imageUrl: string;
@@ -11,6 +11,10 @@ interface Props {
   uploadType?: 'hero' | 'gallery';
   onSave: (croppedUrl: string) => void;
   onClose: () => void;
+  onDelete?: () => void;
+  onNext?: () => void;
+  onPrev?: () => void;
+  onEnhance?: () => void;
   zIndex?: number;
 }
 
@@ -78,12 +82,14 @@ function getProxiedUrl(url: string): string {
   return `/api/image-proxy?url=${encodeURIComponent(url)}`;
 }
 
-export function CropModal({ imageUrl, listingId, uploadType = 'hero', onSave, onClose, zIndex }: Props) {
+export function CropModal({ imageUrl, listingId, uploadType = 'hero', onSave, onClose, onDelete, onNext, onPrev, onEnhance, zIndex }: Props) {
   const imgRef = useRef<HTMLImageElement>(null);
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
-  const [aspect, setAspect] = useState<number | undefined>(16 / 9);
+  // Gallery images default to "Free" aspect (show entire image), hero defaults to 16:9
+  const [aspect, setAspect] = useState<number | undefined>(uploadType === 'gallery' ? undefined : 16 / 9);
   const [saving, setSaving] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const proxiedImageUrl = getProxiedUrl(imageUrl);
 
@@ -144,14 +150,55 @@ export function CropModal({ imageUrl, listingId, uploadType = 'hero', onSave, on
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
           <div className="flex items-center gap-2">
             <CropIcon className="w-4 h-4 text-orange-600" />
-            <h2 className="text-sm font-semibold text-gray-800">Crop Hero Image</h2>
+            <h2 className="text-sm font-semibold text-gray-800">
+              {uploadType === 'gallery' ? 'Edit Gallery Image' : 'Crop Hero Image'}
+            </h2>
           </div>
-          <button
-            onClick={onClose}
-            className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
-          >
-            <X className="w-4 h-4 text-gray-600" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            {onEnhance && (
+              <button
+                onClick={async () => { setEnhancing(true); await onEnhance(); setEnhancing(false); }}
+                disabled={enhancing}
+                className="w-8 h-8 rounded-full bg-purple-100 hover:bg-purple-200 flex items-center justify-center transition-colors"
+                title="Enhance colors"
+              >
+                {enhancing ? <RotateCw className="w-4 h-4 text-purple-600 animate-spin" /> : <Wand2 className="w-4 h-4 text-purple-600" />}
+              </button>
+            )}
+            {onDelete && (
+              <button
+                onClick={onDelete}
+                className="w-8 h-8 rounded-full bg-red-100 hover:bg-red-200 flex items-center justify-center transition-colors"
+                title="Delete this image"
+              >
+                <Trash2 className="w-4 h-4 text-red-600" />
+              </button>
+            )}
+            {onPrev && (
+              <button
+                onClick={onPrev}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                title="Previous image"
+              >
+                <ChevronLeft className="w-4 h-4 text-gray-600" />
+              </button>
+            )}
+            {onNext && (
+              <button
+                onClick={onNext}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                title="Next image"
+              >
+                <ChevronRight className="w-4 h-4 text-gray-600" />
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+            >
+              <X className="w-4 h-4 text-gray-600" />
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 px-5 py-3 border-b border-gray-100 bg-gray-50">
