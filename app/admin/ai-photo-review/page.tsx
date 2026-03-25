@@ -4,9 +4,10 @@ import { useEffect, useState, useCallback } from 'react';
 import {
   Camera, CheckCircle, XCircle, AlertTriangle, RefreshCw,
   ExternalLink, ChevronLeft, ChevronRight, ImageOff, Eye,
-  ThumbsUp, ThumbsDown, Loader2, BarChart3,
+  ThumbsUp, ThumbsDown, Loader2, BarChart3, Crop,
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
+import { CropModal } from '../hero-review/CropModal';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -69,7 +70,11 @@ function StatCard({ label, value, icon: Icon, color }: {
   );
 }
 
-function PhotoCard({ listing, onImgError }: { listing: Listing; onImgError: (id: string) => void }) {
+function PhotoCard({ listing, onImgError, onCrop }: {
+  listing: Listing;
+  onImgError: (id: string) => void;
+  onCrop: (listingId: string, url: string, type: 'hero' | 'gallery') => void;
+}) {
   const [imgErr, setImgErr] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const gallery = (listing.photos ?? []).filter(p => p !== listing.hero_image);
@@ -92,6 +97,14 @@ function PhotoCard({ listing, onImgError }: { listing: Listing; onImgError: (id:
               style={{ objectPosition }}
               onError={() => { setImgErr(true); onImgError(listing.id); }}
             />
+            {/* Crop button — appears on hover */}
+            <button
+              onClick={(e) => { e.stopPropagation(); onCrop(listing.id, listing.hero_image!, 'hero'); }}
+              className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-black/50 hover:bg-blue-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+              title="Crop hero image"
+            >
+              <Crop className="w-3.5 h-3.5" />
+            </button>
             {/* Focal point indicator line */}
             {focalPoint !== 'center' && (
               <div
@@ -152,14 +165,22 @@ function PhotoCard({ listing, onImgError }: { listing: Listing; onImgError: (id:
         <div className="border-t border-gray-100 p-2 bg-gray-50">
           <div className="flex flex-wrap gap-1.5">
             {gallery.map((url, i) => (
-              <img
-                key={i}
-                src={url}
-                alt={`Gallery ${i + 1}`}
-                loading="lazy"
-                className="w-16 h-12 object-cover rounded border border-gray-200"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-              />
+              <div key={i} className="relative group/gal">
+                <img
+                  src={url}
+                  alt={`Gallery ${i + 1}`}
+                  loading="lazy"
+                  className="w-16 h-12 object-cover rounded border border-gray-200"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+                <button
+                  onClick={() => onCrop(listing.id, url, 'gallery')}
+                  className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 group-hover/gal:opacity-100 transition-all rounded"
+                  title="Crop gallery photo"
+                >
+                  <Crop className="w-3 h-3" />
+                </button>
+              </div>
             ))}
           </div>
         </div>
@@ -176,6 +197,32 @@ export default function AIPhotoReviewPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [stats, setStats] = useState({ total: 0, withHero: 0, rejected: 0, pending: 0 });
   const [brokenIds, setBrokenIds] = useState<Set<string>>(new Set());
+  const [cropInfo, setCropInfo] = useState<{ listingId: string; url: string; type: 'hero' | 'gallery' } | null>(null);
+
+  const handleCropSave = async (croppedUrl: string) => {
+    if (!cropInfo) return;
+    const { listingId, url: oldUrl, type } = cropInfo;
+
+    if (type === 'hero') {
+      await supabase.from('listings').update({ hero_image: croppedUrl }).eq('id', listingId);
+    } else {
+      // Replace the gallery photo URL in the photos array
+      const listing = listings.find(l => l.id === listingId);
+      if (listing?.photos) {
+        const updatedPhotos = listing.photos.map(p => p === oldUrl ? croppedUrl : p);
+        await supabase.from('listings').update({ photos: updatedPhotos }).eq('id', listingId);
+      }
+    }
+
+    // Update local state so the UI reflects the change immediately
+    setListings(prev => prev.map(l => {
+      if (l.id !== listingId) return l;
+      if (type === 'hero') return { ...l, hero_image: croppedUrl };
+      return { ...l, photos: (l.photos ?? []).map(p => p === oldUrl ? croppedUrl : p) };
+    }));
+
+    setCropInfo(null);
+  };
 
   const fetchStats = useCallback(async () => {
     // Total AI-processed (gallery source = set by our script)
@@ -367,6 +414,7 @@ export default function AIPhotoReviewPage() {
               key={l.id}
               listing={l}
               onImgError={(id) => setBrokenIds((s) => new Set(s).add(id))}
+              onCrop={(listingId, url, type) => setCropInfo({ listingId, url, type })}
             />
           ))}
         </div>
@@ -395,6 +443,18 @@ export default function AIPhotoReviewPage() {
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
+      )}
+
+      {/* Crop modal */}
+      {cropInfo && (
+        <CropModal
+          imageUrl={cropInfo.url}
+          listingId={cropInfo.listingId}
+          uploadType={cropInfo.type}
+          onClose={() => setCropInfo(null)}
+          onSave={handleCropSave}
+          zIndex={60}
+        />
       )}
     </div>
   );
