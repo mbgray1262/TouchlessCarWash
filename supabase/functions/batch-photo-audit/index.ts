@@ -774,7 +774,8 @@ Deno.serve(async (req) => {
   }
 
   // Now that job settings are resolved, compute chunk size and get API keys
-  const chunkSize = includeGooglePhotos ? CHUNK_SIZE_GOOGLE : CHUNK_SIZE_NO_GOOGLE;
+  // No Hero mode: process 3 at a time for faster feedback (each listing updates the job record)
+  const chunkSize = noHeroMode ? 3 : (includeGooglePhotos ? CHUNK_SIZE_GOOGLE : CHUNK_SIZE_NO_GOOGLE);
 
   let googleApiKey = '';
   if (includeGooglePhotos) {

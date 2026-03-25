@@ -329,18 +329,24 @@ export function usePhotoAudit() {
       setRunning(false);
       stopPolling();
       await loadResults();
-    } else if (job.status === 'running' && job.total_processed < job.total_requested && !continuingRef.current) {
-      const updatedAt = new Date(job.updated_at).getTime();
-      const createdAt = new Date(job.created_at).getTime();
-      const now = Date.now();
-      const timeSinceUpdate = now - updatedAt;
-      const isNewJob = Math.abs(updatedAt - createdAt) < 2000 && job.total_processed === 0;
-      if (isNewJob || timeSinceUpdate > 8000) {
-        console.log(`[Poll] Job ${jobId}: ${job.total_processed}/${job.total_requested} — triggering next chunk`);
-        continueJob(jobId);
+    } else if (job.status === 'running') {
+      // For No Hero mode, reload results on each poll so new listings appear immediately
+      if (viewFilter === 'no_hero' && job.total_processed > 0) {
+        await loadPage('no_hero', page, unreviewedOnly);
+      }
+      if (job.total_processed < job.total_requested && !continuingRef.current) {
+        const updatedAt = new Date(job.updated_at).getTime();
+        const createdAt = new Date(job.created_at).getTime();
+        const now = Date.now();
+        const timeSinceUpdate = now - updatedAt;
+        const isNewJob = Math.abs(updatedAt - createdAt) < 2000 && job.total_processed === 0;
+        if (isNewJob || timeSinceUpdate > 8000) {
+          console.log(`[Poll] Job ${jobId}: ${job.total_processed}/${job.total_requested} — triggering next chunk`);
+          continueJob(jobId);
+        }
       }
     }
-  }, [continueJob, formatJobProgress, loadQueueStats, loadResults, stopPolling]);
+  }, [continueJob, formatJobProgress, loadQueueStats, loadResults, loadPage, viewFilter, page, unreviewedOnly, stopPolling]);
 
   const startPolling = useCallback((jobId: string) => {
     stopPolling();
