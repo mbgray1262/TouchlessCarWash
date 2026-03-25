@@ -234,22 +234,25 @@ export default function AIPhotoReviewPage() {
   };
 
   const fetchStats = useCallback(async () => {
-    // Total AI-processed (gallery source = set by our script)
-    const { count: totalAI } = await supabase
+    // Total touchless listings
+    const { count: totalTouchless } = await supabase
       .from('listings')
       .select('id', { count: 'exact', head: true })
-      .eq('is_touchless', true)
-      .eq('hero_image_source', 'gallery');
+      .eq('is_touchless', true);
 
-    // AI-processed WITH a hero image
+    // Total with photo audit results (AI has processed them)
+    const { count: totalAudited } = await supabase
+      .from('photo_audit_results')
+      .select('id', { count: 'exact', head: true });
+
+    // Touchless listings WITH a hero image (regardless of source)
     const { count: withHero } = await supabase
       .from('listings')
       .select('id', { count: 'exact', head: true })
       .eq('is_touchless', true)
-      .eq('hero_image_source', 'gallery')
       .not('hero_image', 'is', null);
 
-    // AI-processed with NO hero (all rejected)
+    // AI-processed with NO hero (all rejected by AI)
     const { count: noHero } = await supabase
       .from('listings')
       .select('id', { count: 'exact', head: true })
@@ -257,18 +260,16 @@ export default function AIPhotoReviewPage() {
       .eq('hero_image_source', 'gallery')
       .is('hero_image', null);
 
-    // Still pending (no AI source yet, 2+ candidate photos - rough estimate)
-    const { count: pending } = await supabase
-      .from('listings')
-      .select('id', { count: 'exact', head: true })
-      .eq('is_touchless', true)
-      .not('hero_image_source', 'in', '("gallery","google","backfill","places_api","rehosted")');
+    // Still pending = total touchless minus those with audit results
+    const total = totalTouchless ?? 0;
+    const audited = totalAudited ?? 0;
+    const pending = Math.max(0, total - audited);
 
     setStats({
-      total: totalAI ?? 0,
+      total: audited,
       withHero: withHero ?? 0,
       rejected: noHero ?? 0,
-      pending: pending ?? 0,
+      pending,
     });
   }, []);
 
