@@ -71,15 +71,16 @@ function StatCard({ label, value, icon: Icon, color }: {
   );
 }
 
-function PhotoCard({ listing, onImgError, onCrop, onDeleteGalleryPhoto, onOpenEditor }: {
+function PhotoCard({ listing, onImgError, onCrop, onDeleteGalleryPhoto, onOpenEditor, highlighted }: {
   listing: Listing;
   onImgError: (id: string) => void;
   onCrop: (listingId: string, url: string, type: 'hero' | 'gallery') => void;
   onDeleteGalleryPhoto: (listingId: string, url: string) => void;
   onOpenEditor: (listingId: string) => void;
+  highlighted?: boolean;
 }) {
   const [imgErr, setImgErr] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const gallery = (listing.photos ?? []).filter(p => p !== listing.hero_image);
   const hasHero = !!listing.hero_image && !imgErr;
 
@@ -87,7 +88,7 @@ function PhotoCard({ listing, onImgError, onCrop, onDeleteGalleryPhoto, onOpenEd
   const objectPosition = focalPoint === 'top' ? 'center 20%' : focalPoint === 'bottom' ? 'center 80%' : 'center';
 
   return (
-    <div className={`rounded-xl border overflow-hidden bg-white shadow-sm transition-all ${hasHero ? 'border-gray-200' : 'border-red-200 bg-red-50'}`}>
+    <div className={`rounded-xl border overflow-hidden bg-white shadow-sm transition-all ${highlighted ? 'border-orange-400 ring-2 ring-orange-200 border-2' : hasHero ? 'border-gray-200' : 'border-red-200 bg-red-50'}`}>
       {/* Hero image area */}
       <div className="relative h-40 bg-gray-100 overflow-hidden group">
         {listing.hero_image && !imgErr ? (
@@ -223,6 +224,7 @@ export default function AIPhotoReviewPage() {
   const [brokenIds, setBrokenIds] = useState<Set<string>>(new Set());
   const [cropInfo, setCropInfo] = useState<{ listingId: string; url: string; type: 'hero' | 'gallery' } | null>(null);
   const [editorListingId, setEditorListingId] = useState<string | null>(null);
+  const [lastEditedId, setLastEditedId] = useState<string | null>(null);
 
   const handleCropSave = async (croppedUrl: string) => {
     if (!cropInfo) return;
@@ -246,6 +248,7 @@ export default function AIPhotoReviewPage() {
       return { ...l, photos: (l.photos ?? []).map(p => p === oldUrl ? croppedUrl : p) };
     }));
 
+    setLastEditedId(cropInfo.listingId);
     setCropInfo(null);
   };
 
@@ -449,9 +452,10 @@ export default function AIPhotoReviewPage() {
             <PhotoCard
               key={l.id}
               listing={l}
+              highlighted={l.id === lastEditedId}
               onImgError={(id) => setBrokenIds((s) => new Set(s).add(id))}
-              onCrop={(listingId, url, type) => setCropInfo({ listingId, url, type })}
-              onDeleteGalleryPhoto={handleDeleteGalleryPhoto}
+              onCrop={(listingId, url, type) => { setLastEditedId(listingId); setCropInfo({ listingId, url, type }); }}
+              onDeleteGalleryPhoto={(listingId, url) => { setLastEditedId(listingId); handleDeleteGalleryPhoto(listingId, url); }}
               onOpenEditor={(id) => setEditorListingId(id)}
             />
           ))}
@@ -561,7 +565,7 @@ export default function AIPhotoReviewPage() {
       {editorListingId && (
         <FastCurationModal
           listingId={editorListingId}
-          onClose={() => setEditorListingId(null)}
+          onClose={() => { setLastEditedId(editorListingId); setEditorListingId(null); }}
           onUpdate={async () => {
             // Refresh just the current page data without changing page position
             let query = supabase
