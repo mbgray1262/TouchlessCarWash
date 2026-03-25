@@ -40,12 +40,26 @@ const organizationSchema = {
 };
 
 async function getStats() {
-  const [listingRes, reviewRes] = await Promise.all([
-    supabase.from('listings').select('id', { count: 'exact', head: true }).eq('is_touchless', true),
-    supabase.from('listings').select('review_count').eq('is_touchless', true).not('review_count', 'is', null),
-  ]);
+  // Fetch all review counts in batches to avoid Supabase 1000-row default limit
+  const listingRes = await supabase.from('listings').select('id', { count: 'exact', head: true }).eq('is_touchless', true);
   const totalListings = listingRes.count ?? 0;
-  const totalReviews = (reviewRes.data ?? []).reduce((sum, l) => sum + (l.review_count || 0), 0);
+
+  let totalReviews = 0;
+  let offset = 0;
+  while (true) {
+    const { data } = await supabase
+      .from('listings')
+      .select('review_count')
+      .eq('is_touchless', true)
+      .not('review_count', 'is', null)
+      .gt('review_count', 0)
+      .range(offset, offset + 999);
+    if (!data || data.length === 0) break;
+    totalReviews += data.reduce((sum, l) => sum + (l.review_count || 0), 0);
+    offset += 1000;
+    if (data.length < 1000) break;
+  }
+
   const roundedListings = Math.floor(totalListings / 10) * 10;
   const roundedReviews = Math.floor(totalReviews / 100) * 100;
   return [
