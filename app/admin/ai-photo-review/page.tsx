@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import {
   Camera, CheckCircle, XCircle, AlertTriangle, RefreshCw,
   ExternalLink, ChevronLeft, ChevronRight, ImageOff, Eye,
-  ThumbsUp, ThumbsDown, Loader2, BarChart3, Crop,
+  ThumbsUp, ThumbsDown, Loader2, BarChart3, Crop, Trash2,
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { CropModal } from '../hero-review/CropModal';
@@ -71,10 +71,11 @@ function StatCard({ label, value, icon: Icon, color }: {
   );
 }
 
-function PhotoCard({ listing, onImgError, onCrop, onOpenEditor }: {
+function PhotoCard({ listing, onImgError, onCrop, onDeleteGalleryPhoto, onOpenEditor }: {
   listing: Listing;
   onImgError: (id: string) => void;
   onCrop: (listingId: string, url: string, type: 'hero' | 'gallery') => void;
+  onDeleteGalleryPhoto: (listingId: string, url: string) => void;
   onOpenEditor: (listingId: string) => void;
 }) {
   const [imgErr, setImgErr] = useState(false);
@@ -187,13 +188,22 @@ function PhotoCard({ listing, onImgError, onCrop, onOpenEditor }: {
                   className="w-16 h-12 object-cover rounded border border-gray-200"
                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                 />
-                <button
-                  onClick={() => onCrop(listing.id, url, 'gallery')}
-                  className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 group-hover/gal:opacity-100 transition-all rounded"
-                  title="Crop gallery photo"
-                >
-                  <Crop className="w-3 h-3" />
-                </button>
+                <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/40 opacity-0 group-hover/gal:opacity-100 transition-all rounded">
+                  <button
+                    onClick={() => onCrop(listing.id, url, 'gallery')}
+                    className="w-6 h-6 flex items-center justify-center bg-blue-500 hover:bg-blue-600 text-white rounded-full transition-colors"
+                    title="Crop gallery photo"
+                  >
+                    <Crop className="w-3 h-3" />
+                  </button>
+                  <button
+                    onClick={() => onDeleteGalleryPhoto(listing.id, url)}
+                    className="w-6 h-6 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors"
+                    title="Delete gallery photo"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -237,6 +247,17 @@ export default function AIPhotoReviewPage() {
     }));
 
     setCropInfo(null);
+  };
+
+  const handleDeleteGalleryPhoto = async (listingId: string, url: string) => {
+    const listing = listings.find(l => l.id === listingId);
+    if (!listing?.photos) return;
+    const updatedPhotos = listing.photos.filter(p => p !== url);
+    await supabase.from('listings').update({ photos: updatedPhotos }).eq('id', listingId);
+    setListings(prev => prev.map(l => {
+      if (l.id !== listingId) return l;
+      return { ...l, photos: updatedPhotos };
+    }));
   };
 
   const fetchStats = useCallback(async () => {
@@ -430,6 +451,7 @@ export default function AIPhotoReviewPage() {
               listing={l}
               onImgError={(id) => setBrokenIds((s) => new Set(s).add(id))}
               onCrop={(listingId, url, type) => setCropInfo({ listingId, url, type })}
+              onDeleteGalleryPhoto={handleDeleteGalleryPhoto}
               onOpenEditor={(id) => setEditorListingId(id)}
             />
           ))}
