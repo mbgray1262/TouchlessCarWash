@@ -561,8 +561,21 @@ export default function AIPhotoReviewPage() {
       {editorListingId && (
         <FastCurationModal
           listingId={editorListingId}
-          onClose={() => { setEditorListingId(null); fetchListings(); }}
-          onUpdate={() => fetchListings()}
+          onClose={() => setEditorListingId(null)}
+          onUpdate={async () => {
+            // Refresh just the current page data without changing page position
+            let query = supabase
+              .from('listings')
+              .select('id, name, slug, city, state, hero_image, hero_image_source, hero_focal_point, google_photo_url, street_view_url, photos, updated_at', { count: 'exact' })
+              .eq('is_touchless', true)
+              .order('updated_at', { ascending: false })
+              .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+            if (view === 'rejected') query = query.is('hero_image', null);
+            else if (view === 'recent') query = query.not('hero_image', 'is', null);
+            const { data, count } = await query;
+            if (data) setListings(data);
+            if (count != null) setTotalCount(count);
+          }}
         />
       )}
     </div>
