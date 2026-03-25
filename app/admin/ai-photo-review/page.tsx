@@ -256,11 +256,18 @@ export default function AIPhotoReviewPage() {
   const handleDeleteGalleryPhoto = async (listingId: string, url: string) => {
     const listing = listings.find(l => l.id === listingId);
     if (!listing?.photos) return;
-    const updatedPhotos = listing.photos.filter(p => p !== url);
-    await supabase.from('listings').update({ photos: updatedPhotos }).eq('id', listingId);
+    // Remove only the first occurrence of the URL (not all duplicates)
+    let removed = false;
+    const updatedPhotos = listing.photos.filter(p => {
+      if (!removed && p === url) { removed = true; return false; }
+      return true;
+    });
+    // Also deduplicate any remaining duplicates
+    const deduped = [...new Set(updatedPhotos)];
+    await supabase.from('listings').update({ photos: deduped }).eq('id', listingId);
     setListings(prev => prev.map(l => {
       if (l.id !== listingId) return l;
-      return { ...l, photos: updatedPhotos };
+      return { ...l, photos: deduped };
     }));
   };
 
