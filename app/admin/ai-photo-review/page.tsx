@@ -225,6 +225,7 @@ export default function AIPhotoReviewPage() {
   const [cropInfo, setCropInfo] = useState<{ listingId: string; url: string; type: 'hero' | 'gallery' } | null>(null);
   const [editorListingId, setEditorListingId] = useState<string | null>(null);
   const [lastEditedId, setLastEditedId] = useState<string | null>(null);
+  const [galleryOnly, setGalleryOnly] = useState(false);
 
   const handleCropSave = async (croppedUrl: string) => {
     if (!cropInfo) return;
@@ -318,15 +319,20 @@ export default function AIPhotoReviewPage() {
       query = query.not('hero_image', 'is', null);
     }
 
+    // Filter to only listings with gallery photos
+    if (galleryOnly) {
+      query = query.not('photos', 'eq', '{}').not('photos', 'is', null);
+    }
+
     const { data, count } = await query;
     setListings(data ?? []);
     setTotalCount(count ?? 0);
     setLoading(false);
-  }, [view, page]);
+  }, [view, page, galleryOnly]);
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
   useEffect(() => { fetchListings(); }, [fetchListings]);
-  useEffect(() => { setPage(0); }, [view]);
+  useEffect(() => { setPage(0); }, [view, galleryOnly]);
 
   // Auto-refresh stats every 30s
   useEffect(() => {
@@ -428,6 +434,16 @@ export default function AIPhotoReviewPage() {
             {label}
           </button>
         ))}
+
+        <label className="flex items-center gap-2 ml-4 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={galleryOnly}
+            onChange={(e) => setGalleryOnly(e.target.checked)}
+            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+          <span className="text-sm font-medium text-gray-600">Gallery photos only</span>
+        </label>
 
         <span className="text-sm text-gray-400 ml-auto">
           {totalCount.toLocaleString()} listings
