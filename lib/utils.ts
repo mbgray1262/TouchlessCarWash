@@ -37,3 +37,16 @@ export function streetAddress(
 
   return street.trim();
 }
+
+/** Returns true if the listing has a real street address (not just city/state/zip) */
+export function hasStreetAddress(
+  address: string | null,
+  city?: string | null,
+  state?: string | null,
+  zip?: string | null,
+): boolean {
+  if (!address) return false;
+  const street = streetAddress(address, city, state, zip);
+  // A real street address starts with a number
+  return street.length > 0 && /^\d/.test(street);
+}

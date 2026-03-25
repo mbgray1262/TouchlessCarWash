@@ -20,7 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
 import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants';
-import { streetAddress } from '@/lib/utils';
+import { streetAddress, hasStreetAddress } from '@/lib/utils';
 import { DEFAULT_OG_IMAGE, ensureHttps, truncateDescription } from '@/lib/seo';
 import { AdUnit } from '@/components/AdUnit';
 import type { Metadata } from 'next';
@@ -1348,8 +1348,17 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                   <div className="flex items-start gap-3">
                     <MapPin className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
                     <div className="text-sm text-gray-700">
-                      <div>{streetAddress(listing.address, listing.city, listing.state, listing.zip)}</div>
-                      <div>{listing.city}, {listing.state} {listing.zip}</div>
+                      {hasStreetAddress(listing.address, listing.city, listing.state, listing.zip) ? (
+                        <>
+                          <div>{streetAddress(listing.address, listing.city, listing.state, listing.zip)}</div>
+                          <div>{listing.city}, {listing.state} {listing.zip}</div>
+                        </>
+                      ) : (
+                        <>
+                          <div>{listing.city}, {listing.state} {listing.zip}</div>
+                          <div className="text-xs text-amber-600 mt-0.5">📍 Approximate location</div>
+                        </>
+                      )}
                     </div>
                   </div>
                   {listing.phone && (
