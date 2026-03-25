@@ -131,11 +131,10 @@ export function usePhotoAudit() {
         .is('hero_image', null);
 
       // Also get ALL listings processed in the most recent no_hero batch (last 30 min)
-      // so the user can review what the batch did — both successes and failures
       const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
       const { data: recentlyFixed } = await supabase
         .from('listings')
-        .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, photo_audited_at')
+        .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, photo_audited_at, is_approved')
         .eq('is_touchless', true)
         .gte('photo_audited_at', thirtyMinAgo)
         .order('photo_audited_at', { ascending: false })
@@ -143,7 +142,7 @@ export function usePhotoAudit() {
 
       const { data: listings } = await supabase
         .from('listings')
-        .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model')
+        .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved')
         .eq('is_touchless', true)
         .is('hero_image', null)
         .order('name')
@@ -164,7 +163,7 @@ export function usePhotoAudit() {
         suggested_hero_url: null,
         suggested_hero_reason: quality === 'missing' ? 'No hero image' : 'Recently added by batch',
         photos_to_remove: [],
-        reviewed: false,
+        reviewed: !!(l as Record<string, unknown>).is_approved,
         applied: quality !== 'missing',
         created_at: '',
         raw_response: null,
@@ -178,14 +177,20 @@ export function usePhotoAudit() {
       if (recentlyFixed && offset === 0) {
         for (const l of recentlyFixed) {
           recentIds.add(l.id);
-          allResults.push(toResult(l, l.hero_image ? 'new' : 'no_photos'));
+          const result = toResult(l, l.hero_image ? 'new' : 'no_photos');
+          if (!unreviewed || !result.reviewed) {
+            allResults.push(result);
+          }
         }
       }
       // Then show remaining no-hero listings (skip ones already shown as recent)
       if (listings) {
         for (const l of listings) {
           if (!recentIds.has(l.id)) {
-            allResults.push(toResult(l, 'missing'));
+            const result = toResult(l, 'missing');
+            if (!unreviewed || !result.reviewed) {
+              allResults.push(result);
+            }
           }
         }
       }
