@@ -59,7 +59,7 @@ export interface AuditStats {
   cleanup_total: number;
 }
 
-export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup';
+export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup' | 'no_hero';
 
 const POLL_INTERVAL = 5000; // 5 seconds
 const PAGE_SIZE = 25;
@@ -122,6 +122,53 @@ export function usePhotoAudit() {
   const loadPage = useCallback(async (filter: ViewFilter, pageNum: number, unreviewed: boolean = false) => {
     setLoading(true);
     const offset = (pageNum - 1) * PAGE_SIZE;
+
+    // Special handling for "no_hero" filter — queries listings directly
+    if (filter === 'no_hero') {
+      const { count } = await supabase
+        .from('listings')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_touchless', true)
+        .is('hero_image', null);
+
+      const { data: listings } = await supabase
+        .from('listings')
+        .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model')
+        .eq('is_touchless', true)
+        .is('hero_image', null)
+        .order('name')
+        .range(offset, offset + PAGE_SIZE - 1);
+
+      if (listings) {
+        // Convert to AuditResult-like format so the UI can render them
+        const fakeResults: AuditResult[] = listings.map(l => ({
+          id: `nohero-${l.id}`,
+          listing_id: l.id,
+          listing_name: l.name,
+          listing_city: l.city,
+          listing_state: l.state,
+          hero_image: l.hero_image,
+          hero_quality: 'missing' as string,
+          equipment_brand: l.equipment_brand,
+          equipment_model: l.equipment_model,
+          equipment_confidence: null,
+          equipment_source_photo: null,
+          suggested_hero_url: null,
+          suggested_hero_reason: 'No hero image',
+          photos_to_remove: [],
+          reviewed: false,
+          applied: false,
+          created_at: '',
+          raw_response: null,
+          google_photos_added: 0,
+          google_photos_screened: 0,
+        }));
+        setResults(fakeResults);
+        setFilteredTotal(count ?? 0);
+      }
+      setLoading(false);
+      return;
+    }
 
     const { data, error } = await supabase.rpc('get_photo_audit_page', {
       p_filter: filter,

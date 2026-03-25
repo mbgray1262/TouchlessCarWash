@@ -414,6 +414,7 @@ export default function PhotoAuditPage() {
               { key: 'equipment' as ViewFilter, label: `Equipment (${stats.equipment_total})` },
               { key: 'heroes' as ViewFilter, label: `Poor Heroes (${stats.heroes_total})` },
               { key: 'cleanup' as ViewFilter, label: `Cleanup (${stats.cleanup_total})` },
+              { key: 'no_hero' as ViewFilter, label: 'No Hero' },
             ]).map(f => (
               <button
                 key={f.key}
@@ -464,6 +465,30 @@ export default function PhotoAuditPage() {
           <>
             {(viewFilter === 'heroes' ? results.map(r => <HeroRow key={r.id} result={r} />) :
               viewFilter === 'cleanup' ? results.map(r => <CleanupRow key={r.id} result={r} />) :
+              viewFilter === 'no_hero' ? results.map(r => (
+                <div key={r.id} className="border-b border-gray-100 last:border-0">
+                  <div className="flex items-center gap-4 px-4 py-3">
+                    <div className="w-16 h-12 rounded bg-gray-200 flex items-center justify-center text-gray-400 text-xs flex-shrink-0">
+                      No image
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <button
+                        onClick={() => openEditor(r.listing_id)}
+                        className="text-sm font-medium text-blue-600 hover:text-blue-800 truncate block text-left"
+                      >
+                        {r.listing_name}
+                      </button>
+                      <p className="text-xs text-gray-500">{r.listing_city}, {r.listing_state}</p>
+                    </div>
+                    <button
+                      onClick={() => openEditor(r.listing_id)}
+                      className="px-3 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium"
+                    >
+                      Add Photos
+                    </button>
+                  </div>
+                </div>
+              )) :
               results.map(r => (
                 <EquipmentRow
                   key={r.id}
