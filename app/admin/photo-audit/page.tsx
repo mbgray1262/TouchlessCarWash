@@ -588,7 +588,10 @@ export default function PhotoAuditPage() {
         <FastCurationModal
           listingId={editorListingId}
           onClose={() => setEditorListingId(null)}
-          onUpdate={reload}
+          onUpdate={() => {
+            // Small delay to let DB update propagate before reloading
+            setTimeout(() => reload(), 500);
+          }}
           onNext={navigateNext}
           onPrev={navIndex > 0 ? navigatePrev : undefined}
         />

@@ -608,7 +608,7 @@ export function useFastCuration(listingId: string) {
     if (listing) {
       await supabase
         .from('listings')
-        .update({ reviewed_at: new Date().toISOString() })
+        .update({ reviewed_at: new Date().toISOString(), is_approved: true })
         .eq('id', listing.id);
     }
 
