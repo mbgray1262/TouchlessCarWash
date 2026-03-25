@@ -441,9 +441,26 @@ export default function AIPhotoReviewPage() {
             <ChevronLeft className="w-4 h-4" />
             Previous
           </button>
-          <span className="text-sm text-gray-500">
-            Page {page + 1} of {totalPages}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm text-gray-500">Page</span>
+            <input
+              type="number"
+              min={1}
+              max={totalPages}
+              value={page + 1}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10);
+                if (!isNaN(val) && val >= 1 && val <= totalPages) {
+                  setPage(val - 1);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+              }}
+              className="w-16 px-2 py-1.5 text-sm text-center border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+            />
+            <span className="text-sm text-gray-500">of {totalPages}</span>
+          </div>
           <button
             onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
             disabled={page >= totalPages - 1}
