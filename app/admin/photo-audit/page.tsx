@@ -471,25 +471,44 @@ export default function PhotoAuditPage() {
             {(viewFilter === 'heroes' ? results.map(r => <HeroRow key={r.id} result={r} />) :
               viewFilter === 'cleanup' ? results.map(r => <CleanupRow key={r.id} result={r} />) :
               viewFilter === 'no_hero' ? results.map(r => (
-                <div key={r.id} className="border-b border-gray-100 last:border-0">
+                <div key={r.id} className={`border-b border-gray-100 last:border-0 ${r.hero_quality === 'new' ? 'bg-green-50 border-l-4 border-l-green-500' : ''}`}>
                   <div className="flex items-center gap-4 px-4 py-3">
-                    <div className="w-16 h-12 rounded bg-gray-200 flex items-center justify-center text-gray-400 text-xs flex-shrink-0">
-                      No image
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <button
+                    {r.listing_hero ? (
+                      <img
+                        src={r.listing_hero}
+                        alt={r.listing_name}
+                        className="w-20 h-14 rounded object-cover flex-shrink-0 cursor-pointer border-2 border-green-400"
+                        loading="lazy"
                         onClick={() => openEditor(r.listing_id)}
-                        className="text-sm font-medium text-blue-600 hover:text-blue-800 truncate block text-left"
-                      >
-                        {r.listing_name}
-                      </button>
+                      />
+                    ) : (
+                      <div className="w-20 h-14 rounded bg-gray-200 flex items-center justify-center text-gray-400 text-xs flex-shrink-0">
+                        No image
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => openEditor(r.listing_id)}
+                          className="text-sm font-medium text-blue-600 hover:text-blue-800 truncate block text-left"
+                        >
+                          {r.listing_name}
+                        </button>
+                        {r.hero_quality === 'new' && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-green-500 text-white font-medium">NEW</span>
+                        )}
+                      </div>
                       <p className="text-xs text-gray-500">{r.listing_city}, {r.listing_state}</p>
                     </div>
                     <button
                       onClick={() => openEditor(r.listing_id)}
-                      className="px-3 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium"
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
+                        r.listing_hero
+                          ? 'bg-blue-500 hover:bg-blue-600 text-white'
+                          : 'bg-orange-500 hover:bg-orange-600 text-white'
+                      }`}
                     >
-                      Add Photos
+                      {r.listing_hero ? 'Review' : 'Add Photos'}
                     </button>
                   </div>
                 </div>

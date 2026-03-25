@@ -123,11 +123,24 @@ export function usePhotoAudit() {
 
     // Special handling for "no_hero" filter — queries listings directly
     if (filter === 'no_hero') {
+      // Get listings still without hero
       const { count } = await supabase
         .from('listings')
         .select('id', { count: 'exact', head: true })
         .eq('is_touchless', true)
         .is('hero_image', null);
+
+      // Also get listings that got a hero from the most recent no_hero batch (last 30 min)
+      // so the user can review what the batch just did
+      const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+      const { data: recentlyFixed } = await supabase
+        .from('listings')
+        .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, photo_audited_at')
+        .eq('is_touchless', true)
+        .not('hero_image', 'is', null)
+        .gte('photo_audited_at', thirtyMinAgo)
+        .order('photo_audited_at', { ascending: false })
+        .limit(50);
 
       const { data: listings } = await supabase
         .from('listings')
@@ -137,33 +150,46 @@ export function usePhotoAudit() {
         .order('name')
         .range(offset, offset + PAGE_SIZE - 1);
 
-      if (listings) {
-        // Convert to AuditResult-like format so the UI can render them
-        const fakeResults: AuditResult[] = listings.map(l => ({
-          id: `nohero-${l.id}`,
-          listing_id: l.id,
-          listing_name: l.name,
-          listing_city: l.city,
-          listing_state: l.state,
-          hero_image: l.hero_image,
-          hero_quality: 'missing' as string,
-          equipment_brand: l.equipment_brand,
-          equipment_model: l.equipment_model,
-          equipment_confidence: null,
-          equipment_source_photo: null,
-          suggested_hero_url: null,
-          suggested_hero_reason: 'No hero image',
-          photos_to_remove: [],
-          reviewed: false,
-          applied: false,
-          created_at: '',
-          raw_response: null,
-          google_photos_added: 0,
-          google_photos_screened: 0,
-        }));
-        setResults(fakeResults);
-        setFilteredTotal(count ?? 0);
+      const toResult = (l: typeof listings extends (infer T)[] | null ? T : never, quality: string): AuditResult => ({
+        id: `nohero-${l.id}`,
+        listing_id: l.id,
+        listing_name: l.name,
+        listing_city: l.city,
+        listing_state: l.state,
+        listing_hero: l.hero_image,
+        hero_quality: quality,
+        equipment_brand: l.equipment_brand,
+        equipment_model: l.equipment_model,
+        equipment_confidence: null,
+        equipment_source_photo: null,
+        suggested_hero_url: null,
+        suggested_hero_reason: quality === 'missing' ? 'No hero image' : 'Recently added by batch',
+        photos_to_remove: [],
+        reviewed: false,
+        applied: quality !== 'missing',
+        created_at: '',
+        raw_response: null,
+        google_photos_added: 0,
+        google_photos_screened: 0,
+      });
+
+      const allResults: AuditResult[] = [];
+      // Show recently fixed first (with green highlight)
+      if (recentlyFixed && offset === 0) {
+        for (const l of recentlyFixed) {
+          allResults.push(toResult(l, 'new'));
+        }
       }
+      // Then show remaining no-hero listings
+      if (listings) {
+        for (const l of listings) {
+          allResults.push(toResult(l, 'missing'));
+        }
+      }
+
+      setResults(allResults);
+      const recentCount = (offset === 0 && recentlyFixed) ? recentlyFixed.length : 0;
+      setFilteredTotal((count ?? 0) + recentCount);
       setLoading(false);
       return;
     }
