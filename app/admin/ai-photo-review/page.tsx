@@ -263,7 +263,7 @@ export default function AIPhotoReviewPage() {
       return true;
     });
     // Also deduplicate any remaining duplicates
-    const deduped = [...new Set(updatedPhotos)];
+    const deduped = Array.from(new Set(updatedPhotos));
     await supabase.from('listings').update({ photos: deduped }).eq('id', listingId);
     setListings(prev => prev.map(l => {
       if (l.id !== listingId) return l;
