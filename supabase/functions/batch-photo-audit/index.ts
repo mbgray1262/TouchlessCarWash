@@ -500,6 +500,7 @@ async function processOneListing(
   googleApiKey: string,
   includeGooglePhotos: boolean,
   dryRun: boolean,
+  noHeroMode: boolean = false,
 ): Promise<{
   equipmentDetected: number;
   heroReplaced: number;
@@ -518,7 +519,8 @@ async function processOneListing(
   // ---- STEP 1: Google Photo Enrichment (if enabled) ----
   const currentPhotoCount = ((listing.photos as string[]) ?? []).length;
   const shouldEnrich = includeGooglePhotos && googleApiKey && !dryRun && listing.google_place_id &&
-    ((!listing.photo_enrichment_attempted_at && currentPhotoCount < 3) ||
+    (noHeroMode ||  // Always enrich in no-hero mode
+     (!listing.photo_enrichment_attempted_at && currentPhotoCount < 3) ||
      (listing.photo_enrichment_attempted_at && currentPhotoCount === 0));
   if (shouldEnrich) {
     try {
@@ -545,6 +547,30 @@ async function processOneListing(
     } catch (err) {
       console.error(`  → Enrichment error: ${(err as Error).message}`);
     }
+  }
+
+  // ---- NO HERO MODE: Skip Sonnet audit — just mark as processed ----
+  if (noHeroMode && !dryRun) {
+    const hasHeroNow = !!listing.hero_image;
+    if (hasHeroNow) heroReplaced++;
+    // Save a lightweight audit result
+    await supabase.from('photo_audit_results').insert({
+      listing_id: listing.id,
+      hero_quality: hasHeroNow ? 'good' : 'missing',
+      suggested_hero_url: null,
+      suggested_hero_reason: hasHeroNow ? 'Hero set from Google Places photos' : 'No suitable photos found',
+      photos_to_remove: [],
+      raw_response: { no_hero_mode: true, google_photos_added: googlePhotosAdded },
+      reviewed: true,
+      applied: true,
+      google_photos_added: googlePhotosAdded,
+      google_photos_screened: googlePhotosScreened,
+    });
+    await supabase.from('listings')
+      .update({ photo_audited_at: new Date().toISOString() })
+      .eq('id', listing.id);
+    if (hasHeroNow) autoApplied++;
+    return { equipmentDetected, heroReplaced, photosRemoved, autoApplied, googlePhotosAdded, googlePhotosScreened };
   }
 
   // ---- STEP 2: Collect all photos for Sonnet audit ----
@@ -703,11 +729,15 @@ Deno.serve(async (req) => {
   let totalRequested: number = body.limit ?? body.total_requested ?? 50;
   let dryRun: boolean = body.dry_run ?? false;
   let includeGooglePhotos: boolean = body.include_google_photos ?? true;
+  let noHeroMode: boolean = body.no_hero_mode ?? false;
+
+  // In no_hero mode, always force Google Photos on (no point running without it)
+  if (noHeroMode) includeGooglePhotos = true;
 
   // Load or create job
   interface JobRecord {
     id: string; status: string; total_requested: number; total_processed: number;
-    dry_run: boolean; include_google_photos: boolean;
+    dry_run: boolean; include_google_photos: boolean; no_hero_mode?: boolean;
     equipment_detected: number; heroes_replaced: number; photos_removed: number;
     auto_applied: number; google_photos_added: number; google_photos_screened: number;
     error_message: string | null;
@@ -724,12 +754,15 @@ Deno.serve(async (req) => {
     totalRequested = job.total_requested;
     dryRun = job.dry_run;
     includeGooglePhotos = job.include_google_photos;
+    noHeroMode = job.no_hero_mode ?? false;
+    if (noHeroMode) includeGooglePhotos = true;
   } else if (body.total_requested || body.limit) {
     // Create a new job and return immediately — frontend poll will trigger first chunk
     const { data, error: insertErr } = await supabase.from('batch_audit_jobs').insert({
       total_requested: totalRequested,
       dry_run: dryRun,
       include_google_photos: includeGooglePhotos,
+      no_hero_mode: noHeroMode,
       status: 'running',
     }).select('*').single();
     if (insertErr || !data) {
@@ -762,13 +795,21 @@ Deno.serve(async (req) => {
     return Response.json({ job_id: jobId, status: 'completed' }, { headers: corsHeaders });
   }
 
-  // Fetch unaudited listings for this chunk
-  const { data: listings, error: listErr } = await supabase
+  // Fetch listings for this chunk — different query for no_hero mode
+  let listQuery = supabase
     .from('listings')
     .select('id, name, hero_image, photos, google_photo_url, street_view_url, equipment_brand, blocked_photos, google_place_id, photo_enrichment_attempted_at')
-    .eq('is_touchless', true)
-    .is('photo_audited_at', null)
-    .not('hero_image', 'is', null)
+    .eq('is_touchless', true);
+
+  if (noHeroMode) {
+    // No Hero mode: find listings without hero images
+    listQuery = listQuery.is('hero_image', null);
+  } else {
+    // Normal mode: find unaudited listings with hero images
+    listQuery = listQuery.is('photo_audited_at', null).not('hero_image', 'is', null);
+  }
+
+  const { data: listings, error: listErr } = await listQuery
     .order('created_at', { ascending: true })
     .limit(thisChunkLimit);
 
@@ -799,7 +840,7 @@ Deno.serve(async (req) => {
     }
 
     chunkProcessed++;
-    const stats = await processOneListing(supabase, listing as Record<string, unknown>, anthropicKey, googleApiKey, includeGooglePhotos, dryRun);
+    const stats = await processOneListing(supabase, listing as Record<string, unknown>, anthropicKey, googleApiKey, includeGooglePhotos, dryRun, noHeroMode);
     chunkEquipment += stats.equipmentDetected;
     chunkHeroes += stats.heroReplaced;
     chunkPhotosRemoved += stats.photosRemoved;

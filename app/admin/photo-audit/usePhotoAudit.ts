@@ -356,7 +356,8 @@ export function usePhotoAudit() {
 
   const runBatch = useCallback(async (limit: number, dryRun: boolean, includeGoogle: boolean) => {
     setRunning(true);
-    setRunProgress(`Starting batch job (${limit} listings, ${dryRun ? 'DRY RUN' : 'LIVE'})...`);
+    const isNoHero = viewFilter === 'no_hero';
+    setRunProgress(`Starting batch job (${limit} listings, ${isNoHero ? 'NO HERO MODE' : dryRun ? 'DRY RUN' : 'LIVE'})...`);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -371,7 +372,8 @@ export function usePhotoAudit() {
         body: JSON.stringify({
           total_requested: limit,
           dry_run: dryRun,
-          include_google_photos: includeGoogle,
+          include_google_photos: isNoHero ? true : includeGoogle,
+          no_hero_mode: isNoHero,
         }),
       });
 
@@ -395,7 +397,7 @@ export function usePhotoAudit() {
       setRunProgress(`Error: ${(err as Error).message}`);
       setRunning(false);
     }
-  }, [loadResults, startPolling]);
+  }, [loadResults, startPolling, viewFilter]);
 
   const applyEquipment = useCallback(async (auditId: string, listingId: string, brand: string, model: string | null) => {
     await supabase

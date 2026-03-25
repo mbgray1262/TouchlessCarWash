@@ -356,12 +356,16 @@ export default function PhotoAuditPage() {
           <label className="flex items-center gap-2 text-sm cursor-pointer">
             <input
               type="checkbox"
-              checked={includeGooglePhotos}
+              checked={viewFilter === 'no_hero' ? true : includeGooglePhotos}
               onChange={e => setIncludeGooglePhotos(e.target.checked)}
-              className="rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+              disabled={viewFilter === 'no_hero'}
+              className="rounded border-gray-300 text-orange-500 focus:ring-orange-500 disabled:opacity-50"
             />
             <span className="text-gray-700">Fetch Google Photos</span>
-            <span className="text-xs text-gray-400">(+~10s/listing)</span>
+            {viewFilter === 'no_hero'
+              ? <span className="text-xs text-orange-500 font-medium">(required for No Hero)</span>
+              : <span className="text-xs text-gray-400">(+~10s/listing)</span>
+            }
           </label>
           <button
             onClick={() => runBatch(batchLimit, false, includeGooglePhotos)}
@@ -372,12 +376,12 @@ export default function PhotoAuditPage() {
             {running ? 'Running...' : 'Run Batch'}
           </button>
           <button
-            onClick={() => runBatch(queueStats.remaining, false, includeGooglePhotos)}
-            disabled={running || queueStats.remaining === 0}
+            onClick={() => runBatch(viewFilter === 'no_hero' ? noHeroCount : queueStats.remaining, false, includeGooglePhotos)}
+            disabled={running || (viewFilter === 'no_hero' ? noHeroCount === 0 : queueStats.remaining === 0)}
             className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-50"
           >
             {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-            Run All ({queueStats.remaining.toLocaleString()})
+            Run All ({(viewFilter === 'no_hero' ? noHeroCount : queueStats.remaining).toLocaleString()})
           </button>
         </div>
         {/* Job progress */}
