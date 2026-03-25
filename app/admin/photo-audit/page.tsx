@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { usePhotoAudit, AuditResult, ViewFilter } from './usePhotoAudit';
 import { Camera, Wrench, Trash2, Play, Loader2, Check, X, Undo2, ChevronDown, ChevronUp, ExternalLink, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
-import Image from 'next/image';
 import { getStateSlug, slugify } from '@/lib/constants';
 import { FastCurationModal } from './FastCurationModal';
 
@@ -34,7 +33,7 @@ function PhotoModal({ url, onClose }: { url: string; onClose: () => void }) {
           <X className="w-6 h-6" />
         </button>
         <div className="relative w-full h-[75vh] rounded-lg overflow-hidden bg-gray-900">
-          <Image src={url} alt="" fill className="object-contain" sizes="(max-width: 1024px) 100vw, 900px" />
+          <img src={url} alt="" className="absolute inset-0 w-full h-full object-contain" referrerPolicy="no-referrer" />
         </div>
       </div>
     </div>
@@ -48,7 +47,7 @@ function PhotoThumb({ url, size = 80, onClick }: { url: string; size?: number; o
       style={{ width: size, height: size }}
       onClick={onClick}
     >
-      <Image src={url} alt="" fill className="object-cover" sizes={`${size}px`} />
+      <img src={url} alt="" className="absolute inset-0 w-full h-full object-cover" referrerPolicy="no-referrer" loading="lazy" />
     </div>
   );
 }
