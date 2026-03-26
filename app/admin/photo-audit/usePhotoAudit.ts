@@ -127,23 +127,47 @@ export function usePhotoAudit() {
     setLoading(true);
     const offset = (pageNum - 1) * PAGE_SIZE;
 
-    // Special handling for "no_hero" filter — shows ALL touchless listings without a hero image
+    // Special handling for "no_hero" filter — shows:
+    // 1. Listings with no hero image (need processing)
+    // 2. Listings with AI-selected hero awaiting approval (photo_audited_at set, is_approved not true, hero_image_source = 'google')
     if (filter === 'no_hero') {
-      // Count: ALL touchless listings with no hero image
-      const { count } = await supabase
-        .from('listings')
-        .select('id', { count: 'exact', head: true })
-        .eq('is_touchless', true)
-        .is('hero_image', null);
+      // Count: touchless listings that either have no hero OR have an unapproved AI-selected hero
+      const [noHeroCountRes, pendingApprovalRes] = await Promise.all([
+        supabase.from('listings').select('id', { count: 'exact', head: true })
+          .eq('is_touchless', true).is('hero_image', null),
+        supabase.from('listings').select('id', { count: 'exact', head: true })
+          .eq('is_touchless', true).not('hero_image', 'is', null)
+          .eq('hero_image_source', 'google')
+          .not('photo_audited_at', 'is', null)
+          .or('is_approved.is.null,is_approved.eq.false'),
+      ]);
+      const totalNoHero = (noHeroCountRes.count ?? 0) + (pendingApprovalRes.count ?? 0);
 
-      // Fetch the page — show all no-hero listings regardless of approval status
-      const { data: listings } = await supabase
-        .from('listings')
-        .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at')
-        .eq('is_touchless', true)
-        .is('hero_image', null)
-        .order('photo_audited_at', { ascending: false, nullsFirst: false })
-        .range(offset, offset + PAGE_SIZE - 1);
+      // Fetch both groups and merge
+      const [noHeroListings, pendingListings] = await Promise.all([
+        supabase.from('listings')
+          .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at')
+          .eq('is_touchless', true).is('hero_image', null)
+          .order('photo_audited_at', { ascending: false, nullsFirst: false })
+          .limit(PAGE_SIZE),
+        supabase.from('listings')
+          .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at')
+          .eq('is_touchless', true).not('hero_image', 'is', null)
+          .eq('hero_image_source', 'google')
+          .not('photo_audited_at', 'is', null)
+          .or('is_approved.is.null,is_approved.eq.false')
+          .order('photo_audited_at', { ascending: false })
+          .limit(PAGE_SIZE),
+      ]);
+
+      // Merge: pending approval first, then no hero
+      const allListings = [
+        ...(pendingListings.data ?? []),
+        ...(noHeroListings.data ?? []),
+      ].slice(offset, offset + PAGE_SIZE);
+      const listings = allListings;
+
+      const count = totalNoHero;
 
       const toResult = (l: NonNullable<typeof listings>[number], quality: string): AuditResult => ({
         id: `nohero-${l.id}`,
@@ -171,19 +195,28 @@ export function usePhotoAudit() {
       const allResults: AuditResult[] = [];
       if (listings) {
         for (const l of listings) {
-          // Recently audited listings show at top (sorted by photo_audited_at desc)
-          const wasRecentlyProcessed = l.photo_audited_at && (Date.now() - new Date(l.photo_audited_at).getTime() < 60 * 60 * 1000);
+          const hasHero = !!l.hero_image;
+          const wasProcessed = !!l.photo_audited_at;
           const hasGallery = (l.photos ?? []).length > 0;
-          const quality = wasRecentlyProcessed
-            ? (hasGallery ? 'has_candidates' : 'no_photos')
-            : 'missing';
+
+          // Determine quality badge
+          let quality: string;
+          if (hasHero && wasProcessed) {
+            quality = 'pending_approval'; // AI selected a hero — needs user approval
+          } else if (wasProcessed && !hasHero && hasGallery) {
+            quality = 'has_candidates'; // Photos found but no hero selected
+          } else if (wasProcessed && !hasHero) {
+            quality = 'no_photos'; // Processed but nothing found
+          } else {
+            quality = 'missing'; // Not yet processed
+          }
           allResults.push(toResult(l, quality));
         }
       }
 
       setResults(allResults);
-      setFilteredTotal(count ?? 0);
-      setNoHeroCount(count ?? 0);
+      setFilteredTotal(count);
+      setNoHeroCount(count);
       setLoading(false);
       return;
     }

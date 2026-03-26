@@ -551,8 +551,8 @@ async function processOneListing(
       if (enrichResult.photosAdded > 0) {
         listing.photos = enrichResult.updatedPhotos;
       }
-      if (enrichResult.updatedHero && !noHeroMode) {
-        // In No Hero mode, don't auto-set hero — user reviews and approves
+      if (enrichResult.updatedHero) {
+        // Set the hero on the listing — in No Hero mode, user still reviews before approving
         listing.hero_image = enrichResult.updatedHero;
       }
     } catch (err) {
@@ -560,17 +560,23 @@ async function processOneListing(
     }
   }
 
-  // ---- NO HERO MODE: Skip Sonnet audit — mark as processed but DO NOT auto-apply ----
-  // User must review and approve all results manually
+  // ---- NO HERO MODE: Auto-select hero but require user approval ----
   if (noHeroMode && !dryRun) {
     const hasHeroNow = !!listing.hero_image;
-    if (hasHeroNow) heroReplaced++;
-    // Save a lightweight audit result — NOT applied, NOT reviewed (user must approve)
+    if (hasHeroNow) {
+      heroReplaced++;
+      // Save the hero to the listing so it shows as a thumbnail on the No Hero tab
+      await supabase.from('listings').update({
+        hero_image: listing.hero_image,
+        hero_image_source: 'google',
+      }).eq('id', listing.id);
+    }
+    // Save audit result — NOT approved (user must review and approve)
     await supabase.from('photo_audit_results').insert({
       listing_id: listing.id,
       hero_quality: hasHeroNow ? 'good' : 'missing',
-      suggested_hero_url: null,
-      suggested_hero_reason: hasHeroNow ? 'Hero set from Google Places photos' : 'No suitable photos found',
+      suggested_hero_url: hasHeroNow ? listing.hero_image as string : null,
+      suggested_hero_reason: hasHeroNow ? 'AI selected best Google Places photo as hero' : 'No suitable photos found',
       photos_to_remove: [],
       raw_response: { no_hero_mode: true, google_photos_added: googlePhotosAdded },
       reviewed: false,

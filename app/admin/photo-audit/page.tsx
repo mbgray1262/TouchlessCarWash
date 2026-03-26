@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { usePhotoAudit, AuditResult, ViewFilter } from './usePhotoAudit';
+import { supabase } from '@/lib/supabase';
 import { Camera, Wrench, Trash2, Play, Loader2, Check, X, Undo2, ChevronDown, ChevronUp, ExternalLink, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getStateSlug, slugify } from '@/lib/constants';
 import { FastCurationModal } from './FastCurationModal';
@@ -474,8 +475,8 @@ export default function PhotoAuditPage() {
               viewFilter === 'cleanup' ? results.map(r => <CleanupRow key={r.id} result={r} />) :
               viewFilter === 'no_hero' ? results.map(r => (
                 <div key={r.id} className={`border-b border-gray-100 last:border-0 ${
-                  r.hero_quality === 'new' ? 'bg-green-50 border-l-4 border-l-green-500' :
-                  r.hero_quality === 'has_candidates' ? 'bg-blue-50 border-l-4 border-l-blue-500' :
+                  r.hero_quality === 'pending_approval' ? 'bg-blue-50 border-l-4 border-l-blue-500' :
+                  r.hero_quality === 'has_candidates' ? 'bg-yellow-50 border-l-4 border-l-yellow-400' :
                   r.hero_quality === 'no_photos' ? 'bg-red-50 border-l-4 border-l-red-400' : ''
                 }`}>
                   <div className="flex items-center gap-4 px-4 py-3">
@@ -483,7 +484,7 @@ export default function PhotoAuditPage() {
                       <img
                         src={r.listing_hero}
                         alt={r.listing_name}
-                        className="w-20 h-14 rounded object-cover flex-shrink-0 cursor-pointer border-2 border-green-400"
+                        className="w-20 h-14 rounded object-cover flex-shrink-0 cursor-pointer border-2 border-blue-400"
                         loading="lazy"
                         onClick={() => openEditor(r.listing_id)}
                       />
@@ -500,11 +501,11 @@ export default function PhotoAuditPage() {
                         >
                           {r.listing_name}
                         </button>
-                        {r.hero_quality === 'new' && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-green-500 text-white font-medium">NEW</span>
+                        {r.hero_quality === 'pending_approval' && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500 text-white font-medium">REVIEW HERO</span>
                         )}
                         {r.hero_quality === 'has_candidates' && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500 text-white font-medium">NEEDS HERO</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-500 text-white font-medium">NEEDS HERO</span>
                         )}
                         {r.hero_quality === 'no_photos' && (
                           <span className="text-xs px-2 py-0.5 rounded-full bg-red-500 text-white font-medium">NO PHOTOS FOUND</span>
@@ -512,16 +513,33 @@ export default function PhotoAuditPage() {
                       </div>
                       <p className="text-xs text-gray-500">{r.listing_city}, {r.listing_state}</p>
                     </div>
-                    <button
-                      onClick={() => openEditor(r.listing_id)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
-                        r.listing_hero
-                          ? 'bg-blue-500 hover:bg-blue-600 text-white'
-                          : 'bg-orange-500 hover:bg-orange-600 text-white'
-                      }`}
-                    >
-                      {r.listing_hero ? 'Review' : 'Add Photos'}
-                    </button>
+                    {r.hero_quality === 'pending_approval' ? (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={async () => {
+                            await supabase.from('listings').update({ is_approved: true }).eq('id', r.listing_id);
+                            await supabase.from('photo_audit_results').update({ reviewed: true, applied: true }).eq('listing_id', r.listing_id);
+                            removeFromResults(r.listing_id);
+                          }}
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-green-500 hover:bg-green-600 text-white"
+                        >
+                          ✓ Approve
+                        </button>
+                        <button
+                          onClick={() => openEditor(r.listing_id)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-500 hover:bg-blue-600 text-white"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => openEditor(r.listing_id)}
+                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-orange-500 hover:bg-orange-600 text-white"
+                      >
+                        Add Photos
+                      </button>
+                    )}
                   </div>
                 </div>
               )) :
