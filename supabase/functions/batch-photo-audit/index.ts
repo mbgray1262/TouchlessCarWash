@@ -94,7 +94,7 @@ async function classifyPhotoWithClaude(
     ? '\nAlso reject this photo (as BAD_OTHER) if it shows essentially the same view as any of the already-approved photos shown above — we want visual variety, not multiple shots of the same angle.'
     : '';
 
-  const prompt = `You are selecting photos for a TOUCHLESS car wash directory listing. Be STRICT — quality over quantity. We only want photos that show the car wash FACILITY or touchless equipment in operation.
+  const prompt = `You are selecting photos for a TOUCHLESS car wash directory listing. Be VERY STRICT — quality over quantity. We only want 1 hero + 3-5 gallery photos max that show the car wash FACILITY or touchless equipment in operation.
 
 GOOD_EQUIPMENT — Use this verdict if you can see touchless car wash equipment:
 - Overhead wash gantries, arches, or spray arms (PDQ LaserWash, WashWorld Razor, Belanger, Ryko, etc.)
@@ -106,21 +106,27 @@ GOOD — Accept ONLY if:
 - A clear photo of the car wash building exterior (the facility itself is the main subject)
 - A car entering, inside, or exiting a touchless wash bay
 - A wide shot showing the car wash facility from the street or parking lot
-- A car wash sign showing the business name (1-2 max of these)
 
 BAD_CONTACT — Reject if you can see brushes, cloth strips, foam rollers, or spinning mops making contact with a car.
 
 BAD_OTHER — Reject if ANY of these are true:
+- A photo of a DIFFERENT BUSINESS (retail store, restaurant, gas station without wash bays, Home Depot, Walmart, etc.) — even if it's nearby or across the street from the car wash
+- Signage or building for a business that is NOT a car wash
 - A close-up of a car body (hood, bumper, wheel, paint) — even if taken at a car wash. We do NOT want car glamour shots.
 - A close-up of a car being washed where you can only see the car and water/soap, not the wash equipment or facility
+- A photo showing mostly a parked car, even in a car wash parking lot
 - Interior of a car (dashboard, seats)
-- A selfie or group photo
+- A selfie or group photo of people
 - A logo, graphic, illustration, clip art, line art, or promotional flyer (not a real photograph)
 - A screenshot of a website or app
-- A receipt, coupon, or price graphic
-- A photo of a vacuum station, vending machine, or other non-wash amenity
+- A receipt, coupon, price graphic, or menu/price board
+- A car wash sign or business name sign (we already have the name — signs add no value unless the facility is clearly visible behind it)
+- A photo of a vacuum station, vending machine, air pump, or other non-wash amenity
 - So blurry or dark that you cannot tell what is in the photo
+- A photo taken from inside a car looking through the windshield (unless wash equipment is clearly visible)
 - A duplicate angle of another photo already approved${dedupClause}
+
+When in doubt, reject. We prefer fewer high-quality photos over many mediocre ones.
 
 Reply with ONLY: VERDICT: one-sentence reason`;
 
