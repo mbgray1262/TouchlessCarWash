@@ -624,6 +624,18 @@ export function useFastCuration(listingId: string) {
     setListing(prev => prev ? { ...prev, website: newUrl } : prev);
   }, [listing]);
 
+  // Set fallback hero — marks listing as "no suitable hero found, use fallback"
+  // This removes it from the No Hero queue by setting a non-null hero_image
+  const setFallbackHero = useCallback(async () => {
+    if (!listing) return;
+    const fallbackUrl = '/images/card-fallback.svg';
+    await supabase.from('listings').update({
+      hero_image: fallbackUrl,
+      hero_image_source: 'fallback',
+    }).eq('id', listing.id);
+    setListing(prev => prev ? { ...prev, hero_image: fallbackUrl, hero_image_source: 'fallback' } : prev);
+  }, [listing]);
+
   const deleteListing = useCallback(async () => {
     if (!listing) return;
     setSaving(true);
@@ -662,6 +674,7 @@ export function useFastCuration(listingId: string) {
     toggleTouchlessVerified,
     markNotTouchless,
     updateWebsite,
+    setFallbackHero,
     deleteListing,
     loadListing,
   };
