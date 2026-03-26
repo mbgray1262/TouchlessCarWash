@@ -438,15 +438,17 @@ export default function PhotoAuditPage() {
               </button>
             ))}
           </div>
-          <label className="flex items-center gap-1.5 text-xs cursor-pointer ml-2">
-            <input
-              type="checkbox"
-              checked={unreviewedOnly}
-              onChange={e => setUnreviewedOnly(e.target.checked)}
-              className="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
-            />
-            <span className={unreviewedOnly ? 'text-violet-700 font-semibold' : 'text-gray-500'}>Unreviewed only</span>
-          </label>
+          {viewFilter !== 'no_hero' && (
+            <label className="flex items-center gap-1.5 text-xs cursor-pointer ml-2">
+              <input
+                type="checkbox"
+                checked={unreviewedOnly}
+                onChange={e => setUnreviewedOnly(e.target.checked)}
+                className="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
+              />
+              <span className={unreviewedOnly ? 'text-violet-700 font-semibold' : 'text-gray-500'}>Unreviewed only</span>
+            </label>
+          )}
           {stats.equipment > 0 && (
             <button
               onClick={applyAllHighConfidence}
@@ -589,8 +591,8 @@ export default function PhotoAuditPage() {
           listingId={editorListingId}
           onClose={() => setEditorListingId(null)}
           onUpdate={() => {
-            // Immediately remove from results if on No Hero tab with unreviewed filter
-            if (viewFilter === 'no_hero' && unreviewedOnly && editorListingId) {
+            // On No Hero tab, immediately remove the approved listing from the queue
+            if (viewFilter === 'no_hero' && editorListingId) {
               removeFromResults(editorListingId);
             }
             setTimeout(() => reload(), 500);

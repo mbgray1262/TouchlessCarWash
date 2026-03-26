@@ -121,34 +121,27 @@ export function usePhotoAudit() {
     setLoading(true);
     const offset = (pageNum - 1) * PAGE_SIZE;
 
-    // Special handling for "no_hero" filter — queries listings directly
+    // Special handling for "no_hero" filter — shows listings needing hero images
     if (filter === 'no_hero') {
-      // Get listings still without hero
+      // Count: touchless listings with no hero that are NOT approved (still in queue)
       const { count } = await supabase
         .from('listings')
         .select('id', { count: 'exact', head: true })
         .eq('is_touchless', true)
-        .is('hero_image', null);
+        .is('hero_image', null)
+        .or('is_approved.is.null,is_approved.eq.false');
 
-      // Also get ALL listings processed in the most recent no_hero batch (last 30 min)
-      const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-      const { data: recentlyFixed } = await supabase
-        .from('listings')
-        .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, photo_audited_at, is_approved')
-        .eq('is_touchless', true)
-        .gte('photo_audited_at', thirtyMinAgo)
-        .order('photo_audited_at', { ascending: false })
-        .limit(50);
-
+      // Fetch the page of no-hero listings (only unapproved ones — approved ones left the queue)
       const { data: listings } = await supabase
         .from('listings')
-        .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved')
+        .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at')
         .eq('is_touchless', true)
         .is('hero_image', null)
-        .order('name')
+        .or('is_approved.is.null,is_approved.eq.false')
+        .order('photo_audited_at', { ascending: false, nullsFirst: false })
         .range(offset, offset + PAGE_SIZE - 1);
 
-      const toResult = (l: typeof listings extends (infer T)[] | null ? T : never, quality: string): AuditResult => ({
+      const toResult = (l: NonNullable<typeof listings>[number], quality: string): AuditResult => ({
         id: `nohero-${l.id}`,
         listing_id: l.id,
         listing_name: l.name,
@@ -161,9 +154,9 @@ export function usePhotoAudit() {
         equipment_confidence: null,
         equipment_source_photo: null,
         suggested_hero_url: null,
-        suggested_hero_reason: quality === 'missing' ? 'No hero image' : 'Recently added by batch',
+        suggested_hero_reason: quality === 'missing' ? 'No hero image' : 'Recently processed',
         photos_to_remove: [],
-        reviewed: !!(l as Record<string, unknown>).is_approved,
+        reviewed: false,
         applied: quality !== 'missing',
         created_at: '',
         raw_response: null,
@@ -172,32 +165,17 @@ export function usePhotoAudit() {
       });
 
       const allResults: AuditResult[] = [];
-      const recentIds = new Set<string>();
-      // Show recently processed first — green for success, red for still no hero
-      if (recentlyFixed && offset === 0) {
-        for (const l of recentlyFixed) {
-          recentIds.add(l.id);
-          const result = toResult(l, l.hero_image ? 'new' : 'no_photos');
-          if (!unreviewed || !result.reviewed) {
-            allResults.push(result);
-          }
-        }
-      }
-      // Then show remaining no-hero listings (skip ones already shown as recent)
       if (listings) {
         for (const l of listings) {
-          if (!recentIds.has(l.id)) {
-            const result = toResult(l, 'missing');
-            if (!unreviewed || !result.reviewed) {
-              allResults.push(result);
-            }
-          }
+          // Recently audited listings show at top (sorted by photo_audited_at desc)
+          const wasRecentlyProcessed = l.photo_audited_at && (Date.now() - new Date(l.photo_audited_at).getTime() < 60 * 60 * 1000);
+          allResults.push(toResult(l, wasRecentlyProcessed ? 'no_photos' : 'missing'));
         }
       }
 
       setResults(allResults);
-      const recentCount = (offset === 0 && recentlyFixed) ? recentlyFixed.length : 0;
-      setFilteredTotal((count ?? 0) + recentCount);
+      setFilteredTotal(count ?? 0);
+      setNoHeroCount(count ?? 0);
       setLoading(false);
       return;
     }
@@ -524,6 +502,8 @@ export function usePhotoAudit() {
     // Remove a listing from results by listing_id (used when approving from editor)
     removeFromResults: (listingId: string) => {
       setResults(prev => prev.filter(r => r.listing_id !== listingId));
+      setFilteredTotal(prev => Math.max(0, prev - 1));
+      setNoHeroCount(prev => Math.max(0, prev - 1));
     },
   };
 }
