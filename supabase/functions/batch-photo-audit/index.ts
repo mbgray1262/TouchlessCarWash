@@ -405,14 +405,16 @@ async function enrichListingWithGooglePhotos(
   },
   anthropicKey: string,
   googleApiKey: string,
+  skipHeroSet: boolean = false,
 ): Promise<{ photosAdded: number; photosScreened: number; updatedPhotos: string[]; updatedHero: string | null }> {
   const currentPhotos: string[] = (listing.photos as string[]) ?? [];
   const heroImage: string | null = (listing.hero_image as string | null) ?? null;
   const blockedPhotos: string[] = (listing.blocked_photos as string[]) ?? [];
 
-  const heroNeedsUpgrade = !heroImage
+  // In No Hero mode (skipHeroSet), don't auto-set hero — user reviews manually
+  const heroNeedsUpgrade = skipHeroSet ? false : (!heroImage
     || heroImage.includes('streetviewpixels')
-    || heroImage.includes('street_view');
+    || heroImage.includes('street_view'));
 
   const existingUrls = [...currentPhotos, ...(heroImage ? [heroImage] : []), ...blockedPhotos];
 
@@ -536,13 +538,15 @@ async function processOneListing(
         },
         anthropicKey,
         googleApiKey,
+        noHeroMode,  // In No Hero mode, don't auto-set hero — just add to gallery
       );
       googlePhotosAdded = enrichResult.photosAdded;
       googlePhotosScreened = enrichResult.photosScreened;
       if (enrichResult.photosAdded > 0) {
         listing.photos = enrichResult.updatedPhotos;
       }
-      if (enrichResult.updatedHero) {
+      if (enrichResult.updatedHero && !noHeroMode) {
+        // In No Hero mode, don't auto-set hero — user reviews and approves
         listing.hero_image = enrichResult.updatedHero;
       }
     } catch (err) {
