@@ -269,7 +269,7 @@ export default function PhotoAuditPage() {
     viewFilter, unreviewedOnly, setUnreviewedOnly, page, filteredTotal, totalPages, pageSize,
     changeFilter, changePage,
     runBatch, applyEquipment, rejectResult, applyAllHighConfidence, undoApply, reload,
-    noHeroCount, removeFromResults,
+    noHeroCount, noHeroUnprocessed, removeFromResults,
   } = usePhotoAudit();
 
   const [batchLimit, setBatchLimit] = useState(100);
@@ -376,12 +376,12 @@ export default function PhotoAuditPage() {
             {running ? 'Running...' : 'Run Batch'}
           </button>
           <button
-            onClick={() => runBatch(viewFilter === 'no_hero' ? noHeroCount : queueStats.remaining, false, viewFilter === 'no_hero' ? true : includeGooglePhotos)}
-            disabled={running || (viewFilter === 'no_hero' ? noHeroCount === 0 : queueStats.remaining === 0)}
+            onClick={() => runBatch(viewFilter === 'no_hero' ? noHeroUnprocessed : queueStats.remaining, false, viewFilter === 'no_hero' ? true : includeGooglePhotos)}
+            disabled={running || (viewFilter === 'no_hero' ? noHeroUnprocessed === 0 : queueStats.remaining === 0)}
             className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-50"
           >
             {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-            Run All ({(viewFilter === 'no_hero' ? noHeroCount : queueStats.remaining).toLocaleString()})
+            Run All ({(viewFilter === 'no_hero' ? noHeroUnprocessed : queueStats.remaining).toLocaleString()})
           </button>
         </div>
         {/* Job progress */}

@@ -815,8 +815,9 @@ Deno.serve(async (req) => {
     .eq('is_touchless', true);
 
   if (noHeroMode) {
-    // No Hero mode: find listings without hero images
-    listQuery = listQuery.is('hero_image', null);
+    // No Hero mode: find listings without hero images that haven't been processed yet
+    // Once processed, they stay on the No Hero tab until user approves them
+    listQuery = listQuery.is('hero_image', null).is('photo_audited_at', null);
   } else {
     // Normal mode: find unaudited listings with hero images
     listQuery = listQuery.is('photo_audited_at', null).not('hero_image', 'is', null);

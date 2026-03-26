@@ -84,19 +84,25 @@ export function usePhotoAudit() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const continuingRef = useRef(false);
 
+  const [noHeroUnprocessed, setNoHeroUnprocessed] = useState(0);
+
   const loadQueueStats = useCallback(async () => {
-    const [totalRes, auditedRes, noHeroRes] = await Promise.all([
+    const [totalRes, auditedRes, noHeroRes, noHeroUnprocessedRes] = await Promise.all([
       supabase.from('listings').select('id', { count: 'exact', head: true })
         .eq('is_touchless', true).not('hero_image', 'is', null),
       supabase.from('listings').select('id', { count: 'exact', head: true })
         .eq('is_touchless', true).not('hero_image', 'is', null).not('photo_audited_at', 'is', null),
       supabase.from('listings').select('id', { count: 'exact', head: true })
         .eq('is_touchless', true).is('hero_image', null),
+      // Count only unprocessed No Hero listings (for Run All button)
+      supabase.from('listings').select('id', { count: 'exact', head: true })
+        .eq('is_touchless', true).is('hero_image', null).is('photo_audited_at', null),
     ]);
 
     const total = totalRes.count ?? 0;
     const audited = auditedRes.count ?? 0;
     setNoHeroCount(noHeroRes.count ?? 0);
+    setNoHeroUnprocessed(noHeroUnprocessedRes.count ?? 0);
     setQueueStats({
       totalUntagged: total,
       alreadyAudited: audited,
@@ -501,6 +507,7 @@ export function usePhotoAudit() {
     undoApply,
     reload: loadResults,
     noHeroCount,
+    noHeroUnprocessed,
     // Remove a listing from results by listing_id (used when approving from editor)
     removeFromResults: (listingId: string) => {
       setResults(prev => prev.filter(r => r.listing_id !== listingId));
