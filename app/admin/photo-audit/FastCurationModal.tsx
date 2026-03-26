@@ -549,6 +549,8 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                 listingId={listing.id}
                 onHeroDropped={addHeroDirect}
                 onStreetViewOpened={() => { awaitingClipboard.current = true; }}
+                onFallbackHero={async () => { await setFallbackHero(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
+                hasHeroImage={!!candidates.find(c => c.tag === 'hero')}
                 equipmentSlot={
                   <div className="my-3">
                     <div className="flex items-center gap-3 flex-wrap">
@@ -656,16 +658,6 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
             >
               <Trash2 className="w-4 h-4" /> Delete
             </button>
-            {!listing.hero_image && (
-              <button
-                onClick={async () => { await setFallbackHero(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
-                disabled={saving}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-medium disabled:opacity-50"
-                title="No suitable hero found — use the generic fallback image and move to next"
-              >
-                Use Fallback
-              </button>
-            )}
 
             <div className="flex-1" />
 

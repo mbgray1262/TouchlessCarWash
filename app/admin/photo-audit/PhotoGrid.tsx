@@ -26,6 +26,8 @@ interface PhotoGridProps {
   listingId?: string;
   onHeroDropped?: (url: string) => void;
   onStreetViewOpened?: () => void;
+  onFallbackHero?: () => void;
+  hasHeroImage?: boolean;
 }
 
 const SOURCE_BADGES: Record<string, { label: string; color: string }> = {
@@ -44,7 +46,7 @@ export function PhotoGrid({
   candidates, selectedId, onSelect, onTag,
   onSetAsHero, onAddToGallery, onRemoveFromGallery, onRemoveHero, onSkipPhoto,
   onCrop, onEnhance, discovering, enhancingId, enhancedIds = [], equipmentSlot,
-  streetViewUrl, googlePhotosUrl, listingId, onHeroDropped, onStreetViewOpened,
+  streetViewUrl, googlePhotosUrl, listingId, onHeroDropped, onStreetViewOpened, onFallbackHero, hasHeroImage,
 }: PhotoGridProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [heroDragging, setHeroDragging] = useState(false);
@@ -150,6 +152,15 @@ export function PhotoGrid({
           <Star className="w-4 h-4 text-amber-500" />
           <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Hero Image</h3>
           <div className="ml-auto flex items-center gap-2">
+            {onFallbackHero && !hasHeroImage && (
+              <button
+                onClick={onFallbackHero}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-400 hover:bg-gray-500 text-white text-xs font-medium transition-colors"
+                title="No suitable hero found — use generic fallback image"
+              >
+                Use Fallback
+              </button>
+            )}
             {googlePhotosUrl && (
               <a
                 href={googlePhotosUrl}

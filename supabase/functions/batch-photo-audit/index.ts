@@ -550,11 +550,12 @@ async function processOneListing(
     }
   }
 
-  // ---- NO HERO MODE: Skip Sonnet audit — just mark as processed ----
+  // ---- NO HERO MODE: Skip Sonnet audit — mark as processed but DO NOT auto-apply ----
+  // User must review and approve all results manually
   if (noHeroMode && !dryRun) {
     const hasHeroNow = !!listing.hero_image;
     if (hasHeroNow) heroReplaced++;
-    // Save a lightweight audit result
+    // Save a lightweight audit result — NOT applied, NOT reviewed (user must approve)
     await supabase.from('photo_audit_results').insert({
       listing_id: listing.id,
       hero_quality: hasHeroNow ? 'good' : 'missing',
@@ -563,15 +564,15 @@ async function processOneListing(
       photos_to_remove: [],
       raw_response: { no_hero_mode: true, google_photos_added: googlePhotosAdded },
       reviewed: false,
-      applied: true,
+      applied: false,
       google_photos_added: googlePhotosAdded,
       google_photos_screened: googlePhotosScreened,
     });
     await supabase.from('listings')
       .update({ photo_audited_at: new Date().toISOString() })
       .eq('id', listing.id);
-    if (hasHeroNow) autoApplied++;
-    return { equipmentDetected, heroReplaced, photosRemoved, autoApplied, googlePhotosAdded, googlePhotosScreened };
+    // Do NOT auto-apply — user reviews all No Hero results
+    return { equipmentDetected, heroReplaced, photosRemoved, autoApplied: 0, googlePhotosAdded, googlePhotosScreened };
   }
 
   // ---- STEP 2: Collect all photos for Sonnet audit ----
