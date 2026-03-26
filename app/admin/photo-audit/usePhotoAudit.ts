@@ -121,23 +121,21 @@ export function usePhotoAudit() {
     setLoading(true);
     const offset = (pageNum - 1) * PAGE_SIZE;
 
-    // Special handling for "no_hero" filter — shows listings needing hero images
+    // Special handling for "no_hero" filter — shows ALL touchless listings without a hero image
     if (filter === 'no_hero') {
-      // Count: touchless listings with no hero that are NOT approved (still in queue)
+      // Count: ALL touchless listings with no hero image
       const { count } = await supabase
         .from('listings')
         .select('id', { count: 'exact', head: true })
         .eq('is_touchless', true)
-        .is('hero_image', null)
-        .or('is_approved.is.null,is_approved.eq.false');
+        .is('hero_image', null);
 
-      // Fetch the page of no-hero listings (only unapproved ones — approved ones left the queue)
+      // Fetch the page — show all no-hero listings regardless of approval status
       const { data: listings } = await supabase
         .from('listings')
         .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at')
         .eq('is_touchless', true)
         .is('hero_image', null)
-        .or('is_approved.is.null,is_approved.eq.false')
         .order('photo_audited_at', { ascending: false, nullsFirst: false })
         .range(offset, offset + PAGE_SIZE - 1);
 
