@@ -167,7 +167,11 @@ export function usePhotoAudit() {
         for (const l of listings) {
           // Recently audited listings show at top (sorted by photo_audited_at desc)
           const wasRecentlyProcessed = l.photo_audited_at && (Date.now() - new Date(l.photo_audited_at).getTime() < 60 * 60 * 1000);
-          allResults.push(toResult(l, wasRecentlyProcessed ? 'no_photos' : 'missing'));
+          const hasGallery = (l.photos ?? []).length > 0;
+          const quality = wasRecentlyProcessed
+            ? (hasGallery ? 'has_candidates' : 'no_photos')
+            : 'missing';
+          allResults.push(toResult(l, quality));
         }
       }
 

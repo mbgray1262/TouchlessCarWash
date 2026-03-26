@@ -475,6 +475,7 @@ export default function PhotoAuditPage() {
               viewFilter === 'no_hero' ? results.map(r => (
                 <div key={r.id} className={`border-b border-gray-100 last:border-0 ${
                   r.hero_quality === 'new' ? 'bg-green-50 border-l-4 border-l-green-500' :
+                  r.hero_quality === 'has_candidates' ? 'bg-blue-50 border-l-4 border-l-blue-500' :
                   r.hero_quality === 'no_photos' ? 'bg-red-50 border-l-4 border-l-red-400' : ''
                 }`}>
                   <div className="flex items-center gap-4 px-4 py-3">
@@ -501,6 +502,9 @@ export default function PhotoAuditPage() {
                         </button>
                         {r.hero_quality === 'new' && (
                           <span className="text-xs px-2 py-0.5 rounded-full bg-green-500 text-white font-medium">NEW</span>
+                        )}
+                        {r.hero_quality === 'has_candidates' && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500 text-white font-medium">NEEDS HERO</span>
                         )}
                         {r.hero_quality === 'no_photos' && (
                           <span className="text-xs px-2 py-0.5 rounded-full bg-red-500 text-white font-medium">NO PHOTOS FOUND</span>
