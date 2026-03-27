@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { usePhotoAudit, AuditResult, ViewFilter } from './usePhotoAudit';
+import { usePhotoAudit, AuditResult, ViewFilter, LowResListing } from './usePhotoAudit';
 import { supabase } from '@/lib/supabase';
-import { Camera, Wrench, Trash2, Play, Loader2, Check, X, Undo2, ChevronDown, ChevronUp, ExternalLink, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Camera, Wrench, Trash2, Play, Loader2, Check, X, Undo2, ChevronDown, ChevronUp, ExternalLink, Filter, ChevronLeft, ChevronRight, ScanLine } from 'lucide-react';
 import { getStateSlug, slugify } from '@/lib/constants';
 import { FastCurationModal } from './FastCurationModal';
 
@@ -263,6 +263,30 @@ function CleanupRow({ result }: { result: AuditResult }) {
   );
 }
 
+function LowResCard({ listing, onEdit }: { listing: LowResListing; onEdit: () => void }) {
+  return (
+    <div className="rounded-lg border border-amber-200 overflow-hidden bg-white hover:shadow-md transition-shadow cursor-pointer" onClick={onEdit}>
+      <div className="relative w-full aspect-[4/3] bg-gray-100">
+        {listing.hero_image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={listing.hero_image} alt={listing.name} className="w-full h-full object-cover" loading="lazy" />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center text-gray-300">
+            <Camera className="w-8 h-8" />
+          </div>
+        )}
+        <div className="absolute top-1 left-1 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+          LOW RES
+        </div>
+      </div>
+      <div className="p-2">
+        <p className="text-xs font-semibold text-gray-800 truncate">{listing.name}</p>
+        <p className="text-[10px] text-gray-500 truncate">{listing.city}, {listing.state}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function PhotoAuditPage() {
   const {
     results, loading, running, runProgress, stats, queueStats,
@@ -271,6 +295,8 @@ export default function PhotoAuditPage() {
     changeFilter, changePage,
     runBatch, applyEquipment, rejectResult, applyAllHighConfidence, undoApply, reload,
     noHeroCount, noHeroUnprocessed, removeFromResults,
+    lowResListings, lowResTotal, lowResPage, lowResTotalPages, changeLowResPage,
+    scanForLowRes, scanProgress,
   } = usePhotoAudit();
 
   const [batchLimit, setBatchLimit] = useState(100);
@@ -281,7 +307,9 @@ export default function PhotoAuditPage() {
 
   // Open the editor modal and snapshot the navigation list
   const openEditor = (listingId: string) => {
-    const ids = results.map(r => r.listing_id);
+    const ids = viewFilter === 'low_res'
+      ? lowResListings.map(l => l.id)
+      : results.map(r => r.listing_id);
     const idx = ids.indexOf(listingId);
     setNavList(ids);
     setNavIndex(idx >= 0 ? idx : 0);
@@ -421,7 +449,7 @@ export default function PhotoAuditPage() {
               { key: 'heroes' as ViewFilter, label: `Poor Heroes (${stats.heroes_total})` },
               { key: 'cleanup' as ViewFilter, label: `Cleanup (${stats.cleanup_total})` },
               { key: 'no_hero' as ViewFilter, label: `No Hero (${viewFilter === 'no_hero' ? filteredTotal : noHeroCount})` },
-              { key: 'low_res' as ViewFilter, label: 'Low Res' },
+              { key: 'low_res' as ViewFilter, label: `Low Res${stats.low_res_total > 0 ? ` (${stats.low_res_total})` : ''}` },
             ]).map(f => (
               <button
                 key={f.key}
@@ -451,7 +479,7 @@ export default function PhotoAuditPage() {
               <span className={unreviewedOnly ? 'text-violet-700 font-semibold' : 'text-gray-500'}>Unreviewed only</span>
             </label>
           )}
-          {stats.equipment > 0 && (
+          {stats.equipment > 0 && viewFilter !== 'low_res' && (
             <button
               onClick={applyAllHighConfidence}
               className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded hover:bg-green-700"
@@ -459,13 +487,62 @@ export default function PhotoAuditPage() {
               <Check className="w-3 h-3" /> Apply All High Confidence
             </button>
           )}
+          {viewFilter === 'low_res' && (
+            <button
+              onClick={scanForLowRes}
+              className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700"
+            >
+              <ScanLine className="w-3 h-3" /> Scan for Low Res Heroes
+            </button>
+          )}
         </div>
+        {viewFilter === 'low_res' && scanProgress && (
+          <div className="px-4 py-2 bg-blue-50 border-b border-blue-100 text-xs text-blue-700">{scanProgress}</div>
+        )}
 
         {/* Results */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
           </div>
+        ) : viewFilter === 'low_res' ? (
+          lowResListings.length === 0 ? (
+            <p className="px-4 py-12 text-center text-sm text-gray-500">
+              No low-res heroes found yet. Click &ldquo;Scan for Low Res Heroes&rdquo; to detect listings with small hero images.
+            </p>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 p-4">
+                {lowResListings.map((listing) => (
+                  <LowResCard key={listing.id} listing={listing} onEdit={() => openEditor(listing.id)} />
+                ))}
+              </div>
+              {lowResTotalPages > 1 && (
+                <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+                  <p className="text-xs text-gray-500">
+                    Showing {(lowResPage - 1) * 50 + 1}&ndash;{Math.min(lowResPage * 50, lowResTotal)} of {lowResTotal}
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => changeLowResPage(Math.max(1, lowResPage - 1))}
+                      disabled={lowResPage <= 1}
+                      className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <span className="text-xs text-gray-600 px-2">Page {lowResPage} of {lowResTotalPages}</span>
+                    <button
+                      onClick={() => changeLowResPage(Math.min(lowResTotalPages, lowResPage + 1))}
+                      disabled={lowResPage >= lowResTotalPages}
+                      className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )
         ) : filteredTotal === 0 ? (
           <p className="px-4 py-12 text-center text-sm text-gray-500">
             {stats.total === 0 ? 'No audit results yet. Run a batch to get started.' : 'No results match this filter.'}

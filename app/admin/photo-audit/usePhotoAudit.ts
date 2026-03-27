@@ -57,12 +57,36 @@ export interface AuditStats {
   equipment_total: number;
   heroes_total: number;
   cleanup_total: number;
+  low_res_total: number;
+}
+
+export interface LowResListing {
+  id: string;
+  name: string;
+  slug: string;
+  city: string;
+  state: string;
+  hero_image: string;
+  hero_image_source: string | null;
 }
 
 export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup' | 'no_hero' | 'low_res';
 
 const POLL_INTERVAL = 5000; // 5 seconds
 const PAGE_SIZE = 25;
+
+function checkImageDimensions(url: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    const timeout = setTimeout(() => resolve(false), 10_000);
+    img.onload = () => {
+      clearTimeout(timeout);
+      resolve(img.naturalWidth < 400 || img.naturalHeight < 300);
+    };
+    img.onerror = () => { clearTimeout(timeout); resolve(false); };
+    img.src = url;
+  });
+}
 
 export function usePhotoAudit() {
   const [results, setResults] = useState<AuditResult[]>([]);
@@ -72,8 +96,12 @@ export function usePhotoAudit() {
   const [includeGooglePhotos, setIncludeGooglePhotos] = useState(true);
   const [stats, setStats] = useState<AuditStats>({
     total: 0, applied: 0, pending: 0, equipment: 0, heroes: 0, cleanup: 0,
-    needs_review: 0, equipment_total: 0, heroes_total: 0, cleanup_total: 0,
+    needs_review: 0, equipment_total: 0, heroes_total: 0, cleanup_total: 0, low_res_total: 0,
   });
+  const [lowResListings, setLowResListings] = useState<LowResListing[]>([]);
+  const [lowResTotal, setLowResTotal] = useState(0);
+  const [lowResPage, setLowResPage] = useState(1);
+  const [scanProgress, setScanProgress] = useState('');
   const [queueStats, setQueueStats] = useState({ totalUntagged: 0, alreadyAudited: 0, remaining: 0 });
   const [activeJob, setActiveJob] = useState<BatchJob | null>(null);
   const [viewFilter, setViewFilter] = useState<ViewFilter>('all');
@@ -221,43 +249,8 @@ export function usePhotoAudit() {
       return;
     }
 
-    // Special handling for "low_res" filter — finds listings with low-resolution hero images
+    // low_res filter is handled separately via loadLowResPage — skip here
     if (filter === 'low_res') {
-      // Query listings with street_view source OR hero images from known low-res sources
-      const { data: listings, count } = await supabase
-        .from('listings')
-        .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved', { count: 'exact' })
-        .eq('is_touchless', true)
-        .not('hero_image', 'is', null)
-        .or('hero_image_source.eq.street_view,hero_image_source.eq.backfill')
-        .order('name')
-        .range(offset, offset + PAGE_SIZE - 1);
-
-      const results: AuditResult[] = (listings ?? []).map(l => ({
-        id: `lowres-${l.id}`,
-        listing_id: l.id,
-        listing_name: l.name,
-        listing_city: l.city,
-        listing_state: l.state,
-        listing_hero: l.hero_image,
-        hero_quality: 'poor',
-        equipment_brand: l.equipment_brand,
-        equipment_model: l.equipment_model,
-        equipment_confidence: null,
-        equipment_source_photo: null,
-        suggested_hero_url: null,
-        suggested_hero_reason: `Source: ${l.hero_image_source ?? 'unknown'}`,
-        photos_to_remove: [],
-        reviewed: false,
-        applied: false,
-        created_at: '',
-        raw_response: null,
-        google_photos_added: 0,
-        google_photos_screened: 0,
-      }));
-
-      setResults(results);
-      setFilteredTotal(count ?? 0);
       setLoading(false);
       return;
     }
@@ -287,6 +280,80 @@ export function usePhotoAudit() {
     }
     setLoading(false);
   }, []);
+
+  const LOW_RES_PAGE_SIZE = 50;
+
+  const loadLowResPage = useCallback(async (pageNum: number) => {
+    setLoading(true);
+    const offset = (pageNum - 1) * LOW_RES_PAGE_SIZE;
+    const { data, error } = await supabase.rpc('get_low_res_listings', {
+      p_offset: offset,
+      p_limit: LOW_RES_PAGE_SIZE,
+    });
+    if (!error && data) {
+      const result = data as { total: number; results: LowResListing[] };
+      setLowResListings(result.results ?? []);
+      setLowResTotal(result.total ?? 0);
+    }
+    setLoading(false);
+  }, []);
+
+  const changeLowResPage = useCallback((pageNum: number) => {
+    setLowResPage(pageNum);
+  }, []);
+
+  const scanForLowRes = useCallback(async () => {
+    setScanProgress('Counting unscanned listings...');
+    const BATCH = 50;
+    let scanned = 0;
+    let lowResFound = 0;
+
+    const { count } = await supabase
+      .from('listings')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_touchless', true)
+      .not('hero_image', 'is', null)
+      .is('hero_is_low_res', null);
+
+    const total = count ?? 0;
+
+    if (total === 0) {
+      setScanProgress('All listings already scanned. Use the Low Res tab to see results.');
+      await loadLowResPage(1);
+      await loadStats();
+      return;
+    }
+
+    setScanProgress(`Scanning 0 / ${total} listings...`);
+
+    while (true) {
+      const { data } = await supabase
+        .from('listings')
+        .select('id, hero_image')
+        .eq('is_touchless', true)
+        .not('hero_image', 'is', null)
+        .is('hero_is_low_res', null)
+        .limit(BATCH);
+
+      if (!data || data.length === 0) break;
+
+      await Promise.all(data.map(async (listing) => {
+        const isLowRes = await checkImageDimensions(listing.hero_image as string);
+        await supabase.from('listings').update({ hero_is_low_res: isLowRes }).eq('id', listing.id);
+        scanned++;
+        if (isLowRes) lowResFound++;
+      }));
+
+      setScanProgress(`Scanning ${scanned} / ${total} listings... (${lowResFound} low-res found)`);
+
+      if (data.length < BATCH) break;
+    }
+
+    setScanProgress(`Scan complete! ${lowResFound} low-res heroes found out of ${scanned} scanned.`);
+    await loadLowResPage(1);
+    setLowResPage(1);
+    await loadStats();
+  }, [loadLowResPage, loadStats]);
 
   // Combined load: stats + current page + queue stats
   const loadResults = useCallback(async () => {
@@ -318,8 +385,17 @@ export function usePhotoAudit() {
 
   // Load page when filter, page, or unreviewedOnly changes
   useEffect(() => {
-    loadPage(viewFilter, page, unreviewedOnly);
+    if (viewFilter !== 'low_res') {
+      loadPage(viewFilter, page, unreviewedOnly);
+    }
   }, [viewFilter, page, unreviewedOnly, loadPage]);
+
+  // Load low-res page when tab is active or page changes
+  useEffect(() => {
+    if (viewFilter === 'low_res') {
+      loadLowResPage(lowResPage);
+    }
+  }, [viewFilter, lowResPage, loadLowResPage]);
 
   // ─── Job polling ──────────────────────────────────────────────────
 
@@ -588,5 +664,13 @@ export function usePhotoAudit() {
       setFilteredTotal(prev => Math.max(0, prev - 1));
       setNoHeroCount(prev => Math.max(0, prev - 1));
     },
+    // Low Res tab
+    lowResListings,
+    lowResTotal,
+    lowResPage,
+    lowResTotalPages: Math.max(1, Math.ceil(lowResTotal / 50)),
+    changeLowResPage,
+    scanForLowRes,
+    scanProgress,
   };
 }
