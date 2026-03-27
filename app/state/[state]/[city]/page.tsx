@@ -1,6 +1,6 @@
 import { cache, Suspense } from 'react';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
@@ -166,9 +166,17 @@ export default async function CityPage({ params }: CityPageProps) {
     getFilters(),
   ]);
 
-  // Return proper 404 for cities with no listings — prevents Google soft 404s
+  // Return proper 404 for cities with no listings at all.
   if (allListings.length === 0) {
     notFound();
+  }
+
+  // Redirect cities with fewer than 3 listings to the state page.
+  // The sitemap already excludes these thin city pages (3+ listing threshold),
+  // but Google can still discover them via listing page breadcrumb links.
+  // A 301 redirect is cleaner than a soft 404 with near-empty content.
+  if (allListings.length < 3) {
+    redirect(`/state/${params.state}`);
   }
 
   // Build filter→listingIds map for client-side in-memory filtering
