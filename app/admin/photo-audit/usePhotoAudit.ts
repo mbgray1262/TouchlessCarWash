@@ -302,6 +302,14 @@ export function usePhotoAudit() {
     setLowResPage(pageNum);
   }, []);
 
+  // Dismiss a single listing from the Low Res tab (marks it as not-low-res so it disappears)
+  const dismissLowRes = useCallback(async (listingId: string) => {
+    await supabase.from('listings').update({ hero_is_low_res: false }).eq('id', listingId);
+    setLowResListings(prev => prev.filter(l => l.id !== listingId));
+    setLowResTotal(prev => Math.max(0, prev - 1));
+    await loadStats();
+  }, [loadStats]);
+
   const scanForLowRes = useCallback(async () => {
     setScanProgress('Counting unscanned listings...');
     const BATCH = 50;
@@ -315,13 +323,29 @@ export function usePhotoAudit() {
       .not('hero_image', 'is', null)
       .is('hero_is_low_res', null);
 
-    const total = count ?? 0;
+    let total = count ?? 0;
 
     if (total === 0) {
-      setScanProgress('All listings already scanned. Use the Low Res tab to see results.');
-      await loadLowResPage(1);
-      await loadStats();
-      return;
+      // All already scanned — reset flags so we can do a fresh re-scan
+      setScanProgress('Resetting scan flags for re-scan...');
+      await supabase
+        .from('listings')
+        .update({ hero_is_low_res: null })
+        .eq('is_touchless', true)
+        .not('hero_image', 'is', null);
+
+      const { count: freshCount } = await supabase
+        .from('listings')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_touchless', true)
+        .not('hero_image', 'is', null)
+        .is('hero_is_low_res', null);
+
+      total = freshCount ?? 0;
+      if (total === 0) {
+        setScanProgress('No listings to scan.');
+        return;
+      }
     }
 
     setScanProgress(`Scanning 0 / ${total} listings...`);
@@ -670,6 +694,7 @@ export function usePhotoAudit() {
     lowResPage,
     lowResTotalPages: Math.max(1, Math.ceil(lowResTotal / 50)),
     changeLowResPage,
+    dismissLowRes,
     scanForLowRes,
     scanProgress,
   };

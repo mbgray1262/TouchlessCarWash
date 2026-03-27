@@ -263,10 +263,10 @@ function CleanupRow({ result }: { result: AuditResult }) {
   );
 }
 
-function LowResCard({ listing, onEdit }: { listing: LowResListing; onEdit: () => void }) {
+function LowResCard({ listing, onEdit, onDismiss }: { listing: LowResListing; onEdit: () => void; onDismiss: () => void }) {
   return (
-    <div className="rounded-lg border border-amber-200 overflow-hidden bg-white hover:shadow-md transition-shadow cursor-pointer" onClick={onEdit}>
-      <div className="relative w-full aspect-[4/3] bg-gray-100">
+    <div className="rounded-lg border border-amber-200 overflow-hidden bg-white hover:shadow-md transition-shadow">
+      <div className="relative w-full aspect-[4/3] bg-gray-100 cursor-pointer" onClick={onEdit}>
         {listing.hero_image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={listing.hero_image} alt={listing.name} className="w-full h-full object-cover" loading="lazy" />
@@ -279,9 +279,18 @@ function LowResCard({ listing, onEdit }: { listing: LowResListing; onEdit: () =>
           LOW RES
         </div>
       </div>
-      <div className="p-2">
-        <p className="text-xs font-semibold text-gray-800 truncate">{listing.name}</p>
-        <p className="text-[10px] text-gray-500 truncate">{listing.city}, {listing.state}</p>
+      <div className="p-2 flex items-center justify-between gap-1">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-gray-800 truncate">{listing.name}</p>
+          <p className="text-[10px] text-gray-500 truncate">{listing.city}, {listing.state}</p>
+        </div>
+        <button
+          onClick={e => { e.stopPropagation(); onDismiss(); }}
+          title="Mark as fixed — removes from this list"
+          className="flex-shrink-0 flex items-center gap-0.5 px-1.5 py-1 bg-green-100 hover:bg-green-200 text-green-700 rounded text-[10px] font-medium transition-colors"
+        >
+          <Check className="w-3 h-3" /> Fixed
+        </button>
       </div>
     </div>
   );
@@ -296,7 +305,7 @@ export default function PhotoAuditPage() {
     runBatch, applyEquipment, rejectResult, applyAllHighConfidence, undoApply, reload,
     noHeroCount, noHeroUnprocessed, removeFromResults,
     lowResListings, lowResTotal, lowResPage, lowResTotalPages, changeLowResPage,
-    scanForLowRes, scanProgress,
+    dismissLowRes, scanForLowRes, scanProgress,
   } = usePhotoAudit();
 
   const [batchLimit, setBatchLimit] = useState(100);
@@ -492,7 +501,7 @@ export default function PhotoAuditPage() {
               onClick={scanForLowRes}
               className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700"
             >
-              <ScanLine className="w-3 h-3" /> Scan for Low Res Heroes
+              <ScanLine className="w-3 h-3" /> {lowResTotal > 0 || scanProgress ? 'Re-scan All Heroes' : 'Scan for Low Res Heroes'}
             </button>
           )}
         </div>
@@ -514,7 +523,7 @@ export default function PhotoAuditPage() {
             <>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 p-4">
                 {lowResListings.map((listing) => (
-                  <LowResCard key={listing.id} listing={listing} onEdit={() => openEditor(listing.id)} />
+                  <LowResCard key={listing.id} listing={listing} onEdit={() => openEditor(listing.id)} onDismiss={() => dismissLowRes(listing.id)} />
                 ))}
               </div>
               {lowResTotalPages > 1 && (
