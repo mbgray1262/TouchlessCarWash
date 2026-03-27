@@ -72,7 +72,7 @@ export interface LowResListing {
 
 export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup' | 'no_hero' | 'low_res';
 
-const POLL_INTERVAL = 5000; // 5 seconds
+const POLL_INTERVAL = 3000; // 3 seconds — fast enough to show per-listing progress
 const PAGE_SIZE = 25;
 
 function checkImageDimensions(url: string): Promise<boolean> {

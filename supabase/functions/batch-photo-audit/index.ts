@@ -752,6 +752,11 @@ Deno.serve(async (req) => {
   // In no_hero mode, always force Google Photos on (no point running without it)
   if (noHeroMode) includeGooglePhotos = true;
 
+  // Guard: reject nonsensical batch sizes (not applicable when continuing an existing job)
+  if (!jobId && totalRequested <= 0) {
+    return Response.json({ error: 'total_requested must be > 0' }, { status: 400, headers: corsHeaders });
+  }
+
   // Load or create job
   interface JobRecord {
     id: string; status: string; total_requested: number; total_processed: number;
@@ -868,8 +873,14 @@ Deno.serve(async (req) => {
     chunkGoogleAdded += stats.googlePhotosAdded;
     chunkGoogleScreened += stats.googlePhotosScreened;
 
-    if (chunkProcessed % 5 === 0) {
-      console.log(`  Chunk progress: ${chunkProcessed}/${listings.length}`);
+    console.log(`  Chunk progress: ${chunkProcessed}/${listings.length}`);
+
+    // Update total_processed in DB after each listing so the frontend progress bar moves in real-time
+    if (job) {
+      await supabase.from('batch_audit_jobs').update({
+        total_processed: job.total_processed + chunkProcessed,
+        updated_at: new Date().toISOString(),
+      }).eq('id', job.id);
     }
 
     await new Promise(r => setTimeout(r, 200));
