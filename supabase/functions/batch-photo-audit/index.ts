@@ -604,12 +604,22 @@ async function processOneListing(
   }
   const photosToAudit = photoUrls.slice(0, 12);
   if (photosToAudit.length === 0) {
+    // No usable photos — mark as audited so this listing isn't retried on every batch
+    if (!dryRun) {
+      console.log(`  → No photos for listing ${listing.id as string} — marking audited with no result`);
+      await supabase.from('listings').update({ photo_audited_at: new Date().toISOString() }).eq('id', listing.id);
+    }
     return { equipmentDetected, heroReplaced, photosRemoved, autoApplied, googlePhotosAdded, googlePhotosScreened };
   }
 
   // ---- STEP 3: Run Sonnet audit ----
   const result = await auditListing(photosToAudit, listing.name as string, anthropicKey);
   if (!result) {
+    // Image fetch failed — mark as audited so this listing isn't retried on every batch
+    if (!dryRun) {
+      console.log(`  → Image fetch failed for listing ${listing.id as string} — marking audited with no result`);
+      await supabase.from('listings').update({ photo_audited_at: new Date().toISOString() }).eq('id', listing.id);
+    }
     return { equipmentDetected, heroReplaced, photosRemoved, autoApplied, googlePhotosAdded, googlePhotosScreened };
   }
 
@@ -629,8 +639,14 @@ async function processOneListing(
   const suggestedHeroUrl = bestIdx != null && bestIdx > 0 && bestIdx < photosToAudit.length
     ? photosToAudit[bestIdx] : null;
 
-  // Save to photo_audit_results
+  // Save to photo_audit_results (skip if listing was already audited by a concurrent chunk)
   if (!dryRun) {
+    const { data: already } = await supabase
+      .from('listings').select('photo_audited_at').eq('id', listing.id).single();
+    if (already?.photo_audited_at) {
+      console.log(`  → Listing ${listing.id as string} already audited by concurrent chunk — skipping insert`);
+      return { equipmentDetected, heroReplaced, photosRemoved, autoApplied, googlePhotosAdded, googlePhotosScreened };
+    }
     await supabase.from('photo_audit_results').insert({
       listing_id: listing.id,
       equipment_brand: normalizedBrand,
