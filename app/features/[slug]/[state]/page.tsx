@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/supabase';
@@ -110,7 +110,9 @@ export default async function FeatureStatePage({ params, searchParams }: Feature
     otherStatesPromise,
   ]);
 
-  if (totalCount < 3) notFound();
+  // Not enough listings for a useful state page — redirect to the parent feature page
+  // instead of returning 404, so Google receives a 301 and the indexed URL resolves cleanly.
+  if (totalCount < 3) redirect(`/features/${feature.slug}`);
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
   const page = Math.min(currentPage, totalPages);

@@ -66,39 +66,99 @@ async function getListing(slug: string): Promise<Listing | null> {
 }
 
 /** Check if a listing exists but is NOT touchless (for showing a helpful message instead of 404) */
+/**
+ * Build a canonical listing URL from a DB row.
+ */
+function buildListingUrl(match: { slug: string; city: string; state: string }): string {
+  const matchStateSlug = slugify(
+    US_STATES.find((s) => s.code === match.state)?.name ?? match.state,
+  );
+  const matchCitySlug = slugify(match.city);
+  return `/state/${matchStateSlug}/${matchCitySlug}/${match.slug}`;
+}
+
+/**
+ * Old slug formats sometimes end with a numeric Google Places ID (e.g. "-15939").
+ * Strip that suffix so we can match against the current address-based slug format.
+ */
+function stripTrailingNumericId(slug: string): string {
+  return slug.replace(/-\d+$/, '');
+}
+
 async function getNonTouchlessListing(slug: string): Promise<{ name: string; city: string; state: string } | null> {
-  const { data } = await supabase
+  // Try exact match first (covers listings recently changed from touchless → not-touchless)
+  const { data: exact } = await supabase
     .from('listings')
     .select('name, city, state')
     .eq('slug', slug)
     .eq('is_touchless', false)
     .maybeSingle();
-  return data;
+  if (exact) return exact;
+
+  // Try again after stripping a trailing numeric ID (old URL format like "circle-k-car-wash-bradenton-florida-14241")
+  const stripped = stripTrailingNumericId(slug);
+  if (stripped !== slug) {
+    const { data: strippedExact } = await supabase
+      .from('listings')
+      .select('name, city, state')
+      .eq('slug', stripped)
+      .eq('is_touchless', false)
+      .maybeSingle();
+    if (strippedExact) return strippedExact;
+
+    // Also try prefix match on stripped slug for not-touchless listings
+    const { data: prefix } = await supabase
+      .from('listings')
+      .select('name, city, state')
+      .like('slug', `${stripped}-%`)
+      .eq('is_touchless', false)
+      .limit(1);
+    if (prefix?.[0]) return prefix[0];
+  }
+
+  return null;
 }
 
 /**
  * Try to find a listing whose slug starts with the requested slug.
  * Handles old short slugs (e.g. "rice-street-car-wash") that were later
- * replaced with longer address-based slugs.
+ * replaced with longer address-based slugs, AND old Google-Places-ID slugs
+ * (e.g. "car-wash-depot-llc-canton-georgia-15939") by stripping the numeric suffix.
  * Returns the canonical URL path for the matching listing, or null.
  */
 async function findListingByPartialSlug(slug: string): Promise<string | null> {
-  const { data } = await supabase
+  // 1. Try the slug as a direct prefix match (existing behaviour)
+  const { data: d1 } = await supabase
     .from('listings')
     .select('slug, city, state')
     .like('slug', `${slug}-%`)
     .eq('is_touchless', true)
     .limit(1);
+  if (d1?.[0]) return buildListingUrl(d1[0]);
 
-  if (!data || data.length === 0) return null;
+  // 2. Strip a trailing numeric ID (old format like "business-name-city-state-15939")
+  const stripped = stripTrailingNumericId(slug);
+  if (stripped !== slug) {
+    // 2a. Exact match on the stripped slug
+    const { data: d2a } = await supabase
+      .from('listings')
+      .select('slug, city, state')
+      .eq('slug', stripped)
+      .eq('is_touchless', true)
+      .maybeSingle();
+    if (d2a) return buildListingUrl(d2a);
 
-  const match = data[0];
-  const matchStateSlug = slugify(
-    US_STATES.find((s) => s.code === match.state)?.name ?? match.state,
-  );
-  const matchCitySlug = slugify(match.city);
+    // 2b. Prefix match on the stripped slug
+    const { data: d2b } = await supabase
+      .from('listings')
+      .select('slug, city, state')
+      .like('slug', `${stripped}-%`)
+      .eq('is_touchless', true)
+      .limit(1);
+    if (d2b?.[0]) return buildListingUrl(d2b[0]);
+  }
 
-  return `/state/${matchStateSlug}/${matchCitySlug}/${match.slug}`;
+  return null;
 }
 
 async function getNearbyListings(listing: Listing, limit = 6): Promise<Listing[]> {
