@@ -63,7 +63,7 @@ async function fetchGooglePlacePhotoUrls(
   const urls: string[] = [];
   for (const photo of photos) {
     if (urls.length >= maxFetch) break;
-    const mediaUrl = `https://places.googleapis.com/v1/${photo.name}/media?maxHeightPx=1600&maxWidthPx=1600&key=${googleApiKey}`;
+    const mediaUrl = `https://places.googleapis.com/v1/${photo.name}/media?maxHeightPx=4800&maxWidthPx=4800&key=${googleApiKey}`;
     const mediaRes = await fetch(mediaUrl, {
       redirect: 'follow',
       signal: AbortSignal.timeout(10000),
