@@ -421,6 +421,7 @@ export default function PhotoAuditPage() {
               { key: 'heroes' as ViewFilter, label: `Poor Heroes (${stats.heroes_total})` },
               { key: 'cleanup' as ViewFilter, label: `Cleanup (${stats.cleanup_total})` },
               { key: 'no_hero' as ViewFilter, label: `No Hero (${viewFilter === 'no_hero' ? filteredTotal : noHeroCount})` },
+              { key: 'low_res' as ViewFilter, label: 'Low Res' },
             ]).map(f => (
               <button
                 key={f.key}
@@ -540,6 +541,49 @@ export default function PhotoAuditPage() {
                         Add Photos
                       </button>
                     )}
+                  </div>
+                </div>
+              )) :
+              viewFilter === 'low_res' ? results.map(r => (
+                <div key={r.id} className="border-b border-gray-100 last:border-0 bg-amber-50 border-l-4 border-l-amber-400">
+                  <div className="flex items-center gap-4 px-4 py-3">
+                    {r.listing_hero ? (
+                      <img
+                        src={r.listing_hero}
+                        alt={r.listing_name}
+                        className="w-20 h-14 rounded object-cover flex-shrink-0 cursor-pointer border-2 border-amber-400"
+                        loading="lazy"
+                        onClick={() => openEditor(r.listing_id)}
+                        onLoad={(e) => {
+                          const img = e.currentTarget;
+                          const dimEl = img.parentElement?.parentElement?.querySelector('.res-info');
+                          if (dimEl) dimEl.textContent = `${img.naturalWidth}×${img.naturalHeight}`;
+                        }}
+                      />
+                    ) : (
+                      <div className="w-20 h-14 rounded bg-gray-200 flex items-center justify-center text-gray-400 text-xs flex-shrink-0">
+                        No image
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => openEditor(r.listing_id)}
+                          className="text-sm font-medium text-blue-600 hover:text-blue-800 truncate block text-left"
+                        >
+                          {r.listing_name}
+                        </button>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500 text-white font-medium">LOW RES</span>
+                        <span className="res-info text-xs text-gray-400 font-mono"></span>
+                      </div>
+                      <p className="text-xs text-gray-500">{r.listing_city}, {r.listing_state} · {r.suggested_hero_reason}</p>
+                    </div>
+                    <button
+                      onClick={() => openEditor(r.listing_id)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-500 hover:bg-blue-600 text-white"
+                    >
+                      Replace
+                    </button>
                   </div>
                 </div>
               )) :

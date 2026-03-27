@@ -59,7 +59,7 @@ export interface AuditStats {
   cleanup_total: number;
 }
 
-export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup' | 'no_hero';
+export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup' | 'no_hero' | 'low_res';
 
 const POLL_INTERVAL = 5000; // 5 seconds
 const PAGE_SIZE = 25;
@@ -217,6 +217,47 @@ export function usePhotoAudit() {
       setResults(allResults);
       setFilteredTotal(count);
       setNoHeroCount(count);
+      setLoading(false);
+      return;
+    }
+
+    // Special handling for "low_res" filter — finds listings with low-resolution hero images
+    if (filter === 'low_res') {
+      // Query listings with street_view source OR hero images from known low-res sources
+      const { data: listings, count } = await supabase
+        .from('listings')
+        .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved', { count: 'exact' })
+        .eq('is_touchless', true)
+        .not('hero_image', 'is', null)
+        .or('hero_image_source.eq.street_view,hero_image_source.eq.backfill')
+        .order('name')
+        .range(offset, offset + PAGE_SIZE - 1);
+
+      const results: AuditResult[] = (listings ?? []).map(l => ({
+        id: `lowres-${l.id}`,
+        listing_id: l.id,
+        listing_name: l.name,
+        listing_city: l.city,
+        listing_state: l.state,
+        listing_hero: l.hero_image,
+        hero_quality: 'poor',
+        equipment_brand: l.equipment_brand,
+        equipment_model: l.equipment_model,
+        equipment_confidence: null,
+        equipment_source_photo: null,
+        suggested_hero_url: null,
+        suggested_hero_reason: `Source: ${l.hero_image_source ?? 'unknown'}`,
+        photos_to_remove: [],
+        reviewed: false,
+        applied: false,
+        created_at: '',
+        raw_response: null,
+        google_photos_added: 0,
+        google_photos_screened: 0,
+      }));
+
+      setResults(results);
+      setFilteredTotal(count ?? 0);
       setLoading(false);
       return;
     }
