@@ -456,7 +456,7 @@ export function usePhotoAudit() {
     continuingRef.current = true;
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      const token = session?.access_token ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
       const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/batch-photo-audit`, {
         method: 'POST',
         headers: {
@@ -561,7 +561,9 @@ export function usePhotoAudit() {
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      // Fall back to anon key if session is missing/expired — the edge function
+      // uses the service role key internally so user JWT is only needed for auth middleware
+      const token = session?.access_token ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/batch-photo-audit`, {
         method: 'POST',
@@ -576,6 +578,12 @@ export function usePhotoAudit() {
           no_hero_mode: isNoHero,
         }),
       });
+
+      if (!res.ok && res.status === 401) {
+        setRunProgress('Error: Session expired — please refresh the page and try again.');
+        setRunning(false);
+        return;
+      }
 
       const data = await res.json();
 
