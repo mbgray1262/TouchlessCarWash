@@ -42,6 +42,7 @@ export const EQUIPMENT_BRANDS = [
   { value: 'maxar', label: 'MAXAR' },
   { value: 'washman', label: 'Washman' },
   { value: 'super_wash', label: 'Super Wash' },
+  { value: 'nustar', label: 'Nu+Star (NuStar)' },
   { value: 'delta_sonic', label: 'Delta Sonic' },
   { value: 'other', label: 'Other' },
 ] as const;
@@ -67,6 +68,7 @@ export const EQUIPMENT_MODELS: Record<string, string[]> = {
   maxar: [],
   washman: [],
   super_wash: ['Supermatic', 'Supermatic II'],
+  nustar: ['Comet', 'Super Comet'],
   delta_sonic: ['Custom Tunnel'],
   other: ['CROSSFIRE'],
 };
