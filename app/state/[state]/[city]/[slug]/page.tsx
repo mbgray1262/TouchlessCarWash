@@ -23,6 +23,7 @@ import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants'
 import { streetAddress, hasStreetAddress } from '@/lib/utils';
 import { DEFAULT_OG_IMAGE, ensureHttps, truncateDescription } from '@/lib/seo';
 import { AdUnit } from '@/components/AdUnit';
+import { ProductsBanner } from '@/components/ProductsBanner';
 import type { Metadata } from 'next';
 
 const ListingMap = nextDynamic(() => import('@/components/ListingMap'), { ssr: false });
@@ -1579,7 +1580,11 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
             </div>
           )}
 
-          <AdUnit className="mt-10" format="auto" />
+          <div className="mt-10">
+            <ProductsBanner />
+          </div>
+
+          <AdUnit className="mt-6" format="auto" />
 
           {lastVerified && (
             <div className="mt-8 pt-6 border-t border-gray-200 flex items-center gap-2 text-xs text-gray-400">

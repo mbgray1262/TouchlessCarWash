@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ChevronRight, Calendar, User } from 'lucide-react';
+import { ProductsBanner } from '@/components/ProductsBanner';
 import { supabase, type BlogPost } from '@/lib/supabase';
 import type { Metadata } from 'next';
 
@@ -78,7 +79,11 @@ export default async function BlogPage() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 max-w-5xl py-12">
+      <div className="container mx-auto px-4 max-w-5xl py-8">
+        <ProductsBanner />
+      </div>
+
+      <div className="container mx-auto px-4 max-w-5xl py-4">
         {posts.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-gray-500 text-lg">No posts yet. Check back soon!</p>

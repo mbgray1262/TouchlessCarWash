@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ProductsBanner } from '@/components/ProductsBanner';
 import { Star, MapPin, CheckCircle, TrendingUp, Search, Eye, Sparkles, Droplet } from 'lucide-react';
 import HeroSection from '@/components/HeroSection';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -402,6 +403,12 @@ export default async function Home() {
               </details>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section className="py-10 px-4 bg-gray-50">
+        <div className="container mx-auto max-w-3xl">
+          <ProductsBanner />
         </div>
       </section>
 
