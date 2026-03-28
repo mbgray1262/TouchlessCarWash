@@ -281,6 +281,14 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
           text: 'Yes. Every listing in our directory has been verified as genuinely touchless — no brushes, no cloth, no friction equipment. We cross-reference Google data, business websites, and customer reviews to confirm.',
         },
       },
+      {
+        '@type': 'Question',
+        name: 'What should I do to protect my paint after a touchless car wash?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'After a touchless wash, applying a quick spray wax or detailer adds a hydrophobic layer that repels water and dirt between visits. A quality microfiber drying towel removes water spots without scratching. See our full car care product guide at touchlesscarwashfinder.com/blog/recommended-products.',
+        },
+      },
     ],
   };
 
@@ -586,6 +594,17 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
                 <p className="text-gray-600">
                   Rankings are recalculated with each site update. Google ratings, review counts, and touchless
                   verification data are refreshed regularly to keep the rankings current.
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-[#0F2744] mb-1">
+                  What should I do to protect my paint after a touchless car wash?
+                </h3>
+                <p className="text-gray-600">
+                  After a touchless wash, applying a quick spray wax or detailer adds a hydrophobic layer that repels water and dirt between visits. A quality microfiber drying towel removes water spots without scratching. See our full{' '}
+                  <Link href="/blog/recommended-products" className="text-[#0F2744] font-medium hover:underline">
+                    Car Care Products We Recommend →
+                  </Link>
                 </p>
               </div>
             </div>

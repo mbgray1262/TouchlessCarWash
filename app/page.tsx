@@ -74,6 +74,17 @@ const faqItems = [
     question: 'Are touchless car washes safe for Tesla, BMW, and luxury vehicles?',
     answer: 'Absolutely. Touchless car washes are the preferred wash method for luxury and high-end vehicles including Tesla Model 3, Model Y, and Model S, BMW 3/5/X Series, Mercedes-Benz C/E/S-Class, Lexus, Audi, Porsche, Range Rover, and Genesis. Because no brushes or cloth contact the vehicle, there is zero risk of scratching delicate paint, clear coats, ceramic coatings, or paint protection film (PPF). Auto detailing professionals consistently recommend touch-free washes for preserving showroom-quality finishes on premium vehicles.',
   },
+  {
+    question: 'What products should I use after a touchless car wash?',
+    answer: (
+      <>
+        After a touchless wash, a quick spray wax or detailer helps protect your paint and repel water until your next visit. For drying, a high-quality microfiber towel prevents water spots without scratching. See our full{' '}
+        <Link href="/blog/recommended-products" className="text-[#0F2744] font-medium hover:underline">
+          Car Care Products We Recommend →
+        </Link>
+      </>
+    ),
+  },
 ];
 
 async function getFeaturedListings(): Promise<Listing[]> {
