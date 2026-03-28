@@ -1140,7 +1140,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
               {/* AI-Generated Description */}
               {listing.description && (
                 <div className="bg-white rounded-2xl border border-gray-200 p-6">
-                  <h2 className="text-lg font-bold text-[#0F2744] mb-3">About {listing.name}</h2>
+                  <h2 className="text-lg font-bold text-[#0F2744] mb-3">{listing.name} — Touchless Car Wash in {listing.city}, {listing.state}</h2>
                   <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
                     {listing.description}
                   </div>

@@ -101,10 +101,10 @@ export async function generateMetadata({ params }: StatePageProps): Promise<Meta
 
   const metaDescription = stateDesc
     ? stateDesc.substring(0, 155) + (stateDesc.length > 155 ? '...' : '')
-    : `Find ${totalCount} verified touchless car washes in ${stateName}. Browse by city with ratings, hours, and contact info.`;
+    : `Find ${totalCount} verified touchless, touch-free, and brushless car wash locations in ${stateName}. Browse by city with ratings, hours, and directions.`;
 
   const canonicalUrl = `https://touchlesscarwashfinder.com/state/${params.state}`;
-  const title = `Best Touchless Car Washes in ${stateName}`;
+  const title = `Best Touchless Car Washes in ${stateName} — ${month} ${year}`;
 
   return {
     title,

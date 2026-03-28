@@ -446,7 +446,7 @@ export default function HeroSection() {
           </h1>
 
           <p className="text-lg md:text-xl text-white/90 mb-8 leading-relaxed">
-            The only directory dedicated exclusively to automated touchless, touch-free, and brushless car washes. No brushes, no scratches — just clean.
+            The only directory dedicated exclusively to touchless, touch-free, no-touch, and brushless car washes. Find contactless, automatic car washes with no brushes — just a clean car.
           </p>
 
           <div className="mb-6" ref={containerRef}>

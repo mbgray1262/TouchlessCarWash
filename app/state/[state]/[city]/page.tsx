@@ -129,10 +129,13 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
 
   const metaDescription = cityDesc
     ? cityDesc.substring(0, 155) + (cityDesc.length > 155 ? '...' : '')
-    : `Find ${listings.length} touchless car washes in ${cityName}, ${stateName}.${ratingSnippet} Verified locations with ratings and reviews.`;
+    : `Find ${listings.length} touchless, touch-free, and brushless car washes in ${cityName}, ${stateName}.${ratingSnippet} Verified locations with ratings, hours, and directions.`;
 
+  const now = new Date();
+  const month = now.toLocaleString('default', { month: 'long' });
+  const year = now.getFullYear();
   const canonicalUrl = `https://touchlesscarwashfinder.com/state/${params.state}/${params.city}`;
-  const title = `Best Touchless Car Wash in ${cityName}, ${stateCode}`;
+  const title = `Best Touchless Car Wash in ${cityName}, ${stateCode} — ${month} ${year}`;
 
   return {
     title,
