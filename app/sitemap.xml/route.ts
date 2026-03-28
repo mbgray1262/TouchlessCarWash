@@ -67,10 +67,9 @@ export async function GET() {
   </url>`;
   });
 
-  // Only include city pages with 3+ listings in the sitemap to avoid thin content.
-  // Pages with fewer listings still work — they're just not submitted to Google.
+  // Include all city pages with at least 1 listing in the sitemap.
   const cityUrls = Array.from(citySet)
-    .filter((key) => (cityCount.get(key) ?? 0) >= 3)
+    .filter((key) => (cityCount.get(key) ?? 0) >= 1)
     .map((key) => {
       const [stateCode, city] = key.split('||');
       const lastmod = cityLastmod.get(key) ?? now;
