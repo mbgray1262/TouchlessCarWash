@@ -246,7 +246,7 @@ export default function PipelinePage() {
         return;
       }
       const jobId = data.job_id as string;
-      const total = (data.total as number) ?? 0;
+      const total = (data.urls_submitted as number) ?? (data.total as number) ?? 0;
       setFirecrawlJobs([{ job_id: jobId, chunk_index: 0, urls_submitted: total }]);
       setFirecrawlJobDone({});
       setFirecrawlJobProgress({});
