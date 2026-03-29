@@ -27,9 +27,9 @@ export const FEATURES: Feature[] = [
     shortDescription: 'Touchless car washes with complimentary vacuum stations.',
     longDescription:
       'Many touchless car washes include complimentary vacuum stations so you can clean your vehicle\'s interior right after your wash. These free vacuums typically offer standard suction and crevice tools at no extra cost with any wash purchase.',
-    seoTitle: 'Touchless Car Washes with Free Vacuum Stations',
+    seoTitle: 'Touchless Car Washes with Free Vacuums Near Me',
     seoDescription:
-      'Find touchless car washes with free vacuum stations across all 50 states. Every listing is verified brushless with complimentary vacuum access.',
+      'Find touchless car washes with free vacuum stations near you across all 50 states. Every listing is verified brushless with complimentary vacuum access.',
     stateTitle: (state, count) =>
       `${count} Touchless Car Wash${count !== 1 ? 'es' : ''} with Free Vacuum in ${state}`,
     stateDescription: (state, count) =>
