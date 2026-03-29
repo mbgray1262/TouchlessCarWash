@@ -383,6 +383,7 @@ Deno.serve(async (req: Request) => {
           .is('is_touchless', null)
           .not('website', 'is', null)
           .neq('website', '')
+          .not('crawl_status', 'eq', 'no_website')
           .order('id');
 
         if (retryFailed) {
