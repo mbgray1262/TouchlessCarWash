@@ -114,17 +114,19 @@ export default function PipelinePage() {
   const [loadingStats, setLoadingStats] = useState(true);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
   const [concurrency, setConcurrency] = useState(3);
+  const [batchLimit, setBatchLimit] = useState<number | ''>(100);
   const [job, setJob] = useState<PipelineJob | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [dismissingFetchFailed, setDismissingFetchFailed] = useState(false);
   const [retryingWithFirecrawl, setRetryingWithFirecrawl] = useState(false);
   const [firecrawlJobs, setFirecrawlJobs] = useState<Array<{ job_id: string; chunk_index: number; urls_submitted: number }>>([]);
   const [firecrawlJobDone, setFirecrawlJobDone] = useState<Record<string, boolean>>({});
-  const [firecrawlJobProgress, setFirecrawlJobProgress] = useState<Record<string, { classified: number; total: number; status: string }>>({});
+  const [firecrawlJobProgress, setFirecrawlJobProgress] = useState<Record<string, { classified: number; scraped: number; total: number; status: string }>>({});
   const [firecrawlTotalProcessed, setFirecrawlTotalProcessed] = useState(0);
   const [firecrawlPolling, setFirecrawlPolling] = useState(false);
   const [firecrawlAllDone, setFirecrawlAllDone] = useState(false);
   const firecrawlProgressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const autoPollingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [kicking, setKicking] = useState(false);
   const [extractingRemaining, setExtractingRemaining] = useState(false);
@@ -212,32 +214,94 @@ export default function PipelinePage() {
 
   useEffect(() => {
     statsTimerRef.current = setInterval(() => {
-      if (job?.status === 'running') {
+      if (job?.status === 'running' || firecrawlPolling) {
         refreshStats();
         refreshRecent(0);
         setRecentPage(0);
       }
     }, 8000);
     return () => { if (statsTimerRef.current) clearInterval(statsTimerRef.current); };
-  }, [job?.status, refreshStats, refreshRecent]);
+  }, [job?.status, firecrawlPolling, refreshStats, refreshRecent]);
 
   const handleStart = useCallback(async () => {
     setActionLoading(true);
     try {
-      const res = await callBatchFn({ action: 'start', concurrency });
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/firecrawl-pipeline`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ action: 'submit_batch', ...(batchLimit ? { limit: batchLimit } : {}) }),
+      });
       const data = await res.json();
       if (!res.ok) {
-        showToast('error', data.error ?? 'Failed to start');
-      } else {
-        showToast('success', 'Classification started in the background.');
-        await pollJob();
+        if (res.status === 409 && data.already_running) {
+          showToast('error', 'A Firecrawl batch is already running.');
+          const existingJobId = data.existing_job_id as string;
+          setFirecrawlJobs([{ job_id: existingJobId, chunk_index: 0, urls_submitted: data.urls_submitted ?? 0 }]);
+        } else {
+          showToast('error', data.error ?? 'Failed to start');
+        }
+        return;
       }
+      if (data.done || !data.job_id) {
+        showToast('error', data.message ?? 'No listings found to process.');
+        return;
+      }
+      const jobId = data.job_id as string;
+      const total = (data.urls_submitted as number) ?? (data.total as number) ?? 0;
+
+      setFirecrawlJobs([{ job_id: jobId, chunk_index: 0, urls_submitted: total }]);
+      setFirecrawlJobDone({});
+      setFirecrawlJobProgress({});
+      setFirecrawlAllDone(false);
+      setFirecrawlPolling(true);
+      showToast('success', `Submitted ${total.toLocaleString()} listings — classifying now.`);
+
+      // Clear any existing timers
+      if (firecrawlProgressTimerRef.current) clearInterval(firecrawlProgressTimerRef.current);
+      if (autoPollingTimerRef.current) clearInterval(autoPollingTimerRef.current);
+
+      // Client calls auto_poll every 20s — more reliable than server self-chaining
+      const triggerAutoPoll = () => {
+        fetch(`${SUPABASE_URL}/functions/v1/firecrawl-pipeline`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+          body: JSON.stringify({ action: 'auto_poll', job_id: jobId }),
+        }).catch(() => {});
+      };
+      triggerAutoPoll();
+      autoPollingTimerRef.current = setInterval(triggerAutoPoll, 20000);
+
+      // Poll DB every 5s to update progress UI and refresh results grid
+      const pollFn = async () => {
+        const { data: rows } = await supabase
+          .from('pipeline_batches')
+          .select('firecrawl_job_id, classify_status, classified_count, completed_count, total_urls')
+          .eq('firecrawl_job_id', jobId);
+        if (!rows || rows.length === 0) return;
+        const row = rows[0];
+        const classified = row.classified_count ?? 0;
+        const scraped = row.completed_count ?? 0;
+        setFirecrawlJobProgress({ [jobId]: { classified, scraped, total: row.total_urls ?? 0, status: row.classify_status ?? 'waiting' } });
+        setFirecrawlTotalProcessed(classified);
+        refreshStats();
+        refreshRecent(0);
+        if (row.classify_status === 'completed' || row.classify_status === 'expired') {
+          if (firecrawlProgressTimerRef.current) clearInterval(firecrawlProgressTimerRef.current);
+          if (autoPollingTimerRef.current) clearInterval(autoPollingTimerRef.current);
+          setFirecrawlJobDone({ [jobId]: true });
+          setFirecrawlPolling(false);
+          setFirecrawlAllDone(true);
+          showToast('success', `Done! ${classified.toLocaleString()} listings classified.`);
+        }
+      };
+      pollFn();
+      firecrawlProgressTimerRef.current = setInterval(pollFn, 5000);
     } catch (e) {
       showToast('error', (e as Error).message);
     } finally {
       setActionLoading(false);
     }
-  }, [concurrency, pollJob, showToast]);
+  }, [batchLimit, showToast, refreshStats, refreshRecent]);
 
   const handlePause = useCallback(async () => {
     if (!job) return;
@@ -359,12 +423,13 @@ export default function PipelinePage() {
 
     if (!rows) return;
 
-    const progress: Record<string, { classified: number; total: number; status: string }> = {};
+    const progress: Record<string, { classified: number; scraped: number; total: number; status: string }> = {};
     const done: Record<string, boolean> = {};
     let total = 0;
     for (const row of rows) {
       progress[row.firecrawl_job_id] = {
         classified: row.classified_count ?? 0,
+        scraped: row.completed_count ?? 0,
         total: row.total_urls ?? 0,
         status: row.classify_status ?? 'running',
       };
@@ -435,7 +500,10 @@ export default function PipelinePage() {
   }, [firecrawlJobs, pollFirecrawlProgress, showToast]);
 
   useEffect(() => {
-    return () => { if (firecrawlProgressTimerRef.current) clearInterval(firecrawlProgressTimerRef.current); };
+    return () => {
+      if (firecrawlProgressTimerRef.current) clearInterval(firecrawlProgressTimerRef.current);
+      if (autoPollingTimerRef.current) clearInterval(autoPollingTimerRef.current);
+    };
   }, []);
 
   const handleExtractRemaining = useCallback(async () => {
@@ -544,18 +612,15 @@ export default function PipelinePage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1.5">Concurrency</label>
-                  <select
-                    value={concurrency}
-                    onChange={e => setConcurrency(Number(e.target.value))}
-                    disabled={isActive}
-                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#0F2744]/20 disabled:opacity-50"
-                  >
-                    <option value={1}>1 — Slowest, most reliable</option>
-                    <option value={2}>2 — Conservative</option>
-                    <option value={3}>3 — Recommended</option>
-                    <option value={5}>5 — Fastest</option>
-                  </select>
+                  <label className="text-xs font-medium text-gray-600 block mb-1.5">Batch size <span className="text-gray-400 font-normal">(leave blank for all)</span></label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={batchLimit}
+                    onChange={e => setBatchLimit(e.target.value === '' ? '' : Number(e.target.value))}
+                    placeholder="e.g. 100"
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#0F2744]/20"
+                  />
                 </div>
 
                 {!isActive ? (
@@ -565,8 +630,8 @@ export default function PipelinePage() {
                       onClick={handleStart}
                       disabled={actionLoading || extractingRemaining}
                     >
-                      {actionLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
-                      {isDone ? 'Run Again' : isFailed ? 'Retry' : 'Start Classification'}
+                      {actionLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
+                      {firecrawlAllDone ? 'Run Again with Firecrawl' : 'Run with Firecrawl'}
                     </Button>
                     {(stats?.never_attempted ?? 0) > 0 && (
                       confirmExtract ? (
@@ -738,7 +803,6 @@ export default function PipelinePage() {
                       type="button"
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs h-8"
                       onClick={handleFirecrawlAutoPoll}
-                      disabled={firecrawlPolling}
                     >
                       {firecrawlPolling
                         ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Classifying all batches…</>
@@ -769,70 +833,48 @@ export default function PipelinePage() {
           </div>
         </div>
 
-        {isActive || isDone || isFailed ? (
-          <Card className="mb-6">
-            <CardHeader className="pb-3 border-b border-gray-100">
-              <CardTitle className="text-sm font-semibold text-[#0F2744] flex items-center gap-2">
-                {isRunning && <Loader2 className="w-4 h-4 animate-spin text-blue-500" />}
-                {isPaused && <Pause className="w-4 h-4 text-amber-500" />}
-                {isDone && <CheckCircle2 className="w-4 h-4 text-green-500" />}
-                {isFailed && <AlertCircle className="w-4 h-4 text-red-500" />}
-                {isRunning ? 'Classifying…' : isPaused ? 'Paused' : isDone ? 'Complete' : 'Failed'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 space-y-4">
-              {job && (
-                <>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>
-                        Processed: <span className="font-semibold text-[#0F2744]">{job.processed_count.toLocaleString()}</span>
-                        {job.total_queue > 0 && <> / {job.total_queue.toLocaleString()} ({progressPct}%)</>}
-                      </span>
-                      {isRunning && (
-                        <span className="flex items-center gap-1.5 text-xs text-gray-400">
-                          <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-                          </span>
-                          Running on server
-                        </span>
-                      )}
-                    </div>
-                    {job.total_queue > 0 && (
-                      <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                        <div
-                          className="bg-blue-500 h-2 rounded-full transition-all duration-500"
-                          style={{ width: `${progressPct}%` }}
-                        />
-                      </div>
+        {(firecrawlPolling || firecrawlAllDone) && (() => {
+          const prog = firecrawlJobs[0] ? firecrawlJobProgress[firecrawlJobs[0].job_id] : null;
+          const total = firecrawlJobs[0]?.urls_submitted ?? 0;
+          const classified = prog?.classified ?? 0;
+          const scraped = prog?.scraped ?? 0;
+          const status = prog?.status ?? 'waiting';
+          const pct = total > 0 ? Math.min(firecrawlAllDone ? 100 : 99, Math.round((classified / total) * 100)) : 0;
+          return (
+            <Card className={`mb-6 ${firecrawlAllDone ? 'border-green-200 bg-green-50' : 'border-blue-200 bg-blue-50'}`}>
+              <CardContent className="p-5">
+                <div className="flex items-start gap-3 mb-4">
+                  {firecrawlAllDone
+                    ? <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                    : <Loader2 className="w-5 h-5 animate-spin text-blue-500 mt-0.5 shrink-0" />}
+                  <div className="flex-1">
+                    <p className={`font-semibold ${firecrawlAllDone ? 'text-green-800' : 'text-blue-800'}`}>
+                      {firecrawlAllDone ? `Done — ${classified.toLocaleString()} listings classified` : `Classifying ${total.toLocaleString()} listings…`}
+                    </p>
+                    {!firecrawlAllDone && (
+                      <p className="text-xs text-blue-500 mt-0.5">
+                        {status === 'waiting'
+                          ? '⏳ Waiting for Firecrawl to finish scraping websites…'
+                          : `Firecrawl scraped ${scraped} · Claude classified ${classified} of ${total}`}
+                      </p>
                     )}
                   </div>
-
-                  {isFailed && job.error && (
-                    <div className="bg-red-50 border border-red-100 rounded-lg p-3 text-xs text-red-700">
-                      <span className="font-semibold">Error:</span> {job.error}
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-                    {([
-                      { label: 'Touchless', count: job.touchless_count, color: 'text-green-600' },
-                      { label: 'Not Touchless', count: job.not_touchless_count, color: 'text-red-500' },
-                      { label: 'Unknown', count: job.unknown_count, color: 'text-amber-500' },
-                      { label: 'Failed', count: job.failed_count, color: 'text-orange-500' },
-                    ] as const).map(({ label, count, color }) => (
-                      <div key={label} className="bg-white border border-gray-100 rounded-lg p-2">
-                        <p className={`text-lg font-bold tabular-nums ${color}`}>{count}</p>
-                        <p className="text-xs text-gray-400">{label}</p>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        ) : null}
+                </div>
+                <div className="w-full bg-white/60 rounded-full h-3 overflow-hidden mb-2">
+                  <div
+                    className={`h-3 rounded-full transition-all duration-700 ${firecrawlAllDone ? 'bg-green-500' : status === 'waiting' ? 'bg-amber-400' : 'bg-blue-500'}`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-xs text-blue-500">
+                  <span>{classified.toLocaleString()} classified</span>
+                  <span>{pct}%</span>
+                  <span>{total.toLocaleString()} total</span>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         <Card>
           <CardHeader className="pb-3 border-b border-gray-100">
