@@ -22,13 +22,13 @@ export async function generateMetadata(): Promise<Metadata> {
   const countStr = count > 0 ? count.toLocaleString() + '+' : '3,000+';
   return {
     title: { absolute: `Touchless & Brushless Car Wash Near Me — ${countStr} Locations` },
-    description: `Find the nearest touchless, brushless & automatic car wash in your area. Browse ${countStr} verified no-touch car wash locations across all 50 states + DC.`,
+    description: `Find the nearest touchless, brushless, laser & automatic car wash in your area. Browse ${countStr} verified no-touch, contactless car wash locations across all 50 states + DC.`,
     alternates: {
       canonical: SITE_URL + '/',
     },
     openGraph: {
       title: `Touchless & Brushless Car Wash Near Me — ${countStr} Locations`,
-      description: `Find the nearest touchless (touch-free) car wash in your area. Browse ${countStr} verified brushless, no-touch car wash locations across all 50 states + DC. No scratches, no brushes — just clean.`,
+      description: `Find the nearest touchless, brushless, laser & automatic car wash in your area. Browse ${countStr} verified no-touch, contactless car wash locations across all 50 states + DC.`,
       url: SITE_URL + '/',
       siteName: 'Touchless Car Wash Finder',
       images: [
@@ -44,7 +44,7 @@ export async function generateMetadata(): Promise<Metadata> {
     twitter: {
       card: 'summary_large_image',
       title: `Touchless & Brushless Car Wash Near Me — ${countStr} Locations`,
-      description: `Find the nearest touchless, brushless & automatic car wash in your area. Browse ${countStr} verified no-touch car wash locations across all 50 states + DC.`,
+      description: `Find the nearest touchless, brushless, laser & automatic car wash in your area. Browse ${countStr} verified no-touch, contactless car wash locations across all 50 states + DC.`,
       images: ['https://res.cloudinary.com/dret3qhyu/image/upload/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png'],
     },
   };
