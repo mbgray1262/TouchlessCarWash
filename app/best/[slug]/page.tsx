@@ -73,24 +73,35 @@ async function getTouchlessReviewCounts(listingIds: string[]): Promise<Map<strin
 async function getReviewSnippetsForListings(listingIds: string[]): Promise<Map<string, ReviewSnippet>> {
   if (listingIds.length === 0) return new Map();
 
-  // Get the top-rated review snippet for each listing
+  // Fetch enough snippets per listing to find a positive one for each
   const { data } = await supabase
     .from('review_snippets')
     .select('*')
     .in('listing_id', listingIds)
     .eq('is_touchless_evidence', true)
     .order('rating', { ascending: false, nullsFirst: false })
-    .limit(listingIds.length * 2); // Get extras in case some listings have multiple
+    .limit(listingIds.length * 10);
 
   const map = new Map<string, ReviewSnippet>();
-  if (data) {
-    for (const snippet of data as ReviewSnippet[]) {
-      // Keep only the first (highest-rated) snippet per listing
-      if (!map.has(snippet.listing_id)) {
-        map.set(snippet.listing_id, snippet);
-      }
-    }
+  if (!data) return map;
+
+  const snippets = data as ReviewSnippet[];
+
+  // Group by listing
+  const byListing = new Map<string, ReviewSnippet[]>();
+  for (const s of snippets) {
+    const existing = byListing.get(s.listing_id) ?? [];
+    existing.push(s);
+    byListing.set(s.listing_id, existing);
   }
+
+  // For each listing, prefer positive sentiment → neutral → any
+  for (const [listingId, candidates] of byListing) {
+    const positive = candidates.find((s) => s.sentiment === 'positive');
+    const neutral = candidates.find((s) => s.sentiment === 'neutral');
+    map.set(listingId, positive ?? neutral ?? candidates[0]);
+  }
+
   return map;
 }
 
