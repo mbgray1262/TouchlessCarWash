@@ -381,6 +381,7 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
               {topListings.map((listing, idx) => {
                 const rank = idx + 1;
                 const snippet = reviewSnippets.get(listing.id);
+                const touchlessCount = touchlessReviewCounts.get(listing.id) ?? 0;
                 const rawCardImage = listing.hero_image ?? listing.google_photo_url ?? null;
                 const cardImage = rawCardImage ? ensureHttps(rawCardImage) : null;
                 const rawCardLogo = listing.logo_photo ?? listing.google_logo_url ?? null;
@@ -478,13 +479,13 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
                             </div>
                           )}
 
-                          {/* Touchless sentiment badge */}
-                          {listing.touchless_sentiment && listing.touchless_sentiment !== 'neutral' && (
-                            <p className={`text-xs font-medium mb-3 flex items-center gap-1 ${
-                              listing.touchless_sentiment === 'positive' ? 'text-green-600' : 'text-red-500'
+                          {/* Touchless review count */}
+                          {touchlessCount > 0 && (
+                            <p className={`text-xs font-medium mb-3 flex items-center gap-1.5 ${
+                              listing.touchless_sentiment === 'negative' ? 'text-red-500' : 'text-green-600'
                             }`}>
-                              {listing.touchless_sentiment === 'positive' ? '👍' : '👎'}
-                              {listing.touchless_sentiment === 'positive' ? 'Positive touchless reviews' : 'Negative touchless reviews'}
+                              {listing.touchless_sentiment === 'negative' ? '👎' : '👍'}
+                              {touchlessCount} customer{touchlessCount !== 1 ? 's' : ''} mention{touchlessCount === 1 ? 's' : ''} touchless
                             </p>
                           )}
 
