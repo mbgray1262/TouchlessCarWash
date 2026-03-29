@@ -247,17 +247,51 @@ export default function PipelinePage() {
       }
       const jobId = data.job_id as string;
       const total = (data.urls_submitted as number) ?? (data.total as number) ?? 0;
+
       setFirecrawlJobs([{ job_id: jobId, chunk_index: 0, urls_submitted: total }]);
       setFirecrawlJobDone({});
       setFirecrawlJobProgress({});
       setFirecrawlAllDone(false);
-      showToast('success', `Submitted ${total.toLocaleString()} listings to Firecrawl. Wait a minute, then click "Fetch & Classify All Results".`);
+      setFirecrawlPolling(true);
+      showToast('success', `Submitted ${total.toLocaleString()} listings to Firecrawl — classifying in the background.`);
+
+      // Trigger server-side classification immediately (fire and forget)
+      fetch(`${SUPABASE_URL}/functions/v1/firecrawl-pipeline`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ action: 'auto_poll', job_id: jobId }),
+      }).catch(() => {});
+
+      // Start client-side polling directly with jobId to avoid stale closure
+      if (firecrawlProgressTimerRef.current) clearInterval(firecrawlProgressTimerRef.current);
+      const pollFn = async () => {
+        const { data: rows } = await supabase
+          .from('pipeline_batches')
+          .select('firecrawl_job_id, classify_status, classified_count, total_urls')
+          .eq('firecrawl_job_id', jobId);
+        if (!rows || rows.length === 0) return;
+        const row = rows[0];
+        const classified = row.classified_count ?? 0;
+        setFirecrawlJobProgress({ [jobId]: { classified, total: row.total_urls ?? 0, status: row.classify_status ?? 'running' } });
+        setFirecrawlTotalProcessed(classified);
+        refreshStats();
+        refreshRecent(0);
+        if (row.classify_status === 'completed' || row.classify_status === 'expired') {
+          if (firecrawlProgressTimerRef.current) clearInterval(firecrawlProgressTimerRef.current);
+          setFirecrawlJobDone({ [jobId]: true });
+          setFirecrawlPolling(false);
+          setFirecrawlAllDone(true);
+          showToast('success', `Done! Classified ${classified.toLocaleString()} listings.`);
+        }
+      };
+      pollFn();
+      firecrawlProgressTimerRef.current = setInterval(pollFn, 5000);
     } catch (e) {
       showToast('error', (e as Error).message);
     } finally {
       setActionLoading(false);
     }
-  }, [showToast]);
+  }, [batchLimit, showToast, refreshStats, refreshRecent]);
 
   const handlePause = useCallback(async () => {
     if (!job) return;
