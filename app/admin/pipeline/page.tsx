@@ -241,8 +241,12 @@ export default function PipelinePage() {
         }
         return;
       }
+      if (data.done || !data.job_id) {
+        showToast('error', data.message ?? 'No listings found to process.');
+        return;
+      }
       const jobId = data.job_id as string;
-      const total = data.total as number;
+      const total = (data.total as number) ?? 0;
       setFirecrawlJobs([{ job_id: jobId, chunk_index: 0, urls_submitted: total }]);
       setFirecrawlJobDone({});
       setFirecrawlJobProgress({});
