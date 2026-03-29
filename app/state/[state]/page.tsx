@@ -101,7 +101,7 @@ export async function generateMetadata({ params }: StatePageProps): Promise<Meta
 
   const metaDescription = stateDesc
     ? stateDesc.substring(0, 155) + (stateDesc.length > 155 ? '...' : '')
-    : `Find ${totalCount} verified touchless, touch-free, and brushless car wash locations in ${stateName}. Browse by city with ratings, hours, and directions.`;
+    : `Find ${totalCount} verified touchless, brushless & automatic car wash locations in ${stateName}. Browse by city with ratings, hours, and directions.`;
 
   const canonicalUrl = `https://touchlesscarwashfinder.com/state/${params.state}`;
   const title = `Best Touchless & Brushless Car Washes in ${stateName} — ${month} ${year}`;
@@ -231,7 +231,7 @@ export default async function StatePage({ params }: StatePageProps) {
             <p className="text-gray-700 text-base leading-relaxed">
               {stateDescription ? stateDescription : (
                 <>
-                  Browse <strong>{totalCount} verified touchless, touch-free, and laser car wash{totalCount !== 1 ? ' locations' : ' location'}</strong>{' '}
+                  Browse <strong>{totalCount} verified touchless, brushless & automatic car wash{totalCount !== 1 ? ' locations' : ' location'}</strong>{' '}
                   across <strong>{cities.length} {cities.length === 1 ? 'city' : 'cities'}</strong> in {nickname}.
                   Every listing is confirmed to offer brushless, no-touch washing that&apos;s safe for all paint
                   types and finishes — no bristles, no scratches, no swirl marks. Last updated {month} {year}.
@@ -321,7 +321,7 @@ export default async function StatePage({ params }: StatePageProps) {
                   <span className="flex-shrink-0 w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 group-open:rotate-45 transition-transform text-lg leading-none">+</span>
                 </summary>
                 <div className="px-6 pb-6 pt-1 text-gray-600 leading-relaxed text-sm">
-                  A touchless car wash — also known as a touch-free, no-touch, or laser car wash — uses high-pressure water jets and specialized detergents to clean your vehicle without any physical contact from brushes, cloth, or foam pads. This brushless wash method eliminates the risk of scratches, swirl marks, and paint damage.
+                  A touchless car wash — also known as a touch-free, no-touch, automatic, or laser car wash — uses high-pressure water jets and specialized detergents to clean your vehicle without any physical contact from brushes, cloth, or foam pads. This brushless, automatic wash method eliminates the risk of scratches, swirl marks, and paint damage.
                 </div>
               </details>
               <details className="group bg-white">
