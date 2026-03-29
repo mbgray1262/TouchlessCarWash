@@ -70,36 +70,40 @@ async function getTouchlessReviewCounts(listingIds: string[]): Promise<Map<strin
   return counts;
 }
 
+function scoreSnippet(s: ReviewSnippet): number {
+  let score = 0;
+  score += (s.rating ?? 0) * 4;                          // 0–20: star rating is the strongest signal
+  if (s.sentiment === 'positive') score += 15;            // big boost for positive sentiment
+  else if (s.sentiment === 'negative') score -= 20;       // hard penalty for negative
+  if (s.is_touchless_evidence) score += 8;               // prefer snippets that mention touchless
+  score += Math.min(s.touchless_keywords?.length ?? 0, 4) * 2; // up to +8 for keyword density
+  return score;
+}
+
 async function getReviewSnippetsForListings(listingIds: string[]): Promise<Map<string, ReviewSnippet>> {
   if (listingIds.length === 0) return new Map();
 
-  // Fetch enough snippets per listing to find a positive one for each
   const { data } = await supabase
     .from('review_snippets')
     .select('*')
     .in('listing_id', listingIds)
-    .eq('is_touchless_evidence', true)
     .order('rating', { ascending: false, nullsFirst: false })
-    .limit(listingIds.length * 10);
+    .limit(listingIds.length * 15);
 
   const map = new Map<string, ReviewSnippet>();
   if (!data) return map;
 
-  const snippets = data as ReviewSnippet[];
-
-  // Group by listing
+  // Group by listing then pick the highest-scoring snippet for each
   const byListing = new Map<string, ReviewSnippet[]>();
-  for (const s of snippets) {
+  for (const s of data as ReviewSnippet[]) {
     const existing = byListing.get(s.listing_id) ?? [];
     existing.push(s);
     byListing.set(s.listing_id, existing);
   }
 
-  // For each listing, prefer positive sentiment → neutral → any
   for (const [listingId, candidates] of byListing) {
-    const positive = candidates.find((s) => s.sentiment === 'positive');
-    const neutral = candidates.find((s) => s.sentiment === 'neutral');
-    map.set(listingId, positive ?? neutral ?? candidates[0]);
+    const best = candidates.reduce((a, b) => scoreSnippet(a) >= scoreSnippet(b) ? a : b);
+    map.set(listingId, best);
   }
 
   return map;
