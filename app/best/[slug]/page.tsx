@@ -102,7 +102,7 @@ async function getReviewSnippetsForListings(listingIds: string[]): Promise<Map<s
     byListing.set(s.listing_id, existing);
   }
 
-  for (const [listingId, candidates] of byListing) {
+  for (const [listingId, candidates] of Array.from(byListing)) {
     const best = candidates.reduce((a, b) => scoreSnippet(a) >= scoreSnippet(b) ? a : b);
     map.set(listingId, best);
   }
