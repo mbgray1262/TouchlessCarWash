@@ -621,37 +621,50 @@ async function searchPlaces(
   ];
 
   for (const q of queries) {
-    try {
-      const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Goog-Api-Key': googleApiKey,
-          'X-Goog-FieldMask': SEARCH_FIELDS,
-        },
-        body: JSON.stringify({
+    let pageToken: string | undefined;
+    let pageCount = 0;
+    const MAX_PAGES = 3; // Google allows up to 3 pages (60 results) per query
+
+    do {
+      try {
+        const body: Record<string, unknown> = {
           textQuery: q,
           maxResultCount: 20,
           languageCode: 'en',
-        }),
-      });
+        };
+        if (pageToken) body.pageToken = pageToken;
 
-      if (!res.ok) {
-        const errText = await res.text();
-        console.error(`Places search error for "${q}": ${res.status} ${errText}`);
-        continue;
-      }
+        const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': googleApiKey,
+            'X-Goog-FieldMask': SEARCH_FIELDS,
+          },
+          body: JSON.stringify(body),
+        });
 
-      const data = await res.json();
-      for (const place of data.places || []) {
-        if (!seenIds.has(place.id)) {
-          seenIds.add(place.id);
-          allResults.push(place);
+        if (!res.ok) {
+          const errText = await res.text();
+          console.error(`Places search error for "${q}" page ${pageCount + 1}: ${res.status} ${errText}`);
+          break;
         }
+
+        const data = await res.json();
+        for (const place of data.places || []) {
+          if (!seenIds.has(place.id)) {
+            seenIds.add(place.id);
+            allResults.push(place);
+          }
+        }
+
+        pageToken = data.nextPageToken;
+        pageCount++;
+      } catch (err) {
+        console.error(`Places search failed for "${q}":`, err);
+        break;
       }
-    } catch (err) {
-      console.error(`Places search failed for "${q}":`, err);
-    }
+    } while (pageToken && pageCount < MAX_PAGES);
   }
 
   // Filter out non-car-wash businesses (dermatology clinics, restaurants, etc.)
