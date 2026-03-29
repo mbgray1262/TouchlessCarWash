@@ -355,6 +355,7 @@ Deno.serve(async (req: Request) => {
 
       const retryFailed = body.retry_failed === true;
       const chunkIndex = body.chunk_index ?? 0;
+      const batchLimit: number = body.limit ?? 0;
       const appUrl = body.app_url ?? Deno.env.get('APP_URL') ?? '';
       const listingIds: string[] | undefined = body.listing_ids;
 
@@ -394,7 +395,8 @@ Deno.serve(async (req: Request) => {
         }
 
         const offset = chunkIndex * CHUNK_SIZE;
-        const result = await query.range(offset, offset + CHUNK_SIZE - 1);
+        const pageSize = batchLimit > 0 ? batchLimit : CHUNK_SIZE;
+        const result = await query.range(offset, offset + pageSize - 1);
         listings = result.data;
         listErr = result.error;
       }

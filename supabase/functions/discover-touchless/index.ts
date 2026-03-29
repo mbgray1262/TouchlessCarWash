@@ -1634,6 +1634,23 @@ Deno.serve(async (req: Request) => {
       const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY')!;
       const enrichResults: Array<{ step: string; result: unknown }> = [];
 
+      // Step 0: Import photos from Google Places
+      const photoResults: Array<{ id: string; photosRehosted: number; heroSet: boolean }> = [];
+      const { data: photoListings } = await supabase
+        .from('listings')
+        .select('id, google_place_id')
+        .in('id', listingIds)
+        .not('google_place_id', 'is', null);
+      for (const listing of photoListings ?? []) {
+        try {
+          const result = await importPhotosForListing(supabase, listing.google_place_id, listing.id, googleApiKey);
+          photoResults.push({ id: listing.id, ...result });
+        } catch (e) {
+          photoResults.push({ id: listing.id, photosRehosted: 0, heroSet: false });
+        }
+      }
+      enrichResults.push({ step: 'import-photos', result: photoResults });
+
       // Step 1: Crawl websites (Firecrawl)
       try {
         const crawlRes = await fetch(`${supabaseUrl}/functions/v1/bulk-crawl`, {

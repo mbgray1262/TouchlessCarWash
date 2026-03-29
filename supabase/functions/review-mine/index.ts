@@ -999,14 +999,19 @@ Deno.serve(async (req: Request) => {
     const supabase = createClient(supabaseUrl, serviceKey);
 
     const body = await req.json();
+    const action = body.action as string;
+
+    // Actions that don't call SerpAPI can skip the key check
+    const SERP_FREE_ACTIONS = new Set(['progress', 'reject_touchless', 'reset', 'sentiment_backfill']);
 
     // Get SerpAPI key — env var, then Supabase vault, then request body (injected by proxy)
+    // Uses || not ?? so empty strings from getSecret() fall through to the next source
     const serpApiKey =
-      Deno.env.get('SERPAPI_KEY') ??
-      (await getSecret(supabaseUrl, serviceKey, 'SERPAPI_KEY')) ??
+      Deno.env.get('SERPAPI_KEY') ||
+      (SERP_FREE_ACTIONS.has(action) ? undefined : await getSecret(supabaseUrl, serviceKey, 'SERPAPI_KEY')) ||
       body.serpApiKey;
 
-    if (!serpApiKey) {
+    if (!serpApiKey && !SERP_FREE_ACTIONS.has(action)) {
       return new Response(
         JSON.stringify({ error: 'SerpAPI key not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -1018,7 +1023,6 @@ Deno.serve(async (req: Request) => {
       Deno.env.get('ANTHROPIC_API_KEY') ??
       (await getSecret(supabaseUrl, serviceKey, 'ANTHROPIC_API_KEY')) ??
       body.anthropicApiKey;
-    const action = body.action as string;
 
     // -----------------------------------------------------------------------
     // ACTION: scan_batch — scan existing non-touchless car wash listings
@@ -1027,15 +1031,30 @@ Deno.serve(async (req: Request) => {
       const batchSize = Math.min(body.batch_size || 50, 100);
 
       // Fetch car wash listings that haven't been scanned yet (review_mine_status IS NULL).
-      // Includes both previously-touchless and unclassified listings so re-scans work correctly.
-      const { data: listings, error: fetchError } = await supabase
-        .from('listings')
-        .select('id, name, slug, google_place_id, google_maps_url, city, state, rating, review_count, is_touchless')
-        .is('review_mine_status', null)
-        .not('google_place_id', 'is', null)
-        .or('google_category.in.("Car wash","car_wash","Self service car wash"),and(google_category.is.null,name.ilike.%car wash%),and(google_category.is.null,name.ilike.%carwash%)')
-        .order('review_count', { ascending: false, nullsFirst: false }) // Prioritize listings with more reviews, NULLs last
-        .limit(batchSize);
+      // Run two queries to avoid PostgREST quoting issues with "Gas station" inside .or()
+      const COLS = 'id, name, slug, google_place_id, google_maps_url, city, state, rating, review_count, is_touchless';
+      const [carWashResult, gasStationResult] = await Promise.all([
+        supabase.from('listings').select(COLS)
+          .is('review_mine_status', null)
+          .not('google_place_id', 'is', null)
+          .or('google_category.in.("Car wash","car_wash","Self service car wash"),and(google_category.is.null,name.ilike.%car wash%),and(google_category.is.null,name.ilike.%carwash%)')
+          .order('review_count', { ascending: false, nullsFirst: false })
+          .limit(batchSize),
+        supabase.from('listings').select(COLS)
+          .is('review_mine_status', null)
+          .not('google_place_id', 'is', null)
+          .eq('google_category', 'Gas station')
+          .ilike('name', '%wash%')
+          .order('review_count', { ascending: false, nullsFirst: false })
+          .limit(batchSize),
+      ]);
+
+      const fetchError = carWashResult.error || gasStationResult.error;
+      const seen = new Set<string>();
+      const listings = [...(carWashResult.data ?? []), ...(gasStationResult.data ?? [])]
+        .filter(l => { if (seen.has(l.id)) return false; seen.add(l.id); return true; })
+        .sort((a, b) => (b.review_count ?? 0) - (a.review_count ?? 0))
+        .slice(0, batchSize);
 
       if (fetchError) {
         return new Response(

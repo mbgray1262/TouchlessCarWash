@@ -114,6 +114,7 @@ export default function PipelinePage() {
   const [loadingStats, setLoadingStats] = useState(true);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
   const [concurrency, setConcurrency] = useState(3);
+  const [batchLimit, setBatchLimit] = useState<number | ''>(100);
   const [job, setJob] = useState<PipelineJob | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [dismissingFetchFailed, setDismissingFetchFailed] = useState(false);
@@ -224,20 +225,35 @@ export default function PipelinePage() {
   const handleStart = useCallback(async () => {
     setActionLoading(true);
     try {
-      const res = await callBatchFn({ action: 'start', concurrency });
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/firecrawl-pipeline`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ action: 'submit_batch', ...(batchLimit ? { limit: batchLimit } : {}) }),
+      });
       const data = await res.json();
       if (!res.ok) {
-        showToast('error', data.error ?? 'Failed to start');
-      } else {
-        showToast('success', 'Classification started in the background.');
-        await pollJob();
+        if (res.status === 409 && data.already_running) {
+          showToast('error', 'A Firecrawl batch is already running.');
+          const existingJobId = data.existing_job_id as string;
+          setFirecrawlJobs([{ job_id: existingJobId, chunk_index: 0, urls_submitted: data.urls_submitted ?? 0 }]);
+        } else {
+          showToast('error', data.error ?? 'Failed to start');
+        }
+        return;
       }
+      const jobId = data.job_id as string;
+      const total = data.total as number;
+      setFirecrawlJobs([{ job_id: jobId, chunk_index: 0, urls_submitted: total }]);
+      setFirecrawlJobDone({});
+      setFirecrawlJobProgress({});
+      setFirecrawlAllDone(false);
+      showToast('success', `Submitted ${total.toLocaleString()} listings to Firecrawl. Wait a minute, then click "Fetch & Classify All Results".`);
     } catch (e) {
       showToast('error', (e as Error).message);
     } finally {
       setActionLoading(false);
     }
-  }, [concurrency, pollJob, showToast]);
+  }, [showToast]);
 
   const handlePause = useCallback(async () => {
     if (!job) return;
@@ -544,18 +560,15 @@ export default function PipelinePage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1.5">Concurrency</label>
-                  <select
-                    value={concurrency}
-                    onChange={e => setConcurrency(Number(e.target.value))}
-                    disabled={isActive}
-                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#0F2744]/20 disabled:opacity-50"
-                  >
-                    <option value={1}>1 — Slowest, most reliable</option>
-                    <option value={2}>2 — Conservative</option>
-                    <option value={3}>3 — Recommended</option>
-                    <option value={5}>5 — Fastest</option>
-                  </select>
+                  <label className="text-xs font-medium text-gray-600 block mb-1.5">Batch size <span className="text-gray-400 font-normal">(leave blank for all)</span></label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={batchLimit}
+                    onChange={e => setBatchLimit(e.target.value === '' ? '' : Number(e.target.value))}
+                    placeholder="e.g. 100"
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#0F2744]/20"
+                  />
                 </div>
 
                 {!isActive ? (
@@ -565,8 +578,8 @@ export default function PipelinePage() {
                       onClick={handleStart}
                       disabled={actionLoading || extractingRemaining}
                     >
-                      {actionLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
-                      {isDone ? 'Run Again' : isFailed ? 'Retry' : 'Start Classification'}
+                      {actionLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
+                      {firecrawlAllDone ? 'Run Again with Firecrawl' : 'Run with Firecrawl'}
                     </Button>
                     {(stats?.never_attempted ?? 0) > 0 && (
                       confirmExtract ? (
