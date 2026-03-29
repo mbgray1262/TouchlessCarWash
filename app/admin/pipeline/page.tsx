@@ -418,7 +418,7 @@ export default function PipelinePage() {
     const jobIds = firecrawlJobs.map(j => j.job_id);
     const { data: rows } = await supabase
       .from('pipeline_batches')
-      .select('firecrawl_job_id, classify_status, classified_count, total_urls')
+      .select('firecrawl_job_id, classify_status, classified_count, completed_count, total_urls')
       .in('firecrawl_job_id', jobIds);
 
     if (!rows) return;
