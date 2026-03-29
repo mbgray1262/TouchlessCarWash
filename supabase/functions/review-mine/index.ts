@@ -998,10 +998,13 @@ Deno.serve(async (req: Request) => {
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Get SerpAPI key
+    const body = await req.json();
+
+    // Get SerpAPI key — env var, then Supabase vault, then request body (injected by proxy)
     const serpApiKey =
       Deno.env.get('SERPAPI_KEY') ??
-      (await getSecret(supabaseUrl, serviceKey, 'SERPAPI_KEY'));
+      (await getSecret(supabaseUrl, serviceKey, 'SERPAPI_KEY')) ??
+      body.serpApiKey;
 
     if (!serpApiKey) {
       return new Response(
@@ -1013,9 +1016,8 @@ Deno.serve(async (req: Request) => {
     // Get Anthropic API key for AI verification (optional — falls back to keyword-only)
     const anthropicKey =
       Deno.env.get('ANTHROPIC_API_KEY') ??
-      (await getSecret(supabaseUrl, serviceKey, 'ANTHROPIC_API_KEY'));
-
-    const body = await req.json();
+      (await getSecret(supabaseUrl, serviceKey, 'ANTHROPIC_API_KEY')) ??
+      body.anthropicApiKey;
     const action = body.action as string;
 
     // -----------------------------------------------------------------------
