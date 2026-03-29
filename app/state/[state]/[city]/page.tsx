@@ -135,7 +135,7 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
   const month = now.toLocaleString('default', { month: 'long' });
   const year = now.getFullYear();
   const canonicalUrl = `https://touchlesscarwashfinder.com/state/${params.state}/${params.city}`;
-  const title = `Best Touchless Car Wash in ${cityName}, ${stateCode} — ${month} ${year}`;
+  const title = `Best Touchless & Brushless Car Wash in ${cityName}, ${stateCode} — ${month} ${year}`;
 
   return {
     title,
@@ -386,7 +386,7 @@ export default async function CityPage({ params }: CityPageProps) {
             <span className="text-white">{cityName}</span>
           </nav>
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
-            Touchless Car Washes in {cityName}, {stateCode}
+            Touchless & Brushless Car Washes in {cityName}, {stateCode}
           </h1>
           <p className="text-white/80 text-lg">
             {allListings.length} verified touchless car wash{allListings.length !== 1 ? 'es' : ''} in {cityName}

@@ -146,8 +146,8 @@ export async function generateMetadata({ params }: BestOfPageProps): Promise<Met
 
   if (count < 5) return { title: 'Not Found' };
 
-  const title = `${count} Best Touchless Car Washes in ${metro.displayName}`;
-  const description = `Discover the ${count} best-rated touchless car washes in ${metro.name}. Ranked by Google ratings, reviews, and verified touchless confirmation.`;
+  const title = `${count} Best Touchless & Brushless Car Washes in ${metro.displayName}`;
+  const description = `Discover the ${count} best-rated touchless & brushless car washes in ${metro.name}. Ranked by Google ratings, reviews, and verified touchless confirmation.`;
 
   return {
     title,
@@ -331,7 +331,7 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
               <Trophy className="w-5 h-5 text-yellow-400" />
             </div>
             <h1 className="text-3xl md:text-5xl font-bold leading-tight mb-4">
-              {count} Best Touchless Car Washes in {metro.displayName} ({year})
+              {count} Best Touchless & Brushless Car Washes in {metro.displayName} ({year})
             </h1>
             <p className="text-lg text-blue-100 leading-relaxed max-w-2xl mx-auto">
               Ranked by Google ratings, customer reviews, and verified touchless confirmation.

@@ -442,7 +442,7 @@ export default function HeroSection() {
           </div>
 
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
-            Find Touchless Car&nbsp;Washes {headingLocation}
+            Find Touchless &amp; Brushless Car&nbsp;Washes {headingLocation}
           </h1>
 
           <p className="text-lg md:text-xl text-white/90 mb-8 leading-relaxed">

@@ -8,7 +8,7 @@ import type { Metadata } from 'next';
 export const revalidate = 3600; // 1 hour
 
 export const metadata: Metadata = {
-  title: 'Best Touchless Car Washes by Metro Area',
+  title: 'Best Touchless & Brushless Car Washes by Metro Area',
   description:
     'Find the best-rated touchless car washes in major US metro areas. Rankings based on Google ratings, customer reviews, and verified touchless confirmation.',
   alternates: {
@@ -108,7 +108,7 @@ export default async function BestOfIndexPage() {
             <Trophy className="w-5 h-5 text-yellow-400" />
           </div>
           <h1 className="text-3xl md:text-5xl font-bold leading-tight mb-4">
-            Best Touchless Car Washes by Metro Area
+            Best Touchless & Brushless Car Washes by Metro Area
           </h1>
           <p className="text-lg text-blue-100 leading-relaxed max-w-2xl mx-auto">
             Explore the top-rated touchless car washes in {totalMetros} major metro areas across the US.
