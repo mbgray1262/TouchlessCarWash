@@ -254,19 +254,19 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   const rankings = await getBestOfRankings(listing.id);
   const topRanking = rankings.length > 0 ? rankings[0] : null; // Use the best (lowest) rank
 
-  // Enhanced title for ranked listings: "#1 Best Touchless Car Wash in Houston, TX | Name"
+  // Enhanced title for ranked listings: "#1 Best Touchless & Brushless Car Wash in Houston, TX | Name"
   const title = topRanking
-    ? `#${topRanking.rank} Best Touchless Car Wash in ${topRanking.metro_name} | ${listing.name}`
-    : `${listing.name} | Touchless Car Wash in ${listing.city}, ${listing.state}`;
+    ? `#${topRanking.rank} Best Touchless & Brushless Car Wash in ${topRanking.metro_name} | ${listing.name}`
+    : `${listing.name} | Touchless & Brushless Car Wash in ${listing.city}, ${listing.state}`;
   const ogTitle = topRanking
-    ? `#${topRanking.rank} Best Touchless Car Wash in ${topRanking.metro_name} | ${listing.name}`
-    : `${listing.name} | Touchless Car Wash in ${listing.city}, ${stateName}`;
+    ? `#${topRanking.rank} Best Touchless & Brushless Car Wash in ${topRanking.metro_name} | ${listing.name}`
+    : `${listing.name} | Touchless & Brushless Car Wash in ${listing.city}, ${stateName}`;
 
   // Lead with star rating for CTR — Google often shows this in snippet
   const ratingPrefix = listing.rating > 0
     ? `★ ${Number(listing.rating).toFixed(1)}${listing.review_count > 0 ? ` (${listing.review_count} reviews)` : ''} — `
     : '';
-  const rankingPrefix = topRanking ? `#${topRanking.rank} Best Touchless Car Wash in ${topRanking.metro_name}. ` : '';
+  const rankingPrefix = topRanking ? `#${topRanking.rank} Best Touchless & Brushless Car Wash in ${topRanking.metro_name}. ` : '';
   const description = truncateDescription(
     `${ratingPrefix}${rankingPrefix}${listing.name} at ${streetAddress(listing.address, listing.city, listing.state, listing.zip)}, ${listing.city}, ${listing.state}.${amenityPart} Hours, directions & more.`
   );
@@ -1141,7 +1141,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
               {/* AI-Generated Description */}
               {listing.description && (
                 <div className="bg-white rounded-2xl border border-gray-200 p-6">
-                  <h2 className="text-lg font-bold text-[#0F2744] mb-3">{listing.name} — Touchless Car Wash in {listing.city}, {listing.state}</h2>
+                  <h2 className="text-lg font-bold text-[#0F2744] mb-3">{listing.name} — Touchless & Brushless Car Wash in {listing.city}, {listing.state}</h2>
                   <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
                     {listing.description}
                   </div>
