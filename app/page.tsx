@@ -52,16 +52,16 @@ export async function generateMetadata(): Promise<Metadata> {
 
 const faqItems = [
   {
-    question: 'What is a touchless car wash?',
-    answer: 'A touchless car wash — also called a touch-free, no-touch, or laser car wash — is an automated drive-through or in-bay wash that uses high-pressure water jets and specialized detergents to clean your vehicle without any physical contact from brushes, cloth, or foam pads. Because nothing touches your car\'s surface, this brushless wash method eliminates the risk of scratches, swirl marks, and paint damage.',
+    question: 'What is a touchless, no touch, or contactless car wash?',
+    answer: 'A touchless car wash — also called a no touch car wash, contactless car wash, touch-free, or laser car wash — is an automated drive-through or in-bay wash that uses high-pressure water jets and specialized detergents to clean your vehicle without any physical contact from brushes, cloth, or foam pads. Because nothing touches your car\'s surface, this brushless wash method eliminates the risk of scratches, swirl marks, and paint damage.',
   },
   {
     question: 'Are touchless car washes better for your car?',
     answer: 'Yes — touchless (brushless) car washes are widely considered the safest option for your paint. Because touch-free washes use only water pressure and chemistry with no physical contact, they eliminate brush-induced scratches and swirl marks, preserve ceramic coatings and paint protection film (PPF), and are safe for all paint types including matte finishes. This is why owners of Tesla, BMW, Mercedes-Benz, Lexus, Audi, Porsche, and other luxury vehicles prefer touchless washes.',
   },
   {
-    question: 'How do I find a touchless car wash near me?',
-    answer: 'Use the search bar at the top of this page — enter your city, ZIP code, or the name of a car wash and we\'ll show you verified touchless locations nearby. Whether you search for a touch-free car wash, brushless wash, laser car wash, or no-touch wash, our directory lists 3,000+ verified locations across all 50 states + DC.',
+    question: 'How do I find a touchless or automated car wash near me?',
+    answer: 'Use the search bar at the top of this page — enter your city, ZIP code, or the name of a car wash and we\'ll show you verified touchless locations nearby. Whether you search for a no touch car wash, contactless car wash, automated car wash, brushless wash, laser car wash, or touch-free wash, our directory lists 3,000+ verified locations across all 50 states + DC.',
   },
   {
     question: 'How much does a touchless car wash cost?',

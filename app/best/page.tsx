@@ -10,14 +10,14 @@ export const revalidate = 3600; // 1 hour
 export const metadata: Metadata = {
   title: 'Best Touchless & Brushless Car Washes by Metro Area',
   description:
-    'Find the best-rated touchless car washes in major US metro areas. Rankings based on Google ratings, customer reviews, and verified touchless confirmation.',
+    'Find the best-rated touchless & brushless car washes near you in major US metro areas. Rankings based on Google ratings, customer reviews, and verified touchless confirmation.',
   alternates: {
     canonical: 'https://touchlesscarwashfinder.com/best',
   },
   openGraph: {
     title: 'Best Touchless Car Washes by Metro Area | Touchless Car Wash Finder',
     description:
-      'Find the best-rated touchless car washes in major US metro areas. Ranked by ratings, reviews, and touchless verification.',
+      'Find the best-rated touchless & brushless car washes near you in major US metro areas. Ranked by ratings, reviews, and touchless verification.',
     url: 'https://touchlesscarwashfinder.com/best',
     type: 'website',
   },
