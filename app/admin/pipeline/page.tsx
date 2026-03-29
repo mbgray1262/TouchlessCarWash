@@ -213,14 +213,14 @@ export default function PipelinePage() {
 
   useEffect(() => {
     statsTimerRef.current = setInterval(() => {
-      if (job?.status === 'running') {
+      if (job?.status === 'running' || firecrawlPolling) {
         refreshStats();
         refreshRecent(0);
         setRecentPage(0);
       }
     }, 8000);
     return () => { if (statsTimerRef.current) clearInterval(statsTimerRef.current); };
-  }, [job?.status, refreshStats, refreshRecent]);
+  }, [job?.status, firecrawlPolling, refreshStats, refreshRecent]);
 
   const handleStart = useCallback(async () => {
     setActionLoading(true);
@@ -755,7 +755,6 @@ export default function PipelinePage() {
                       type="button"
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs h-8"
                       onClick={handleFirecrawlAutoPoll}
-                      disabled={firecrawlPolling}
                     >
                       {firecrawlPolling
                         ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Classifying all batches…</>
