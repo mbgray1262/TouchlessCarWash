@@ -423,12 +423,13 @@ export default function PipelinePage() {
 
     if (!rows) return;
 
-    const progress: Record<string, { classified: number; total: number; status: string }> = {};
+    const progress: Record<string, { classified: number; scraped: number; total: number; status: string }> = {};
     const done: Record<string, boolean> = {};
     let total = 0;
     for (const row of rows) {
       progress[row.firecrawl_job_id] = {
         classified: row.classified_count ?? 0,
+        scraped: row.completed_count ?? 0,
         total: row.total_urls ?? 0,
         status: row.classify_status ?? 'running',
       };
