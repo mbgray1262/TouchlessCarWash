@@ -148,9 +148,12 @@ interface ProspectResult {
 }
 
 async function callEdgeFunction(action: string, params: Record<string, unknown> = {}) {
-  const res = await fetch('/api/review-mine', {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/review-mine`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    },
     body: JSON.stringify({ action, ...params }),
   });
   if (!res.ok) {
