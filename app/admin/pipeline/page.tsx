@@ -128,6 +128,10 @@ export default function PipelinePage() {
   const firecrawlProgressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const autoPollingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  const [seqJobId, setSeqJobId] = useState<string | null>(null);
+  const [seqJob, setSeqJob] = useState<{ id: string; status: string; total: number; processed: number; succeeded: number; failed: number } | null>(null);
+  const [seqPolling, setSeqPolling] = useState(false);
+
   const [kicking, setKicking] = useState(false);
   const [extractingRemaining, setExtractingRemaining] = useState(false);
   const [confirmExtract, setConfirmExtract] = useState(false);
@@ -214,14 +218,14 @@ export default function PipelinePage() {
 
   useEffect(() => {
     statsTimerRef.current = setInterval(() => {
-      if (job?.status === 'running' || firecrawlPolling) {
+      if (job?.status === 'running' || firecrawlPolling || seqPolling) {
         refreshStats();
         refreshRecent(0);
         setRecentPage(0);
       }
     }, 8000);
     return () => { if (statsTimerRef.current) clearInterval(statsTimerRef.current); };
-  }, [job?.status, firecrawlPolling, refreshStats, refreshRecent]);
+  }, [job?.status, firecrawlPolling, seqPolling, refreshStats, refreshRecent]);
 
   const handleStart = useCallback(async () => {
     setActionLoading(true);
@@ -229,79 +233,85 @@ export default function PipelinePage() {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/firecrawl-pipeline`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
-        body: JSON.stringify({ action: 'submit_batch', ...(batchLimit ? { limit: batchLimit } : {}) }),
+        body: JSON.stringify({ action: 'start_seq', ...(batchLimit ? { limit: batchLimit } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) {
-        if (res.status === 409 && data.already_running) {
-          showToast('error', 'A Firecrawl batch is already running.');
-          const existingJobId = data.existing_job_id as string;
-          setFirecrawlJobs([{ job_id: existingJobId, chunk_index: 0, urls_submitted: data.urls_submitted ?? 0 }]);
+        if (res.status === 409 && data.existing_job_id) {
+          showToast('error', 'Already running — resuming monitoring.');
+          setSeqJobId(data.existing_job_id);
+          setSeqPolling(true);
         } else {
           showToast('error', data.error ?? 'Failed to start');
         }
         return;
       }
-      if (data.done || !data.job_id) {
-        showToast('error', data.message ?? 'No listings found to process.');
+      if (!data.job_id) {
+        showToast('error', data.error ?? 'No listings found to process.');
         return;
       }
       const jobId = data.job_id as string;
-      const total = (data.urls_submitted as number) ?? (data.total as number) ?? 0;
-
-      setFirecrawlJobs([{ job_id: jobId, chunk_index: 0, urls_submitted: total }]);
-      setFirecrawlJobDone({});
-      setFirecrawlJobProgress({});
-      setFirecrawlAllDone(false);
-      setFirecrawlPolling(true);
-      showToast('success', `Submitted ${total.toLocaleString()} listings — classifying now.`);
-
-      // Clear any existing timers
-      if (firecrawlProgressTimerRef.current) clearInterval(firecrawlProgressTimerRef.current);
-      if (autoPollingTimerRef.current) clearInterval(autoPollingTimerRef.current);
-
-      // Client calls auto_poll every 20s — more reliable than server self-chaining
-      const triggerAutoPoll = () => {
-        fetch(`${SUPABASE_URL}/functions/v1/firecrawl-pipeline`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
-          body: JSON.stringify({ action: 'auto_poll', job_id: jobId }),
-        }).catch(() => {});
-      };
-      triggerAutoPoll();
-      autoPollingTimerRef.current = setInterval(triggerAutoPoll, 20000);
-
-      // Poll DB every 5s to update progress UI and refresh results grid
-      const pollFn = async () => {
-        const { data: rows } = await supabase
-          .from('pipeline_batches')
-          .select('firecrawl_job_id, classify_status, classified_count, completed_count, total_urls')
-          .eq('firecrawl_job_id', jobId);
-        if (!rows || rows.length === 0) return;
-        const row = rows[0];
-        const classified = row.classified_count ?? 0;
-        const scraped = row.completed_count ?? 0;
-        setFirecrawlJobProgress({ [jobId]: { classified, scraped, total: row.total_urls ?? 0, status: row.classify_status ?? 'waiting' } });
-        setFirecrawlTotalProcessed(classified);
-        refreshStats();
-        refreshRecent(0);
-        if (row.classify_status === 'completed' || row.classify_status === 'expired') {
-          if (firecrawlProgressTimerRef.current) clearInterval(firecrawlProgressTimerRef.current);
-          if (autoPollingTimerRef.current) clearInterval(autoPollingTimerRef.current);
-          setFirecrawlJobDone({ [jobId]: true });
-          setFirecrawlPolling(false);
-          setFirecrawlAllDone(true);
-          showToast('success', `Done! ${classified.toLocaleString()} listings classified.`);
-        }
-      };
-      pollFn();
-      firecrawlProgressTimerRef.current = setInterval(pollFn, 5000);
+      const total = (data.total as number) ?? 0;
+      setSeqJobId(jobId);
+      setSeqJob({ id: jobId, status: 'running', total, processed: 0, succeeded: 0, failed: 0 });
+      setSeqPolling(true);
+      showToast('success', `Classifying ${total.toLocaleString()} listings — results appear as each one completes.`);
     } catch (e) {
       showToast('error', (e as Error).message);
     } finally {
       setActionLoading(false);
     }
-  }, [batchLimit, showToast, refreshStats, refreshRecent]);
+  }, [batchLimit, showToast]);
+
+  const handleCancelSeq = useCallback(async () => {
+    if (!seqJobId) return;
+    await fetch(`${SUPABASE_URL}/functions/v1/firecrawl-pipeline`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+      body: JSON.stringify({ action: 'cancel_seq', job_id: seqJobId }),
+    }).catch(() => {});
+    setSeqPolling(false);
+    setSeqJob(prev => prev ? { ...prev, status: 'cancelled' } : null);
+    showToast('success', 'Classification cancelled.');
+  }, [seqJobId, showToast]);
+
+  // Poll classify_jobs every 3s when active — shows results as each listing completes
+  useEffect(() => {
+    if (!seqJobId || !seqPolling) return;
+    const poll = async () => {
+      const { data } = await supabase
+        .from('classify_jobs')
+        .select('id, status, total, processed, succeeded, failed')
+        .eq('id', seqJobId)
+        .maybeSingle();
+      if (!data) return;
+      setSeqJob(data);
+      refreshStats();
+      refreshRecent(0);
+      if (data.status === 'done' || data.status === 'cancelled') {
+        setSeqPolling(false);
+        if (data.status === 'done') {
+          showToast('success', `Done! ${(data.succeeded as number).toLocaleString()} listings classified.`);
+        }
+      }
+    };
+    poll();
+    const t = setInterval(poll, 3000);
+    return () => clearInterval(t);
+  }, [seqJobId, seqPolling, refreshStats, refreshRecent, showToast]);
+
+  // Client backup: call process_seq every 30s to keep the chain alive if server self-chain breaks
+  useEffect(() => {
+    if (!seqJobId || !seqPolling) return;
+    const t = setInterval(() => {
+      fetch(`${SUPABASE_URL}/functions/v1/firecrawl-pipeline`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ action: 'process_seq', job_id: seqJobId }),
+      }).catch(() => {});
+    }, 30000);
+    return () => clearInterval(t);
+  }, [seqJobId, seqPolling]);
 
   const handlePause = useCallback(async () => {
     if (!job) return;
@@ -628,10 +638,10 @@ export default function PipelinePage() {
                     <Button
                       className="w-full bg-[#0F2744] hover:bg-[#1a3a5c] text-white"
                       onClick={handleStart}
-                      disabled={actionLoading || extractingRemaining}
+                      disabled={actionLoading || extractingRemaining || seqPolling}
                     >
                       {actionLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
-                      {firecrawlAllDone ? 'Run Again with Firecrawl' : 'Run with Firecrawl'}
+                      {seqPolling ? 'Classifying…' : seqJob?.status === 'done' ? 'Run Again with Firecrawl' : 'Run with Firecrawl'}
                     </Button>
                     {(stats?.never_attempted ?? 0) > 0 && (
                       confirmExtract ? (
@@ -833,43 +843,45 @@ export default function PipelinePage() {
           </div>
         </div>
 
-        {(firecrawlPolling || firecrawlAllDone) && (() => {
-          const prog = firecrawlJobs[0] ? firecrawlJobProgress[firecrawlJobs[0].job_id] : null;
-          const total = firecrawlJobs[0]?.urls_submitted ?? 0;
-          const classified = prog?.classified ?? 0;
-          const scraped = prog?.scraped ?? 0;
-          const status = prog?.status ?? 'waiting';
-          const pct = total > 0 ? Math.min(firecrawlAllDone ? 100 : 99, Math.round((classified / total) * 100)) : 0;
+        {seqJob && (seqPolling || seqJob.status === 'done' || seqJob.status === 'cancelled') && (() => {
+          const pct = seqJob.total > 0 ? Math.min(seqJob.status === 'done' ? 100 : 99, Math.round(seqJob.processed / seqJob.total * 100)) : 0;
+          const isDone = seqJob.status === 'done';
+          const isCancelled = seqJob.status === 'cancelled';
           return (
-            <Card className={`mb-6 ${firecrawlAllDone ? 'border-green-200 bg-green-50' : 'border-blue-200 bg-blue-50'}`}>
+            <Card className={`mb-6 ${isDone ? 'border-green-200 bg-green-50' : isCancelled ? 'border-gray-200 bg-gray-50' : 'border-blue-200 bg-blue-50'}`}>
               <CardContent className="p-5">
-                <div className="flex items-start gap-3 mb-4">
-                  {firecrawlAllDone
-                    ? <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
-                    : <Loader2 className="w-5 h-5 animate-spin text-blue-500 mt-0.5 shrink-0" />}
+                <div className="flex items-center gap-3 mb-3">
+                  {isDone
+                    ? <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
+                    : isCancelled
+                    ? <XCircle className="w-5 h-5 text-gray-400 shrink-0" />
+                    : <Loader2 className="w-5 h-5 animate-spin text-blue-500 shrink-0" />}
                   <div className="flex-1">
-                    <p className={`font-semibold ${firecrawlAllDone ? 'text-green-800' : 'text-blue-800'}`}>
-                      {firecrawlAllDone ? `Done — ${classified.toLocaleString()} listings classified` : `Classifying ${total.toLocaleString()} listings…`}
+                    <p className={`font-semibold ${isDone ? 'text-green-800' : isCancelled ? 'text-gray-600' : 'text-blue-800'}`}>
+                      {isDone
+                        ? `Done — ${seqJob.succeeded.toLocaleString()} classified`
+                        : isCancelled
+                        ? 'Classification cancelled'
+                        : `Classifying ${seqJob.total.toLocaleString()} listings — results appear below as each completes`}
                     </p>
-                    {!firecrawlAllDone && (
-                      <p className="text-xs text-blue-500 mt-0.5">
-                        {status === 'waiting'
-                          ? '⏳ Waiting for Firecrawl to finish scraping websites…'
-                          : `Firecrawl scraped ${scraped} · Claude classified ${classified} of ${total}`}
-                      </p>
-                    )}
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {seqJob.processed} processed · {seqJob.succeeded} classified · {seqJob.failed} failed
+                    </p>
                   </div>
+                  {seqPolling && (
+                    <Button size="sm" variant="outline" className="text-xs h-7 shrink-0" onClick={handleCancelSeq}>Cancel</Button>
+                  )}
                 </div>
-                <div className="w-full bg-white/60 rounded-full h-3 overflow-hidden mb-2">
+                <div className="w-full bg-white/60 rounded-full h-2.5 overflow-hidden mb-2">
                   <div
-                    className={`h-3 rounded-full transition-all duration-700 ${firecrawlAllDone ? 'bg-green-500' : status === 'waiting' ? 'bg-amber-400' : 'bg-blue-500'}`}
+                    className={`h-2.5 rounded-full transition-all duration-500 ${isDone ? 'bg-green-500' : isCancelled ? 'bg-gray-400' : 'bg-blue-500'}`}
                     style={{ width: `${pct}%` }}
                   />
                 </div>
-                <div className="flex justify-between text-xs text-blue-500">
-                  <span>{classified.toLocaleString()} classified</span>
+                <div className="flex justify-between text-xs text-gray-400">
+                  <span>{seqJob.processed} processed</span>
                   <span>{pct}%</span>
-                  <span>{total.toLocaleString()} total</span>
+                  <span>{seqJob.total} total</span>
                 </div>
               </CardContent>
             </Card>
@@ -885,7 +897,7 @@ export default function PipelinePage() {
                   <span className="ml-2 text-sm font-normal text-gray-400">({recentTotal.toLocaleString()} total)</span>
                 )}
               </CardTitle>
-              {isRunning && (
+              {(isRunning || seqPolling) && (
                 <span className="flex items-center gap-1.5 text-xs text-gray-400">
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />

@@ -1883,6 +1883,255 @@ RULES:
       }, { headers: corsHeaders });
     }
 
+    // --- START SEQUENTIAL CLASSIFICATION ---
+    // Processes one listing at a time: scrape → classify → save → next
+    // Results appear in the UI immediately as each listing completes.
+    if (action === 'start_seq') {
+      if (!firecrawlKey || !anthropicKey) {
+        return Response.json({ error: 'API keys not configured' }, { status: 500, headers: corsHeaders });
+      }
+
+      const { data: existing } = await supabase
+        .from('classify_jobs')
+        .select('id')
+        .eq('status', 'running')
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        return Response.json({ error: 'Already running', existing_job_id: existing.id }, { status: 409, headers: corsHeaders });
+      }
+
+      const seqLimit: number = body.limit ?? 100;
+      let q = supabase
+        .from('listings')
+        .select('id, website')
+        .is('is_touchless', null)
+        .not('website', 'is', null)
+        .neq('website', '')
+        .not('crawl_status', 'eq', 'no_website')
+        .order('id');
+      if (seqLimit > 0) q = q.limit(seqLimit);
+
+      const { data: seqListings, error: seqListErr } = await q;
+      if (seqListErr) return Response.json({ error: seqListErr.message }, { status: 500, headers: corsHeaders });
+
+      const seqEligible = (seqListings ?? []).filter(l => !SKIP_DOMAINS.some(d => l.website.toLowerCase().includes(d)));
+      if (seqEligible.length === 0) {
+        return Response.json({ error: 'No eligible listings found' }, { status: 404, headers: corsHeaders });
+      }
+
+      const { data: seqJob, error: seqJobErr } = await supabase
+        .from('classify_jobs')
+        .insert({ total: seqEligible.length, status: 'running' })
+        .select('id')
+        .single();
+      if (seqJobErr || !seqJob) return Response.json({ error: seqJobErr?.message ?? 'Failed to create job' }, { status: 500, headers: corsHeaders });
+
+      const seqTasks = seqEligible.map(l => ({ job_id: seqJob.id, listing_id: l.id, website: l.website, status: 'pending' }));
+      for (let i = 0; i < seqTasks.length; i += 500) {
+        const { error: tErr } = await supabase.from('classify_tasks').insert(seqTasks.slice(i, i + 500));
+        if (tErr) return Response.json({ error: tErr.message }, { status: 500, headers: corsHeaders });
+      }
+
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+      EdgeRuntime.waitUntil(
+        fetch(`${supabaseUrl}/functions/v1/firecrawl-pipeline`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anonKey}` },
+          body: JSON.stringify({ action: 'process_seq', job_id: seqJob.id }),
+        }).catch(() => {})
+      );
+
+      return Response.json({ job_id: seqJob.id, total: seqEligible.length }, { headers: corsHeaders });
+    }
+
+    // --- PROCESS ONE SEQUENTIAL TASK ---
+    if (action === 'process_seq') {
+      if (!firecrawlKey || !anthropicKey) {
+        return Response.json({ error: 'API keys not configured' }, { status: 500, headers: corsHeaders });
+      }
+
+      const seqJobId: string = body.job_id;
+      if (!seqJobId) return Response.json({ error: 'job_id required' }, { status: 400, headers: corsHeaders });
+
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+      const { data: seqJobRow } = await supabase
+        .from('classify_jobs')
+        .select('id, status, processed, succeeded, failed')
+        .eq('id', seqJobId)
+        .maybeSingle();
+
+      if (!seqJobRow) return Response.json({ error: 'Job not found' }, { status: 404, headers: corsHeaders });
+      if (seqJobRow.status === 'cancelled' || seqJobRow.status === 'done') {
+        return Response.json({ done: true, status: seqJobRow.status }, { headers: corsHeaders });
+      }
+
+      // Reset stuck tasks (in_progress > 2 min)
+      const stuckCutoff = new Date(Date.now() - 120_000).toISOString();
+      await supabase.from('classify_tasks')
+        .update({ status: 'pending', started_at: null })
+        .eq('job_id', seqJobId)
+        .eq('status', 'in_progress')
+        .lt('started_at', stuckCutoff);
+
+      // Pick next pending task
+      const { data: seqTask } = await supabase
+        .from('classify_tasks')
+        .select('id, listing_id, website')
+        .eq('job_id', seqJobId)
+        .eq('status', 'pending')
+        .order('id')
+        .limit(1)
+        .maybeSingle();
+
+      if (!seqTask) {
+        await supabase.from('classify_jobs').update({ status: 'done', finished_at: new Date().toISOString() }).eq('id', seqJobId);
+        return Response.json({ done: true }, { headers: corsHeaders });
+      }
+
+      // Mark as in_progress
+      await supabase.from('classify_tasks')
+        .update({ status: 'in_progress', started_at: new Date().toISOString() })
+        .eq('id', seqTask.id);
+
+      // Scrape + classify
+      let seqCrawlStatus = 'classified';
+      let seqIsTouchless: boolean | null = null;
+      let seqEvidence = '';
+      let seqAmenities: string[] = [];
+      let seqDescription: string | null = null;
+      let seqMarkdown = '';
+      let seqImages: string[] = [];
+      let seqTaskError: string | null = null;
+
+      try {
+        if (SKIP_DOMAINS.some(d => seqTask.website.toLowerCase().includes(d))) {
+          seqCrawlStatus = 'no_website';
+          seqTaskError = 'Directory/social URL';
+        } else {
+          const scrapeRes = await fetch('https://api.firecrawl.dev/v1/scrape', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              url: seqTask.website,
+              formats: ['markdown'],
+              onlyMainContent: true,
+              timeout: 30000,
+              blockAds: true,
+              proxy: 'auto',
+              location: { country: 'US', languages: ['en-US'] },
+              skipTlsVerification: true,
+              removeBase64Images: true,
+            }),
+            signal: AbortSignal.timeout(45000),
+          });
+
+          const scrapeData = await scrapeRes.json();
+
+          if (!scrapeRes.ok || !scrapeData.success) {
+            seqCrawlStatus = 'fetch_failed';
+            seqTaskError = scrapeData.error ?? `HTTP ${scrapeRes.status}`;
+          } else {
+            seqMarkdown = scrapeData.data?.markdown ?? '';
+            seqImages = scrapeData.data?.images ?? [];
+            const statusCode = scrapeData.data?.metadata?.statusCode ?? 200;
+
+            if (statusCode >= 400 || seqMarkdown.trim().length < 50) {
+              seqCrawlStatus = statusCode >= 400 ? 'fetch_failed' : 'no_content';
+            } else {
+              try {
+                const cls = await classifyWithClaude(seqMarkdown, anthropicKey);
+                seqIsTouchless = cls.is_touchless ?? null;
+                seqEvidence = cls.touchless_evidence ?? '';
+                seqAmenities = cls.amenities ?? [];
+                seqDescription = cls.description ?? null;
+                seqCrawlStatus = 'classified';
+              } catch (clsErr) {
+                seqCrawlStatus = 'classify_failed';
+                seqTaskError = (clsErr as Error).message.slice(0, 200);
+              }
+            }
+          }
+        }
+      } catch (e) {
+        seqCrawlStatus = 'fetch_failed';
+        seqTaskError = (e as Error).message.slice(0, 200);
+      }
+
+      // Update listing
+      const seqUpdate: Record<string, unknown> = { crawl_status: seqCrawlStatus, last_crawled_at: new Date().toISOString() };
+      if (seqCrawlStatus === 'classified') {
+        seqUpdate.is_touchless = seqIsTouchless;
+        if (seqDescription) seqUpdate.description = seqDescription;
+        if (seqAmenities.length > 0) seqUpdate.amenities = seqAmenities;
+      }
+      await supabase.from('listings').update(seqUpdate).eq('id', seqTask.listing_id);
+
+      // Save website snapshot for future data mining
+      await supabase.from('pipeline_runs').insert({
+        listing_id: seqTask.listing_id,
+        batch_id: null,
+        crawl_status: seqCrawlStatus,
+        is_touchless: seqIsTouchless,
+        touchless_evidence: seqEvidence,
+        raw_markdown: seqMarkdown ? seqMarkdown.slice(0, 50000) : null,
+        images_found: seqImages.length,
+      });
+
+      // Sync filters
+      if (seqCrawlStatus === 'classified' && seqIsTouchless !== null) {
+        const { data: filterRows } = await supabase.from('filters').select('id, slug');
+        const seqFilterMap: FilterMap = {};
+        for (const f of (filterRows ?? [])) seqFilterMap[f.slug] = f.id;
+        await syncFilters(supabase, seqTask.listing_id, seqIsTouchless, seqAmenities, seqFilterMap);
+      }
+
+      // Update task + job counters
+      const seqSucceeded = seqCrawlStatus === 'classified' ? 1 : 0;
+      const seqFailed = seqCrawlStatus !== 'classified' ? 1 : 0;
+
+      await Promise.all([
+        supabase.from('classify_tasks').update({
+          status: seqCrawlStatus === 'classified' ? 'done' : 'failed',
+          error: seqTaskError,
+          finished_at: new Date().toISOString(),
+        }).eq('id', seqTask.id),
+        supabase.from('classify_jobs').update({
+          processed: (seqJobRow.processed ?? 0) + 1,
+          succeeded: (seqJobRow.succeeded ?? 0) + seqSucceeded,
+          failed: (seqJobRow.failed ?? 0) + seqFailed,
+        }).eq('id', seqJobId),
+      ]);
+
+      // Self-chain for next task
+      EdgeRuntime.waitUntil(
+        fetch(`${supabaseUrl}/functions/v1/firecrawl-pipeline`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anonKey}` },
+          body: JSON.stringify({ action: 'process_seq', job_id: seqJobId }),
+        }).catch(() => {})
+      );
+
+      return Response.json({ done: false, processed: 1, succeeded: seqSucceeded, failed: seqFailed }, { headers: corsHeaders });
+    }
+
+    // --- CANCEL SEQUENTIAL JOB ---
+    if (action === 'cancel_seq') {
+      const seqJobId: string = body.job_id;
+      if (!seqJobId) return Response.json({ error: 'job_id required' }, { status: 400, headers: corsHeaders });
+
+      await supabase.from('classify_jobs').update({
+        status: 'cancelled',
+        finished_at: new Date().toISOString(),
+      }).eq('id', seqJobId);
+
+      return Response.json({ cancelled: true }, { headers: corsHeaders });
+    }
+
     return Response.json({ error: 'Unknown action' }, { status: 400, headers: corsHeaders });
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 500, headers: corsHeaders });
