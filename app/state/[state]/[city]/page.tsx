@@ -129,7 +129,7 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
 
   const metaDescription = cityDesc
     ? cityDesc.substring(0, 155) + (cityDesc.length > 155 ? '...' : '')
-    : `Find ${listings.length} touchless, touch-free, and brushless car washes in ${cityName}, ${stateName}.${ratingSnippet} Verified locations with ratings, hours, and directions.`;
+    : `Find ${listings.length} touchless, brushless, contactless & no-touch car washes in ${cityName}, ${stateName}.${ratingSnippet} Verified locations with ratings, hours, and directions.`;
 
   const now = new Date();
   const month = now.toLocaleString('default', { month: 'long' });
