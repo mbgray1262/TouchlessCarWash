@@ -15,8 +15,8 @@ import HeroImageFallback from '@/components/HeroImageFallback';
 import { DEFAULT_OG_IMAGE, ensureHttps } from '@/lib/seo';
 import type { Metadata } from 'next';
 
-// Revalidate every 24 hours — pages are pre-rendered (SSG) but refresh daily for updated rankings
-export const revalidate = 3600; // 1 hour
+// Revalidate every 5 minutes — keeps rankings and snippets fresh without hammering the DB
+export const revalidate = 300;
 
 interface BestOfPageProps {
   params: { slug: string };
