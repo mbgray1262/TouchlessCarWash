@@ -59,7 +59,8 @@ async function getTouchlessReviewCounts(listingIds: string[]): Promise<Map<strin
     .from('review_snippets')
     .select('listing_id')
     .in('listing_id', listingIds)
-    .eq('is_touchless_evidence', true);
+    .eq('is_touchless_evidence', true)
+    .eq('sentiment', 'positive');
 
   const counts = new Map<string, number>();
   if (data) {
@@ -485,7 +486,7 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
                               listing.touchless_sentiment === 'negative' ? 'text-red-500' : 'text-green-600'
                             }`}>
                               {listing.touchless_sentiment === 'negative' ? '👎' : '👍'}
-                              {touchlessCount} customer{touchlessCount !== 1 ? 's' : ''} mention{touchlessCount === 1 ? 's' : ''} touchless
+                              {touchlessCount} customer{touchlessCount !== 1 ? 's' : ''} rate the touchless experience positively
                             </p>
                           )}
 
