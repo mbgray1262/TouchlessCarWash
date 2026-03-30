@@ -70,12 +70,14 @@ export type Listing = {
   touchless_sentiment: 'positive' | 'negative' | 'neutral' | null;
   is_claimed: boolean;
   hero_focal_point: 'top' | 'center' | 'bottom' | null;
+  hero_image_source: 'manual' | 'google' | 'website' | 'street_view' | 'chain_brand' | null;
+  touchless_verified: 'user_review' | 'admin' | 'chain' | null;
   vendor_id: number | null;
 };
 
 // Columns needed by ListingCard — avoids fetching heavy fields like description,
 // google_about, popular_times, reviews_per_score, wash_packages, photos, etc.
-export const LISTING_CARD_COLUMNS = 'id, name, slug, city, state, address, phone, rating, review_count, hero_image, hero_focal_point, google_photo_url, street_view_url, logo_photo, google_logo_url, amenities, touchless_wash_types, extracted_data, hours, is_touchless, is_featured, is_claimed' as const;
+export const LISTING_CARD_COLUMNS = 'id, name, slug, city, state, address, phone, rating, review_count, hero_image, hero_focal_point, hero_image_source, google_photo_url, street_view_url, logo_photo, google_logo_url, amenities, touchless_wash_types, extracted_data, hours, is_touchless, is_featured, is_claimed, touchless_verified, parent_chain' as const;
 
 export type Review = {
   id: string;

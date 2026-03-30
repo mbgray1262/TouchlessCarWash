@@ -13,6 +13,7 @@ import LogoImage from '@/components/LogoImage';
 import HeroImageFallback from '@/components/HeroImageFallback';
 import { OpenStatusBadge } from '@/components/OpenStatusBadge';
 import { ensureHttps } from '@/lib/seo';
+import { getChainBrandImage } from '@/lib/chain-brand-images';
 
 /** Hostnames configured in next.config.js remotePatterns — safe for next/image optimization. */
 const OPTIMIZED_HOSTS = new Set([
@@ -58,8 +59,13 @@ export function ListingCard({ listing, href, showVerifiedBadge = false, distance
     /automatic|tunnel|self.serve|express/i.test(a)
   );
 
+  // For chain listings, prefer brand photo over location-specific (often a gas station shot).
+  // Exception: manually-approved location photos always win.
+  const chainBrandImage = listing.touchless_verified === 'chain' && listing.hero_image_source !== 'manual'
+    ? getChainBrandImage(listing.parent_chain)
+    : null;
   // Don't use street_view_url as card image — often returns 403 and looks broken
-  const rawCardImage = listing.hero_image ?? listing.google_photo_url ?? null;
+  const rawCardImage = chainBrandImage ?? listing.hero_image ?? listing.google_photo_url ?? null;
   const cardImage = rawCardImage ? ensureHttps(rawCardImage) : null;
   const rawCardLogo = listing.logo_photo ?? listing.google_logo_url ?? null;
   const cardLogo = rawCardLogo ? ensureHttps(rawCardLogo) : null;

@@ -22,6 +22,7 @@ import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
 import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants';
 import { streetAddress, hasStreetAddress } from '@/lib/utils';
 import { DEFAULT_OG_IMAGE, ensureHttps, truncateDescription } from '@/lib/seo';
+import { getChainBrandImage } from '@/lib/chain-brand-images';
 import { AdUnit } from '@/components/AdUnit';
 import { ProductsBanner } from '@/components/ProductsBanner';
 import type { Metadata } from 'next';
@@ -244,7 +245,9 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   const topAmenities = (listing.amenities || []).slice(0, 3).join(', ');
   const amenityPart = topAmenities ? ` Touch-free, brushless car wash offering ${topAmenities}.` : '';
   const canonicalUrl = `${SITE_URL}/state/${params.state}/${params.city}/${params.slug}`;
-  const rawHeroImage = listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
+  const chainBrandImageMeta = listing.touchless_verified === 'chain' && listing.hero_image_source !== 'manual'
+    ? getChainBrandImage(listing.parent_chain) : null;
+  const rawHeroImage = chainBrandImageMeta ?? listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
   const heroImage = rawHeroImage ? ensureHttps(rawHeroImage) : null;
   const ogImages = heroImage
     ? [{ url: heroImage, width: 1200, height: 630, alt: listing.name }]
@@ -443,7 +446,9 @@ function buildLocalBusinessSchema(listing: Listing, canonicalUrl: string, hours:
     };
   }
 
-  const heroImage = listing.hero_image ?? listing.google_photo_url ?? null;
+  const chainBrandImageSchema = listing.touchless_verified === 'chain' && listing.hero_image_source !== 'manual'
+    ? getChainBrandImage(listing.parent_chain) : null;
+  const heroImage = chainBrandImageSchema ?? listing.hero_image ?? listing.google_photo_url ?? null;
   if (heroImage) schema.image = heroImage;
   if (listing.price_range) schema.priceRange = listing.price_range;
   if (listing.website) schema.sameAs = listing.website;
@@ -901,7 +906,9 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
   const cityName = unslugCity(params.city);
   const todayKey = getTodayKey();
 
-  const heroImage = listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
+  const chainBrandImage = listing.touchless_verified === 'chain' && listing.hero_image_source !== 'manual'
+    ? getChainBrandImage(listing.parent_chain) : null;
+  const heroImage = chainBrandImage ?? listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
   const logoImage = listing.logo_photo ?? listing.google_logo_url ?? null;
   const heroFocalPoint = listing.hero_focal_point ?? 'center';
   const heroObjectPosition = heroFocalPoint === 'top' ? 'center 20%' : heroFocalPoint === 'bottom' ? 'center 80%' : 'center';
