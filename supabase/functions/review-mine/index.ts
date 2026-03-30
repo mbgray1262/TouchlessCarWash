@@ -1019,32 +1019,50 @@ Deno.serve(async (req: Request) => {
     // -----------------------------------------------------------------------
     if (action === 'scan_batch') {
       const batchSize = Math.min(body.batch_size || 50, 100);
+      // all_listings=true bypasses category filter — catches gas stations, unknowns, and already-classified
+      // touchless listings that still need review snippet enrichment
+      const allListings = body.all_listings === true;
 
-      // Fetch car wash listings that haven't been scanned yet (review_mine_status IS NULL).
-      // Run two queries to avoid PostgREST quoting issues with "Gas station" inside .or()
       const COLS = 'id, name, slug, google_place_id, google_maps_url, city, state, rating, review_count, is_touchless';
-      const [carWashResult, gasStationResult] = await Promise.all([
-        supabase.from('listings').select(COLS)
-          .is('review_mine_status', null)
-          .not('google_place_id', 'is', null)
-          .or('google_category.in.("Car wash","car_wash","Self service car wash"),and(google_category.is.null,name.ilike.%car wash%),and(google_category.is.null,name.ilike.%carwash%)')
-          .order('review_count', { ascending: false, nullsFirst: false })
-          .limit(batchSize),
-        supabase.from('listings').select(COLS)
-          .is('review_mine_status', null)
-          .not('google_place_id', 'is', null)
-          .eq('google_category', 'Gas station')
-          .ilike('name', '%wash%')
-          .order('review_count', { ascending: false, nullsFirst: false })
-          .limit(batchSize),
-      ]);
 
-      const fetchError = carWashResult.error || gasStationResult.error;
-      const seen = new Set<string>();
-      const listings = [...(carWashResult.data ?? []), ...(gasStationResult.data ?? [])]
-        .filter(l => { if (seen.has(l.id)) return false; seen.add(l.id); return true; })
-        .sort((a, b) => (b.review_count ?? 0) - (a.review_count ?? 0))
-        .slice(0, batchSize);
+      let listings: Array<Record<string, unknown>> | null = null;
+      let fetchError: { message: string } | null = null;
+
+      if (allListings) {
+        // Process unscanned unknowns (classify) + unscanned touchless (enrich with snippets).
+        // Excludes is_touchless=false (already confirmed non-touchless — no point mining).
+        const result = await supabase.from('listings').select(COLS)
+          .is('review_mine_status', null)
+          .not('google_place_id', 'is', null)
+          .or('is_touchless.is.null,is_touchless.eq.true')
+          .order('review_count', { ascending: false, nullsFirst: false })
+          .limit(batchSize);
+        listings = result.data;
+        fetchError = result.error;
+      } else {
+        // Default: only car washes and gas stations with "wash" in name
+        const [carWashResult, gasStationResult] = await Promise.all([
+          supabase.from('listings').select(COLS)
+            .is('review_mine_status', null)
+            .not('google_place_id', 'is', null)
+            .or('google_category.in.("Car wash","car_wash","Self service car wash"),and(google_category.is.null,name.ilike.%car wash%),and(google_category.is.null,name.ilike.%carwash%)')
+            .order('review_count', { ascending: false, nullsFirst: false })
+            .limit(batchSize),
+          supabase.from('listings').select(COLS)
+            .is('review_mine_status', null)
+            .not('google_place_id', 'is', null)
+            .eq('google_category', 'Gas station')
+            .ilike('name', '%wash%')
+            .order('review_count', { ascending: false, nullsFirst: false })
+            .limit(batchSize),
+        ]);
+        fetchError = carWashResult.error || gasStationResult.error;
+        const seen = new Set<string>();
+        listings = [...(carWashResult.data ?? []), ...(gasStationResult.data ?? [])]
+          .filter(l => { if (seen.has(l.id)) return false; seen.add(l.id); return true; })
+          .sort((a, b) => (b.review_count ?? 0) - (a.review_count ?? 0))
+          .slice(0, batchSize);
+      }
 
       if (fetchError) {
         return new Response(
@@ -1286,7 +1304,9 @@ Deno.serve(async (req: Request) => {
           total_scanned: counts.totalScanned,
           total_remaining: counts.totalRemaining,
           total_touchless_found: counts.touchlessFound,
-          complete: counts.totalRemaining === 0,
+          // For all_listings mode, the RPC counts only category-filtered listings so totalRemaining
+          // will be 0 even when there are unknowns left. Use batch underflow as the stop signal instead.
+          complete: allListings ? listings.length < batchSize : counts.totalRemaining === 0,
           results,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
