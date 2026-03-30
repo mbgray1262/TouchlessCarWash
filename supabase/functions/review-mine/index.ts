@@ -53,30 +53,18 @@ async function makeUniqueSlug(
 }
 
 // ---------------------------------------------------------------------------
-// SerpAPI Types & Helpers
+// DataForSEO Types & Helpers
 // ---------------------------------------------------------------------------
 
-interface SerpApiReview {
-  rating?: number;
-  date?: string;
-  iso_date?: string;
-  snippet?: string;
-  extracted_snippet?: { original: string };
-  user?: { name: string; reviews?: number };
-  review_id?: string;
-}
-
-interface SerpApiResponse {
-  reviews?: SerpApiReview[];
-  search_metadata?: {
-    status?: string;
-    total_results?: number;
-  };
-  serpapi_pagination?: {
-    next_page_token?: string;
-    next?: string;
-  };
-  error?: string;
+interface DataForSeoReview {
+  review_text: string | null;
+  original_review_text: string | null;
+  profile_name: string | null;
+  timestamp: string | null;   // e.g., "2024-10-21 00:25:11 +00:00"
+  time_ago: string | null;    // e.g., "a year ago"
+  rating: { value: number; rating_type: string; rating_max: number } | null;
+  review_id: string | null;
+  owner_answer: string | null;
 }
 
 /** Keywords that indicate touchless evidence in reviews. */
@@ -125,7 +113,7 @@ const CONTACTLESS_PAYMENT_PATTERNS = [
 async function verifyTouchlessWithAI(
   anthropicKey: string,
   carWashName: string,
-  reviews: SerpApiReview[],
+  reviews: DataForSeoReview[],
 ): Promise<{ isTouchless: boolean; reasoning: string; sentiment: 'positive' | 'negative' | 'neutral' | null }> {
   if (!anthropicKey) {
     return { isTouchless: true, reasoning: 'AI verification unavailable — no API key', sentiment: null };
@@ -133,7 +121,7 @@ async function verifyTouchlessWithAI(
 
   const reviewTexts = reviews
     .map((r, i) => {
-      const text = r.snippet || r.extracted_snippet?.original || '';
+      const text = r.review_text || r.original_review_text || '';
       return text ? `Review ${i + 1}: "${text}"` : null;
     })
     .filter(Boolean)
@@ -327,102 +315,104 @@ async function getTotalScannedCount(
 }
 
 /**
- * Call SerpAPI Google Maps Reviews with keyword query.
- * Fetches up to 20 results per page (SerpAPI max) to minimize API calls.
- * Supports pagination via next_page_token; maxPages caps total API calls.
+ * Post a review-fetch task to DataForSEO and return the task ID.
+ * Uses place_id directly — no keyword filter (client-side filtering instead).
  */
-async function searchReviews(
-  serpApiKey: string,
+async function postReviewTask(
+  dataForSeoKey: string,
   placeId: string,
-  query: string,
-  opts?: { sort_by?: string; maxPages?: number; num?: number },
-): Promise<{ reviews: SerpApiReview[]; apiCalls: number; error?: string }> {
-  const maxPages = opts?.maxPages ?? 1;
-  const num = opts?.num ?? 20; // Max 20 per page — get the most per API call
-  const allReviews: SerpApiReview[] = [];
-  let apiCalls = 0;
-  let nextPageToken: string | undefined;
+  depth = 100,
+): Promise<string> {
+  const res = await fetch(
+    'https://api.dataforseo.com/v3/business_data/google/reviews/task_post',
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${dataForSeoKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify([{
+        place_id: placeId,
+        location_name: 'United States',
+        language_name: 'English',
+        depth,
+        sort_by: 'relevant',
+      }]),
+      signal: AbortSignal.timeout(15000),
+    },
+  );
 
-  for (let page = 0; page < maxPages; page++) {
-    const params = new URLSearchParams({
-      engine: 'google_maps_reviews',
-      place_id: placeId,
-      api_key: serpApiKey,
-      hl: 'en',
-    });
-    // num param only works when query, next_page_token, or topic_id is set
-    if (query || nextPageToken) params.set('num', String(num));
-    if (query) params.set('query', query);
-    if (opts?.sort_by) params.set('sort_by', opts.sort_by);
-    if (nextPageToken) params.set('next_page_token', nextPageToken);
-
-    try {
-      const res = await fetch(`https://serpapi.com/search.json?${params}`, {
-        signal: AbortSignal.timeout(30000),
-      });
-      apiCalls++;
-
-      if (!res.ok) {
-        const errText = await res.text();
-        console.error(`SerpAPI error for ${placeId}: ${res.status} ${errText}`);
-        if (allReviews.length > 0) break; // Return what we have so far
-        return { reviews: [], apiCalls, error: `HTTP ${res.status}: ${errText}` };
-      }
-
-      const data: SerpApiResponse = await res.json();
-
-      if (data.error) {
-        if (allReviews.length > 0) break;
-        return { reviews: [], apiCalls, error: data.error };
-      }
-
-      const pageReviews = data.reviews || [];
-      allReviews.push(...pageReviews);
-
-      // Check for next page
-      nextPageToken = data.serpapi_pagination?.next_page_token;
-      if (!nextPageToken || pageReviews.length === 0) break;
-
-      console.log(`[serpapi] Page ${page + 1}: got ${pageReviews.length} reviews, fetching next page...`);
-    } catch (err) {
-      console.error(`SerpAPI fetch failed for ${placeId} (page ${page + 1}):`, err);
-      if (allReviews.length > 0) break;
-      return { reviews: [], apiCalls, error: String(err) };
-    }
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`DataForSEO task_post error: ${res.status} ${errText}`);
   }
 
-  return { reviews: allReviews, apiCalls };
+  const data = await res.json();
+  const task = data.tasks?.[0];
+  if (!task || (task.status_code !== 20100 && task.status_code !== 20000)) {
+    throw new Error(`DataForSEO task failed: ${task?.status_message || 'Unknown error'}`);
+  }
+  return task.id as string;
 }
 
 /**
- * Search reviews for touchless-related keywords.
- *
- * Strategy:
- * 1. Query "touch" — one call catches touchless, no-touch, touch-free, soft-touch
- * 2. Query "brushless" — fallback only if "touch" found nothing (catches brushless, brush-free)
- *
- * Locally verifies every result against REVIEW_TOUCHLESS_KEYWORDS before accepting.
+ * Poll DataForSEO for task results, retrying until complete.
+ * Standard queue typically resolves in 5–20 seconds in practice.
  */
-async function searchReviewsMultiKeyword(
-  serpApiKey: string,
-  placeId: string,
-): Promise<{ reviews: SerpApiReview[]; apiCalls: number; error?: string }> {
-  // Single query using OR operator — searches for all touchless-related keywords.
-  // 1 API call with num=20 captures up to 20 keyword-matched reviews.
-  // "touch" catches: touchless, no-touch, touch-free, soft-touch, touch less
-  // "brushless" catches: brushless, brush-free
-  // "laser" catches: laser wash, laserwash
-  // NOTE: "contactless" REMOVED — almost always refers to contactless payment, not touchless washing
-  const result = await searchReviews(serpApiKey, placeId, 'touch OR brushless OR laser OR frictionless');
+async function pollReviewTask(
+  dataForSeoKey: string,
+  taskId: string,
+  opts?: { maxRetries?: number; retryDelayMs?: number },
+): Promise<DataForSeoReview[]> {
+  const maxRetries = opts?.maxRetries ?? 20;
+  const retryDelayMs = opts?.retryDelayMs ?? 4000;
 
-  if (result.error) {
-    return { reviews: [], apiCalls: result.apiCalls, error: result.error };
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    if (attempt > 0) {
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+    }
+
+    const res = await fetch(
+      `https://api.dataforseo.com/v3/business_data/google/reviews/task_get/${taskId}`,
+      {
+        headers: { 'Authorization': `Basic ${dataForSeoKey}` },
+        signal: AbortSignal.timeout(15000),
+      },
+    );
+    if (!res.ok) throw new Error(`DataForSEO task_get error: ${res.status}`);
+
+    const data = await res.json();
+    const task = data.tasks?.[0];
+
+    if (task?.status_code === 20000 && task.result) {
+      return (task.result[0]?.items || []) as DataForSeoReview[];
+    }
+    // 20100 = Task Created (still processing) — keep polling
+    console.log(`[dataforseo] Task ${taskId} pending (attempt ${attempt + 1}/${maxRetries})...`);
   }
 
-  // Filter to only reviews that genuinely contain our exact keywords
-  const verified = filterVerifiedReviews(result.reviews);
-  console.log(`[multi-kw] ${result.reviews.length} raw → ${verified.length} verified (${result.apiCalls} API calls)`);
-  return { reviews: verified, apiCalls: result.apiCalls };
+  throw new Error(`DataForSEO task ${taskId} timed out after ${maxRetries} retries`);
+}
+
+/**
+ * Fetch and filter reviews for a single listing via DataForSEO.
+ * Posts the task, polls until complete, then applies client-side keyword filtering.
+ */
+async function getReviewsForListing(
+  dataForSeoKey: string,
+  placeId: string,
+  depth = 100,
+): Promise<{ reviews: DataForSeoReview[]; error?: string }> {
+  try {
+    const taskId = await postReviewTask(dataForSeoKey, placeId, depth);
+    const allReviews = await pollReviewTask(dataForSeoKey, taskId);
+    const filtered = filterVerifiedReviews(allReviews);
+    console.log(`[dataforseo] ${allReviews.length} raw → ${filtered.length} keyword-matched (place_id=${placeId})`);
+    return { reviews: filtered };
+  } catch (err) {
+    console.error(`[dataforseo] getReviewsForListing failed for ${placeId}:`, err);
+    return { reviews: [], error: String(err) };
+  }
 }
 
 /**
@@ -465,14 +455,14 @@ function hasNegation(text: string): boolean {
 }
 
 /**
- * Filter SerpAPI reviews to only those that genuinely contain touchless keywords
+ * Filter DataForSEO reviews to only those that genuinely contain touchless keywords
  * AND do not negate them (e.g., "not touch free" is rejected).
- * SerpAPI's query parameter does fuzzy matching, so many returned reviews
- * don't actually contain our keywords.
+ * DataForSEO returns all reviews without server-side keyword filtering,
+ * so this client-side filter is essential.
  */
-function filterVerifiedReviews(reviews: SerpApiReview[]): SerpApiReview[] {
+function filterVerifiedReviews(reviews: DataForSeoReview[]): DataForSeoReview[] {
   return reviews.filter((r) => {
-    const text = r.snippet || r.extracted_snippet?.original;
+    const text = r.review_text || r.original_review_text;
     if (!text) return false;
     if (extractKeywords(text).length === 0) return false;
     // Reject reviews that negate the keyword (e.g., "Not touch free")
@@ -485,20 +475,20 @@ function filterVerifiedReviews(reviews: SerpApiReview[]): SerpApiReview[] {
 }
 
 /**
- * Insert SerpAPI review evidence into the review_snippets table.
+ * Insert DataForSEO review evidence into the review_snippets table.
  * ONLY inserts reviews that genuinely contain touchless keywords.
  */
-async function insertSerpApiReviewSnippets(
+async function insertReviewSnippets(
   supabase: ReturnType<typeof createClient>,
   listingId: string,
-  reviews: SerpApiReview[],
+  reviews: DataForSeoReview[],
 ): Promise<number> {
   if (!reviews.length) return 0;
 
   const snippets: Array<Record<string, unknown>> = [];
 
   for (const review of reviews) {
-    const text = review.snippet || review.extracted_snippet?.original;
+    const text = review.review_text || review.original_review_text;
     if (!text) continue;
 
     const matchedKeywords = extractKeywords(text);
@@ -507,15 +497,15 @@ async function insertSerpApiReviewSnippets(
 
     snippets.push({
       listing_id: listingId,
-      reviewer_name: review.user?.name || null,
-      rating: review.rating || null,
+      reviewer_name: review.profile_name || null,
+      rating: review.rating?.value ?? null,
       review_text: text.slice(0, 2000),
-      review_date: review.date || null,
-      iso_date: review.iso_date || null,
+      review_date: review.time_ago || null,
+      iso_date: review.timestamp || null,
       review_id: review.review_id || null,
       touchless_keywords: matchedKeywords,
       is_touchless_evidence: true,
-      source: 'serpapi',
+      source: 'dataforseo',
     });
   }
 
@@ -1001,19 +991,19 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     const action = body.action as string;
 
-    // Actions that don't call SerpAPI can skip the key check
-    const SERP_FREE_ACTIONS = new Set(['progress', 'reject_touchless', 'reset', 'sentiment_backfill']);
+    // Actions that don't call DataForSEO can skip the key check
+    const API_FREE_ACTIONS = new Set(['progress', 'reject_touchless', 'reset', 'sentiment_backfill']);
 
-    // Get SerpAPI key — env var, then Supabase vault, then request body (injected by proxy)
+    // Get DataForSEO key — env var, then Supabase vault, then request body
     // Uses || not ?? so empty strings from getSecret() fall through to the next source
-    const serpApiKey =
-      Deno.env.get('SERPAPI_KEY') ||
-      (SERP_FREE_ACTIONS.has(action) ? undefined : await getSecret(supabaseUrl, serviceKey, 'SERPAPI_KEY')) ||
-      body.serpApiKey;
+    const dataForSeoKey =
+      Deno.env.get('DATAFORSEO_KEY') ||
+      (API_FREE_ACTIONS.has(action) ? undefined : await getSecret(supabaseUrl, serviceKey, 'DATAFORSEO_KEY')) ||
+      body.dataForSeoKey;
 
-    if (!serpApiKey && !SERP_FREE_ACTIONS.has(action)) {
+    if (!dataForSeoKey && !API_FREE_ACTIONS.has(action)) {
       return new Response(
-        JSON.stringify({ error: 'SerpAPI key not configured' }),
+        JSON.stringify({ error: 'DataForSEO key not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
@@ -1108,21 +1098,46 @@ Deno.serve(async (req: Request) => {
       let totalApiCalls = 0;
       let aiRejected = 0;
 
-      for (const listing of listings) {
-        scanned++;
+      // Post all DataForSEO tasks in parallel to minimize total wait time
+      const taskPostResults = await Promise.all(
+        listings.map(async (listing) => {
+          try {
+            const taskId = await postReviewTask(dataForSeoKey!, listing.google_place_id, 100);
+            return { listing, taskId, postError: null };
+          } catch (err) {
+            return { listing, taskId: null as string | null, postError: String(err) };
+          }
+        })
+      );
 
-        const { reviews, apiCalls, error } = await searchReviewsMultiKeyword(
-          serpApiKey,
-          listing.google_place_id,
-        );
-        totalApiCalls += apiCalls;
+      // Poll all tasks in parallel
+      const pollResults = await Promise.all(
+        taskPostResults.map(async ({ listing, taskId, postError }) => {
+          if (postError || !taskId) {
+            return { listing, reviews: [] as DataForSeoReview[], error: postError };
+          }
+          try {
+            const allReviews = await pollReviewTask(dataForSeoKey!, taskId);
+            const filtered = filterVerifiedReviews(allReviews);
+            console.log(`[dataforseo] ${listing.name}: ${allReviews.length} raw → ${filtered.length} keyword-matched`);
+            return { listing, reviews: filtered, error: null };
+          } catch (err) {
+            return { listing, reviews: [] as DataForSeoReview[], error: String(err) };
+          }
+        })
+      );
+
+      // Process results
+      for (const { listing, reviews, error } of pollResults) {
+        scanned++;
+        totalApiCalls += 1;
 
         if (error) {
-          // SerpAPI error — still mark as scanned_clean so it doesn't get retried endlessly
+          // DataForSEO error — still mark as scanned_clean so it doesn't get retried endlessly
           console.error(`Error scanning ${listing.name}: ${error}`);
           await supabase.from('listings').update({
             review_mine_status: 'scanned_clean',
-            crawl_notes: `Review mine SerpAPI error: ${error}`,
+            crawl_notes: `Review mine DataForSEO error: ${error}`,
           }).eq('id', listing.id);
 
           results.push({
@@ -1135,7 +1150,7 @@ Deno.serve(async (req: Request) => {
             google_maps_url: listing.google_maps_url,
             status: 'error',
             reviewCount: 0,
-            apiCalls,
+            apiCalls: 1,
             reviews: [],
           });
           continue;
@@ -1150,17 +1165,17 @@ Deno.serve(async (req: Request) => {
           );
 
           const reviewMapped = reviews.map((r) => ({
-            text: r.snippet || r.extracted_snippet?.original || '',
-            rating: r.rating ?? null,
-            reviewer: r.user?.name ?? null,
-            keywords: extractKeywords(r.snippet || r.extracted_snippet?.original || ''),
+            text: r.review_text || r.original_review_text || '',
+            rating: r.rating?.value ?? null,
+            reviewer: r.profile_name ?? null,
+            keywords: extractKeywords(r.review_text || r.original_review_text || ''),
           }));
 
           if (aiResult.isTouchless) {
             // AI confirmed — reclassify as touchless!
             foundTouchless++;
 
-            const snippetCount = await insertSerpApiReviewSnippets(supabase, listing.id, reviews);
+            const snippetCount = await insertReviewSnippets(supabase, listing.id, reviews);
 
             await supabase.from('listings').update({
               is_touchless: true,
@@ -1185,7 +1200,7 @@ Deno.serve(async (req: Request) => {
               google_maps_url: listing.google_maps_url,
               status: 'touchless_found',
               reviewCount: snippetCount,
-              apiCalls: apiCalls,
+              apiCalls: 1,
               aiVerdict: `✅ ${aiResult.reasoning}`,
               reviews: reviewMapped,
               touchlessSentiment: aiResult.sentiment,
@@ -1209,7 +1224,7 @@ Deno.serve(async (req: Request) => {
               google_maps_url: listing.google_maps_url,
               status: 'ai_rejected',
               reviewCount: 0,
-              apiCalls,
+              apiCalls: 1,
               aiVerdict: `❌ ${aiResult.reasoning}`,
               reviews: reviewMapped,
             });
@@ -1230,7 +1245,7 @@ Deno.serve(async (req: Request) => {
             google_maps_url: listing.google_maps_url,
             status: 'scanned_clean',
             reviewCount: 0,
-            apiCalls,
+            apiCalls: 1,
             reviews: [],
           });
         }
@@ -1303,14 +1318,14 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const { reviews, apiCalls, error } = await searchReviewsMultiKeyword(
-        serpApiKey,
+      const { reviews, error } = await getReviewsForListing(
+        dataForSeoKey!,
         listing.google_place_id,
       );
 
       if (error) {
         return new Response(
-          JSON.stringify({ error: `SerpAPI error: ${error}` }),
+          JSON.stringify({ error: `DataForSEO error: ${error}` }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
         );
       }
@@ -1320,14 +1335,14 @@ Deno.serve(async (req: Request) => {
         const aiResult = await verifyTouchlessWithAI(anthropicKey, listing.name, reviews);
 
         const reviewMapped = reviews.map((r) => ({
-          text: r.snippet || r.extracted_snippet?.original || '',
-          rating: r.rating,
-          reviewer: r.user?.name,
-          keywords: extractKeywords(r.snippet || r.extracted_snippet?.original || ''),
+          text: r.review_text || r.original_review_text || '',
+          rating: r.rating?.value ?? null,
+          reviewer: r.profile_name ?? null,
+          keywords: extractKeywords(r.review_text || r.original_review_text || ''),
         }));
 
         if (aiResult.isTouchless) {
-          const snippetCount = await insertSerpApiReviewSnippets(supabase, listing.id, reviews);
+          const snippetCount = await insertReviewSnippets(supabase, listing.id, reviews);
 
           // Load filter map
           const { data: filters } = await supabase.from('filters').select('id, slug');
@@ -1352,7 +1367,7 @@ Deno.serve(async (req: Request) => {
               status: 'touchless_found',
               name: listing.name,
               review_count: snippetCount,
-              api_calls: apiCalls,
+              api_calls: 1,
               ai_verdict: `✅ ${aiResult.reasoning}`,
               reviews: reviewMapped,
               touchless_sentiment: aiResult.sentiment,
@@ -1371,7 +1386,7 @@ Deno.serve(async (req: Request) => {
               status: 'ai_rejected',
               name: listing.name,
               review_count: 0,
-              api_calls: apiCalls,
+              api_calls: 1,
               ai_verdict: `❌ ${aiResult.reasoning}`,
               reviews: reviewMapped,
             }),
@@ -1389,7 +1404,7 @@ Deno.serve(async (req: Request) => {
           status: 'scanned_clean',
           name: listing.name,
           review_count: 0,
-          api_calls: apiCalls,
+          api_calls: 1,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
@@ -1418,7 +1433,7 @@ Deno.serve(async (req: Request) => {
           .from('review_snippets')
           .select('listing_id, reviewer_name, rating, review_text, touchless_keywords')
           .in('listing_id', findIds)
-          .eq('source', 'serpapi')
+          .in('source', ['serpapi', 'dataforseo'])
           .order('rating', { ascending: false });
 
         for (const s of snippets || []) {
@@ -1529,27 +1544,24 @@ Deno.serve(async (req: Request) => {
         const placeId = place.id.replace(/^places\//, '');
         const placeName = place.displayName?.text || 'Unknown';
 
-        // Check if name alone tells us it's touchless (saves SerpAPI credits)
+        // Check if name alone tells us it's touchless (saves DataForSEO credits)
         const nameMatchesTouchless = /touch\s*-?\s*less|touch\s*-?\s*free|no\s*-?\s*touch|contactless\s+wash|laser\s*wash|brush\s*-?\s*less|brush\s*-?\s*free/i.test(placeName);
 
-        let reviews: Array<{ reviewer_name: string; rating: number; review_text: string; touchless_keywords: string[] }> = [];
+        let reviews: DataForSeoReview[] = [];
 
         if (nameMatchesTouchless) {
-          console.log(`[prospect] Name match — skipping SerpAPI for: ${placeName}`);
+          console.log(`[prospect] Name match — skipping DataForSEO for: ${placeName}`);
         } else {
           // Search reviews for touchless evidence
-          const result = await searchReviewsMultiKeyword(
-            serpApiKey,
-            placeId,
-          );
-          apiCalls += result.apiCalls;
+          const result = await getReviewsForListing(dataForSeoKey!, placeId);
+          apiCalls += 1;
           reviews = result.reviews;
 
           if (result.error) {
             skipped.push({
               name: placeName,
               address: place.formattedAddress || '',
-              reason: `SerpAPI error: ${result.error}`,
+              reason: `DataForSEO error: ${result.error}`,
             });
             continue;
           }
@@ -1601,10 +1613,10 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
-        // Insert review snippets (if we have any from SerpAPI)
+        // Insert review snippets (if we have any from DataForSEO)
         let snippetCount = 0;
         if (reviews.length > 0) {
-          snippetCount = await insertSerpApiReviewSnippets(supabase, inserted.id, reviews);
+          snippetCount = await insertReviewSnippets(supabase, inserted.id, reviews);
         }
 
         // Update review count on listing
@@ -1753,22 +1765,19 @@ Deno.serve(async (req: Request) => {
           const placeId = place.id.replace(/^places\//, '');
           const placeName = place.displayName?.text || 'Unknown';
 
-          // Check if name alone tells us it's touchless (saves SerpAPI credits)
+          // Check if name alone tells us it's touchless (saves DataForSEO credits)
           const nameMatchesTouchless = /touch\s*-?\s*less|touch\s*-?\s*free|no\s*-?\s*touch|contactless\s+wash|laser\s*wash|brush\s*-?\s*less|brush\s*-?\s*free/i.test(placeName);
 
-          let reviews: Array<{ reviewer_name: string; rating: number; review_text: string; touchless_keywords: string[] }> = [];
+          let reviews: DataForSeoReview[] = [];
 
           if (nameMatchesTouchless) {
             nameMatches++;
-            console.log(`[prospect_next] Name match — skipping SerpAPI for: ${placeName}`);
+            console.log(`[prospect_next] Name match — skipping DataForSEO for: ${placeName}`);
           } else {
             // Only check reviews if the place looks like it could be touchless
             // (Google returned it for a "touchless" search, so worth checking)
-            const result = await searchReviewsMultiKeyword(
-              serpApiKey,
-              placeId,
-            );
-            apiCalls += result.apiCalls;
+            const result = await getReviewsForListing(dataForSeoKey!, placeId);
+            apiCalls += 1;
             reviews = result.reviews;
 
             if (result.error || reviews.length === 0) continue;
@@ -1791,7 +1800,7 @@ Deno.serve(async (req: Request) => {
 
           let snippetCount = 0;
           if (reviews.length > 0) {
-            snippetCount = await insertSerpApiReviewSnippets(supabase, inserted.id, reviews);
+            snippetCount = await insertReviewSnippets(supabase, inserted.id, reviews);
           }
 
           await supabase.from('listings').update({
@@ -1903,7 +1912,7 @@ Deno.serve(async (req: Request) => {
         .from('review_snippets')
         .delete()
         .eq('listing_id', listingId)
-        .eq('source', 'serpapi');
+        .in('source', ['serpapi', 'dataforseo']);
 
       return new Response(
         JSON.stringify({
