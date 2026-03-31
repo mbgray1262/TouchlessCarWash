@@ -321,6 +321,7 @@ export function usePhotoAudit() {
       .select('id', { count: 'exact', head: true })
       .eq('is_touchless', true)
       .not('hero_image', 'is', null)
+      .neq('hero_image_source', 'chain_brand')
       .is('hero_is_low_res', null);
 
     let total = count ?? 0;
@@ -332,13 +333,15 @@ export function usePhotoAudit() {
         .from('listings')
         .update({ hero_is_low_res: null })
         .eq('is_touchless', true)
-        .not('hero_image', 'is', null);
+        .not('hero_image', 'is', null)
+        .neq('hero_image_source', 'chain_brand');
 
       const { count: freshCount } = await supabase
         .from('listings')
         .select('id', { count: 'exact', head: true })
         .eq('is_touchless', true)
         .not('hero_image', 'is', null)
+        .neq('hero_image_source', 'chain_brand')
         .is('hero_is_low_res', null);
 
       total = freshCount ?? 0;
@@ -356,6 +359,7 @@ export function usePhotoAudit() {
         .select('id, hero_image')
         .eq('is_touchless', true)
         .not('hero_image', 'is', null)
+        .neq('hero_image_source', 'chain_brand')
         .is('hero_is_low_res', null)
         .limit(BATCH);
 
