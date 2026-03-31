@@ -74,17 +74,28 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
         srcH = Math.round(width / targetAspect);
         srcY = Math.round((height - srcH) / 2);
       }
+
+      // Cap canvas output to max 2048px wide to avoid huge PNG uploads (Netlify 4.5MB body limit)
+      const MAX_WIDTH = 2048;
+      let outW = srcW, outH = srcH;
+      if (outW > MAX_WIDTH) {
+        outH = Math.round((MAX_WIDTH / outW) * outH);
+        outW = MAX_WIDTH;
+      }
+
       const canvas = document.createElement('canvas');
-      canvas.width = srcW;
-      canvas.height = srcH;
+      canvas.width = outW;
+      canvas.height = outH;
       const ctx = canvas.getContext('2d')!;
-      ctx.drawImage(bitmap, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
+      ctx.drawImage(bitmap, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
+
+      // Use JPEG (80% quality) to avoid huge file sizes; PNG can be 10MB+ for retina screens
       const cropped = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob(b => b ? resolve(b) : reject(new Error('Canvas empty')), 'image/png');
+        canvas.toBlob(b => b ? resolve(b) : reject(new Error('Canvas empty')), 'image/jpeg', 0.85);
       });
 
       const formData = new FormData();
-      formData.append('file', cropped, 'hero-streetview.png');
+      formData.append('file', cropped, 'hero-screenshot.jpg');
       formData.append('type', 'hero');
       formData.append('listingId', listing.id);
       const res = await fetch('/api/upload-image', { method: 'POST', body: formData });
@@ -94,14 +105,20 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
         setPasteStatus('success');
         setPasteError('');
       } else {
+        // Show actual server error so we can debug
+        let errMsg = `Upload failed (${res.status})`;
+        try {
+          const errData = await res.json();
+          errMsg = errData.error || errMsg;
+        } catch {}
         setPasteStatus('error');
-        setPasteError('Upload failed');
+        setPasteError(errMsg);
       }
     } catch (err) {
       setPasteStatus('error');
       setPasteError(err instanceof Error ? err.message : 'Failed to process image');
     }
-    setTimeout(() => setPasteStatus('idle'), 3000);
+    setTimeout(() => setPasteStatus('idle'), 5000);
   }, [listing, addHeroDirect]);
 
   // When tab regains focus after Street View, show banner prompting a click
@@ -556,6 +573,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                 onHeroDropped={addHeroDirect}
                 onStreetViewOpened={() => { awaitingClipboard.current = true; }}
                 onFallbackHero={async () => { await setFallbackHero(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
+                onClipboardPaste={processClipboardImage}
                 hasHeroImage={!!candidates.find(c => c.tag === 'hero')}
                 chainBrandImageUrl={
                   // Show chain brand image as the "effective hero" when no location-specific

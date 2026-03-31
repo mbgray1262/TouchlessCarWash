@@ -31,6 +31,8 @@ interface PhotoGridProps {
   // Chain brand fallback: shown when no location-specific hero is chosen
   chainBrandImageUrl?: string | null;
   chainBrandName?: string;
+  // Clipboard paste handler (called when user clicks the empty hero area)
+  onClipboardPaste?: (blob: Blob) => void;
 }
 
 const SOURCE_BADGES: Record<string, { label: string; color: string }> = {
@@ -50,7 +52,7 @@ export function PhotoGrid({
   onSetAsHero, onAddToGallery, onRemoveFromGallery, onRemoveHero, onSkipPhoto,
   onCrop, onEnhance, discovering, enhancingId, enhancedIds = [], equipmentSlot,
   streetViewUrl, googlePhotosUrl, listingId, onHeroDropped, onStreetViewOpened, onFallbackHero, hasHeroImage,
-  chainBrandImageUrl, chainBrandName,
+  chainBrandImageUrl, chainBrandName, onClipboardPaste,
 }: PhotoGridProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [heroDragging, setHeroDragging] = useState(false);
@@ -311,7 +313,7 @@ export function PhotoGrid({
           </div>
         ) : (
           <div
-            className={`aspect-video rounded-xl border-2 border-dashed ${heroDragging ? 'border-orange-400 bg-orange-50 ring-4 ring-orange-200' : 'border-gray-300 bg-gray-50'} flex flex-col items-center justify-center text-gray-400 transition-colors`}
+            className={`aspect-video rounded-xl border-2 border-dashed ${heroDragging ? 'border-orange-400 bg-orange-50 ring-4 ring-orange-200' : 'border-gray-300 bg-gray-50'} flex flex-col items-center justify-center text-gray-400 transition-colors overflow-hidden`}
             onDragEnter={(e) => { e.preventDefault(); heroDragCounter.current++; setHeroDragging(true); }}
             onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
             onDragLeave={(e) => { e.preventDefault(); heroDragCounter.current--; if (heroDragCounter.current <= 0) { heroDragCounter.current = 0; setHeroDragging(false); } }}
@@ -321,6 +323,23 @@ export function PhotoGrid({
               const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
               if (file) await processHeroDrop(file);
             }}
+            onClick={async () => {
+              if (!onClipboardPaste) return;
+              try {
+                const clipboardItems = await navigator.clipboard.read();
+                for (const item of clipboardItems) {
+                  const imageType = item.types.find(t => t.startsWith('image/'));
+                  if (imageType) {
+                    const blob = await item.getType(imageType);
+                    onClipboardPaste(blob);
+                    return;
+                  }
+                }
+              } catch {
+                // Clipboard read permission denied or no image — Cmd+V still works
+              }
+            }}
+            title={onClipboardPaste ? 'Click to paste clipboard image, or drag & drop a file here' : undefined}
           >
             {heroUploading ? (
               <div className="flex items-center gap-2 text-orange-600">
@@ -335,22 +354,30 @@ export function PhotoGrid({
               </>
             ) : chainBrandImageUrl ? (
               // Chain brand fallback — this is what visitors see on the public page
-              <div className="relative w-full h-full">
+              // Clicking pastes clipboard image as the new hero
+              <div className="relative w-full h-full cursor-pointer group/brand">
                 <img
                   src={chainBrandImageUrl}
                   alt={chainBrandName ?? 'Brand default'}
-                  className="w-full h-full object-cover opacity-60"
+                  className="w-full h-full object-cover opacity-60 group-hover/brand:opacity-40 transition-opacity"
                 />
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30">
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 group-hover/brand:bg-black/50 transition-colors">
                   <p className="text-white text-sm font-semibold drop-shadow">Brand default ({chainBrandName})</p>
                   <p className="text-white/80 text-xs mt-1 drop-shadow">Visitors see this — upload a location photo to override</p>
+                  {onClipboardPaste && (
+                    <p className="text-white/60 text-xs mt-2 drop-shadow opacity-0 group-hover/brand:opacity-100 transition-opacity">
+                      Click to paste clipboard image as hero
+                    </p>
+                  )}
                 </div>
               </div>
             ) : (
               <>
                 <ImageOff className="w-10 h-10 mb-2" />
                 <p className="text-sm">No hero image selected</p>
-                <p className="text-xs mt-1">Drag a screenshot here, click Upload Hero, or select from candidates below</p>
+                <p className="text-xs mt-1">
+                  {onClipboardPaste ? 'Click to paste clipboard image, drag a file here, or click Upload Hero above' : 'Drag a screenshot here, click Upload Hero, or select from candidates below'}
+                </p>
               </>
             )}
           </div>

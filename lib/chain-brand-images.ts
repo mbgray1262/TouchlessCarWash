@@ -27,8 +27,9 @@ export const CHAIN_BRAND_IMAGES: Record<string, string> = {
   // BellStores Touch Free tunnel image — hosted in Supabase (104 KB)
   'BellStores': `${STORAGE}/bellstores.png`,
 
-  // Power Market: no branded car wash photo available (website has video only, no tunnel photos).
-  // Listings fall back to per-location Google photo or street view.
+  // Power Market: exterior car wash building with "CAR WASH" red-on-white signage.
+  // Source: pwrmarket.com Facebook upload. Hosted in Supabase (289 KB).
+  'Power Market': `${STORAGE}/power-market.jpg`,
 
   // BP gas station canopy with BP sunflower logo — from Monee, IL location. 1600×900. Hosted in Supabase (251 KB).
   'BP': `${STORAGE}/bp.jpg`,
