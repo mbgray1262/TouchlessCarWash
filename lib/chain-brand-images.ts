@@ -17,9 +17,8 @@ export const CHAIN_BRAND_IMAGES: Record<string, string> = {
   // Source: circlek.com/us/holiday-station/car-wash (header image)
   'Holiday Stationstores': 'https://www.circlek.com/sites/default/files/2024-05/car_wash_header_002-min.png',
 
-  // TODO: Find a good photo — pwrmarket.com only has a video embed, no static photo.
-  // Options: use Google Street View of a Power Market wash, or upload a manual photo.
-  'Power Market': '',
+  // Source: best available photo from Redding, CA Power Market (stored in Supabase)
+  'Power Market': 'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/93883d70-f945-4bdb-8fb9-e238e6f4d85b/google-1774913769885.jpg',
 
   // Source: kwiktrip.com/carwash (hero image)
   'Kwik Trip': 'https://www.kwiktrip.com/wordpress/wp-content/uploads/2024/01/CarWash_Hero.jpg',
