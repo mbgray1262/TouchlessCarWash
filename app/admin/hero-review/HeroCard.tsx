@@ -259,8 +259,11 @@ export function HeroCard({
 
   const chainBrandImage = listing.hero_image_source === 'chain_brand'
     ? getChainBrandImage(listing.parent_chain) : null;
-  const displayHero = chainBrandImage ?? listing.hero_image;
-  const hasHero = !!displayHero;
+  const displayHero = chainBrandImage ?? listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
+  const hasHero = !!listing.hero_image;
+
+  const [heroImgFailed, setHeroImgFailed] = useState(false);
+  useEffect(() => { setHeroImgFailed(false); }, [displayHero]);
   // Use normalized URLs to catch same photo at different resolutions (w800 vs w1600)
   const replacementBases = new Set(replacements.map(r => normalizePhotoUrl(r.url)));
   const heroBase = displayHero ? normalizePhotoUrl(displayHero) : null;
@@ -408,7 +411,7 @@ export function HeroCard({
       className={`
         relative rounded-xl overflow-hidden border-2 transition-all duration-200 outline-none cursor-pointer
         ${isFocused ? 'border-orange-400 shadow-lg shadow-orange-100' : 'border-gray-200 hover:border-gray-300'}
-        ${!hasHero ? 'opacity-60' : ''}
+        ${!displayHero || heroImgFailed ? 'opacity-60' : ''}
         ${listing.flagged ? 'ring-2 ring-amber-400 ring-offset-1' : ''}
       `}
     >
@@ -421,14 +424,14 @@ export function HeroCard({
       />
 
       <div className="relative bg-gray-100 h-48 overflow-hidden group/hero">
-        {displayHero ? (
+        {displayHero && !heroImgFailed ? (
           <>
             <img
               src={displayHero}
               alt={listing.name}
               loading="lazy"
               className="w-full h-full object-cover"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              onError={() => setHeroImgFailed(true)}
             />
             <button
               onClick={(e) => {
