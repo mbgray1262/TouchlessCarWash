@@ -257,7 +257,9 @@ export function HeroCard({
     }
   }, [isFocused]);
 
-  const chainBrandImage = listing.hero_image_source === 'chain_brand'
+  // Use brand image for any listing with a known parent_chain (regardless of hero_image_source),
+  // unless a manual photo has been explicitly approved (hero_image_source === 'manual').
+  const chainBrandImage = listing.hero_image_source !== 'manual'
     ? getChainBrandImage(listing.parent_chain) : null;
   const displayHero = chainBrandImage ?? listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
   const hasHero = !!listing.hero_image;

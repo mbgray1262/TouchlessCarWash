@@ -245,7 +245,7 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   const topAmenities = (listing.amenities || []).slice(0, 3).join(', ');
   const amenityPart = topAmenities ? ` Touch-free, brushless car wash offering ${topAmenities}.` : '';
   const canonicalUrl = `${SITE_URL}/state/${params.state}/${params.city}/${params.slug}`;
-  const chainBrandImageMeta = listing.touchless_verified === 'chain' && listing.hero_image_source !== 'manual'
+  const chainBrandImageMeta = listing.hero_image_source !== 'manual'
     ? getChainBrandImage(listing.parent_chain) : null;
   const rawHeroImage = chainBrandImageMeta ?? listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
   const heroImage = rawHeroImage ? ensureHttps(rawHeroImage) : null;
@@ -446,7 +446,7 @@ function buildLocalBusinessSchema(listing: Listing, canonicalUrl: string, hours:
     };
   }
 
-  const chainBrandImageSchema = listing.touchless_verified === 'chain' && listing.hero_image_source !== 'manual'
+  const chainBrandImageSchema = listing.hero_image_source !== 'manual'
     ? getChainBrandImage(listing.parent_chain) : null;
   const heroImage = chainBrandImageSchema ?? listing.hero_image ?? listing.google_photo_url ?? null;
   if (heroImage) schema.image = heroImage;
@@ -906,7 +906,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
   const cityName = unslugCity(params.city);
   const todayKey = getTodayKey();
 
-  const chainBrandImage = listing.touchless_verified === 'chain' && listing.hero_image_source !== 'manual'
+  const chainBrandImage = listing.hero_image_source !== 'manual'
     ? getChainBrandImage(listing.parent_chain) : null;
   const heroImage = chainBrandImage ?? listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
   const logoImage = listing.logo_photo ?? listing.google_logo_url ?? null;
