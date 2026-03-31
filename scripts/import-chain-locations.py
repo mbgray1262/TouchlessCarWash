@@ -23,6 +23,15 @@ Logs to: scripts/import-chain.log
 """
 import os, json, re, ssl, urllib.request, urllib.error, time, datetime, subprocess
 
+def upscale_google_photo(url: str | None) -> str | None:
+    """Replace low-res size suffix on Google Photos URLs with w1600-h1200."""
+    if not url:
+        return url
+    if 'googleusercontent.com' in url or 'lh3.google' in url:
+        base = re.sub(r'=[^/=]+$', '', url)
+        return f'{base}=w1600-h1200'
+    return url
+
 ssl_ctx = ssl.create_default_context()
 ssl_ctx.check_hostname = False
 ssl_ctx.verify_mode = ssl.CERT_NONE
@@ -800,7 +809,7 @@ def lookup_location(chain_name, address, city, state):
     zip_ = addr_info.get('zip') or ''
     street = (item.get('address') or address).split(',')[0].strip()
     hours = parse_hours(item.get('work_hours'))
-    main_image = item.get('main_image') or None
+    main_image = upscale_google_photo(item.get('main_image') or None)
     price_level = item.get('price_level')
     price_range = {1:'$',2:'$$',3:'$$$',4:'$$$$'}.get(price_level)
 
