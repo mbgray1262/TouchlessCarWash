@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { Camera, Wrench, Trash2, Play, Loader2, Check, X, Undo2, ChevronDown, ChevronUp, ExternalLink, Filter, ChevronLeft, ChevronRight, ScanLine } from 'lucide-react';
 import { getStateSlug, slugify } from '@/lib/constants';
 import { FastCurationModal } from './FastCurationModal';
+import { getChainBrandImage } from '@/lib/chain-brand-images';
 
 const CONFIDENCE_COLORS: Record<string, string> = {
   high: 'bg-green-100 text-green-700',
@@ -620,12 +621,35 @@ export default function PhotoAuditPage() {
                         </button>
                       </div>
                     ) : (
-                      <button
-                        onClick={() => openEditor(r.listing_id)}
-                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-orange-500 hover:bg-orange-600 text-white"
-                      >
-                        Add Photos
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {(() => {
+                          const brandUrl = getChainBrandImage(r.listing_parent_chain ?? null);
+                          if (!brandUrl) return null;
+                          return (
+                            <button
+                              onClick={async () => {
+                                await supabase.from('listings').update({
+                                  hero_image: brandUrl,
+                                  hero_image_source: 'chain_brand',
+                                  photo_audited_at: new Date().toISOString(),
+                                }).eq('id', r.listing_id);
+                                removeFromResults(r.listing_id);
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-500 hover:bg-purple-600 text-white"
+                              title={`Use ${r.listing_parent_chain} brand image`}
+                            >
+                              <img src={brandUrl} alt="" className="w-5 h-5 rounded object-cover" />
+                              Use Brand Image
+                            </button>
+                          );
+                        })()}
+                        <button
+                          onClick={() => openEditor(r.listing_id)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-orange-500 hover:bg-orange-600 text-white"
+                        >
+                          Add Photos
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>

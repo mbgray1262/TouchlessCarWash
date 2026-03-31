@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, supabaseAnonKey } from '@/lib/supabase';
 
 export interface AuditResult {
   id: string;
@@ -26,6 +26,7 @@ export interface AuditResult {
   listing_city?: string;
   listing_state?: string;
   listing_slug?: string;
+  listing_parent_chain?: string | null;
 }
 
 export interface BatchJob {
@@ -176,12 +177,12 @@ export function usePhotoAudit() {
       // Fetch both groups and merge
       const [noHeroListings, pendingListings] = await Promise.all([
         supabase.from('listings')
-          .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at')
+          .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
           .eq('is_touchless', true).is('hero_image', null)
           .order('photo_audited_at', { ascending: false, nullsFirst: false })
           .limit(PAGE_SIZE),
         supabase.from('listings')
-          .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at')
+          .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
           .eq('is_touchless', true).not('hero_image', 'is', null)
           .eq('hero_image_source', 'google')
           .not('photo_audited_at', 'is', null)
@@ -220,6 +221,7 @@ export function usePhotoAudit() {
         raw_response: null,
         google_photos_added: 0,
         google_photos_screened: 0,
+        listing_parent_chain: l.parent_chain ?? null,
       });
 
       const allResults: AuditResult[] = [];
@@ -576,7 +578,7 @@ export function usePhotoAudit() {
       }
       // Fall back to anon key if session is missing/expired — the edge function
       // uses the service role key internally so user JWT is only needed for auth middleware
-      const token = session?.access_token ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      const token = session?.access_token ?? supabaseAnonKey;
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/batch-photo-audit`, {
         method: 'POST',
@@ -595,7 +597,7 @@ export function usePhotoAudit() {
       });
 
       if (!res.ok && res.status === 401) {
-        setRunProgress('Error: Authentication failed — please sign out and sign back in.');
+        setRunProgress('Error: Authentication failed (401) — please sign out and sign back in to refresh your session.');
         setRunning(false);
         return;
       }

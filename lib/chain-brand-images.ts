@@ -16,9 +16,9 @@
 const STORAGE = 'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/chain-brands';
 
 export const CHAIN_BRAND_IMAGES: Record<string, string> = {
-  // Holiday/Circle K car wash building exterior at dusk — red & tan brand colors, "EXIT CAR WASH" signage visible.
-  // Architectural photo of Ledgeview WI location. Hosted in Supabase (565 KB).
-  'Holiday Stationstores': `${STORAGE}/holiday-stationstores.png`,
+  // Holiday Stationstores car wash building exterior — from Rogers, MN location hero.
+  // Hosted in Supabase (226 KB).
+  'Holiday Stationstores': `${STORAGE}/holiday-stationstores.jpg`,
 
   // Kwik Trip car wash entrance building — red Kwik Trip fascia stripe, "CARWASH ENTRANCE" signage.
   // Hosted in Supabase (123 KB).
