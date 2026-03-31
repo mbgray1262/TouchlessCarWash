@@ -34,3 +34,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Claude Code worktrees and local state
+.claude/worktrees/
+.netlify/
+
+# Script logs and progress files (local only)
+scripts/*.log
+scripts/*-progress.json
