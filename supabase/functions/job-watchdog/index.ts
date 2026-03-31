@@ -234,6 +234,34 @@ Deno.serve(async (req: Request) => {
       report.push(jobEntry);
     }
 
+    // --- Auto-start photo enrichment for new no-hero listings ---
+    // If no photo_enrich job is currently running, check for touchless listings
+    // that have no hero image. If any exist, automatically start enrichment
+    // (capped at 50 per run to avoid overwhelming the pipeline).
+    const { count: runningPhotoJobs } = await supabase
+      .from('photo_enrich_jobs')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'running');
+
+    if ((runningPhotoJobs ?? 0) === 0) {
+      const { count: noHeroCount } = await supabase
+        .from('listings')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_touchless', true)
+        .is('hero_image', null)
+        .neq('hero_image_source', 'chain_brand');
+
+      if ((noHeroCount ?? 0) > 0) {
+        const autoStartUrl = `${supabaseUrl}/functions/v1/photo-enrich`;
+        await fetch(autoStartUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anonKey}` },
+          body: JSON.stringify({ action: 'start', total_requested: Math.min(noHeroCount ?? 0, 50) }),
+        }).catch(() => {});
+        report.push({ type: 'photo_enrich_autostart', no_hero_count: noHeroCount, action: 'STARTED new job' });
+      }
+    }
+
     const checked_at = new Date().toISOString();
     return new Response(
       JSON.stringify({ checked_at, jobs_checked: report.length, report }),
