@@ -205,7 +205,16 @@ export function useFastCuration(listingId: string) {
         // Keep pre-loaded items (with user tags), add new discovered ones
         return [...prev, ...newOnly];
       });
-      setSourceCounts(data.sources);
+
+      // Report VALID candidate counts per source (not raw server counts which include
+      // broken/tiny images that were filtered out by the frontend validation step).
+      const validCounts = { ...data.sources };
+      validCounts.google_maps    = filteredCandidates.filter(c => c.source === 'google_maps').length;
+      validCounts.google_places  = filteredCandidates.filter(c => c.source === 'google_places').length;
+      validCounts.bing_search    = filteredCandidates.filter(c => c.source === 'bing_search').length;
+      validCounts.website        = filteredCandidates.filter(c => c.source === 'website').length;
+      validCounts.street_view    = filteredCandidates.filter(c => c.source === 'street_view' || c.source === 'capture').length;
+      setSourceCounts(validCounts);
     } catch (err) {
       console.error('Photo discovery failed:', err);
     } finally {
