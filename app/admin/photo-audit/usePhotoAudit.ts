@@ -561,7 +561,8 @@ export function usePhotoAudit() {
   const runBatch = useCallback(async (limit: number, dryRun: boolean, includeGoogle: boolean) => {
     setRunning(true);
     const isNoHero = viewFilter === 'no_hero';
-    setRunProgress(`Starting batch job (${limit} listings, ${isNoHero ? 'NO HERO MODE' : dryRun ? 'DRY RUN' : 'LIVE'})...`);
+    const isManualReview = !isNoHero && !includeGoogle;
+    setRunProgress(`Starting batch job (${limit} listings, ${isNoHero ? 'NO HERO MODE' : isManualReview ? 'MANUAL REVIEW — no AI' : dryRun ? 'DRY RUN' : 'LIVE'})...`);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -580,6 +581,8 @@ export function usePhotoAudit() {
           dry_run: dryRun,
           include_google_photos: isNoHero ? true : includeGoogle,
           no_hero_mode: isNoHero,
+          // manual_review: no Google photos + not no_hero mode → queue all listings, no AI, no auto-apply
+          manual_review: !isNoHero && !includeGoogle,
         }),
       });
 

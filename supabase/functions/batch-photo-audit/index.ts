@@ -510,6 +510,7 @@ async function processOneListing(
   includeGooglePhotos: boolean,
   dryRun: boolean,
   noHeroMode: boolean = false,
+  manualReview: boolean = false,
 ): Promise<{
   equipmentDetected: number;
   heroReplaced: number;
@@ -589,6 +590,26 @@ async function processOneListing(
       .eq('id', listing.id);
     // Do NOT auto-apply — user reviews all No Hero results
     return { equipmentDetected, heroReplaced, photosRemoved, autoApplied: 0, googlePhotosAdded, googlePhotosScreened };
+  }
+
+  // ---- MANUAL REVIEW MODE: No AI, no auto-apply — just queue for human review ----
+  if (manualReview && !dryRun) {
+    await supabase.from('photo_audit_results').insert({
+      listing_id: listing.id,
+      hero_quality: listing.hero_image ? 'good' : 'missing',
+      suggested_hero_url: null,
+      suggested_hero_reason: 'Manual review — no AI processing',
+      photos_to_remove: [],
+      raw_response: { manual_review: true },
+      reviewed: false,
+      applied: false,
+      google_photos_added: 0,
+      google_photos_screened: 0,
+    });
+    await supabase.from('listings')
+      .update({ photo_audited_at: new Date().toISOString() })
+      .eq('id', listing.id);
+    return { equipmentDetected: 0, heroReplaced: 0, photosRemoved: 0, autoApplied: 0, googlePhotosAdded: 0, googlePhotosScreened: 0 };
   }
 
   // ---- STEP 2: Collect all photos for Sonnet audit ----
@@ -764,9 +785,12 @@ Deno.serve(async (req) => {
   let dryRun: boolean = body.dry_run ?? false;
   let includeGooglePhotos: boolean = body.include_google_photos ?? true;
   let noHeroMode: boolean = body.no_hero_mode ?? false;
+  let manualReview: boolean = body.manual_review ?? false;
 
   // In no_hero mode, always force Google Photos on (no point running without it)
   if (noHeroMode) includeGooglePhotos = true;
+  // In manual_review mode, always force Google Photos off (no API calls)
+  if (manualReview) includeGooglePhotos = false;
 
   // Guard: reject nonsensical batch sizes (not applicable when continuing an existing job)
   if (!jobId && totalRequested <= 0) {
@@ -776,7 +800,7 @@ Deno.serve(async (req) => {
   // Load or create job
   interface JobRecord {
     id: string; status: string; total_requested: number; total_processed: number;
-    dry_run: boolean; include_google_photos: boolean; no_hero_mode?: boolean;
+    dry_run: boolean; include_google_photos: boolean; no_hero_mode?: boolean; manual_review?: boolean;
     equipment_detected: number; heroes_replaced: number; photos_removed: number;
     auto_applied: number; google_photos_added: number; google_photos_screened: number;
     error_message: string | null;
@@ -794,7 +818,9 @@ Deno.serve(async (req) => {
     dryRun = job.dry_run;
     includeGooglePhotos = job.include_google_photos;
     noHeroMode = job.no_hero_mode ?? false;
+    manualReview = job.manual_review ?? false;
     if (noHeroMode) includeGooglePhotos = true;
+    if (manualReview) includeGooglePhotos = false;
   } else if (body.total_requested || body.limit) {
     // Create a new job and return immediately — frontend poll will trigger first chunk
     const { data, error: insertErr } = await supabase.from('batch_audit_jobs').insert({
@@ -802,6 +828,7 @@ Deno.serve(async (req) => {
       dry_run: dryRun,
       include_google_photos: includeGooglePhotos,
       no_hero_mode: noHeroMode,
+      manual_review: manualReview,
       status: 'running',
     }).select('*').single();
     if (insertErr || !data) {
@@ -813,7 +840,7 @@ Deno.serve(async (req) => {
 
   // Now that job settings are resolved, compute chunk size and get API keys
   // No Hero mode: process 3 at a time for faster feedback (each listing updates the job record)
-  const chunkSize = noHeroMode ? 3 : (includeGooglePhotos ? CHUNK_SIZE_GOOGLE : CHUNK_SIZE_NO_GOOGLE);
+  const chunkSize = manualReview ? 50 : noHeroMode ? 3 : (includeGooglePhotos ? CHUNK_SIZE_GOOGLE : CHUNK_SIZE_NO_GOOGLE);
 
   let googleApiKey = '';
   if (includeGooglePhotos) {
@@ -841,7 +868,11 @@ Deno.serve(async (req) => {
     .select('id, name, hero_image, photos, google_photo_url, street_view_url, equipment_brand, blocked_photos, google_place_id, photo_enrichment_attempted_at')
     .eq('is_touchless', true);
 
-  if (noHeroMode) {
+  if (manualReview) {
+    // Manual review mode: queue ALL unaudited touchless listings (with or without hero)
+    // No AI, no auto-apply — every listing goes to the "All" tab for human review
+    listQuery = listQuery.is('photo_audited_at', null);
+  } else if (noHeroMode) {
     // No Hero mode: find listings without hero images that haven't been processed yet
     // Once processed, they stay on the No Hero tab until user approves them
     listQuery = listQuery.is('hero_image', null).is('photo_audited_at', null);
@@ -881,7 +912,7 @@ Deno.serve(async (req) => {
     }
 
     chunkProcessed++;
-    const stats = await processOneListing(supabase, listing as Record<string, unknown>, anthropicKey, googleApiKey, includeGooglePhotos, dryRun, noHeroMode);
+    const stats = await processOneListing(supabase, listing as Record<string, unknown>, anthropicKey, googleApiKey, includeGooglePhotos, dryRun, noHeroMode, manualReview);
     chunkEquipment += stats.equipmentDetected;
     chunkHeroes += stats.heroReplaced;
     chunkPhotosRemoved += stats.photosRemoved;
