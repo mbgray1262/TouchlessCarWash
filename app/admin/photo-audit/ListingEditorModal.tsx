@@ -157,11 +157,15 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
 
   const allPhotos = listing.photos ?? [];
   const heroBase = listing.hero_image;
-  const galleryPhotos = allPhotos.filter(p => p !== heroBase);
+  // Include google_photo_url and street_view_url in the gallery display — these appear
+  // on the public listing page even when not in the photos array, so show them here too.
+  const autoPhotos = [listing.google_photo_url, listing.street_view_url]
+    .filter((u): u is string => !!u && u !== heroBase && !allPhotos.includes(u));
+  const galleryPhotos = [...allPhotos.filter(p => p !== heroBase), ...autoPhotos];
 
   // ─── Actions ────────────────────────────────────────────────────
 
-  const setAsHero = async (url: string, source: string = 'gallery') => {
+  const setAsHero = async (url: string, _source: string = 'gallery') => {
     setSaving(true);
     const oldHero = listing.hero_image;
     const currentPhotos = listing.photos ?? [];
@@ -174,9 +178,12 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
       updatedPhotos = [url, ...updatedPhotos];
     }
 
+    // Always mark as 'manual' — a human explicitly chose this photo.
+    // Without 'manual', chain brand images (BP, Holiday, Kwik Trip) override this
+    // location-specific hero on the public listing page.
     await supabase.from('listings').update({
       hero_image: url,
-      hero_image_source: source,
+      hero_image_source: 'manual',
       photos: updatedPhotos,
     }).eq('id', listing.id);
 

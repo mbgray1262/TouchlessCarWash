@@ -35,6 +35,7 @@ interface ListingData {
   hero_image_source: string | null;
   photos: string[] | null;
   street_view_url: string | null;
+  google_photo_url: string | null;
   blocked_photos: string[] | null;
   equipment_brand: string | null;
   equipment_model: string | null;
@@ -72,7 +73,7 @@ export function useFastCuration(listingId: string) {
   const loadListing = useCallback(async () => {
     const { data } = await supabase
       .from('listings')
-      .select('id, name, city, state, slug, latitude, longitude, google_place_id, website, hero_image, hero_image_source, photos, street_view_url, blocked_photos, equipment_brand, equipment_model, touchless_verified, touchless_evidence')
+      .select('id, name, city, state, slug, latitude, longitude, google_place_id, website, hero_image, hero_image_source, photos, street_view_url, google_photo_url, blocked_photos, equipment_brand, equipment_model, touchless_verified, touchless_evidence')
       .eq('id', listingId)
       .maybeSingle();
     if (data) {
@@ -254,6 +255,28 @@ export function useFastCuration(listingId: string) {
           });
         }
       });
+      // Also show google_photo_url and street_view_url as untagged candidates so the user
+      // can see them — the public listing page always appends these to the gallery, so
+      // they'd show as "surprise" photos if not shown here.
+      const existingUrls = new Set([listing.hero_image, ...(listing.photos ?? [])].filter(Boolean));
+      if (listing.google_photo_url && !existingUrls.has(listing.google_photo_url)) {
+        existing.push({
+          id: 'existing-google-photo',
+          url: listing.google_photo_url,
+          source: 'existing',
+          label: 'Google photo (auto)',
+          tag: null,
+        });
+      }
+      if (listing.street_view_url && !existingUrls.has(listing.street_view_url)) {
+        existing.push({
+          id: 'existing-street-view',
+          url: listing.street_view_url,
+          source: 'existing',
+          label: 'Street view (auto)',
+          tag: null,
+        });
+      }
       if (existing.length > 0) setCandidates(existing);
       // Then: discover external photos (adds to candidates)
       discoverPhotos();
@@ -458,8 +481,10 @@ export function useFastCuration(listingId: string) {
       };
 
       if (heroPhoto) {
-        updateData.hero_image_source = heroPhoto.source === 'google_places' ? 'google' :
-          heroPhoto.source === 'capture' ? 'street_view' : heroPhoto.source;
+        // Always write 'manual' — the user explicitly chose this photo.
+        // Without 'manual', chain brand images (BP, Holiday, Kwik Trip) take priority
+        // over a location-specific hero on the public listing page.
+        updateData.hero_image_source = 'manual';
       }
 
       // equipment_photo column doesn't exist yet — store in classification_source for now
