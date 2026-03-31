@@ -29,6 +29,9 @@ export const CHAIN_BRAND_IMAGES: Record<string, string> = {
 
   // Power Market: no branded car wash photo available (website has video only, no tunnel photos).
   // Listings fall back to per-location Google photo or street view.
+
+  // BP gas station canopy with BP sunflower logo — from Monee, IL location. 1600×900. Hosted in Supabase (251 KB).
+  'BP': `${STORAGE}/bp.jpg`,
 };
 
 /**
