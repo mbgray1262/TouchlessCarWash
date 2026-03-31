@@ -51,6 +51,11 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
   const dragCounter = useRef(0);
   const awaitingClipboard = useRef(false);
   const [showClipboardBanner, setShowClipboardBanner] = useState(false);
+  const candidatesRef = useRef<HTMLDivElement>(null);
+
+  const scrollToCandidates = () => {
+    candidatesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   // Process a clipboard image: auto-crop to 16:9 and set as hero
   const processClipboardImage = useCallback(async (blob: Blob) => {
@@ -448,14 +453,14 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
             {/* Source counts + actions bar */}
             <div className="px-6 py-3 border-b bg-white flex items-center gap-4 flex-wrap">
               {sourceCounts && (
-                <div className="flex gap-3 text-xs text-gray-500">
-                  {sourceCounts.existing > 0 && <span className="bg-gray-100 px-2 py-1 rounded">{sourceCounts.existing} existing</span>}
-                  {sourceCounts.yelp > 0 && <span className="bg-red-50 text-red-600 px-2 py-1 rounded">{sourceCounts.yelp} Yelp</span>}
-                  {sourceCounts.google_maps > 0 && <span className="bg-blue-50 text-blue-600 px-2 py-1 rounded">{sourceCounts.google_maps} Google Maps</span>}
-                  {sourceCounts.google_places > 0 && <span className="bg-blue-50 text-blue-600 px-2 py-1 rounded">{sourceCounts.google_places} Google API</span>}
-                  {sourceCounts.bing_search > 0 && <span className="bg-cyan-50 text-cyan-600 px-2 py-1 rounded">{sourceCounts.bing_search} Bing</span>}
-                  {sourceCounts.website > 0 && <span className="bg-teal-50 text-teal-600 px-2 py-1 rounded">{sourceCounts.website} Website</span>}
-                  {sourceCounts.street_view > 0 && <span className="bg-orange-50 text-orange-600 px-2 py-1 rounded">Street View</span>}
+                <div className="flex gap-3 text-xs text-gray-500 flex-wrap">
+                  {sourceCounts.existing > 0 && <button onClick={scrollToCandidates} className="bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded cursor-pointer transition-colors" title="Click to scroll to photos">{sourceCounts.existing} existing ↓</button>}
+                  {sourceCounts.yelp > 0 && <button onClick={scrollToCandidates} className="bg-red-50 text-red-600 hover:bg-red-100 px-2 py-1 rounded cursor-pointer transition-colors" title="Click to scroll to photos">{sourceCounts.yelp} Yelp ↓</button>}
+                  {sourceCounts.google_maps > 0 && <button onClick={scrollToCandidates} className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-2 py-1 rounded cursor-pointer transition-colors" title="Click to scroll to photos">{sourceCounts.google_maps} Google Maps ↓</button>}
+                  {sourceCounts.google_places > 0 && <button onClick={scrollToCandidates} className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-2 py-1 rounded cursor-pointer transition-colors" title="Click to scroll to photos">{sourceCounts.google_places} Google API ↓</button>}
+                  {sourceCounts.bing_search > 0 && <button onClick={scrollToCandidates} className="bg-cyan-50 text-cyan-600 hover:bg-cyan-100 px-2 py-1 rounded cursor-pointer transition-colors" title="Click to scroll to photos">{sourceCounts.bing_search} Bing ↓</button>}
+                  {sourceCounts.website > 0 && <button onClick={scrollToCandidates} className="bg-teal-50 text-teal-600 hover:bg-teal-100 px-2 py-1 rounded cursor-pointer transition-colors" title="Click to scroll to photos">{sourceCounts.website} Website ↓</button>}
+                  {sourceCounts.street_view > 0 && <button onClick={scrollToCandidates} className="bg-orange-50 text-orange-600 hover:bg-orange-100 px-2 py-1 rounded cursor-pointer transition-colors" title="Click to scroll to photos">Street View ↓</button>}
                 </div>
               )}
               <div className="flex gap-2 ml-auto">

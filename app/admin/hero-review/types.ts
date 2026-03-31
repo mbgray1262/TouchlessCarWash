@@ -1,4 +1,4 @@
-export type HeroSource = 'gallery' | 'google' | 'street_view' | 'website' | 'chain_brand' | null;
+export type HeroSource = 'gallery' | 'google' | 'street_view' | 'website' | 'chain_brand' | 'manual' | null;
 
 export type FilterSource = 'all' | 'gallery' | 'google' | 'street_view' | 'website' | 'none';
 

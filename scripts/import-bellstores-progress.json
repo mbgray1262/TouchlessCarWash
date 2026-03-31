@@ -1,0 +1,224 @@
+{
+  "processed": [
+    "1261 w. maple st|hartville|OH",
+    "3985 everhard rd nw|canton|OH",
+    "2424 akron rd|wooster|OH",
+    "208 s. mill st|dalton|OH",
+    "3917 wales ave nw|massillon|OH",
+    "519 lincoln way west|massillon|OH",
+    "120 wabash st|brewster|OH",
+    "108 lake ave ne|massillon|OH",
+    "4141 erie st south|massillon|OH",
+    "425 w. high st|orrville|OH",
+    "2491 w. state st|alliance|OH",
+    "15927 e. main st|mt. eaton|OH",
+    "1011 sugarbush dr|ashland|OH",
+    "7467 state route 250 nw|strasburg|OH",
+    "102 e. nassau st|east canton|OH",
+    "132 w. milltown rd|wooster|OH",
+    "2240 columbus rd|wooster|OH",
+    "300 w. sandusky st|fredericktown|OH",
+    "7200 sawmill rd|columbus|OH",
+    "5501 fisher rd|columbus|OH",
+    "1923 oh-60|ashland|OH",
+    "201 w. ohio ave|dover|OH",
+    "4716 state route 39|millersburg|OH",
+    "450a canal street se|bolivar|OH",
+    "1215 west main cross street|findlay|OH",
+    "7397 canton road nw|malvern|OH",
+    "8015 hills and dales rd nw|massillon|OH",
+    "507 crawford street|martins ferry|OH",
+    "102 mccauley drive|uhrichsville|OH",
+    "246 marietta street|st. clairsville|OH",
+    "6356 market ave n|canton|OH",
+    "220 s. columbus ave|wooster|OH",
+    "4105 cleveland ave sw|canton|OH",
+    "2506 locust st ne|canal fulton|OH",
+    "100 commercial ave se|new philadelphia|OH"
+  ],
+  "inserted": [
+    {
+      "id": "14df6859-f045-4d72-9627-0b4581d5051e",
+      "name": "BellStores",
+      "city": "Canton"
+    },
+    {
+      "id": "f793703c-980c-454d-8284-a3c9ce79486f",
+      "name": "BellStores",
+      "city": "Wooster"
+    },
+    {
+      "id": "8d260b34-4c0e-403f-be99-62f9fb9e61b4",
+      "name": "BellStores",
+      "city": "Massillon"
+    },
+    {
+      "id": "c87e9a8a-9536-46d3-a8e8-86494fce930c",
+      "name": "BellStores",
+      "city": "Massillon"
+    },
+    {
+      "id": "572738b4-8b97-4ae3-8667-68d4302d4894",
+      "name": "BellStores",
+      "city": "Brewster"
+    },
+    {
+      "id": "0b4d7a72-c878-4337-8342-cd1d53403810",
+      "name": "BellStores",
+      "city": "Massillon"
+    },
+    {
+      "id": "9fc873a9-40b3-47e4-9590-7bda232e5280",
+      "name": "BellStores",
+      "city": "Massillon"
+    },
+    {
+      "id": "0d2133b3-3177-4d78-9bfa-51b62fb67a20",
+      "name": "BellStores",
+      "city": "Orrville"
+    },
+    {
+      "id": "84dee839-9614-4dfc-9d0a-00ef38c205ed",
+      "name": "BellStores",
+      "city": "Alliance"
+    },
+    {
+      "id": "e9dd0ee7-1a31-486e-a91a-24ffd276eca0",
+      "name": "BellStores",
+      "city": "Mt Eaton"
+    },
+    {
+      "id": "ee2e2d2d-521e-4582-952a-73695b5a21c6",
+      "name": "BellStores",
+      "city": "Ashland"
+    },
+    {
+      "id": "fc4fbcff-43f2-4973-85b8-64c28ade2835",
+      "name": "Bellstores",
+      "city": "Strasburg"
+    },
+    {
+      "id": "cbb19d87-8e87-4be0-9c28-d3d7eb25dea2",
+      "name": "BellStores",
+      "city": "East Canton"
+    },
+    {
+      "id": "936658a7-b249-487c-883e-7523a9eb035e",
+      "name": "BellStores",
+      "city": "Wooster"
+    },
+    {
+      "id": "b909f256-b236-4975-be7e-13dbf09dfa98",
+      "name": "BellStores",
+      "city": "Wooster"
+    },
+    {
+      "id": "3f9c9087-7bb3-48ad-8f22-67f00c14b85b",
+      "name": "BellStores",
+      "city": "Fredericktown"
+    },
+    {
+      "id": "8c7082cf-1b34-4995-b1bd-26fe424e0755",
+      "name": "BellStores",
+      "city": "Columbus"
+    },
+    {
+      "id": "f828f316-d75f-4ea4-9bf0-638cbf1b52b8",
+      "name": "BellStores",
+      "city": "Columbus"
+    },
+    {
+      "id": "16592f66-5434-40f0-87e0-5f41d8b7c89f",
+      "name": "BellStores",
+      "city": "Ashland"
+    },
+    {
+      "id": "4245e04b-6a59-4d6b-9ea4-9b22e4e1afcb",
+      "name": "BellStores",
+      "city": "Dover"
+    },
+    {
+      "id": "1592f7bc-4b84-4b50-89ca-2eb7827ab29f",
+      "name": "BellStores",
+      "city": "Millersburg"
+    },
+    {
+      "id": "ddf9b6fa-da12-4b59-a06b-cc2f0cc4ddf4",
+      "name": "BellStores",
+      "city": "Bolivar"
+    },
+    {
+      "id": "57a78dfc-5316-4101-a606-3d44dcd5b1ce",
+      "name": "BellStores",
+      "city": "Findlay"
+    },
+    {
+      "id": "7c2d8837-f2bd-466b-9884-e34b7ee522b4",
+      "name": "BellStores",
+      "city": "Malvern"
+    },
+    {
+      "id": "2abf0ab7-1205-4c95-bb1f-1cffde43f171",
+      "name": "BellStores",
+      "city": "Massillon"
+    },
+    {
+      "id": "6699bccd-1162-4891-b3b5-5ff2edaa9b25",
+      "name": "BellStores",
+      "city": "Martins Ferry"
+    },
+    {
+      "id": "c10b7962-57ce-43da-9054-17725c5d764f",
+      "name": "BellStores",
+      "city": "Uhrichsville"
+    },
+    {
+      "id": "84b2c23e-e208-4dc9-81af-bc44d57bbfb1",
+      "name": "BellStores",
+      "city": "St Clairsville"
+    },
+    {
+      "id": "343824d5-1a48-40c7-80d2-185a4a49fb09",
+      "name": "BellStores",
+      "city": "Canton"
+    },
+    {
+      "id": "59cdec21-5227-4929-af3c-f562e74d4971",
+      "name": "Bellstores",
+      "city": "Wooster"
+    },
+    {
+      "id": "210510f0-c425-4fc8-8b7c-69becd18f232",
+      "name": "BellStores",
+      "city": "Canal Fulton"
+    },
+    {
+      "id": "bb87d4b4-0b9c-4f63-8002-db8d4c697ced",
+      "name": "BellStores",
+      "city": "New Philadelphia"
+    }
+  ],
+  "updated": [],
+  "skipped": [],
+  "errors": [
+    {
+      "address": "1261 W. Maple St",
+      "city": "Hartville",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "address": "208 S. Mill St",
+      "city": "Dalton",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "address": "5 W Buckeye St",
+      "error": "HTTP 409: {\"code\":\"23505\",\"details\":\"Key (google_place_id)=(ChIJm6_ouXVTN4gRyQvUNy-ltZQ) already exists.\",\"hint\":null,\"message\":\"duplicate key value violates unique constraint \\\"listings_google_place_id_unique\\"
+    },
+    {
+      "address": "4105 Cleveland Ave SW",
+      "city": "Canton",
+      "error": "DFS 40102: No Search Results."
+    }
+  ]
+}

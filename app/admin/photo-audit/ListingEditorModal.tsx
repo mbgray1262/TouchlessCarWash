@@ -192,10 +192,10 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
       action: 'replaced',
       old_hero_url: oldHero,
       new_hero_url: url,
-      new_source: source,
+      new_source: 'manual',
     });
 
-    setListing(prev => prev ? { ...prev, hero_image: url, hero_image_source: source, photos: updatedPhotos } : prev);
+    setListing(prev => prev ? { ...prev, hero_image: url, hero_image_source: 'manual', photos: updatedPhotos } : prev);
     setPreEnhance(null);
     setEnhancedPreview(null);
     revalidate();

@@ -1,0 +1,4558 @@
+{
+  "processed": [
+    "Holiday Stationstores|702 6th avenue se|aberdeen|SD",
+    "Holiday Stationstores|1 minnesota avenue s|aitkin|MN",
+    "Holiday Stationstores|650 50th avenue west|alexandria|MN",
+    "Holiday Stationstores|785 n. nokomis ne|alexandria|MN",
+    "Holiday Stationstores|285 muldoon road|anchorage|AK",
+    "Holiday Stationstores|3500 c street|anchorage|AK",
+    "Holiday Stationstores|5980 149th street|apple valley|MN",
+    "Holiday Stationstores|15550 cedar avenue|apple valley|MN",
+    "Holiday Stationstores|14113 galaxie avenue|apple valley|MN",
+    "Holiday Stationstores|1920 highway 96|arden hills|MN",
+    "Holiday Stationstores|110 ellis avenue|ashland|WI",
+    "Holiday Stationstores|7472 excelsior road|baxter|MN",
+    "Holiday Stationstores|402 belgrade blvd.|belgrade|MT",
+    "Holiday Stationstores|281 jefferson blvd.|big lake|MN",
+    "Holiday Stationstores|4041 grand ave.|billings|MT",
+    "Holiday Stationstores|790 s billings blvd|billings|MT",
+    "Holiday Stationstores|785 s 20th st w|billings|MT",
+    "Holiday Stationstores|3551 ember lane|billings|MT",
+    "Holiday Stationstores|1212 mullowney lane|billings|MT",
+    "Holiday Stationstores|3600 state street|bismarck|ND",
+    "Holiday Stationstores|3815 trenton drive|bismarck|ND",
+    "Holiday Stationstores|9933 ulysses street ne|blaine|MN",
+    "Holiday Stationstores|50 west 98th street|bloomington|MN",
+    "Holiday Stationstores|5401 w. old shakopee rd|bloomington|MN",
+    "Holiday Stationstores|1951 durston road|bozeman|MT",
+    "Holiday Stationstores|920 n splitrock blvd|brandon|SD",
+    "Holiday Stationstores|420 66th ave. n.|brooklyn center|MN",
+    "Holiday Stationstores|8517 jefferson lane north|brooklyn park|MN",
+    "Holiday Stationstores|9399 west broadway|brooklyn park|MN",
+    "Holiday Stationstores|7 n.e. 8th street|buffalo|MN",
+    "Holiday Stationstores|900 west burnsville parkway|burnsville|MN",
+    "Holiday Stationstores|12290 nicollet ave south|burnsville|MN",
+    "Holiday Stationstores|6210 109th ave no.|champlin|MN",
+    "Holiday Stationstores|501 n. bridge street|chippewa falls|WI",
+    "Holiday Stationstores|450 highway 7 se|clara city|MN",
+    "Holiday Stationstores|409 paul ave s|cologne|MN",
+    "Holiday Stationstores|4259 central ave. n.e.|columbia heights|MN",
+    "Holiday Stationstores|202 101st avenue nw|coon rapids|MN",
+    "Holiday Stationstores|13051 round lake blvd. nw|coon rapids|MN",
+    "Holiday Stationstores|8101 hadley ave. s.|cottage grove|MN",
+    "Holiday Stationstores|8610 e. point douglas road|cottage grove|MN",
+    "Holiday Stationstores|7033 jorgensen lane s|cottage grove|MN",
+    "Holiday Stationstores|5410 lakeland ave|crystal|MN",
+    "Holiday Stationstores|23736 front street|deerwood|MN",
+    "Holiday Stationstores|303 frazee street e|detroit lakes|MN",
+    "Holiday Stationstores|5430 grand avenue|duluth|MN",
+    "Holiday Stationstores|210 s 27th ave west|duluth|MN",
+    "Holiday Stationstores|1520 kenwood avenue|duluth|MN",
+    "Holiday Stationstores|3301 w. arrowhead road|duluth|MN",
+    "Holiday Stationstores|5699 miller trunk highway|duluth|MN",
+    "Holiday Stationstores|1065 diffley road|eagan|MN",
+    "Holiday Stationstores|4595 nicols road|eagan|MN",
+    "Holiday Stationstores|3044 holiday lane|eagan|MN",
+    "Holiday Stationstores|2660 eagan woods drive|eagan|MN",
+    "Holiday Stationstores|1579 cliff road|eagan|MN",
+    "Holiday Stationstores|1010 central avenue ne|east grand forks|MN",
+    "Holiday Stationstores|2109 highland avenue|eau claire|WI",
+    "Holiday Stationstores|4304 jeffers road|eau claire|WI",
+    "Holiday Stationstores|2806 golf road|eau claire|WI",
+    "Holiday Stationstores|2230 birch street|eau claire|WI",
+    "Holiday Stationstores|2940 n. clairemont avenue|eau claire|WI",
+    "Holiday Stationstores|13445 business center drive|elk river|MN",
+    "Holiday Stationstores|18823 freeport avenue|elk river|MN",
+    "Holiday Stationstores|456 west main street|ellsworth|WI",
+    "Holiday Stationstores|700 n. lincoln road|escanaba|MI",
+    "Holiday Stationstores|3040 25th street south|fargo|ND",
+    "Holiday Stationstores|1902 45th street s.|fargo|ND",
+    "Holiday Stationstores|2755 brandt drive south|fargo|ND",
+    "Holiday Stationstores|5651 36th avenue s|fargo|ND",
+    "Holiday Stationstores|5168 38th street south|fargo|ND",
+    "Holiday Stationstores|200 57th avenue ne|fridley|MN",
+    "Holiday Stationstores|3450 32nd avenue|grand forks|ND",
+    "Holiday Stationstores|4005 south washington street|grand forks|ND",
+    "Holiday Stationstores|202 east 4th street|grand rapids|MN",
+    "Holiday Stationstores|601 northwest bypass|great falls|MT",
+    "Holiday Stationstores|1442 crosstown blvd. ne|ham lake|MN",
+    "Holiday Stationstores|12370 pt. douglas dr|hastings|MN",
+    "Holiday Stationstores|8100 corner stone drive|hayden|ID",
+    "Holiday Stationstores|2517 13th ave e|hibbing|MN",
+    "Holiday Stationstores|210 s. second street|hudson|WI",
+    "Holiday Stationstores|6976 cahill avenue|inver grove heights|MN",
+    "Holiday Stationstores|9087 broderick blvd.|inver grove heights|MN",
+    "Holiday Stationstores|255 triangle lane|jordan|MN",
+    "Holiday Stationstores|215 manning avenue n.|lake elmo|MN",
+    "Holiday Stationstores|7287 161st street west|lakeville|MN",
+    "Holiday Stationstores|1536 silverstone trail|ledgeview|WI",
+    "Holiday Stationstores|504 bryden ave|lewiston|ID",
+    "Holiday Stationstores|12970 lake blvd.|lindstrom|MN",
+    "Holiday Stationstores|1704 1st avenue ne|little falls|MN",
+    "Holiday Stationstores|780 stillwater road|mahtomedi|MN",
+    "Holiday Stationstores|1901 adams street|mankato|MN",
+    "Holiday Stationstores|11201 93rd avenue north|maple grove|MN",
+    "Holiday Stationstores|280 mcknight road south|maplewood|MN",
+    "Holiday Stationstores|1535 beam avenue|maplewood|MN",
+    "Holiday Stationstores|200 w. hwy 210|mcgregor|MN",
+    "Holiday Stationstores|200 highway 55|medina|MN",
+    "Holiday Stationstores|12 aspen avenue se|menahga|MN",
+    "Holiday Stationstores|1312 w. main street|merrill|WI",
+    "Holiday Stationstores|4601 hiawatha avenue|minneapolis|MN",
+    "Holiday Stationstores|1301 industrial blvd ne|minneapolis|MN",
+    "Holiday Stationstores|3550 cedar avenue south|minneapolis|MN",
+    "Holiday Stationstores|7700 34th avenue s|minneapolis|MN",
+    "Holiday Stationstores|1624 washington avenue n.|minneapolis|MN",
+    "Holiday Stationstores|1617 broadway st. ne|minneapolis|MN",
+    "Holiday Stationstores|3301 south broadway|minot|ND",
+    "Holiday Stationstores|2325 so. reserve st.|missoula|MT",
+    "Holiday Stationstores|110 oakwood drive|monticello|MN",
+    "Holiday Stationstores|3475 28th avenue s.|moorhead|MN",
+    "Holiday Stationstores|725 30th avenue south|moorhead|MN",
+    "Holiday Stationstores|700 s. highway 65|mora|MN",
+    "Holiday Stationstores|16 highway 10 south|motley|MN",
+    "Holiday Stationstores|301 e. munising|munising|MI",
+    "Holiday Stationstores|2420 shadywood rd|navarre|MN",
+    "Holiday Stationstores|201 west county road e2|new brighton|MN",
+    "Holiday Stationstores|9456 medicine lake road|new hope|MN",
+    "Holiday Stationstores|102 10th avenue ne|new prague|MN",
+    "Holiday Stationstores|1201 west ridge road|new ulm|MN",
+    "Holiday Stationstores|5554 st. croix trail|north branch|MN",
+    "Holiday Stationstores|2255 east south avenue|north st. paul|MN",
+    "Holiday Stationstores|502 north faxon road|norwood|MN",
+    "Holiday Stationstores|3344 hadley avenue n.|oakdale|MN",
+    "Holiday Stationstores|695 w. bridge st.|owatonna|MN",
+    "Holiday Stationstores|10100 county rd #9|plymouth|MN",
+    "Holiday Stationstores|9705 schmidt lake road|plymouth|MN",
+    "Holiday Stationstores|2725 campus drive|plymouth|MN",
+    "Holiday Stationstores|12650 county road 10|plymouth|MN",
+    "Holiday Stationstores|236 broad street n|prescott|WI",
+    "Holiday Stationstores|16800 duluth ave. se|prior lake|MN",
+    "Holiday Stationstores|14350 xkimo street|ramsey|MN",
+    "Holiday Stationstores|14075 ramsey blvd.|ramsey|MN",
+    "Holiday Stationstores|1846 eglin street|rapid city|SD",
+    "Holiday Stationstores|3216 e hwy 44|rapid city|SD",
+    "Holiday Stationstores|35 omaha street|rapid city|SD",
+    "Holiday Stationstores|1610 caregiver circle|rapid city|SD",
+    "Holiday Stationstores|2460 w. chicago st.|rapid city|SD",
+    "Holiday Stationstores|900 n division street|roberts|WI",
+    "Holiday Stationstores|3225 40th avenue nw|rochester|MN",
+    "Holiday Stationstores|701 broadway avenue n|rochester|MN",
+    "Holiday Stationstores|5505 hwy 52 n|rochester|MN",
+    "Holiday Stationstores|1851 assisi dr. nw|rochester|MN",
+    "Holiday Stationstores|13028 main street|rogers|MN",
+    "Holiday Stationstores|1583 west county road c|roseville|MN",
+    "Holiday Stationstores|1550 west 4th street|rush city|MN",
+    "Holiday Stationstores|304 college avenue north|saint joseph|MN",
+    "Holiday Stationstores|1001 7th street north|sartell|MN",
+    "Holiday Stationstores|212 riverside avenue n.|sartell|MN",
+    "Holiday Stationstores|1185 s main|sauk centre|MN",
+    "Holiday Stationstores|3 north benton drive|sauk rapids|MN",
+    "Holiday Stationstores|1715 2nd avenue north|sauk rapids|MN",
+    "Holiday Stationstores|1423 2nd street n.|sauk rapids|MN",
+    "Holiday Stationstores|7800 126th st|savage|MN",
+    "Holiday Stationstores|1381 greenwood court|shakopee|MN",
+    "Holiday Stationstores|8002 old carriage court north|shakopee|MN",
+    "Holiday Stationstores|3901 eagle creek blvd.|shakopee|MN",
+    "Holiday Stationstores|6509 s. louise avenue|sioux falls|SD",
+    "Holiday Stationstores|3000 e. 26th st.|sioux falls|SD",
+    "Holiday Stationstores|1927 west 57th street|sioux falls|SD",
+    "Holiday Stationstores|7125 west 26th street|sioux falls|SD",
+    "Holiday Stationstores|3245 s. sycamore avenue|sioux falls|SD",
+    "Holiday Stationstores|7414 south minnesota avenue|sioux falls|SD",
+    "Holiday Stationstores|5212 w. 12th street|sioux falls|SD",
+    "Holiday Stationstores|8101 university ave ne|spring lake park|MN",
+    "Holiday Stationstores|3810 silver lake road ne|st. anthony|MN",
+    "Holiday Stationstores|8720 state hwy. no. 7|st. bonifacius|MN",
+    "Holiday Stationstores|905 county road 4|st. cloud|MN",
+    "Holiday Stationstores|730 s. highway 10|st. cloud|MN",
+    "Holiday Stationstores|4200 larabee avenue ne|st. michael|MN",
+    "Holiday Stationstores|629 rice street|st. paul|MN",
+    "Holiday Stationstores|200 south wabasha st|st. paul|MN",
+    "Holiday Stationstores|1345 marshall avenue|st. paul|MN",
+    "Holiday Stationstores|402 westview lane|stanley|ND",
+    "Holiday Stationstores|1101 2nd ave ne|staples|MN",
+    "Holiday Stationstores|2500 w. orleans street|stillwater|MN",
+    "Holiday Stationstores|2600 south airport road|traverse city|MI",
+    "Holiday Stationstores|1793 arboretum blvd|victoria|MN",
+    "Holiday Stationstores|1502 south 12th avenue west|virginia|MN",
+    "Holiday Stationstores|10700 10th street w|waconia|MN",
+    "Holiday Stationstores|157 south waite avenue|waite park|MN",
+    "Holiday Stationstores|107 8th ave se|watford city|ND",
+    "Holiday Stationstores|306 south 18th avenue|wausau|WI",
+    "Holiday Stationstores|2020 sheyenne street|west fargo|ND",
+    "Holiday Stationstores|1845 so. robert street|west st. paul|MN",
+    "Holiday Stationstores|1800 e county rd f|white bear lake|MN",
+    "Holiday Stationstores|5970 n. hwy 61|white bear lake|MN",
+    "Holiday Stationstores|4540 centerville road|white bear lake|MN",
+    "Holiday Stationstores|118 chandler blvd. s|williston|ND",
+    "Holiday Stationstores|113 58th street w|williston|ND",
+    "Holiday Stationstores|1408 oxford street|worthington|MN",
+    "Power Market|700 n brookhurst st|anaheim|CA",
+    "Power Market|1101 n magnolia ave|anaheim|CA",
+    "Power Market|201 s state college blvd|anaheim|CA",
+    "Power Market|1975 ponderosa st|anderson|CA",
+    "Power Market|3480 w center st|anderson|CA",
+    "Power Market|1049 s main st|angels camp|CA",
+    "Power Market|7966 walerga rd|antelope|CA",
+    "Power Market|1401 g st|arcata|CA",
+    "Power Market|421 j st|arcata|CA",
+    "Power Market|10021 combie rd|auburn|CA",
+    "Power Market|3960 grass valley hwy|auburn|CA",
+    "Power Market|3575 willow pass rd|bay point|CA",
+    "Power Market|8750 brentwood blvd|brentwood|CA",
+    "Power Market|6971 beach blvd|buena park|CA",
+    "Power Market|4051 cameron park dr|cameron park|CA",
+    "Power Market|1649 41st ave|capitola|CA",
+    "Power Market|7 carmel center pl|carmel|CA",
+    "Power Market|27800 dorris dr|carmel|CA",
+    "Power Market|5049 marconi ave|carmichael|CA",
+    "Power Market|17255 bloomfield ave|cerritos|CA",
+    "Power Market|13356 e. south st|cerritos|CA",
+    "Power Market|11004 south st|cerritos|CA",
+    "Power Market|710 e lassen ave|chico|CA",
+    "Power Market|110 e park ave|chico|CA",
+    "Power Market|1255 w east ave|chico|CA",
+    "Power Market|14088 euclid ave|chino|CA",
+    "Power Market|95 bonita rd|chula vista|CA",
+    "Power Market|221 s hacienda blvd|city of industry|CA",
+    "Power Market|12589 e highway 20|clearlake oaks|CA",
+    "Power Market|2546 east coast hwy|corona del mar|CA",
+    "Power Market|1200 northcrest dr|crescent city|CA",
+    "Power Market|1006 us highway 101 n|crescent city|CA",
+    "Power Market|900 us highway 101 n|crescent city|CA",
+    "Power Market|9500 valley view st|cypress|CA",
+    "Power Market|130 pleasant valley rd|diamond springs|CA",
+    "Power Market|8501 bond rd|elk grove|CA",
+    "Power Market|9198 elk grove florin rd|elk grove|CA",
+    "Power Market|2323 laguna blvd|elk grove|CA",
+    "Power Market|1125 4th st|eureka|CA",
+    "Power Market|2111 4th st|eureka|CA",
+    "Power Market|1310 5th st|eureka|CA",
+    "Power Market|3505 broadway st|eureka|CA",
+    "Power Market|1007 broadway st|eureka|CA",
+    "Power Market|1434 myrtle avenue|eureka|CA",
+    "Power Market|111 w harris st|eureka|CA",
+    "Power Market|3973 walnut dr|eureka|CA",
+    "Power Market|8900 madison ave|fair oaks|CA",
+    "Power Market|5361 sunrise blvd|fair oaks|CA",
+    "Power Market|4720 gold hill rd|fairfield|CA",
+    "Power Market|119 red top rd|fairfield|CA",
+    "Power Market|1024 e bidwell st|folsom|CA",
+    "Power Market|9881 greenback ln|folsom|CA",
+    "Power Market|1020 riley st|folsom|CA",
+    "Power Market|819 main st|fortuna|CA",
+    "Power Market|1791 riverwalk dr|fortuna|CA",
+    "Power Market|390 s fortuna blvd|fortuna|CA",
+    "Power Market|723 s fortuna blvd|fortuna|CA",
+    "Power Market|36979 fremont blvd|fremont|CA",
+    "Power Market|2950 nutwood ave|fullerton|CA",
+    "Power Market|860 redwood dr|garberville|CA",
+    "Power Market|1080 guadalupe st|guadalupe|CA",
+    "Power Market|604 s coast hwy|laguna beach|CA",
+    "Power Market|25991 crown valley pkwy|laguna niguel|CA",
+    "Power Market|30072 crown valley pkwy|laguna niguel|CA",
+    "Power Market|1088 lakeport blvd|lakeport|CA",
+    "Power Market|2935 lakeshore blvd|lakeport|CA",
+    "Power Market|192 lathrop rd|lathrop|CA",
+    "Power Market|671 lincoln blvd|lincoln|CA",
+    "Power Market|2330 nicolaus rd|lincoln|CA",
+    "Power Market|9811 live oak blvd|live oak|CA",
+    "Power Market|14000 ca-88|lockeford|CA",
+    "Power Market|5100 katella ave|los alamitos|CA",
+    "Power Market|11305 culver blvd|los angeles|CA",
+    "Power Market|1516 main st|los angeles|CA",
+    "Power Market|10815 national blvd|los angeles|CA",
+    "Power Market|11852 san vicente blvd|los angeles|CA",
+    "Power Market|9815 highway 53|lower lake|CA",
+    "Power Market|6282 e highway 20|lucerne|CA",
+    "Power Market|1434 w yosemite ave|manteca|CA",
+    "Power Market|3030 del monte blvd|marina|CA",
+    "Power Market|3012 howe rd|martinez|CA",
+    "Power Market|1606 central ave|mckinleyville|CA",
+    "Power Market|1551 california cir|milpitas|CA",
+    "Power Market|9700 central ave|montclair|CA",
+    "Power Market|1600 paramount blvd|montebello|CA",
+    "Power Market|7825 telegraph rd.|montebello|CA",
+    "Power Market|7501 telegraph rd.|montebello|CA",
+    "Power Market|3444 e hwy 20|nice|CA",
+    "Power Market|3519 a st|north highlands|CA",
+    "Power Market|3475 main st|oakley|CA",
+    "Power Market|656 benet rd|oceanside|CA",
+    "Power Market|3945 mission ave|oceanside|CA",
+    "Power Market|2191 vista way|oceanside|CA",
+    "Power Market|4217 arboga rd|olivehurst|CA",
+    "Power Market|1976 mcgowan pkwy|olivehurst|CA",
+    "Power Market|2970 olive hwy|oroville|CA",
+    "Power Market|687 lighthouse ave|pacific grove|CA",
+    "Power Market|1440 e washington st|petaluma|CA",
+    "Power Market|254 bailey rd|pittsburg|CA",
+    "Power Market|1805 willow pass rd|pittsburg|CA",
+    "Power Market|1515 n garey ave|pomona|CA",
+    "Power Market|1903 w holt ave|pomona|CA",
+    "Power Market|3190 w temple ave|pomona|CA",
+    "Power Market|1670 hartnell ave|redding|CA",
+    "Power Market|1495 lake blvd|redding|CA",
+    "Power Market|3122 redwood dr|redway|CA",
+    "Power Market|582 wildwood ave|rio dell|CA",
+    "Power Market|1050 sunset blvd|rocklin|CA",
+    "Power Market|1400 e roseville pkwy|roseville|CA",
+    "Power Market|10545 fairway dr|roseville|CA",
+    "Power Market|3001 foothills blvd|roseville|CA",
+    "Power Market|4231 arden wy|sacramento|CA",
+    "Power Market|4430 auburn blvd|sacramento|CA",
+    "Power Market|3300 bradshaw rd|sacramento|CA",
+    "Power Market|9680 business park dr|sacramento|CA",
+    "Power Market|8908 elder creek rd|sacramento|CA",
+    "Power Market|5597 stockton blvd|sacramento|CA",
+    "Power Market|458 e market st.|salinas|CA",
+    "Power Market|1764 n main st|salinas|CA",
+    "Power Market|417 n main st|salinas|CA",
+    "Power Market|440 w st charles st|san andreas|CA",
+    "Power Market|8210 camino santa fe|san diego|CA",
+    "Power Market|2432 coronado ave|san diego|CA",
+    "Power Market|4180 park blvd|san diego|CA",
+    "Power Market|3800 3rd st|san francisco|CA",
+    "Power Market|545 w alma ave|san jose|CA",
+    "Power Market|220 sycamore rd|san ysidro|CA",
+    "Power Market|3501 homestead rd|santa clara|CA",
+    "Power Market|2700 soquel ave|santa cruz|CA",
+    "Power Market|1732 lincoln blvd|santa monica|CA",
+    "Power Market|1330 santa monica blvd|santa monica|CA",
+    "Power Market|432 wilshire blvd|santa monica|CA",
+    "Power Market|1300 farmers ln|santa rosa|CA",
+    "Power Market|3825 santa rosa ave|santa rosa|CA",
+    "Power Market|1 hacienda dr|scotts valley|CA",
+    "Power Market|90 mt hermon rd|scotts valley|CA",
+    "Power Market|1305 s front st|soledad|CA",
+    "Power Market|1105 santa anita ave|south el monte|CA",
+    "Power Market|2986 us hwy 50|south lake tahoe|CA",
+    "Power Market|4155 suisun valley rd|suisun city|CA",
+    "Power Market|3940 n tracy blvd|tracy|CA",
+    "Power Market|12353 deerfield dr|truckee|CA",
+    "Power Market|10041 donner pass rd|truckee|CA",
+    "Power Market|31300 alvarado-niles rd|union city|CA",
+    "Power Market|501 peabody rd|vacaville|CA",
+    "Power Market|900 mason st|vacaville|CA",
+    "Power Market|223 fairgrounds dr|vallejo|CA",
+    "Power Market|425 laurel st|vallejo|CA",
+    "Power Market|251 lincoln blvd|venice|CA",
+    "Power Market|3180 jefferson blvd|west sacramento|CA",
+    "Power Market|901 east st|woodland|CA",
+    "Power Market|530 bogue rd|yuba city|CA",
+    "Power Market|790 tahoe blvd|incline village|NV",
+    "Power Market|2500 highway 66|ashland|OR",
+    "Power Market|13982 nw main st|banks|OR",
+    "Power Market|24485 highway 101 s|beaver|OR",
+    "Power Market|22025 s beavercreek rd|beavercreek|OR",
+    "Power Market|3405 n hwy 97|bend|OR",
+    "Power Market|2409 ne butler market rd|bend|OR",
+    "Power Market|2100 ne hwy 20|bend|OR",
+    "Power Market|1400 nw college way|bend|OR",
+    "Power Market|981 nw galveston ave.|bend|OR",
+    "Power Market|1123 chetco ave|brookings|OR",
+    "Power Market|16258 u.s. 101|brookings|OR",
+    "Power Market|262 se 1st ave|canby|OR",
+    "Power Market|112 redwood hwy|cave junction|OR",
+    "Power Market|1510 e pine st|central point|OR",
+    "Power Market|1065 e pine st|central point|OR",
+    "Power Market|6779 crater lake highway|central point|OR",
+    "Power Market|10596 se hwy 212|clackamas|OR",
+    "Power Market|55870 nw wilson river hwy|gales creek|OR",
+    "Power Market|701 garibaldi ave|garibaldi|OR",
+    "Power Market|19805 mcloughlin blvd|gladstone|OR",
+    "Power Market|1995 ne 6th st|grants pass|OR",
+    "Power Market|836 ne a st|grants pass|OR",
+    "Power Market|125 ne morgan ln|grants pass|OR",
+    "Power Market|104 ne morgan ln|grants pass|OR",
+    "Power Market|1044 nw 6th st|grants pass|OR",
+    "Power Market|650 redwood hwy|grants pass|OR",
+    "Power Market|1553 williams hwy|grants pass|OR",
+    "Power Market|6410 williams hwy|grants pass|OR",
+    "Power Market|945 n 5th st|jacksonville|OR",
+    "Power Market|2123 oregon ave|klamath falls|OR",
+    "Power Market|3434 s 6th st|klamath falls|OR",
+    "Power Market|2104 se 6th st.|klamath falls|OR",
+    "Power Market|52530 hwy 97|la pine|OR",
+    "Power Market|1210 sw hwy 97|madras|OR",
+    "Power Market|2232 biddle rd|medford|OR",
+    "Power Market|1325 court st|medford|OR",
+    "Power Market|417 e barnett rd|medford|OR",
+    "Power Market|1068 s riverside ave|medford|OR",
+    "Power Market|1306 springbrook rd|medford|OR",
+    "Power Market|785 stewart ave|medford|OR",
+    "Power Market|3046 se harrison st|milwaukie|OR",
+    "Power Market|13939 se mcloughlin blvd|milwaukie|OR",
+    "Power Market|36453 n hwy 101|nehalem|OR",
+    "Power Market|13001 clackamas river dr|oregon city|OR",
+    "Power Market|1511 molalla ave|oregon city|OR",
+    "Power Market|34995 brooten rd.|pacific city|OR",
+    "Power Market|730 w main st|phoenix|OR",
+    "Power Market|1137 oregon st|port orford|OR",
+    "Power Market|914 oregon st|port orford|OR",
+    "Power Market|398 nw 3rd st|prineville|OR",
+    "Power Market|2005 s hwy 97|redmond|OR",
+    "Power Market|125 depot st|rogue river|OR",
+    "Power Market|95 pine st|rogue river|OR",
+    "Power Market|345 w harvard ave|roseburg|OR",
+    "Power Market|18430 redwood hwy|selma|OR",
+    "Power Market|21222 highway 62|shady cove|OR",
+    "Power Market|56896 venture ln|sunriver|OR",
+    "Power Market|21 talent ave|talent|OR",
+    "Power Market|301 w valley view rd|talent|OR",
+    "Power Market|8160 us-97|terrebonne|OR",
+    "Power Market|303 pacific ave|tillamook|OR",
+    "Power Market|7640 highway 62|white city|OR",
+    "Power Market|692 ne main st|willamina|OR",
+    "Kwik Trip|2929 meadowlark ln|altoona|WI",
+    "Kwik Trip|116 baumbach way|altoona|WI",
+    "Kwik Trip|855 keller ave s|amery|WI",
+    "Kwik Trip|455 state hwy 64|antigo|WI",
+    "Kwik Trip|831 s superior st|antigo|WI",
+    "Kwik Trip|650 w northland ave|appleton|WI",
+    "Kwik Trip|2120 e edgewood dr|appleton|WI",
+    "Kwik Trip|4520 w greenville dr|appleton|WI",
+    "Kwik Trip|515 ellis ave|ashland|WI",
+    "Kwik Trip|2300 lakeshore dr e|ashland|WI",
+    "Kwik Trip|1814 lakeshore dr w|ashland|WI",
+    "Kwik Trip|2282 s ridge rd|ashwaubenon|WI",
+    "Kwik Trip|2499 s point rd|ashwaubenon|WI",
+    "Kwik Trip|950 curtis st|baldwin|WI",
+    "Kwik Trip|1171 wisconsin dells pkwy s|baraboo|WI",
+    "Kwik Trip|100 e industrial dr|barneveld|WI",
+    "Kwik Trip|1456 e laa salle ave|barron|WI",
+    "Kwik Trip|2006 n spring st|beaver dam|WI",
+    "Kwik Trip|1201 madison st|beaver dam|WI",
+    "Kwik Trip|1120 bellwest blvd|belleville|WI",
+    "Kwik Trip|106 n royal ave|belgium|WI",
+    "Kwik Trip|3155 prairie ave|beloit|WI",
+    "Kwik Trip|2107 1st center ave|brodhead|WI",
+    "Kwik Trip|500 falcon ridge dr|burlington|WI",
+    "Kwik Trip|1164 pine st s|burlington|WI",
+    "Kwik Trip|424 w main st|cambridge|WI",
+    "Kwik Trip|550 westgate ct|cambridge|WI",
+    "Kwik Trip|201 s 1st st|cameron|WI",
+    "Kwik Trip|1267 chippewa crossing blvd|chippewa falls|WI",
+    "Kwik Trip|12 w madison st|clintonville|WI",
+    "Kwik Trip|204 dix st|columbus|WI",
+    "Kwik Trip|459 debruin rd|combined locks|WI",
+    "Kwik Trip|1601 landmark dr|cottage grove|WI",
+    "Kwik Trip|401 w cottage grove rd|cottage grove|WI",
+    "Kwik Trip|212 us highway 141|crtiviz|WI",
+    "Kwik Trip|7372 n towne rd|deforest|WI",
+    "Kwik Trip|4848 cty hwy v|deforest|WI",
+    "Kwik Trip|4665 dalmore rd|deforest|WI",
+    "Kwik Trip|111 bohemia dr|denmark|WI",
+    "Kwik Trip|2618 monroe rd|depere|WI",
+    "Kwik Trip|1122 n bequette st|dodgeville|WI",
+    "Kwik Trip|1101 hardy st|durand|WI",
+    "Kwik Trip|201 w wall st|eagle river|WI",
+    "Kwik Trip|1506 black ave|eau claire|WI",
+    "Kwik Trip|2327 n clairemont ave|eau claire|WI",
+    "Kwik Trip|2232 otter rd|eau claire|WI",
+    "Kwik Trip|2715 golf rd|eau claire|WI",
+    "Kwik Trip|3801 gateway dr|eau claire|WI",
+    "Kwik Trip|1130 w mccarthur ave|eau claire|WI",
+    "Kwik Trip|6 w hidden trail|elkhorn|WI",
+    "Kwik Trip|6133 mckee rd|fitchburg|WI",
+    "Kwik Trip|2792 s syene rd|fitchburg|WI",
+    "Kwik Trip|1061 e johnson st|fond du lac|WI",
+    "Kwik Trip|1123 w johnson st|fond du lac|WI",
+    "Kwik Trip|665 w scott|fond du lac|WI",
+    "Kwik Trip|456 s main st|fond du lac|WI",
+    "Kwik Trip|168 n pioneer rd|fond du lac|WI",
+    "Kwik Trip|1565 madison ave|fort atkinson|WI",
+    "Kwik Trip|1680 janesville ave|fort atkinson|WI",
+    "Kwik Trip|10750 w speedway dr|franklin|WI",
+    "Kwik Trip|5040 w rawson ave|franklin|WI",
+    "Kwik Trip|w188 n10963 maple rd|germantown|WI",
+    "Kwik Trip|3721 w college ave|grand chute|WI",
+    "Kwik Trip|710 w evergreen dr|grand chute|WI",
+    "Kwik Trip|650 w northland ave|grand chute|WI",
+    "Kwik Trip|1712 e mason st|green bay|WI",
+    "Kwik Trip|840 s huron rd|green bay|WI",
+    "Kwik Trip|2400 university ave|green bay|WI",
+    "Kwik Trip|2498 lineville rd|green bay|WI",
+    "Kwik Trip|2203 s webster ave|green bay|WI",
+    "Kwik Trip|3525 humboldt rd|green bay|WI",
+    "Kwik Trip|715 w capitol dr|hartland|WI",
+    "Kwik Trip|15870 us hwy 63|hayward|WI",
+    "Kwik Trip|115 hale dr|holmen|WI",
+    "Kwik Trip|1760 temte st|holmen|WI",
+    "Kwik Trip|261 e main st|hortonville|WI",
+    "Kwik Trip|399 cardinal ln|howard|WI",
+    "Kwik Trip|2401 crest view dr|hudson|WI",
+    "Kwik Trip|520 annabelle way|hudson|WI",
+    "Kwik Trip|3123 s us hwy 51|janesville|WI",
+    "Kwik Trip|2810 e milwaukee st|janesville|WI",
+    "Kwik Trip|1919 humes rd|janesville|WI",
+    "Kwik Trip|1100 n wright rd|janesville|WI",
+    "Kwik Trip|102 collins rd|jefferson|WI",
+    "Kwik Trip|1080 remmel dr|johnson creek|WI",
+    "Kwik Trip|322 lawe st|kaukauna|WI",
+    "Kwik Trip|6300 52nd st|kenosha|WI",
+    "Kwik Trip|11350 28th st|kenosha|WI",
+    "Kwik Trip|701 schelfhout ln|kimberly|WI",
+    "Kwik Trip|4828 mormon coulee rd|la crosse|WI",
+    "Kwik Trip|506 cass st|la crosse|WI",
+    "Kwik Trip|1922 ward ave|la crosse|WI",
+    "Kwik Trip|1125 george st w|la crosse|WI",
+    "Kwik Trip|100 w 9th st n|ladysmith|WI",
+    "Kwik Trip|710 williams st|lake geneva|WI",
+    "Kwik Trip|230 s main st|lodi|WI",
+    "Kwik Trip|3602 milwaukee st|madison|WI",
+    "Kwik Trip|5440 e broadway|madison|WI",
+    "Kwik Trip|8201 watts rd|madison|WI",
+    "Kwik Trip|7602 tree ln|madison|WI",
+    "Kwik Trip|725 n high point rd|madison|WI",
+    "Kwik Trip|4402 calumet ave|manitowoc|WI",
+    "Kwik Trip|1801 marinette ave|marinette|WI",
+    "Kwik Trip|450 n hubbell ave|marshall|WI",
+    "Kwik Trip|825 n 8th st|medford|WI",
+    "Kwik Trip|625 midway rd|menasha|WI",
+    "Kwik Trip|w156 n8481 pilgrims rd|menomonee falls|WI",
+    "Kwik Trip|2219 stout rd|menomonie|WI",
+    "Kwik Trip|7400 erin st|middleton|WI",
+    "Kwik Trip|720 oneida st|minocqua|WI",
+    "Kwik Trip|2900 winnebago st|monona|WI",
+    "Kwik Trip|901 8th st|monroe|WI",
+    "Kwik Trip|100 springdale st|mt. horeb|WI",
+    "Kwik Trip|1260 east veterans way|mukwonago|WI",
+    "Kwik Trip|s65 w17700 martin dr|muskego|WI",
+    "Kwik Trip|701 s green bay rd|neenah|WI",
+    "Kwik Trip|1200 w wisconsin ave|neenah|WI",
+    "Kwik Trip|4100 s moorland rd|new berlin|WI",
+    "Kwik Trip|2100 plymouth rd|new holstein|WI",
+    "Kwik Trip|920 w washington st|new london|WI",
+    "Kwik Trip|1430 paperjack dr|new richmond|WI",
+    "Kwik Trip|7750 s howell ave|oak creek|WI",
+    "Kwik Trip|1125 e main st|omro|WI",
+    "Kwik Trip|2704 e oak ave|onalaska|WI",
+    "Kwik Trip|1130 n main st|oregon|WI",
+    "Kwik Trip|3000 w 9th ave|oshkosh|WI",
+    "Kwik Trip|3105 s washburn st|oshkosh|WI",
+    "Kwik Trip|1025 n westhaven dr|oshkosh|WI",
+    "Kwik Trip|n4650 us hwy 151|perry/randolph|WI",
+    "Kwik Trip|1020 lake ave|phillips|WI",
+    "Kwik Trip|3400 n point dr|plover|WI",
+    "Kwik Trip|826 eastern ave|plymouth|WI",
+    "Kwik Trip|2703 new pinery rd|portage|WI",
+    "Kwik Trip|930 water st|prairie du sac|WI",
+    "Kwik Trip|425 industrial park dr|prescott|WI",
+    "Kwik Trip|2610 s main st|rice lake|WI",
+    "Kwik Trip|1501 n main st|river falls|WI",
+    "Kwik Trip|1021 e green bay st|shawano|WI",
+    "Kwik Trip|3130 s business dr|sheboygan|WI",
+    "Kwik Trip|w242 hillcrest dr|slinger|WI",
+    "Kwik Trip|124 crossroads dr|somerset|WI",
+    "Kwik Trip|1225 w college ave|south milwaukee|WI",
+    "Kwik Trip|24150 us 63|spooner|WI",
+    "Kwik Trip|5004 main st|stevens point|WI",
+    "Kwik Trip|2351 us hwy 51 n|stoughton|WI",
+    "Kwik Trip|2801 caledonia rd|sturtevant|WI",
+    "Kwik Trip|1281 lakeview dr|suamico|WI",
+    "Kwik Trip|400 w main st|sun prairie|WI",
+    "Kwik Trip|2410 w main st|sun prairie|WI",
+    "Kwik Trip|3302 tower ave|superior|WI",
+    "Kwik Trip|n64 w22655 main st|sussex|WI",
+    "Kwik Trip|w229 n1400 westwood dr|sussex|WI",
+    "Kwik Trip|n3485 hwy 13|toledo|WI",
+    "Kwik Trip|406 us hwy 8|turtle lake|WI",
+    "Kwik Trip|4520 memorial dr|two rivers|WI",
+    "Kwik Trip|802 s main st|verona|WI",
+    "Kwik Trip|1200 blackhawk dr|viroqua|WI",
+    "Kwik Trip|1300 s church st|watertown|WI",
+    "Kwik Trip|1600 e moreland blvd|waukesha|WI",
+    "Kwik Trip|1201 royalton st|waupaca|WI",
+    "Kwik Trip|4400 rib mountain dr|wausau|WI",
+    "Kwik Trip|105 prairie view dr|waunakee|WI",
+    "Kwik Trip|621 w main st|waupun|WI",
+    "Kwik Trip|2990 w washington st|west bend|WI",
+    "Kwik Trip|2295 us hwy 16|west salem|WI",
+    "Kwik Trip|4015 rib mountain dr|weston|WI",
+    "Kwik Trip|715 w main st|whitewater|WI",
+    "Kwik Trip|1700 n second st|winneconne|WI",
+    "Kwik Trip|1010 broadway|wisconsin dells|WI",
+    "Kwik Trip|3060 8th st s|wisconsin rapids|WI",
+    "Kwik Trip|2191 8th st s|wisconsin rapids|WI"
+  ],
+  "inserted": [
+    {
+      "chain": "Holiday Stationstores",
+      "id": "4e7b24b9-2940-4d77-aa05-3232bf49374a",
+      "name": "Holiday Stationstores",
+      "city": "Alexandria",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "01b1b9d1-d070-4c7b-821e-d02cd60ec9fe",
+      "name": "Holiday Stationstores",
+      "city": "Alexandria",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "6502dbe6-c59f-44e5-818d-b5a1c852f88a",
+      "name": "Circle K",
+      "city": "Anchorage",
+      "state": "AK"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "4beda50b-8504-462c-9130-5a7f97061405",
+      "name": "Circle K",
+      "city": "Anchorage",
+      "state": "AK"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "8ec67cc2-e877-4e64-950a-27d20f4482bb",
+      "name": "Holiday Stationstores",
+      "city": "Apple Valley",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "1a8c93b5-b5a9-41d3-8882-65bf93e985f0",
+      "name": "Holiday Stationstores",
+      "city": "Apple Valley",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "95ab1a47-8711-4f36-8382-5e43b2c3db6c",
+      "name": "Holiday Stationstores",
+      "city": "Apple Valley",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "32e05bdb-6621-41b8-9530-ae31cc5f30d0",
+      "name": "Circle K Gas Station",
+      "city": "Ashland",
+      "state": "WI"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "713339d4-9c7c-4f44-8f48-8726cdb7be84",
+      "name": "Holiday Stationstores",
+      "city": "Baxter",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "5eab2a3e-0fdb-4010-96a4-7f46e295a9b3",
+      "name": "Holiday Stationstore",
+      "city": "Belgrade",
+      "state": "MT"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "daa3fefb-0967-4bfa-834b-c226ab280d12",
+      "name": "Holiday Stationstores",
+      "city": "Big Lake",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "be000313-c2a0-48b3-8ab4-f1800103bec7",
+      "name": "Circle K",
+      "city": "Billings",
+      "state": "MT"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "1383e88d-ce17-44c5-bdd7-e4be33f89668",
+      "name": "Circle K",
+      "city": "Billings",
+      "state": "MT"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "5280d3bd-791b-4980-90d0-dba2080e85d5",
+      "name": "Circle K",
+      "city": "Billings",
+      "state": "MT"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "c7b9e0ed-6013-402b-81f4-defed29fc6b4",
+      "name": "Circle K Gas Station",
+      "city": "Billings",
+      "state": "MT"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "df5bffd6-921c-47c8-ab78-89d32cfc865d",
+      "name": "Circle K",
+      "city": "Bismarck",
+      "state": "ND"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "ef4deee1-b3a5-41c9-8970-4c8a326c9332",
+      "name": "Holiday Stationstores",
+      "city": "Blaine",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "6117cd15-f6fe-46de-884d-a39d51ab7545",
+      "name": "Holiday Stationstores",
+      "city": "Bloomington",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "dff7b807-9c84-4eb6-a086-cf0a2d322059",
+      "name": "Holiday Stationstores",
+      "city": "Brooklyn Center",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "2942bf22-fd29-4033-be15-efca9c957264",
+      "name": "Holiday Stationstores",
+      "city": "Brooklyn Park",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "b660096f-0750-4877-a0d7-2034bf419417",
+      "name": "Holiday Stationstores",
+      "city": "Brooklyn Park",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "29c5fa2e-c44e-4ae9-9dc2-629c24fe03b7",
+      "name": "Holiday Stationstores",
+      "city": "Buffalo",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "46df7004-43cb-4134-b99f-4a9c0db5477c",
+      "name": "Holiday Stationstores",
+      "city": "Clara City",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "2f52a1db-aad2-4613-81f3-0f8469edccc7",
+      "name": "Holiday Stationstores",
+      "city": "Columbia Heights",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "132cd88e-2727-43a0-a906-f5a07a795663",
+      "name": "Holiday Stationstores",
+      "city": "Coon Rapids",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "1d2056bf-d4b4-4668-acc2-6daef0b8307a",
+      "name": "Holiday Stationstores",
+      "city": "Cottage Grove",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "59c6e5a7-a7d2-47f9-9dd5-cce8c9f41ea8",
+      "name": "Holiday Stationstores",
+      "city": "Crystal",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "3c975bc0-1fb9-43c0-9d9c-a12790b17037",
+      "name": "Holiday Stationstores",
+      "city": "Detroit Lakes",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "3716335c-77ad-4545-9b2b-218ac4682116",
+      "name": "Circle K",
+      "city": "Duluth",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "f02e895f-e97a-4a9c-9341-1919d247cdcf",
+      "name": "Holiday Stationstores",
+      "city": "Duluth",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "56df2c85-e7d1-4526-96a1-504d52013fad",
+      "name": "Holiday Stationstores",
+      "city": "Eagan",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "d3f6dad6-097e-4bf0-9555-51c741840daf",
+      "name": "Holiday Stationstores",
+      "city": "Eagan",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "756cfa0b-930c-4295-be7b-ebad9b26a905",
+      "name": "Holiday Stationstores",
+      "city": "Eagan",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "94b6e1fd-1d61-4c68-b91d-374e25dd231e",
+      "name": "Holiday Stationstores",
+      "city": "Eagan",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "248a0b5b-0f78-4097-a9fc-98da5d322450",
+      "name": "Holiday Stationstores",
+      "city": "Eagan",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "148d874c-6dee-4bc4-83ed-c61aa2a1b8ee",
+      "name": "Holiday Stationstores",
+      "city": "East Grand Forks",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "9785ccc6-4df0-4339-b595-564f6ddc3012",
+      "name": "Holiday Stationstores | Car Wash",
+      "city": "Eau Claire",
+      "state": "WI"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "9df36956-fecd-463d-bca5-f54ec4bfd77c",
+      "name": "Holiday Stationstores | Car Wash",
+      "city": "Eau Claire",
+      "state": "WI"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "658393ae-7f44-4d2d-b911-85a988d83f7b",
+      "name": "Circle K",
+      "city": "Eau Claire",
+      "state": "WI"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "b78afde8-4ce1-439f-b314-038e8e63d138",
+      "name": "Circle K Gas Station",
+      "city": "Eau Claire",
+      "state": "WI"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "b3fee4bc-f76a-4353-9a98-08b156af320f",
+      "name": "Holiday Stationstores",
+      "city": "Elk River",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "39036e92-ea49-4a71-a594-484c78874e64",
+      "name": "Holiday Stationstores",
+      "city": "Elk River",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "d0bf6aac-ad6d-4ae7-a044-7a773a0126bd",
+      "name": "Holiday",
+      "city": "Ellsworth",
+      "state": "WI"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "d81e18a9-87d8-45f5-ad13-825fe91d13ad",
+      "name": "Circle K",
+      "city": "Escanaba",
+      "state": "MI"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "bcd5bd81-caf4-442b-b419-a83150481fdf",
+      "name": "Circle K",
+      "city": "Fargo",
+      "state": "ND"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "1f7ad3c7-310c-4853-b129-2a69b280958c",
+      "name": "Circle K",
+      "city": "Fargo",
+      "state": "ND"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "0fc7c6d7-e4a1-4684-90f1-c4ebb3b190fe",
+      "name": "Circle K",
+      "city": "Fargo",
+      "state": "ND"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "a0325fa2-7aad-43ca-baff-85a4ec1e2329",
+      "name": "Circle K",
+      "city": "Fargo",
+      "state": "ND"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "f519e669-10ce-4e2c-a413-38e1329e6d11",
+      "name": "Circle K",
+      "city": "Fargo",
+      "state": "ND"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "c1479c94-3f3c-4297-badd-06796e0756a9",
+      "name": "Holiday Stationstores",
+      "city": "Fridley",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "d4289c6c-417d-4fb0-94b8-9b359e63e8b0",
+      "name": "Circle K",
+      "city": "Grand Forks",
+      "state": "ND"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "edb0687a-60cd-4569-8b83-4c1ac69e5498",
+      "name": "Circle K",
+      "city": "Great Falls",
+      "state": "MT"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "9204e0c6-9b66-4bcc-9fd9-0a5e2746c69d",
+      "name": "Holiday Stationstores",
+      "city": "Ham Lake",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "0fe6b152-5a1b-4204-9569-9c389617da12",
+      "name": "Holiday Stationstores",
+      "city": "Hastings",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "58a836c0-87c1-481d-8538-0a35bbffd90f",
+      "name": "Circle K",
+      "city": "Hayden",
+      "state": "ID"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "cbe7751a-483b-4d7e-b31e-72019f103301",
+      "name": "Holiday Stationstores",
+      "city": "Inver Grove Heights",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "77b40b3f-01f8-4529-be38-c5aab17b5453",
+      "name": "Holiday Stationstores",
+      "city": "Inver Grove Heights",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "928e2f06-1f79-45a6-b89c-3edf41681b3c",
+      "name": "Holiday Stationstores",
+      "city": "Jordan",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "3665ba1d-465c-47ab-9692-e34fd99b1c54",
+      "name": "Holiday Stationstores",
+      "city": "Lake Elmo",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "bef3bc58-cda4-496a-8cce-6e7ff74dd0ec",
+      "name": "Holiday Stationstores",
+      "city": "Rosemount",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "4ac1d6a5-ddc0-4659-9835-9cad7eaa9a4e",
+      "name": "Circle K",
+      "city": "Ledgeview",
+      "state": "WI"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "62c0a6a2-5b26-44ee-bb40-16de305aa329",
+      "name": "Holiday Stationstores",
+      "city": "Little Falls",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "68f10773-74e6-47e8-b5a4-c58a5d766c67",
+      "name": "Holiday Stationstores",
+      "city": "Mahtomedi",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "fa45859a-fe78-453d-8a05-5645b62eaeae",
+      "name": "Holiday Stationstores",
+      "city": "Maplewood",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "3c91dfa7-02b5-4aef-852f-568cd79699d0",
+      "name": "Holiday Stationstores",
+      "city": "Maplewood",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "dd7009ee-4b84-4a77-810a-35f5c544ec03",
+      "name": "Holiday Stationstores",
+      "city": "Medina",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "fe44e5f0-a344-44f0-84a3-0340b55728de",
+      "name": "Circle K",
+      "city": "Merrill",
+      "state": "WI"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "c747d66f-3137-49e9-926d-b3c3d66c51ad",
+      "name": "Holiday Stationstores",
+      "city": "Minneapolis",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "a77f7d32-0013-45ee-b557-867da6b02844",
+      "name": "Holiday Stationstores",
+      "city": "Minneapolis",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "c1192e3a-8117-47b8-b925-7cdfd7d1cf02",
+      "name": "Holiday Stationstores",
+      "city": "Minneapolis",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "5a2a8693-ab55-43ec-8081-03b19e4c2386",
+      "name": "Holiday Stationstores",
+      "city": "Minneapolis",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "98ee05fe-329a-40fd-abed-1596c97a4596",
+      "name": "Holiday Stationstores",
+      "city": "Minneapolis",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "b11245c8-ed73-4a84-a591-756286d6a31d",
+      "name": "Circle K",
+      "city": "Minot",
+      "state": "ND"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "dde4fa96-cb1a-449e-a5d3-a763b265dfc9",
+      "name": "Circle K",
+      "city": "Moorhead",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "5d79bf00-c04e-4204-949b-a9664dbe1a56",
+      "name": "Circle K",
+      "city": "Moorhead",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "db15fde6-ed58-4a15-aca3-d0281292a1b4",
+      "name": "Circle K",
+      "city": "Munising",
+      "state": "MI"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "c25d0105-6844-4ee7-a58f-75487dc24a75",
+      "name": "Holiday Stationstores",
+      "city": "Excelsior",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "6b94dd1f-3d1f-4d26-a332-64636e07dfa2",
+      "name": "Holiday Stationstores",
+      "city": "New Hope",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "50b282ca-4ab0-4557-aff6-be0a6dcde07a",
+      "name": "Circle K Gas Station",
+      "city": "New Prague",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "81ff2b83-4b00-48d9-9a49-1dc7b23adc8f",
+      "name": "Holiday Stationstores",
+      "city": "New Ulm",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "f63f9026-8280-4330-b468-372bbf4d8d2a",
+      "name": "Holiday Stationstores",
+      "city": "Norwood Young America",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "9e510854-72b2-429a-8e09-f1362a3be68a",
+      "name": "Circle K",
+      "city": "Owatonna",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "7c7c2964-0a11-4569-902c-d9fd9f3db41b",
+      "name": "Holiday Stationstores",
+      "city": "Plymouth",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "99455bdb-c2f7-4074-a333-3e147e0bb842",
+      "name": "Holiday Stationstores",
+      "city": "Plymouth",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "5de565b3-a499-4b8b-900f-64103397f96f",
+      "name": "Holiday Stationstores",
+      "city": "Plymouth",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "8b720fa8-3f97-4c35-a4d7-869c954562c7",
+      "name": "Holiday Stationstores",
+      "city": "Plymouth",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "061a6791-bd98-4d76-91ee-cb0abd469a10",
+      "name": "Holiday Stationstores",
+      "city": "Prior Lake",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "89fdac18-40ea-405b-9323-6e60880c4671",
+      "name": "Holiday Stationstores",
+      "city": "Ramsey",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "35d2dcd6-3680-465b-be24-cc5a6ed488c1",
+      "name": "Holiday Stationstores",
+      "city": "Ramsey",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "00f77e34-bc90-421f-84b3-65c464af7f11",
+      "name": "Circle K",
+      "city": "Rapid City",
+      "state": "SD"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "da125402-68eb-43fe-951f-6647130628a2",
+      "name": "Circle K",
+      "city": "Rapid City",
+      "state": "SD"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "8ea56808-53a3-4f63-85ad-8d0baa21956e",
+      "name": "Circle K",
+      "city": "Rapid City",
+      "state": "SD"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "6a9960d4-3372-451d-946b-1b2b1f76c7b4",
+      "name": "Circle K",
+      "city": "Rapid City",
+      "state": "SD"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "2bc25cda-4ac4-4d75-8f9e-d064168393a9",
+      "name": "Circle K",
+      "city": "Rochester",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "6ba6f84b-289c-4f4e-a43d-3217f44b518a",
+      "name": "Holiday",
+      "city": "Rochester",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "49ddec58-8fca-4056-adbb-0c691750ba57",
+      "name": "Circle K",
+      "city": "Rochester",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "5d285f70-b6a7-4bcf-b519-a5ed0c4e68b4",
+      "name": "Holiday Stationstores",
+      "city": "Rogers",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "308a22a3-366d-4f50-901b-cf821905cf82",
+      "name": "Holiday Stationstores",
+      "city": "Roseville",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "e9eacabd-9caf-47a4-a6ba-da3b50dd569a",
+      "name": "Holiday Stationstores",
+      "city": "Rush City",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "8dc13dba-0da1-458a-aaa7-ca16cd350839",
+      "name": "Holiday Stationstores",
+      "city": "Sartell",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "7b809a8a-86b9-4086-80af-09c5f9d89f3b",
+      "name": "Holiday Stationstores",
+      "city": "Sartell",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "0ead534a-3ed9-4aef-8341-0f64153abdaa",
+      "name": "Holiday Stationstores",
+      "city": "Sauk Centre",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "02f42f4a-0e33-43e0-b022-771272717a11",
+      "name": "Holiday Stationstores",
+      "city": "Sauk Rapids",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "80fb7365-0527-4f55-903f-efc053cbc04c",
+      "name": "Holiday Stationstores",
+      "city": "Sauk Rapids",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "7fc8d488-987b-43a6-8ff2-76a1c9071ede",
+      "name": "Holiday Stationstores",
+      "city": "Savage",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "40043778-e567-4b26-9fa6-9077c68e32d4",
+      "name": "Holiday Stationstores",
+      "city": "Shakopee",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "2d9c6789-55c4-41e1-856e-702171f91662",
+      "name": "Holiday Stationstores",
+      "city": "Shakopee",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "bfdaeaf8-2d29-461f-92e2-443d3104e806",
+      "name": "Holiday Stationstores",
+      "city": "Shakopee",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "d98a6072-7abc-44d4-b271-675aee8c12a8",
+      "name": "Circle K",
+      "city": "Sioux Falls",
+      "state": "SD"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "72a9baef-d8df-4881-871f-5ebfd62b9813",
+      "name": "Holiday",
+      "city": "Sioux Falls",
+      "state": "SD"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "dafcb2c6-17e0-42fa-bd9a-9b4ababe2461",
+      "name": "Holiday Stationstores",
+      "city": "Spring Lake Park",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "7ba8ad22-3804-4c34-82f4-f2c301fa13d9",
+      "name": "Holiday Stationstores",
+      "city": "St Anthony",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "567b8f6e-d6ab-47cf-87ab-a70c13298ac1",
+      "name": "Holiday Stationstores",
+      "city": "St Cloud",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "a8e379e9-92a1-4a65-9337-8a79bf6da9c5",
+      "name": "Holiday Stationstores",
+      "city": "St Cloud",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "3d52571a-369a-49b5-bc41-eb940a687070",
+      "name": "Holiday Stationstores",
+      "city": "St Michael",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "2683fb65-ddd1-46e6-bd2c-0916a214dcd7",
+      "name": "Holiday Stationstores",
+      "city": "St Paul",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "8ff002f1-0e9f-43a8-b729-28d1d0e76be7",
+      "name": "Holiday Stationstores",
+      "city": "St Paul",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "4bd997c8-ed12-460c-b145-4db02df597a4",
+      "name": "Holiday Stationstores",
+      "city": "St Paul",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "13099ac8-c83e-47e3-952d-9476bf3539a4",
+      "name": "Holiday",
+      "city": "Stanley",
+      "state": "ND"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "4667b0d2-2e82-49a1-99dd-f0dc74d4ebea",
+      "name": "Holiday Stationstores",
+      "city": "Staples",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "b5099514-f6de-40fc-ad84-8eeae7018686",
+      "name": "Holiday Stationstores",
+      "city": "Stillwater",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "c72a0658-aac9-44a3-92a2-b93245205e54",
+      "name": "Circle K",
+      "city": "Traverse City",
+      "state": "MI"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "4e46c4f6-4020-44ea-b06f-6ee81cbeb09a",
+      "name": "Holiday Stationstores",
+      "city": "Victoria",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "a2a65830-6107-4195-85bf-bfffd3a50d2f",
+      "name": "Circle K",
+      "city": "Virginia",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "04208176-9b92-4403-ba15-652051ba150b",
+      "name": "Holiday Gas Station",
+      "city": "Waconia",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "ddea79a6-d05a-43bf-89ed-2642116f7dcc",
+      "name": "Holiday Stationstores",
+      "city": "Waite Park",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "a200c8a3-3775-4e75-aef0-b47926c2d4be",
+      "name": "Circle K",
+      "city": "Watford City",
+      "state": "ND"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "84f578da-0e09-4fa0-b875-f61b97006ee5",
+      "name": "HOLIDAY",
+      "city": "Wausau",
+      "state": "WI"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "4da97c44-5054-4a8e-8ce1-4e3ef60fa054",
+      "name": "Holiday Stationstores",
+      "city": "West St Paul",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "e922316b-fe2a-4561-814c-674176c0fead",
+      "name": "Holiday Stationstores",
+      "city": "White Bear Lake",
+      "state": "MN"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "f3cbb782-8d50-4168-9fb2-7690c2cf3e59",
+      "name": "Circle K",
+      "city": "Williston",
+      "state": "ND"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "d5bb1c7b-8c9f-4219-a805-6a7efcbfaf49",
+      "name": "Holiday gas station",
+      "city": "Williston",
+      "state": "ND"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "1a6c0801-f2f0-4c06-a63f-1f1bc8f07c33",
+      "name": "Holiday Stationstores",
+      "city": "Worthington",
+      "state": "MN"
+    },
+    {
+      "chain": "Power Market",
+      "id": "6915ec06-69bf-4205-89d3-5c361470a728",
+      "name": "Power Market",
+      "city": "Anderson",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "1c4c3b20-f541-424b-bf03-413438029726",
+      "name": "Power Market",
+      "city": "Anderson",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "1626bc85-0fd5-48cb-b593-64c80af4f278",
+      "name": "Power Market",
+      "city": "Angels Camp",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "41ef3a22-efbc-4b0b-8dd7-1afb3570dfce",
+      "name": "Power Market",
+      "city": "Antelope",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "a9dc3d8a-c6eb-4b3b-9fc8-8a1ceab283ac",
+      "name": "Power Market",
+      "city": "Arcata",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "20ba4a24-b68b-4524-bbee-879ced86b418",
+      "name": "Power Market",
+      "city": "Arcata",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "1d1d1001-229d-435f-a65a-25268bd41339",
+      "name": "Power Market",
+      "city": "Auburn",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "d05390cf-2f77-4ea5-bf53-d4937e553050",
+      "name": "Power Market",
+      "city": "Bay Point",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "3a61726a-4c8b-4876-95da-1f965c9d9055",
+      "name": "Power Market",
+      "city": "Brentwood",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "1e9fe428-86ed-4831-b441-0e1791545fc1",
+      "name": "Chevron",
+      "city": "Buena Park",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "8abaec08-1e9c-420d-ada8-05fe9b9a6ece",
+      "name": "Power Market",
+      "city": "Cameron Park",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "f20f1d2a-91e4-484d-a8e1-e27a9e575544",
+      "name": "Power Market",
+      "city": "Capitola",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "01a4bb8f-4026-46df-97d7-a0664f22badb",
+      "name": "Power Market",
+      "city": "Carmel-By-The-Sea",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "212590d2-4cba-424a-a49c-d9571e722065",
+      "name": "Power Market",
+      "city": "Carmel-By-The-Sea",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "81c1b1e3-2749-46ea-b321-e2f808ce1c20",
+      "name": "Power Market",
+      "city": "Carmichael",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "9ed23929-c6b8-4ede-b121-72a917485127",
+      "name": "Chevron",
+      "city": "Cerritos",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "e7c726ce-a649-4420-b1c6-de04c534027a",
+      "name": "Power Market",
+      "city": "Cerritos",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "b9bf864a-6a35-4723-80b8-d38710970c04",
+      "name": "Power Market",
+      "city": "Chico",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "fbb8e1c6-1c68-40ba-8fd9-7cd0fd665374",
+      "name": "Power Market",
+      "city": "Chico",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "0a927fc8-7d18-4f5c-8671-4c6865a46f8d",
+      "name": "Power Market",
+      "city": "Chico",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "d0dceb4f-cedb-4369-9889-894d7ea695f1",
+      "name": "Power Market",
+      "city": "Chino",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "a0959969-4673-4d77-9140-0e971ab9c74a",
+      "name": "Chevron",
+      "city": "Chula Vista",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "31215049-d537-4ede-872a-3322bafbf9e1",
+      "name": "Power Market",
+      "city": "Clearlake Oaks",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "b0be1c99-ff06-4ac6-b1f7-d65cf9a600b2",
+      "name": "Power Market",
+      "city": "Corona Del Mar",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "434347fb-19e1-4eee-af73-ce13110a1014",
+      "name": "Power Market",
+      "city": "Crescent City",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "e1dd9320-4b29-4669-84b8-ee8ba7074910",
+      "name": "Chevron Crescent City",
+      "city": "Crescent City",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "5a8c3c6e-47a5-4a39-bc8d-e8bb4c228e50",
+      "name": "Power Market",
+      "city": "Cypress",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "1f10bfe9-8405-4124-93b4-2a3882b13898",
+      "name": "Power Market",
+      "city": "Diamond Springs",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "f8cf54f3-8109-4ad1-a3f5-d6332d588909",
+      "name": "H&S Energy - Extra Mile",
+      "city": "Elk Grove",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "eb184588-c704-43e5-85f6-0c11a6d0e0e4",
+      "name": "Power Market",
+      "city": "Eureka",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "da84a5b4-2547-42f3-8169-5a0d3a3341c7",
+      "name": "Power Market",
+      "city": "Eureka",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "c55d53b9-1934-457a-8e54-570785676004",
+      "name": "Power Market",
+      "city": "Eureka",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "cd02078b-e240-4280-ab2c-571b9304d9a1",
+      "name": "Power Market",
+      "city": "Eureka",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "283ddb37-1a9f-45cb-95b8-b48e25d9b49d",
+      "name": "Power Market",
+      "city": "Eureka",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "14bf9938-8fb9-4872-87d8-bb57be4687dc",
+      "name": "Power Market",
+      "city": "Eureka",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "c9736eb2-1833-4cd1-8b7c-41766bbc0942",
+      "name": "Power Market",
+      "city": "Eureka",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "1229dd1c-cd4d-4bfa-9e72-134ef8fd5ce0",
+      "name": "Power Market",
+      "city": "Eureka",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "1f994e43-d4b9-4e52-b138-5b989718ed7f",
+      "name": "Power Market",
+      "city": "Fair Oaks",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "2ac06971-b0b3-4401-956e-867534fab5b2",
+      "name": "Power Market",
+      "city": "Fairfield",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "8dc1f125-c599-43cb-b84b-af4b0c867c3a",
+      "name": "Power Market",
+      "city": "Fairfield",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "cab441ac-8ee2-4b5f-812f-81294403cb0a",
+      "name": "Power Market",
+      "city": "Folsom",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "df6ef5a2-5808-4156-9b46-9b49e4233b1c",
+      "name": "Power Market",
+      "city": "Fortuna",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "7deea457-d336-42e5-a94b-19ca6ec5c632",
+      "name": "Power Market",
+      "city": "Fortuna",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "7e63c0d1-7d64-418f-91c1-6909050b2e74",
+      "name": "Power Market",
+      "city": "Fortuna",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "bbf152f4-c997-471c-8cda-8ca08295585d",
+      "name": "Power Market",
+      "city": "Fortuna",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "2fbda3f7-e327-4b3e-a911-73a9aff16ccd",
+      "name": "Power Market",
+      "city": "Fremont",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "ecec23b0-b09f-4dcc-90c5-572438c1e10e",
+      "name": "ExtraMile",
+      "city": "Fullerton",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "37febe9b-e8e5-4cb4-9df3-0b4ac7d60f95",
+      "name": "Power Market",
+      "city": "Garberville",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "28062178-2649-4d61-b924-00b5189e509f",
+      "name": "Power Market",
+      "city": "Guadalupe",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "98447c02-9f26-4bbc-93cf-7c89264c274a",
+      "name": "Power Market",
+      "city": "Laguna Niguel",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "67828ce4-508f-4c84-8fe4-2c89f80b3a87",
+      "name": "Power Market",
+      "city": "Lakeport",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "8024b1af-9c9e-470e-96ac-c4e5e9e4a0be",
+      "name": "Power Market",
+      "city": "Lakeport",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "9778a2f2-7c6e-4410-a54a-eee229533e41",
+      "name": "Power Market",
+      "city": "Lathrop",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "fa318f90-e821-420c-b11f-14005c4f8378",
+      "name": "Power Market",
+      "city": "Lincoln",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "8d55b53a-225a-4637-91b0-7100b65d607a",
+      "name": "Power Market",
+      "city": "Live Oak",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "25de2933-42c0-48e6-96ac-cf25ca4fccb9",
+      "name": "Power Market",
+      "city": "Los Alamitos",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "707e20be-a279-48fd-abac-51e63a82ac03",
+      "name": "Power Market",
+      "city": "Los Angeles",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "5b02168e-5bf7-45a6-bb96-bccbeddaeb7f",
+      "name": "Power Market",
+      "city": "Los Angeles",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "90b12c3a-3979-4adf-bcea-238f537a963c",
+      "name": "ExtraMile",
+      "city": "Los Angeles",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "abbe47be-c725-45cf-9b64-8dad2cf60011",
+      "name": "Power Market",
+      "city": "Los Angeles",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "eaec0a90-6e76-44c6-a286-cbacc5189d60",
+      "name": "Power Market",
+      "city": "Lower Lake",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "e66ddeec-058e-4d04-86f2-a1ccb698de00",
+      "name": "Power Market",
+      "city": "Lucerne",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "361bfa64-577f-4528-8d36-a02ec2c4c8bf",
+      "name": "Power Market",
+      "city": "Manteca",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "d8de41e6-6d04-43f6-8264-2c8d845fbf62",
+      "name": "Power Market",
+      "city": "Martinez",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "d540df13-fb5d-4d00-a184-d0b6093616b2",
+      "name": "Power Market",
+      "city": "McKinleyville",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "d3c38984-e143-4b0c-ba4a-29e5f80d42fb",
+      "name": "Power Market",
+      "city": "Milpitas",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "3b3136da-ccef-48d0-a3bc-766d2a66e5d8",
+      "name": "Power Market",
+      "city": "Montclair",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "8ad08225-d058-4ee0-a86d-9914904fa23d",
+      "name": "POWER MARKET (Gas)- Montebello- Paramount Blvd",
+      "city": "Montebello",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "86d4dc12-0eba-4aff-bff5-67cae5576b39",
+      "name": "Chevron",
+      "city": "Montebello",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "e8a53f1c-4115-4cf3-b20f-ed74a1b2485d",
+      "name": "Shell",
+      "city": "Montebello",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "498580dd-b92a-42fc-88c4-90fac0d9bb49",
+      "name": "H&S Gas",
+      "city": "Nice",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "0e84939b-db10-497f-b3fb-5156f5ee4723",
+      "name": "Power Market",
+      "city": "North Highlands",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "49a10214-d41e-410f-95cd-3707ed39d5eb",
+      "name": "Power Market",
+      "city": "Oakley",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "99e257b2-0915-4bcc-9e0e-2e32b798ae5b",
+      "name": "ExtraMile",
+      "city": "Oceanside",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "b942b897-b5f4-42f0-8db9-7f3c13932084",
+      "name": "ExtraMile",
+      "city": "Oceanside",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "9b963f97-0d57-48c4-9f94-58791eeae6c2",
+      "name": "Power Market",
+      "city": "Olivehurst",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "41424b27-4fe9-4ce9-84ad-0dc7bc7c2f87",
+      "name": "Power Market",
+      "city": "Olivehurst",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "28f17b87-2576-4700-802e-88db1ce3b24b",
+      "name": "Power Market",
+      "city": "Oroville",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "fa153f15-0a46-4e3a-968a-0f21285704b9",
+      "name": "Power Market",
+      "city": "Pacific Grove",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "a2c330d4-a1c5-47b7-b514-2f7b43e05ca5",
+      "name": "Power Market",
+      "city": "Pittsburg",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "c7d2cf04-b917-479f-a153-0513fee7792e",
+      "name": "Power Market",
+      "city": "Bay Point",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "7f56b7f4-161c-42b1-84d9-8e3feeb9a77c",
+      "name": "ExtraMile",
+      "city": "Pomona",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "4b5b7329-21ea-4ac6-bd2d-6004d0828db3",
+      "name": "Chevron",
+      "city": "Pomona",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "2f72142c-8577-4887-8ee7-bfa56ea9fe5f",
+      "name": "Power Market",
+      "city": "Redding",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "3f98bd05-cdec-42f6-adea-f1f2cb49d100",
+      "name": "Power Market",
+      "city": "Rio Dell",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "2f353b0f-d246-4bf8-ad72-45c4c2d997e6",
+      "name": "Power Market",
+      "city": "Rocklin",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "35c50db8-e7dd-45be-9feb-f6e43d4f1ca7",
+      "name": "ExtraMile",
+      "city": "Roseville",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "748ddb8b-782e-4d64-9d1a-c02962beee68",
+      "name": "Power Market",
+      "city": "Roseville",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "0a5295cd-060c-4a1c-beca-90857b649566",
+      "name": "Power Market",
+      "city": "Sacramento",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "5ef723d4-1732-49a6-8969-988cf2931e97",
+      "name": "Power Market",
+      "city": "Sacramento",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "95be895d-f581-497a-a917-c4f4af37d6d3",
+      "name": "H & S Energy Products 3076",
+      "city": "Sacramento",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "997a377c-77d8-4840-a8b0-a84b9c2b2778",
+      "name": "Power Market",
+      "city": "Sacramento",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "b6c4c769-451a-4e7e-9bd1-5b344c384eec",
+      "name": "Shell",
+      "city": "Salinas",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "dc0ed6e2-034d-40fd-bf61-bd118e3a20b6",
+      "name": "Power Market",
+      "city": "Salinas",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "f424eb2e-ca21-40e8-b101-f39bb54726fc",
+      "name": "Power Market",
+      "city": "Salinas",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "4130dbd5-c878-4476-a585-48c399ef8985",
+      "name": "Power Market",
+      "city": "San Andreas",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "23d37285-da2f-485b-a653-f8fd4b78daf2",
+      "name": "ExtraMile",
+      "city": "San Diego",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "28c68301-cecf-4dd5-8e76-991e13eccba0",
+      "name": "ExtraMile",
+      "city": "San Diego",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "61aace0c-860e-4abb-acb6-1a113e5f1fc6",
+      "name": "ExtraMile",
+      "city": "San Diego",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "e4ffc5bc-eab9-432d-9f07-965fe9432724",
+      "name": "Power Market",
+      "city": "San Francisco",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "f3df13ea-d718-4497-816f-3c6e184a93f0",
+      "name": "Power Market",
+      "city": "San Jose",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "da455570-d40c-4a5f-840c-5e7b498c6546",
+      "name": "ExtraMile",
+      "city": "San Ysidro",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "0b197c5e-905a-4035-b72e-ecc8033c0702",
+      "name": "Power Market",
+      "city": "Santa Clara",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "840e7230-1c47-4873-8c0f-b6b4c90c1dce",
+      "name": "Power Market",
+      "city": "Santa Cruz",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "da20588a-5210-4c54-962f-02fa81b61562",
+      "name": "Power Market",
+      "city": "Santa Monica",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "1e26d115-b811-4f42-a313-a89e2ee679a9",
+      "name": "Power Market",
+      "city": "Santa Monica",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "59f10690-e98a-4e4f-a956-fb97c41f1ad5",
+      "name": "Power Market",
+      "city": "Santa Monica",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "384b32bd-5d2f-4921-8d04-6efb376b6fa0",
+      "name": "Power Market",
+      "city": "Santa Rosa",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "afb78a20-725a-488d-82be-52f9a712715c",
+      "name": "Power Market",
+      "city": "Santa Rosa",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "fd25235d-5bac-448d-8744-0f64303dcaa9",
+      "name": "Power Market",
+      "city": "Scotts Valley",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "89ea392a-cfc1-4646-8ac7-c8ddac131291",
+      "name": "Power Market",
+      "city": "Scotts Valley",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "1a7335d4-8c1f-4706-a54f-561115b42884",
+      "name": "Chevron ExtraMile South El Monte",
+      "city": "South El Monte",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "e2468857-c636-4917-9a07-d39618d1131b",
+      "name": "Power Market",
+      "city": "South Lake Tahoe",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "1bcf5fe6-d50c-47ce-b257-f91f669906ea",
+      "name": "Power Market",
+      "city": "Fairfield",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "0256d5f5-451c-4e8e-9738-b6809b9df796",
+      "name": "Power Market",
+      "city": "Tracy",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "9be80aac-8aa6-4a37-b626-7ab1f65fe115",
+      "name": "Power Market",
+      "city": "Truckee",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "210672a5-e345-46a4-9e31-65e85e0bf33a",
+      "name": "Power Market",
+      "city": "Truckee",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "e6873314-11c3-452c-8b25-28dd5f656293",
+      "name": "Power Market",
+      "city": "Union City",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "b91932e9-6d30-4a68-863e-73b94d25cd70",
+      "name": "Texaco",
+      "city": "Vacaville",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "34294ace-abd7-4759-a1e8-fce6c10fbca7",
+      "name": "Power Market",
+      "city": "Vallejo",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "e05730e0-ab6e-4e03-8d83-0d3c6439f393",
+      "name": "Power Market",
+      "city": "West Sacramento",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "9d9b52cf-9c07-45d1-bba3-6e6cfe3b8c76",
+      "name": "Power Market",
+      "city": "Woodland",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "a389aafb-b4c8-4d4e-ac20-7b1999ab6c23",
+      "name": "Power Market",
+      "city": "Yuba City",
+      "state": "CA"
+    },
+    {
+      "chain": "Power Market",
+      "id": "4d619ae4-2c3b-45bc-bd8b-297eaf812d6b",
+      "name": "Power Market",
+      "city": "Incline Village",
+      "state": "NV"
+    },
+    {
+      "chain": "Power Market",
+      "id": "6e54bee9-b9b8-4705-8d6b-0153fb80c046",
+      "name": "Power Market",
+      "city": "Ashland",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "3628ccb3-e139-47f7-ba8c-58b4de6f854f",
+      "name": "Power Market",
+      "city": "Banks",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "1bff0d83-7b7f-484c-9070-cc32d21a8ea1",
+      "name": "Power Market",
+      "city": "Beaver",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "e1bf21d8-1f07-4e35-9552-e8f8ff24245d",
+      "name": "Chevron",
+      "city": "Beavercreek",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "556ddb12-01f7-4bdb-9e26-155eff82e24a",
+      "name": "Power Market",
+      "city": "Bend",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "7a3e7fc2-b6c2-417f-a81a-560864454710",
+      "name": "Power Market",
+      "city": "Bend",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "2be02e35-6b7a-4f23-8f05-ac196b16b14d",
+      "name": "Power Market",
+      "city": "Bend",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "edf0c06f-f943-43c5-a263-0ab97af70dc7",
+      "name": "Power Market",
+      "city": "Bend",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "a9a4a044-6a8d-4a72-81f4-267342555c59",
+      "name": "Power Market",
+      "city": "Bend",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "85d345c4-7a94-4d52-aa70-cbccf0ff988b",
+      "name": "Power Market",
+      "city": "Brookings",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "c78be240-d25a-44b6-99e5-c032a4d752fd",
+      "name": "Power Market",
+      "city": "Brookings",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "3bf17f97-6d6f-4eab-bbc0-d57dbbe3d139",
+      "name": "Power Market",
+      "city": "Cave Junction",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "f55c526e-e672-41db-b10a-64e863f1d911",
+      "name": "Power Market",
+      "city": "Central Point",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "4e94e159-6eb9-404e-9fbe-ab7b1450adc3",
+      "name": "Power Market",
+      "city": "Central Point",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "f77bd64c-a708-4e68-b5df-573677be3377",
+      "name": "Power Market",
+      "city": "White City",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "a0e0ec68-a266-49c3-8d46-bcc8423f0bbb",
+      "name": "Power Market",
+      "city": "Oregon City",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "a7ed5f5f-d5be-4d4b-b4dc-f3ed886fc908",
+      "name": "Power Market",
+      "city": "Gales Creek",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "e23b2601-ca23-4503-8aad-29a1e87a42a9",
+      "name": "Power Market",
+      "city": "Garibaldi",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "228985d1-a1da-4e52-b8bc-74ef36569407",
+      "name": "Texaco",
+      "city": "Gladstone",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "d8566127-6afa-40a7-b357-a504fb1dd2c3",
+      "name": "Power Market",
+      "city": "Grants Pass",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "62f6ac53-0965-4973-a878-429691439590",
+      "name": "Power Market",
+      "city": "Grants Pass",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "be69d7ae-ee14-4cae-a83f-b01ee043c5d3",
+      "name": "Power Market",
+      "city": "Grants Pass",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "469791e0-1bb6-4bd0-9898-202b659fe2b0",
+      "name": "Power Market",
+      "city": "Grants Pass",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "643f7507-7357-42a9-8086-7baa9d7f6c43",
+      "name": "Power Market",
+      "city": "Grants Pass",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "25861715-a876-40db-ab0d-d61650dfe632",
+      "name": "Power Market",
+      "city": "Grants Pass",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "0227a4ef-6055-45b9-994a-311c03628782",
+      "name": "Power Market",
+      "city": "Grants Pass",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "09f3cd26-1e3c-4ae5-95ab-f3c365cfaf6d",
+      "name": "Power Market",
+      "city": "Grants Pass",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "c1fa037f-0944-492a-a617-fe2960c45224",
+      "name": "Power Market",
+      "city": "Jacksonville",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "34960e77-9bdd-4c63-82e4-7ba5160266ab",
+      "name": "Power Market",
+      "city": "Klamath Falls",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "2dc48d38-a357-4828-9300-0762ea51ee1d",
+      "name": "Power Market",
+      "city": "Klamath Falls",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "1dcc1f6e-08ae-4a5f-9a76-8edcc8046e49",
+      "name": "Power Market",
+      "city": "Klamath Falls",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "5609f0d0-8b66-49e5-8f56-ca6d5a5fbf36",
+      "name": "Power Market",
+      "city": "Madras",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "f55f6977-5635-46a4-a6ce-ef637c07f2b6",
+      "name": "Power Market",
+      "city": "Medford",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "741a362b-204e-4619-9723-86a5d3ab5ff4",
+      "name": "Power Market",
+      "city": "Medford",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "8357488b-2bd6-42d6-a560-095d5d6a2bae",
+      "name": "Power Market",
+      "city": "Medford",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "a0663338-a82c-4318-a70d-ff3dc3328d0a",
+      "name": "Power Market",
+      "city": "Medford",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "c2fa585a-dcdf-4025-89eb-05db6733633f",
+      "name": "Power Market",
+      "city": "Medford",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "6ce6e943-aed7-4481-bec9-d054096656e5",
+      "name": "Power Market",
+      "city": "Medford",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "2732c24b-2474-48b1-b4e0-7e4773efe639",
+      "name": "Chevron Milwaukie",
+      "city": "Milwaukie",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "0f751e0a-31c6-4f6e-aee2-4c94422b87df",
+      "name": "Power Market",
+      "city": "Nehalem",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "3bf9f5e3-c56f-400b-b35b-14836cf5ac7f",
+      "name": "Power Market",
+      "city": "Pacific City",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "9f7992e5-543b-45de-8272-c2773ebd108f",
+      "name": "Power Market",
+      "city": "Phoenix",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "125a8eb6-e020-4efc-8dd6-6b690b1f2f95",
+      "name": "Power Market",
+      "city": "Port Orford",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "f14d4bb5-6f7a-4c72-bf38-bb93be07b6fb",
+      "name": "Power Market",
+      "city": "Port Orford",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "375bfd67-d9ff-4059-bffd-e3b1899c9379",
+      "name": "Power Market",
+      "city": "Prineville",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "20dc337d-a8f1-4e5f-b0f8-43a288ad72d4",
+      "name": "Power Market",
+      "city": "Rogue River",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "f81a359a-a090-44f7-a4ff-e04b7390301b",
+      "name": "Power Market",
+      "city": "Rogue River",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "1c759c24-39d6-40b2-b64d-69dab226ef29",
+      "name": "Power Market",
+      "city": "Roseburg",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "871e26e4-0b11-4d64-aa4e-f0c8c0b9dfa5",
+      "name": "Power Market",
+      "city": "Selma",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "6ccbbe19-f4f6-47f7-8106-7c01d4a27b0a",
+      "name": "Power Market",
+      "city": "Shady Cove",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "c7224880-e35d-4ad4-be0c-5d0e274638ea",
+      "name": "Power Market",
+      "city": "Sunriver",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "798d2cfd-fa71-41cb-bce5-a61c232b010e",
+      "name": "Power Market",
+      "city": "Talent",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "a752b1ba-5931-47e4-b4f2-c3b5c263185d",
+      "name": "Power Market",
+      "city": "Talent",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "b00b8acf-5591-42fb-b939-a5761c5daa7f",
+      "name": "Power Market",
+      "city": "Terrebonne",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "7d413b64-b07c-4153-9e16-164a28fb48d4",
+      "name": "Power Market",
+      "city": "Tillamook",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "52d6b7f2-8496-4cf2-bf5d-d8948cc14e39",
+      "name": "Power Market",
+      "city": "White City",
+      "state": "OR"
+    },
+    {
+      "chain": "Power Market",
+      "id": "df6bb1c4-cc9b-4159-b26a-94ddd2db0a49",
+      "name": "Power Market",
+      "city": "Willamina",
+      "state": "OR"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "57f6471a-48a4-4c2c-bcc8-d6c9a5f7304e",
+      "name": "Kwik Trip",
+      "city": "Altoona",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "9a0ddfe5-070b-4f41-a78d-0e6c21c7468a",
+      "name": "Kwik Trip",
+      "city": "Altoona",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "5c8f8b40-2886-4925-bf45-c01ec46e6158",
+      "name": "Kwik Trip #595",
+      "city": "Amery",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "aece9de8-0313-47b3-ba5b-ed798298d582",
+      "name": "Kwik Trip",
+      "city": "Antigo",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "e033c077-967d-43aa-91d2-cabdb38ea898",
+      "name": "Kwik Trip",
+      "city": "Antigo",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "c6daf1fb-a229-438a-b45b-4516750d74dd",
+      "name": "Kwik Trip",
+      "city": "Appleton",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "fa113df6-a8ad-4d2d-b03e-f50040d7c626",
+      "name": "Kwik Trip",
+      "city": "Appleton",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "8b6d121f-2623-4463-8c38-a583ea28865c",
+      "name": "Kwik Trip",
+      "city": "Grand Chute",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "8b72fe72-ef4a-43d8-9c54-04663c1e88bf",
+      "name": "Kwik Trip",
+      "city": "Ashland",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "00167b8d-e7aa-42ca-a8ec-fd3af8f36eaf",
+      "name": "Kwik Trip",
+      "city": "Ashwaubenon",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "3a790c01-771b-497e-9584-dc938a6607c6",
+      "name": "Kwik Trip",
+      "city": "Ashwaubenon",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "48b9b6d8-1861-44a5-bdce-cd8e0391fea2",
+      "name": "Kwik Trip",
+      "city": "Baldwin",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "1bd64431-0f4d-48fc-93e1-cb42d422bdd5",
+      "name": "Kwik Trip",
+      "city": "Baraboo",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "e9ba5f27-8028-423c-b267-89d891fa4ce5",
+      "name": "Kwik Trip",
+      "city": "Barron",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "edaadbe8-b75e-45c7-a428-3a9e9107689f",
+      "name": "Kwik Trip",
+      "city": "Beaver Dam",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "df3d8e53-236e-43b1-8c57-42057e866c0f",
+      "name": "Kwik Trip",
+      "city": "Beaver Dam",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "d7cad09c-4210-4857-9f6b-65d89987b74d",
+      "name": "Kwik Trip",
+      "city": "Belleville",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "ee29955a-6740-4334-ab8a-bac405a88cd8",
+      "name": "Kwik Trip",
+      "city": "Belgium",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "3a29a884-5009-460e-b8e6-aeddb8006086",
+      "name": "Kwik Trip",
+      "city": "Beloit",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "45bf4c62-d286-43d4-8b3b-e4302a15b730",
+      "name": "Kwik Trip",
+      "city": "Burlington",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "eb5e6c2f-00c6-4d29-966f-32a7b079b3c3",
+      "name": "Kwik Trip",
+      "city": "Burlington",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "1b55e01a-3ad2-41ca-a430-c78b1a4bcd3f",
+      "name": "Kwik Trip",
+      "city": "Cambridge",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "cad7d658-0e2f-42d5-b6a9-e784c4eb7421",
+      "name": "Kwik Trip",
+      "city": "Cameron",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "2e8f6b14-ba39-4877-8f07-d478e2e0a04d",
+      "name": "Kwik Trip",
+      "city": "Chippewa Falls",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "12ae426d-5a88-4891-a805-136398e3b548",
+      "name": "Kwik Trip",
+      "city": "Clintonville",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "94591c47-ac3f-43ad-a0aa-b70cc961fb2a",
+      "name": "Kwik Trip",
+      "city": "Columbus",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "6f20e775-fa6b-4a46-975d-107e0d357a5c",
+      "name": "Kwik Trip",
+      "city": "Cottage Grove",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "5e6f802c-8df9-46b2-b16d-faae0a5f43e4",
+      "name": "Kwik Trip",
+      "city": "Crivitz",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "f4750d4b-fee2-4f80-a3e5-714ac913657e",
+      "name": "KWIK TRIP #124",
+      "city": "DeForest",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "a4989817-868a-499d-b236-5b2306f92cee",
+      "name": "Kwik Trip #557",
+      "city": "DeForest",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "ec8cbafc-40ee-4276-b41f-5c1c0cd16076",
+      "name": "Kwik Trip #1093",
+      "city": "DeForest",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "98db637d-d309-429b-848a-8156cadff1dc",
+      "name": "Kwik Trip Travel Center--Denmark",
+      "city": "Denmark",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "0b04b5f5-f599-448c-b57e-dba6d5d7c5c2",
+      "name": "Kwik Trip",
+      "city": "De Pere",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "de514387-10ee-4639-ac88-d86b210c01ef",
+      "name": "Kwik Trip",
+      "city": "Dodgeville",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "370cc967-f39d-4804-bd7d-4a05552126e7",
+      "name": "Kwik Trip",
+      "city": "Durand",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "52c80753-15c5-48ff-bf82-aabfb9252fa4",
+      "name": "Kwik Trip",
+      "city": "Eagle River",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "e9d1e754-bb3b-4fff-9d49-a23a0124d4d5",
+      "name": "Kwik Trip",
+      "city": "Eau Claire",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "b673347e-dab8-4b8c-bf2d-795b831a2246",
+      "name": "Kwik Trip",
+      "city": "Eau Claire",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "8348951e-13a4-44e8-8a94-1cd09da82df9",
+      "name": "Kwik Trip",
+      "city": "Eau Claire",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "49033849-cc86-4ba3-bcc9-018b394a0556",
+      "name": "Kwik Trip",
+      "city": "Eau Claire",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "3e2cbc4b-9850-44d3-8d40-df38acd05e7f",
+      "name": "Kwik Trip",
+      "city": "Eau Claire",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "c320e19e-dd87-4bfc-bf51-b3ea2ffb969e",
+      "name": "Kwik Trip",
+      "city": "Elkhorn",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "5a50aa0e-a011-4f1b-bbd5-5fbdb0e0f408",
+      "name": "Kwik Trip",
+      "city": "Fitchburg",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "3a06b3de-8b5b-4962-a19e-5e4a455cf922",
+      "name": "Kwik Trip",
+      "city": "Fitchburg",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "c138c045-c71f-4cc3-b0d4-c9f0cc53a49b",
+      "name": "Kwik Trip",
+      "city": "Fond du Lac",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "ee59fa06-18b3-4362-80f1-f428a46a13da",
+      "name": "Kwik Trip",
+      "city": "Fond du Lac",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "6a01017f-9d48-452c-8d4f-d9f844dd6a71",
+      "name": "KWIK TRIP #579",
+      "city": "Fond du Lac",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "e4f6698b-e22d-423c-834a-a9687af27b92",
+      "name": "Kwik Trip",
+      "city": "Fond du Lac",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "c4b9fabe-edff-45d7-ba81-23db08a6644a",
+      "name": "Kwik Trip",
+      "city": "Fond du Lac",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "4c27e552-8282-4f4f-aca3-3157a4f37945",
+      "name": "Kwik Trip",
+      "city": "Fort Atkinson",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "e6f4cff0-9fac-49ae-a1c7-2d02f512532c",
+      "name": "Kwik Trip",
+      "city": "Franklin",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "4165f8fd-450a-438c-b891-71c8fec4f531",
+      "name": "Kwik Trip",
+      "city": "Franklin",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "bc94b159-12e6-4961-aee2-f2fb48bbeeba",
+      "name": "Kwik Trip",
+      "city": "Germantown",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "1704d6e8-669f-4937-836f-42f748f5f4af",
+      "name": "Kwik Trip",
+      "city": "Grand Chute",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "e1ec9b72-739e-43b5-82c5-7d57e3805373",
+      "name": "Kwik Trip",
+      "city": "Grand Chute",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "39c29dd2-a4f5-456b-bda2-dfb5b595fa08",
+      "name": "Kwik Trip",
+      "city": "Green Bay",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "d88f841d-17e1-4695-a8d1-129645341b4f",
+      "name": "Kwik Trip",
+      "city": "Green Bay",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "c55b2e75-08d6-441b-b408-15e104e8c063",
+      "name": "Kwik Trip",
+      "city": "Green Bay",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "abb86737-51f1-46e8-b2a1-2257dc2989f8",
+      "name": "Kwik Trip",
+      "city": "Green Bay",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "995db7c8-39ce-4e55-b422-21236bb21638",
+      "name": "Kwik Trip",
+      "city": "Green Bay",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "11783b90-a097-4623-bdef-436124bcb0f5",
+      "name": "Kwik Trip",
+      "city": "Hartland",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "0c48918b-410e-4b16-a0e4-ed8a37625b0e",
+      "name": "KWIK TRIP #1112",
+      "city": "Hayward",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "d6376aaa-e316-43a9-bb43-d6fe85b3d3c9",
+      "name": "Kwik Trip",
+      "city": "Holmen",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "a095d245-b436-4ead-89df-83ba2dd13744",
+      "name": "Kwik Trip",
+      "city": "Holmen",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "50aae5f2-0078-4753-85a0-29d0ebfd003a",
+      "name": "Kwik Trip",
+      "city": "Hortonville",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "3c800f44-101a-494e-a9b8-42d0e85d2045",
+      "name": "Kwik Trip",
+      "city": "Howard",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "65017cd5-77e3-4740-b385-766bdabde958",
+      "name": "Kwik Trip",
+      "city": "Hudson",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "7a7e3145-410a-44ed-8068-6bc4ba238d60",
+      "name": "Kwik Trip",
+      "city": "Hudson",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "e8e9d226-8ef1-46d0-8574-570b510e0f50",
+      "name": "Kwik Trip",
+      "city": "Janesville",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "7bcda382-38fc-479b-8798-d98f94f7ad10",
+      "name": "Kwik Trip",
+      "city": "Janesville",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "e554c14f-1920-4c33-8251-8a9eab864047",
+      "name": "Kwik Trip",
+      "city": "Janesville",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "7bf6c32b-6ece-4231-8d1b-3f88590f9455",
+      "name": "Kwik Trip",
+      "city": "Janesville",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "2310be0c-e06d-4b9f-8eb2-eb26de7548a8",
+      "name": "Kwik Trip",
+      "city": "Jefferson",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "825ad362-0eb3-4b6c-aeaa-6794b7ed9c46",
+      "name": "Kwik Trip",
+      "city": "Johnson Creek",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "e0a22f78-d54e-485f-8b49-fde1e2917121",
+      "name": "Kwik Trip",
+      "city": "Kaukauna",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "bc25a38b-7a9b-4e3c-8ff2-94413d3e95b8",
+      "name": "Kwik Trip",
+      "city": "Kenosha",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "66af98d7-e91c-488a-a2cd-a13a5d64b5db",
+      "name": "Kwik Trip",
+      "city": "Kenosha",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "9b39201e-4241-401a-ad2c-821b4284044b",
+      "name": "Kwik Trip",
+      "city": "Kimberly",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "35d04f0a-b3d8-4d91-9803-8991c02313ce",
+      "name": "Kwik Trip",
+      "city": "La Crosse",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "d81631c2-01a3-41af-babf-c1d34479f57b",
+      "name": "Kwik Trip",
+      "city": "La Crosse",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "b3d9c069-2d1f-4bc7-9c71-e0ba41bdc595",
+      "name": "Kwik Trip",
+      "city": "La Crosse",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "1346ee4f-6633-4ed4-8f21-daae3a141862",
+      "name": "Kwik Trip",
+      "city": "Ladysmith",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "00bfe1a3-ae05-4732-b3da-14e473db9a7d",
+      "name": "Kwik Trip",
+      "city": "Lake Geneva",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "4724b36a-ff23-46b7-b195-fb014f8b95c6",
+      "name": "Kwik Trip",
+      "city": "Lodi",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "62e73663-4dbd-4666-858c-d0f7553958f4",
+      "name": "Kwik Trip",
+      "city": "Madison",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "11f5176e-dc66-4aa6-911c-ccbb43402ea5",
+      "name": "Kwik Trip",
+      "city": "Medford",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "b0efdc3b-8042-4ff1-b572-c48d27304778",
+      "name": "Kwik Trip",
+      "city": "Menasha",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "4bd44a8e-5b8d-4f03-9cbc-ef87b0a435ce",
+      "name": "Kwik Trip",
+      "city": "Menomonie",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "c985b25c-def7-44ee-8798-1d0a42ace2b3",
+      "name": "Kwik Trip",
+      "city": "Monroe",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "20fe7b2a-3b85-4103-8191-35b40debdaf4",
+      "name": "Kwik Trip",
+      "city": "Mt Horeb",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "295e9f50-943a-4fd6-b375-1726827f21b3",
+      "name": "Kwik Trip",
+      "city": "Mukwonago",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "241611c2-66d5-4d82-8448-995533c18990",
+      "name": "Kwik Trip",
+      "city": "Neenah",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "fa757511-ed0f-4dfb-9b2e-7580b8c55986",
+      "name": "Kwik Trip #971",
+      "city": "New Berlin",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "5efeb3b6-db9b-4b37-8942-16e240d7d11b",
+      "name": "Kwik Trip",
+      "city": "New Holstein",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "dce69812-e998-4ee1-a0ae-6b4ec52ba2f2",
+      "name": "Kwik Trip",
+      "city": "Onalaska",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "6eb7ef6c-34cc-4db1-829f-bc05c44240ab",
+      "name": "Kwik Trip",
+      "city": "Oregon",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "db2dfc53-065c-43a4-b076-b7d0eec8bfbe",
+      "name": "Kwik Trip",
+      "city": "Oshkosh",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "4657170b-3318-4331-80a4-3d9fe36730dc",
+      "name": "Kwik Trip",
+      "city": "Oshkosh",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "34e0c790-cf31-4856-89b5-7d9e76c59603",
+      "name": "Kwik Trip",
+      "city": "Phillips",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "7fb7bc78-adef-4875-879e-b3e29bb4ca51",
+      "name": "Kwik Trip",
+      "city": "Plymouth",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "95ca1889-b689-410e-8771-d98a2869e712",
+      "name": "Kwik Trip",
+      "city": "Prairie du Sac",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "ddda44bd-6c9a-43b2-a981-8ae27c17dc37",
+      "name": "Kwik Trip",
+      "city": "Prescott",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "208b0a88-3986-4272-ad1f-3a5559ce9eba",
+      "name": "Kwik Trip",
+      "city": "Shawano",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "ad5c6326-5322-48e6-afa6-0987b8415935",
+      "name": "Kwik Trip",
+      "city": "Sheboygan",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "ccd52c9f-fe8c-4bbb-b106-bfccec574c6c",
+      "name": "Kwik Trip",
+      "city": "Slinger",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "ddca7974-82de-4223-b8f0-da1f953b36fa",
+      "name": "Kwik Trip",
+      "city": "Suamico",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "573fcc85-ce9c-45f6-b6e8-91c561100d78",
+      "name": "Kwik Trip",
+      "city": "Sun Prairie",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "c80bd978-b219-48a7-868f-9f5085e16ff5",
+      "name": "Kwik Trip",
+      "city": "Sussex",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "0e8dd0c6-edee-41a6-bd0d-bfebaa42adc6",
+      "name": "Kwik Trip",
+      "city": "Turtle Lake",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "ca712b07-bd96-41d7-b097-f30ff6e3bfcd",
+      "name": "Kwik Trip",
+      "city": "Two Rivers",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "48833711-d3a3-4d79-b8e7-d2354cfdb030",
+      "name": "Kwik Trip",
+      "city": "Watertown",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "271363d1-7a0f-4215-9808-d4ebe6803e76",
+      "name": "Kwik Trip",
+      "city": "Waukesha",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "c16a2f85-0b6a-49a8-8fd8-ac37e305facd",
+      "name": "Kwik Trip",
+      "city": "Wausau",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "bcbb603c-1cb1-4371-ac02-a0e6de104f75",
+      "name": "Kwik Trip",
+      "city": "Waupun",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "b5b68c4c-8280-4669-acfd-73f58533b8a5",
+      "name": "Kwik Trip",
+      "city": "Winneconne",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "c2dc4365-3122-4e4a-95e2-9ef44d04820f",
+      "name": "Kwik Trip #1118",
+      "city": "Wisconsin Dells",
+      "state": "WI"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "7995d160-7002-49e5-80af-58912d67e46d",
+      "name": "Kwik Trip",
+      "city": "Wisconsin Rapids",
+      "state": "WI"
+    }
+  ],
+  "updated": [
+    {
+      "chain": "Holiday Stationstores",
+      "id": "6fbfb5cf-9ff1-4845-9e8c-01db5fd28024",
+      "name": "Circle K"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "764984dd-0746-467a-a961-e2d2aa17adf8",
+      "name": "Circle K"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "0047787a-d01e-4995-ba5c-90f75024d66b",
+      "name": "Circle K"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "47a8f985-1919-44a8-aff2-42132b2f8013",
+      "name": "Circle K"
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "id": "2c55bc57-dcfe-4588-9f36-3f8c29cf624e",
+      "name": "Holiday Stationstores"
+    },
+    {
+      "chain": "Power Market",
+      "id": "7bdf39b2-b880-4d42-a433-6567f877240c",
+      "name": "Food Mart"
+    },
+    {
+      "chain": "Power Market",
+      "id": "b67e8717-03ac-4212-8395-f2ec8231df21",
+      "name": "Power Market"
+    },
+    {
+      "chain": "Power Market",
+      "id": "c7dcfcc1-a0b9-4a8a-aadd-6f74d4705bfb",
+      "name": "Power Market"
+    },
+    {
+      "chain": "Power Market",
+      "id": "178f57ad-4722-4df3-8d2d-86935a6db840",
+      "name": "Power Market"
+    },
+    {
+      "chain": "Power Market",
+      "id": "93883d70-f945-4bdb-8fb9-e238e6f4d85b",
+      "name": "Power Market"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "0a77da4b-d462-41e1-9b43-b5cc4e8afa88",
+      "name": "Kwik Trip"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "2ff4722e-ebd7-4ca2-a55e-399030afea65",
+      "name": "Kwik Trip"
+    },
+    {
+      "chain": "Kwik Trip",
+      "id": "29eff28d-f516-4626-8d9a-6429e757e898",
+      "name": "Kwik Trip"
+    }
+  ],
+  "skipped": [
+    {
+      "chain": "Holiday Stationstores",
+      "address": "201 West County Road E2",
+      "reason": "place_id_in_db_classified"
+    },
+    {
+      "chain": "Power Market",
+      "address": "11004 South St",
+      "reason": "place_id_in_db_classified"
+    },
+    {
+      "chain": "Power Market",
+      "address": "14000 CA-88",
+      "reason": "place_id_in_db_classified"
+    },
+    {
+      "chain": "Power Market",
+      "address": "3122 Redwood Dr",
+      "reason": "place_id_in_db_classified"
+    },
+    {
+      "chain": "Power Market",
+      "address": "13001 Clackamas River Dr",
+      "reason": "place_id_in_db_classified"
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "550 Westgate Ct",
+      "reason": "place_id_in_db_classified"
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "1565 Madison Ave",
+      "reason": "place_id_in_db_classified"
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "650 W Northland Ave",
+      "reason": "place_id_in_db_classified"
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "2498 Lineville Rd",
+      "reason": "place_id_in_db_classified"
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "1200 W Wisconsin Ave",
+      "reason": "place_id_in_db_classified"
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "2410 W Main St",
+      "reason": "place_id_in_db_classified"
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "W229 N1400 Westwood Dr",
+      "reason": "place_id_in_db_classified"
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "4015 Rib Mountain Dr",
+      "reason": "place_id_in_db_classified"
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "2191 8th St S",
+      "reason": "place_id_in_db_classified"
+    }
+  ],
+  "errors": [
+    {
+      "chain": "Holiday Stationstores",
+      "address": "702 6th Avenue SE",
+      "city": "Aberdeen",
+      "state": "SD",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "1 Minnesota Avenue S",
+      "city": "Aitkin",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "1920 Highway 96",
+      "city": "Arden Hills",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "3600 State Street",
+      "city": "Bismarck",
+      "state": "ND",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "50 West 98th Street",
+      "city": "Bloomington",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "920 N Splitrock Blvd",
+      "city": "Brandon",
+      "state": "SD",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "900 West Burnsville Parkway",
+      "city": "Burnsville",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "12290 Nicollet Ave South",
+      "city": "Burnsville",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "6210 109th Ave No.",
+      "city": "Champlin",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "501 N. Bridge Street",
+      "city": "Chippewa Falls",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "409 Paul Ave S",
+      "city": "Cologne",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "13051 Round Lake Blvd. NW",
+      "city": "Coon Rapids",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "8610 E. Point Douglas Road",
+      "city": "Cottage Grove",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "7033 Jorgensen Lane S",
+      "city": "Cottage Grove",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "23736 Front Street",
+      "city": "Deerwood",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "1520 Kenwood Avenue",
+      "city": "Duluth",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "5699 Miller Trunk Highway",
+      "city": "Duluth",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "2940 N. Clairemont Avenue",
+      "city": "Eau Claire",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "4005 South Washington Street",
+      "city": "Grand Forks",
+      "state": "ND",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "202 East 4th Street",
+      "city": "Grand Rapids",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "2517 13th Ave E",
+      "city": "Hibbing",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "210 S. Second Street",
+      "city": "Hudson",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "504 Bryden Ave",
+      "city": "Lewiston",
+      "state": "ID",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "12970 Lake Blvd.",
+      "city": "Lindstrom",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "1901 Adams Street",
+      "city": "Mankato",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "11201 93rd Avenue North",
+      "city": "Maple Grove",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "200 W. Hwy 210",
+      "city": "McGregor",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "12 Aspen Avenue SE",
+      "city": "Menahga",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "1301 Industrial Blvd NE",
+      "city": "Minneapolis",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "2325 So. Reserve St.",
+      "city": "Missoula",
+      "state": "MT",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "110 Oakwood Drive",
+      "city": "Monticello",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "700 S. Highway 65",
+      "city": "Mora",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "16 Highway 10 South",
+      "city": "Motley",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "5554 St. Croix Trail",
+      "city": "North Branch",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "2255 East South Avenue",
+      "city": "North St. Paul",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "3344 Hadley Avenue N.",
+      "city": "Oakdale",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "236 Broad Street N",
+      "city": "Prescott",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "2460 W. Chicago St.",
+      "city": "Rapid City",
+      "state": "SD",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "900 N Division Street",
+      "city": "Roberts",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "1851 Assisi Dr. NW",
+      "city": "Rochester",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "304 College Avenue North",
+      "city": "Saint Joseph",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "1715 2nd Avenue North",
+      "city": "Sauk Rapids",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "6509 S. Louise Avenue",
+      "city": "Sioux Falls",
+      "state": "SD",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "1927 West 57th Street",
+      "city": "Sioux Falls",
+      "state": "SD",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "7125 West 26th Street",
+      "city": "Sioux Falls",
+      "state": "SD",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "7414 South Minnesota Avenue",
+      "city": "Sioux Falls",
+      "state": "SD",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "5212 W. 12th Street",
+      "city": "Sioux Falls",
+      "state": "SD",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "8720 State Hwy. No. 7",
+      "city": "St. Bonifacius",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Holiday Stationstores",
+      "address": "1800 E County Rd F",
+      "city": "White Bear Lake",
+      "state": "MN",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Power Market",
+      "address": "700 N Brookhurst St",
+      "city": "Anaheim",
+      "state": "CA",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Power Market",
+      "address": "1101 N Magnolia Ave",
+      "city": "Anaheim",
+      "state": "CA",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Power Market",
+      "address": "221 S Hacienda Blvd",
+      "city": "City of Industry",
+      "state": "CA",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Power Market",
+      "address": "1006 US HIGHWAY 101 N",
+      "city": "Crescent City",
+      "state": "CA",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Power Market",
+      "address": "8900 Madison Ave",
+      "city": "Fair Oaks",
+      "state": "CA",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Power Market",
+      "address": "9881 Greenback Ln",
+      "city": "Folsom",
+      "state": "CA",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Power Market",
+      "address": "1020 Riley St",
+      "city": "Folsom",
+      "state": "CA",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Power Market",
+      "address": "604 S Coast Hwy",
+      "city": "Laguna Beach",
+      "state": "CA",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Power Market",
+      "address": "25991 Crown Valley Pkwy",
+      "city": "Laguna Niguel",
+      "state": "CA",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Power Market",
+      "address": "671 Lincoln Blvd",
+      "city": "Lincoln",
+      "state": "CA",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Power Market",
+      "address": "3030 Del Monte Blvd",
+      "city": "Marina",
+      "state": "CA",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Power Market",
+      "address": "656 Benet Rd",
+      "city": "Oceanside",
+      "state": "CA",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Power Market",
+      "address": "1440 E Washington St",
+      "city": "Petaluma",
+      "state": "CA",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Power Market",
+      "address": "1903 W Holt Ave",
+      "city": "Pomona",
+      "state": "CA",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Power Market",
+      "address": "1400 E Roseville Pkwy",
+      "city": "Roseville",
+      "state": "CA",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Power Market",
+      "address": "3300 Bradshaw Rd",
+      "city": "Sacramento",
+      "state": "CA",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Power Market",
+      "address": "5597 Stockton Blvd",
+      "city": "Sacramento",
+      "state": "CA",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Power Market",
+      "address": "1305 S Front St",
+      "city": "Soledad",
+      "state": "CA",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Power Market",
+      "address": "900 Mason St",
+      "city": "Vacaville",
+      "state": "CA",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Power Market",
+      "address": "223 Fairgrounds Dr",
+      "city": "Vallejo",
+      "state": "CA",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Power Market",
+      "address": "251 Lincoln Blvd",
+      "city": "Venice",
+      "state": "CA",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Power Market",
+      "address": "262 SE 1st Ave",
+      "city": "Canby",
+      "state": "OR",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Power Market",
+      "address": "52530 Hwy 97",
+      "city": "La Pine",
+      "state": "OR",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Power Market",
+      "address": "3046 SE Harrison St",
+      "city": "Milwaukie",
+      "state": "OR",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Power Market",
+      "address": "1511 Molalla Ave",
+      "city": "Oregon City",
+      "state": "OR",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Power Market",
+      "address": "2005 S Hwy 97",
+      "city": "Redmond",
+      "state": "OR",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "2300 Lakeshore Dr E",
+      "city": "Ashland",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "1814 Lakeshore Dr W",
+      "city": "Ashland",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "2107 1st Center Ave",
+      "city": "Brodhead",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "401 W Cottage Grove Rd",
+      "city": "Cottage Grove",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "2327 N Clairemont Ave",
+      "city": "Eau Claire",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "4828 Mormon Coulee Rd",
+      "city": "La Crosse",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "5440 E Broadway",
+      "city": "Madison",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "8201 Watts Rd",
+      "city": "Madison",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "7602 Tree Ln",
+      "city": "Madison",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "725 N High Point Rd",
+      "city": "Madison",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "4402 Calumet Ave",
+      "city": "Manitowoc",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "1801 Marinette Ave",
+      "city": "Marinette",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "W156 N8481 Pilgrims Rd",
+      "city": "Menomonee Falls",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "7400 Erin St",
+      "city": "Middleton",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "720 Oneida St",
+      "city": "Minocqua",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "2900 Winnebago St",
+      "city": "Monona",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "S65 W17700 Martin Dr",
+      "city": "Muskego",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "920 W Washington St",
+      "city": "New London",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "1430 Paperjack Dr",
+      "city": "New Richmond",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "7750 S Howell Ave",
+      "city": "Oak Creek",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "1125 E Main St",
+      "city": "Omro",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "1025 N Westhaven Dr",
+      "city": "Oshkosh",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "N4650 US Hwy 151",
+      "city": "Perry/Randolph",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "3400 N Point Dr",
+      "city": "Plover",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "2703 New Pinery Rd",
+      "city": "Portage",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "2610 S Main St",
+      "city": "Rice Lake",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "1501 N Main St",
+      "city": "River Falls",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "124 Crossroads Dr",
+      "city": "Somerset",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "1225 W College Ave",
+      "city": "South Milwaukee",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "24150 US 63",
+      "city": "Spooner",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "5004 Main St",
+      "city": "Stevens Point",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "2351 US Hwy 51 N",
+      "city": "Stoughton",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "2801 Caledonia Rd",
+      "city": "Sturtevant",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "3302 Tower Ave",
+      "city": "Superior",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "N3485 Hwy 13",
+      "city": "Toledo",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "802 S Main St",
+      "city": "Verona",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "1200 Blackhawk Dr",
+      "city": "Viroqua",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "1201 Royalton St",
+      "city": "Waupaca",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "105 Prairie View Dr",
+      "city": "Waunakee",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "2990 W Washington St",
+      "city": "West Bend",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "2295 US Hwy 16",
+      "city": "West Salem",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    },
+    {
+      "chain": "Kwik Trip",
+      "address": "715 W Main St",
+      "city": "Whitewater",
+      "state": "WI",
+      "error": "DFS 40102: No Search Results."
+    }
+  ]
+}

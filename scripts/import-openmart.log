@@ -1,0 +1,271 @@
+[10:23:23] ============================================================
+[10:23:23] OpenMart import pipeline started
+[10:23:23] ============================================================
+[10:23:23] Loaded 5319 Place IDs from /Users/michaelgray/Projects/TouchlessCarWash/scripts/openmart-net-new-place-ids.json
+[10:23:23] Progress: 0 already processed, 0 inserted, 0 errors
+[10:23:23] Phase 1: 5319 Place IDs to enrich (0 already done)
+[10:23:23] Loading existing slugs from DB...
+[10:23:33] Loaded 52033 existing slugs
+[10:23:33] Checking which Place IDs already exist in DB...
+[10:24:01]   ERROR ChIJGVsCmYaAhYARsF6rcoKlxYg: DFS error 40102: No Search Results.
+[10:24:51]   ERROR ChIJGQRmbMPcwogRREXm1NDl5fM: DFS error 40102: No Search Results.
+[10:25:52]   50/5319 | inserted=30 skip_existing=0 skip_no_wash=18 errors=2
+[10:29:14]   ERROR ChIJmfcjBqubZIgR74r_Tcsg7rs: DFS error 40102: No Search Results.
+[10:29:24]   INSERT ERROR ChIJRfLqlL9hVIgRjdsjv0zzNgo (Ecoshine Touchless Automatic): HTTP Error 400: Bad Request
+[10:29:25]   INSERT ERROR ChIJVbs60q8BkVQRR0EuwKbZEcM (Car Wash Touchless): HTTP Error 400: Bad Request
+[10:29:33]   ERROR ChIJ9cql4O4J2YgRZAEk6G0J7KM: DFS error 40102: No Search Results.
+[10:29:55]   INSERT ERROR ChIJYVdJBX3-v1QRc4NwXwz2IOw (Laser - Touchless Car Wash): HTTP Error 400: Bad Request
+[10:30:01]   ERROR ChIJ4RVEvyW2zIYRmcCaxj3VEaU: DFS error 40102: No Search Results.
+[10:30:27]   INSERT ERROR ChIJQaP1m8Z5e4gR7Vriw10i0-8 (Boss Touchless Car Wash): HTTP Error 400: Bad Request
+[10:30:27]   150/5319 | inserted=92 skip_existing=0 skip_no_wash=49 errors=9
+[10:30:35]   INSERT ERROR ChIJa3PhWsphkIcR-tTJry7o7-s (SPARKLE & SHINE TOUCHLESS CAR WASH): HTTP Error 400: Bad Request
+[10:30:40]   INSERT ERROR ChIJQeJAQW1YfYgRMjt0UKgVpL0 (Hometown Touchless Automatic Car Wash): HTTP Error 400: Bad Request
+[10:30:45]   INSERT ERROR ChIJ6XR6vrvwI4gRIHrQWaObdNA (A & B Touchless Car Wash): HTTP Error 400: Bad Request
+[10:31:13]   INSERT ERROR ChIJvbwNeSMsw4ARbxUAo268Yvc (Auto Spa Touchless Car Wash): HTTP Error 400: Bad Request
+[10:32:18] ============================================================
+[10:32:18] OpenMart import pipeline started
+[10:32:18] ============================================================
+[10:32:18] Loaded 5319 Place IDs from /Users/michaelgray/Projects/TouchlessCarWash/scripts/openmart-net-new-place-ids.json
+[10:32:18] Progress: 150 already processed, 92 inserted, 9 errors
+[10:32:18] Phase 1: 5169 Place IDs to enrich (150 already done)
+[10:32:18] Loading existing slugs from DB...
+[10:32:24] Loaded 52135 existing slugs
+[10:32:24] Checking which Place IDs already exist in DB...
+[10:32:26]   10 Place IDs already in DB — will skip
+[10:34:31]   50/5169 | inserted=13 skip_existing=10 skip_no_wash=27 errors=0
+[10:36:26]   ERROR ChIJVbkeoNpvkFQRR3LwqWWSxVE: DFS error 40102: No Search Results.
+[10:37:06]   ERROR ChIJ-e3p3YN_2okR-XOs9E0OE6g: DFS error 40102: No Search Results.
+[10:39:08]   150/5169 | inserted=44 skip_existing=10 skip_no_wash=94 errors=2
+[10:39:53]   ERROR ChIJ66j3gUob24ARWK6bHjsZRSU: DFS error 40102: No Search Results.
+[10:40:58]   ERROR ChIJU1MfTa0FxokR5gD0B8N-SI8: DFS error 40102: No Search Results.
+[10:42:06]   ERROR ChIJ6_60Z8Db3ogRrWUE5Sxx-_8: DFS error 40102: No Search Results.
+[10:43:45]   250/5169 | inserted=75 skip_existing=10 skip_no_wash=160 errors=5
+[10:46:20]   300/5169 | inserted=123 skip_existing=10 skip_no_wash=162 errors=5
+[10:49:02]   350/5169 | inserted=172 skip_existing=10 skip_no_wash=163 errors=5
+[10:49:18]   ERROR ChIJjcJSRhQxR4YRYFI4XglERzU: DFS error 40102: No Search Results.
+[10:51:05]   ERROR ChIJm15S91e7woAR2oeMLXzLmCo: DFS error 40102: No Search Results.
+[10:53:29]   450/5169 | inserted=203 skip_existing=10 skip_no_wash=230 errors=7
+[10:54:15]   ERROR ChIJK8u9ndm1wogRR8SeKd1k-kM: DFS error 40102: No Search Results.
+[10:57:37]   ERROR ChIJfSoeBHfpwogRZpmY-utTly0: DFS error 40102: No Search Results.
+[11:02:13]   ERROR ChIJqcjtRsEbsocRSFWn4YLzonU: The read operation timed out
+[11:08:16]   ERROR ChIJ5QzobJU_w4gRoWku8ra0FLQ: DFS error 40102: No Search Results.
+[11:15:23]   ERROR ChIJGZ-ZvyP1qYkRGLKLXGVlxQM: DFS error 40102: No Search Results.
+[11:16:48]   ERROR ChIJu10uyFTXZIgRP1r3Wag8ai4: DFS error 40102: No Search Results.
+[11:26:19]   ERROR ChIJr3saUQYeVIgR7J0omupgpfk: The read operation timed out
+[11:32:59]   950/5169 | inserted=220 skip_existing=10 skip_no_wash=706 errors=14
+[11:33:06]   ERROR ChIJ9SCR0-b53YYR_JKc3wcV-04: DFS error 40102: No Search Results.
+[11:33:43]   ERROR ChIJc-3HazOJa4cRcUEiiRbjOIw: DFS error 40102: No Search Results.
+[11:38:08]   ERROR ChIJoYdkhLzLTYYRRGmyj3XEZwI: DFS error 40102: No Search Results.
+[11:39:13]   ERROR ChIJu62NkagFU4cRVGEJNGl4WGU: DFS error 40102: No Search Results.
+[11:50:32]   ERROR ChIJNbXTTimRtocRj9e17U0dfes: DFS error 40102: No Search Results.
+[11:51:30]   ERROR ChIJPZ5oxCoJyIkR1lAeVe5ROWk: DFS error 40102: No Search Results.
+[11:53:41]   1200/5169 | inserted=240 skip_existing=10 skip_no_wash=930 errors=20
+[11:55:30]   ERROR ChIJocvGJRAGm4gRbILXkOOspGI: DFS error 40102: No Search Results.
+[11:59:51]   ERROR ChIJbbA3UbmzK4cR0ikujUpgppM: DFS error 40102: No Search Results.
+[11:59:56]   ERROR ChIJvSNQ8xLJD4gRGpQGE08yl14: DFS error 40102: No Search Results.
+[12:01:22]   ERROR ChIJZYtvSS58sIkRudPbkrb_PYk: DFS error 40102: No Search Results.
+[12:02:23]   ERROR ChIJS1gYE4OdYIgRhGksFk7jI5o: The read operation timed out
+[12:03:24]   ERROR ChIJGQiPLiwryYARVeKUM1bx-aA: The read operation timed out
+[12:04:25]   ERROR ChIJlViPsDtN_4gRkhaMUfEssyM: The read operation timed out
+[12:05:27]   ERROR ChIJ7XQcL6GnToYRbiVGRClzBqg: The read operation timed out
+[12:06:28]   ERROR ChIJA9IMQSMUsIkRIc4XO7Hvpgg: The read operation timed out
+[12:10:16]   1350/5169 | inserted=251 skip_existing=10 skip_no_wash=1060 errors=29
+[12:11:01]   ERROR ChIJA73c65I3P2cRYhuRrxWNxtc: DFS error 40102: No Search Results.
+[12:14:59]   ERROR ChIJHdXd5W6bhYARed_47HkcImw: DFS error 40102: No Search Results.
+[12:15:49]   ERROR ChIJB3tcCXgts1IRVsq86UBxyc4: DFS error 40102: No Search Results.
+[12:21:36]   ERROR ChIJFZcaF_KHqIcR-3vxBsKPMGA: DFS error 40102: No Search Results.
+[12:22:09]   ERROR ChIJiUXro9gC2YgR4nD_s81IoX0: DFS error 40102: No Search Results.
+[12:23:43]   ERROR ChIJs0L2l8WLNU0Rs8VUE0kddxs: DFS error 40102: No Search Results.
+[12:24:39]   ERROR ChIJzTvOGxLN34kRweqoHh_qH3g: DFS error 40102: No Search Results.
+[12:26:54]   ERROR ChIJVWHPQLh5j4ARkzfra0Krho8: DFS error 40102: No Search Results.
+[12:36:52]   ERROR ChIJp7arqEUIW1MRcNwAmavjR1k: DFS error 40102: No Search Results.
+[12:39:00]   ERROR ChIJX_K9xhPrkG8RN0qIytnHt9M: DFS error 40102: No Search Results.
+[12:39:22]   ERROR ChIJVSHWZaO5woARqOWDwCYKuzQ: DFS error 40102: No Search Results.
+[12:41:59]   ERROR ChIJLyBKZJ-zhKAREmifjQ1tLzY: DFS error 40102: No Search Results.
+[12:42:38]   ERROR ChIJGd-ffJSvJIgR7H3aGLc4xvo: DFS error 40102: No Search Results.
+[12:42:57]   ERROR ChIJqVIsA25_TYcR58CYPVVpT-Y: DFS error 40102: No Search Results.
+[12:43:58]   ERROR ChIJrw36DDOtqokRm51vgTu5jy4: DFS error 40102: No Search Results.
+[12:44:19]   ERROR ChIJ6UompvJ9VIcR2s6-jS7p6q8: DFS error 40102: No Search Results.
+[12:49:22]   ERROR ChIJJepBMbhsRYYRDOH3KErToXs: DFS error 40102: No Search Results.
+[12:50:55]   ERROR ChIJXYTs4-FNwokRdusrTsAeBe8: DFS error 40102: No Search Results.
+[12:51:39]   ERROR ChIJVxXDNtk9N4gRuEsZ7Rs-9-c: DFS error 40102: No Search Results.
+[12:53:51]   ERROR ChIJE3fCD8HmolQRIYEUKmMbYC4: DFS error 40102: No Search Results.
+[12:56:58]   2250/5169 | inserted=294 skip_existing=10 skip_no_wash=1897 errors=49
+[12:57:04]   ERROR ChIJfcyRJial2YgRP2RlJiTwzgQ: DFS error 40102: No Search Results.
+[12:58:02]   ERROR ChIJ3RZCSgApm4ARQJGvyp9eCcQ: DFS error 40102: No Search Results.
+[13:00:54]   ERROR ChIJaR35_4si9ocRn3XeUrU9S98: DFS error 40102: No Search Results.
+[13:04:39]   ERROR ChIJ_TxycYVJ3YARUm6gGNOdpeI: DFS error 40102: No Search Results.
+[13:05:47]   ERROR ChIJJSWCH1y-hVQR5HtsUmT-SFE: DFS error 40102: No Search Results.
+[13:06:41]   ERROR ChIJKd13RwBZ2YARH50G5JQPSsQ: DFS error 40102: No Search Results.
+[13:08:08]   ERROR ChIJFaGf_acj4okR2W0jI1GncgU: DFS error 40102: No Search Results.
+[13:08:16]   ERROR ChIJxRMuoprF54kR6iCleBFPa9s: DFS error 40102: No Search Results.
+[13:10:10]   ERROR ChIJg_-GzNVyhYARRBJyJtepemk: DFS error 40102: No Search Results.
+[13:15:54]   ERROR ChIJaxPreR37CC4RO4Sr0TiAwak: DFS error 40102: No Search Results.
+[13:17:00]   ERROR ChIJG85Fp8hvToYRBT_4ayg8X0o: DFS error 40102: No Search Results.
+[13:20:38]   ERROR ChIJeUXsvBAF9YgRDLH_jRcjC5E: DFS error 40102: No Search Results.
+[13:21:50]   ERROR ChIJDw-BQABZ9ocRkC9rJOp7aQA: DFS error 40102: No Search Results.
+[13:22:44]   ERROR ChIJhcCWiywJsokRmoI_H5HCB5w: DFS error 40102: No Search Results.
+[13:23:11]   ERROR ChIJowvxlvF_bIcRiK66FJxprgA: DFS error 40102: No Search Results.
+[13:23:21]   ERROR ChIJ62_Op31NrlQROjnL89UAcLs: DFS error 40102: No Search Results.
+[13:23:28]   ERROR ChIJT9Re88-ej4ARMDDVXZDyjQc: DFS error 40102: No Search Results.
+[13:25:11]   2850/5169 | inserted=302 skip_existing=10 skip_no_wash=2472 errors=66
+[13:27:41] ============================================================
+[13:27:41] OpenMart import pipeline started
+[13:27:41] ============================================================
+[13:27:41] Loaded 5319 Place IDs from /Users/michaelgray/Projects/TouchlessCarWash/scripts/openmart-net-new-place-ids.json
+[13:27:41] Progress: 3000 already processed, 394 inserted, 75 errors
+[13:27:41] Phase 1: 2319 Place IDs to enrich (3000 already done)
+[13:27:41] Loading existing slugs from DB...
+[13:27:48] Loaded 52440 existing slugs
+[13:27:48] Checking which Place IDs already exist in DB...
+[13:27:50]   3 Place IDs already in DB — will skip
+[13:30:31]   ERROR ChIJlx3OaAIND4gRZ5B9uzXN72E: DFS error 40102: No Search Results.
+[13:33:13]   ERROR ChIJjRUyDNBH24gRNRnEazzXt4g: DFS error 40102: No Search Results.
+[13:38:37]   ERROR ChIJEdwWAk-IbIcRMpjHkKV1TB0: DFS error 40102: No Search Results.
+[18:45:38] ============================================================
+[18:45:38] OpenMart import pipeline started
+[18:45:38] ============================================================
+[18:45:38] Loaded 5319 Place IDs from /Users/michaelgray/Projects/TouchlessCarWash/scripts/openmart-net-new-place-ids.json
+[18:45:38] Progress: 3000 already processed, 394 inserted, 75 errors
+[18:45:38] Phase 1: 2319 Place IDs to enrich (3000 already done)
+[18:45:38] Loading existing slugs from DB...
+[18:45:46] Loaded 52443 existing slugs
+[18:45:46] Checking which Place IDs already exist in DB...
+[18:45:48]   6 Place IDs already in DB — will skip
+[18:48:17]   ERROR ChIJlx3OaAIND4gRZ5B9uzXN72E: DFS error 40102: No Search Results.
+[18:50:59]   ERROR ChIJjRUyDNBH24gRNRnEazzXt4g: DFS error 40102: No Search Results.
+[18:55:06]   ERROR ChIJEdwWAk-IbIcRMpjHkKV1TB0: DFS error 40102: No Search Results.
+[19:01:03]   ERROR ChIJKd5i4gOT5IcR1tlW0pbnOYE: DFS error 40102: No Search Results.
+[19:01:22]   ERROR ChIJVVWJA6UCD4gRXH0Wy401SCI: DFS error 40102: No Search Results.
+[19:02:33]   ERROR ChIJZcS6QXCyJIgRsEab_zi9fV0: DFS error 40102: No Search Results.
+[19:06:43]   ERROR ChIJ-dcdg2OAhYARjvJrzrynfuY: DFS error 40102: No Search Results.
+[19:06:53]   ERROR ChIJP4YyQ0nEj4ARj5tGZdQ2F58: DFS error 40102: No Search Results.
+[19:07:47]   ERROR ChIJc8AYfBMVMYgRuOGdS5Kkqbc: DFS error 40102: No Search Results.
+[19:08:30]   ERROR ChIJW8vl8t6npC0RbwBAfkQWW7c: DFS error 40102: No Search Results.
+[19:08:45]   ERROR ChIJHTEiwbYIhYAR8QKzhwP0SUw: DFS error 40102: No Search Results.
+[19:09:14]   ERROR ChIJbbM1Ue__iYgRobBeJFsYd-c: DFS error 40102: No Search Results.
+[19:13:01]   ERROR ChIJ12mez897j4ARx0rfJ1UYj_o: DFS error 40102: No Search Results.
+[19:15:02]   ERROR ChIJk9C_DF78kFQRiUOaLM6J6hk: DFS error 40102: No Search Results.
+[19:15:06]   ERROR ChIJq6qa2qEjkFQRJEJxX0-v1g4: DFS error 40102: No Search Results.
+[19:15:37]   ERROR ChIJJbL9rTrDwoARS2J2Pf-lP64: DFS error 40102: No Search Results.
+[19:15:51]   ERROR ChIJP4AWfV3p3IARLmsMTbE2sEY: DFS error 40102: No Search Results.
+[19:20:50]   ERROR ChIJAQBQZRUBtokRrvTupLrcPg8: DFS error 40102: No Search Results.
+[19:20:54]   ERROR ChIJAQCkmnprRYYRgtV6VnZ-Yms: DFS error 40102: No Search Results.
+[19:21:13]   ERROR ChIJbQAv9hJ3bIcRYOlIXfOIhj4: DFS error 40102: No Search Results.
+[19:23:48]   ERROR ChIJ__9vqqtkx4kRfD0nrNE0p60: DFS error 40102: No Search Results.
+[19:24:03]   ERROR ChIJq6omxlE_mYAR1drAw_FAwLI: DFS error 40102: No Search Results.
+[19:24:09]   ERROR ChIJoYUtUObNRIYRQAwTf-D9FJA: DFS error 40102: No Search Results.
+[19:24:30]   ERROR ChIJybaj7y-FLYcR9CPj9HJPVmo: DFS error 40102: No Search Results.
+[19:25:42]   ERROR ChIJvyK1Jv2nK4cRBdNC86spJRs: DFS error 40102: No Search Results.
+[19:26:22]   ERROR ChIJVVXF3I0cW4YRUPBL5w8uGgQ: DFS error 40102: No Search Results.
+[19:26:28]   ERROR ChIJVVUJuZlyrIkRiM33JcqNQCs: DFS error 40102: No Search Results.
+[19:27:33]   ERROR ChIJMxThNdhbNIgRn-DYtYaMJ9E: DFS error 40102: No Search Results.
+[19:29:12]   ERROR ChIJLedwaSFMmYARIRvgzOsAszk: DFS error 40102: No Search Results.
+[19:29:33]   ERROR ChIJoy4-5MZy54gRq8maRWS5SKI: DFS error 40102: No Search Results.
+[19:29:47]   ERROR ChIJl94yu_Al_YcRUfqq8JHSaWI: DFS error 40102: No Search Results.
+[19:30:08]   ERROR ChIJx9_ibTeNzwoR3XFloL8FMlM: DFS error 40102: No Search Results.
+[19:30:39]   ERROR ChIJdZSQdmmWlocRp42-WbAgpm4: DFS error 40102: No Search Results.
+[19:31:30]   ERROR ChIJe-O7b00IOIgR9ngbVglUduc: DFS error 40102: No Search Results.
+[19:33:12]   ERROR ChIJnSR2ve6B9YgRhmedwAt5VWk: DFS error 40102: No Search Results.
+[19:33:24]   ERROR ChIJHR-dXjsk_ogRJ21imQD-OJ4: DFS error 40102: No Search Results.
+[19:34:15]   ERROR ChIJpes16cYUOIYRnKVpF5MebBw: DFS error 40102: No Search Results.
+[19:40:46]   ERROR ChIJXzM1-MS52YgRcDqb_jXwA5g: DFS error 40102: No Search Results.
+[19:41:08]   ERROR ChIJdXuAKACfwoARIBi5X-TechU: DFS error 40102: No Search Results.
+[19:41:22]   ERROR ChIJEZiBdwC32YgRK3ROmBiRBtQ: DFS error 40102: No Search Results.
+[19:41:39]   ERROR ChIJ0TU1aAC52YgRT2D6JiSeCoo: DFS error 40102: No Search Results.
+[19:43:55]   ERROR ChIJAWYyuPq8lVQRHopjKLSilh0: DFS error 40102: No Search Results.
+[19:44:02]   ERROR ChIJVcG1nPyH9ogR3uBsuH0LLhg: DFS error 40102: No Search Results.
+[19:44:28]   ERROR ChIJUeEufQBp6oARyajYooi46Zw: DFS error 40102: No Search Results.
+[19:44:31]   ERROR ChIJ4zLGu7V3jIgRgjAkbC8NKok: DFS error 40102: No Search Results.
+[19:45:49]   ERROR ChIJy46o8FDKQYgROqXb7RTlsW0: DFS error 40102: No Search Results.
+[19:46:07]   ERROR ChIJsWcM0RtrDYUR7IkZsHAyIDM: DFS error 40102: No Search Results.
+[19:46:26]   ERROR ChIJfZ43_t5BolQRBc4aqH-P8lE: DFS error 40102: No Search Results.
+[19:46:53]   ERROR ChIJIy5X2OIb9YgRMrxRDdyb9FY: DFS error 40102: No Search Results.
+[19:47:13]   ERROR ChIJF0AGRABp6oARfl94Cx19Tdw: DFS error 40102: No Search Results.
+[19:47:33]   ERROR ChIJXxn9Ps1JWYgRw1nsoB_flBc: DFS error 40102: No Search Results.
+[19:48:16]   ERROR ChIJVVVF609ps1IRau5vqDXKyWo: DFS error 40102: No Search Results.
+[19:48:21]   ERROR ChIJOcnBLAC32YgRDTg9NLaXIWc: DFS error 40102: No Search Results.
+[19:54:26]   ERROR ChIJ15qF4Ye-f6kRXzEMelo-3W4: DFS error 40102: No Search Results.
+[19:54:55]   ERROR ChIJo0Sd2M571oYRiqLYfdsj2-I: DFS error 40102: No Search Results.
+[19:55:05]   ERROR ChIJNSs9AgC32YgRmAARALzr6KU: DFS error 40102: No Search Results.
+[19:55:17]   ERROR ChIJvzxqEQCbwoARJwHRNL1Vw24: DFS error 40102: No Search Results.
+[19:55:23]   ERROR ChIJZdA-5fol3YARKZpJMqK1ZFA: DFS error 40102: No Search Results.
+[19:55:38]   ERROR ChIJP0096i8l3YARn3tQ4ZDZFYg: DFS error 40102: No Search Results.
+[19:55:50]   ERROR ChIJGxymt3y3cSoRGxGEBTPulkE: DFS error 40102: No Search Results.
+[19:56:08]   ERROR ChIJq6I8agCbwoARQ5M8YrP9KbY: DFS error 40102: No Search Results.
+[19:56:51]   ERROR ChIJG-nwzB3hyFYRoRK2SK11bUI: DFS error 40102: No Search Results.
+[19:56:58]   ERROR ChIJ__-Pb4jMSYYRDvr4hR0m_I8: DFS error 40102: No Search Results.
+[19:57:57]   ERROR ChIJFa8uuEHh3YkRir-aWJUYfRk: DFS error 40102: No Search Results.
+[19:58:10]   ERROR ChIJGdYzyci7hYAR6u-_ylnkdlQ: DFS error 40102: No Search Results.
+[19:58:16]   ERROR ChIJj6mToc9l-4cRvScEweXSPBE: DFS error 40102: No Search Results.
+[19:58:23]   ERROR ChIJtTfTEgDZmoARxa_XXGH94wE: DFS error 40102: No Search Results.
+[20:00:12]   ERROR ChIJycMEPgBl54gR4vAdHYvMulU: DFS error 40102: No Search Results.
+[20:00:40]   ERROR ChIJPZj4GQCFj4ARm_hevFrqa74: DFS error 40102: No Search Results.
+[20:01:24]   ERROR ChIJlW3VawBp6oARCxIR-BbiQJE: DFS error 40102: No Search Results.
+[20:03:25]   ERROR ChIJlVGgVgCv2YgRGZkm2Zi03k0: DFS error 40102: No Search Results.
+[20:03:56]   ERROR ChIJa5GHEgCdwoARAkHaw6AcEvs: DFS error 40102: No Search Results.
+[20:07:00]   ERROR ChIJ44lCYqVRwokRSdlAL4NmLZk: DFS error 40102: No Search Results.
+[20:08:14]   ERROR ChIJs-MfSQAbqYkRDTDNB5UV9QU: DFS error 40102: No Search Results.
+[20:09:22]   ERROR ChIJ__977ubKtocRpWErKPD2HOY: DFS error 40102: No Search Results.
+[20:09:46]   ERROR ChIJ3-WSbAD524ARFSTOndXZSr0: DFS error 40102: No Search Results.
+[20:10:17]   ERROR ChIJdzlWua8h3YAR2YbsLnJCDD4: DFS error 40102: No Search Results.
+[20:12:01]   ERROR ChIJTcghAgCXwoARqkhcbvZEpY0: DFS error 40102: No Search Results.
+[20:13:14]   ERROR ChIJxwGfawCbwoARdLFeWdyAjMo: DFS error 40102: No Search Results.
+[20:13:57]   ERROR ChIJ3Tk9ut3cGEIRHluBGzWBhkw: DFS error 40102: No Search Results.
+[20:16:14]   ERROR ChIJ4bT23BsWw4gRblbTNVzmAVo: DFS error 40102: No Search Results.
+[20:17:36]   ERROR ChIJC-KBeVwl3YARMcDomunWy_o: DFS error 40102: No Search Results.
+[20:18:01]   ERROR ChIJq50fOQCRwoARSTAgeHkp0Pw: DFS error 40102: No Search Results.
+[20:18:14]   ERROR ChIJ16gqZQCfj4ARaNwcbSmH1rc: DFS error 40102: No Search Results.
+[20:18:25]   ERROR ChIJN0wZJo39DogR2x4xDjFPsFY: DFS error 40102: No Search Results.
+[20:19:12]   ERROR ChIJM9gJAABl54gRURUt24WI2s8: DFS error 40102: No Search Results.
+[20:19:39]   ERROR ChIJdQ12nlgv3YAR8jb_lhumpk4: DFS error 40102: No Search Results.
+[20:19:49]   ERROR ChIJ6zVLfQDBwogRCCEHg0_AM9g: DFS error 40102: No Search Results.
+[20:20:12]   ERROR ChIJYxpHJgC52YgRJUcCy8qOeJQ: DFS error 40102: No Search Results.
+[20:20:24]   ERROR ChIJCY8ZSwC32YgRYwLbUhVMLyA: DFS error 40102: No Search Results.
+[20:23:23]   ERROR ChIJVVUJcLQuU4YRkB9iVuAnxGQ: DFS error 40102: No Search Results.
+[20:26:36]   ERROR ChIJJdB8vlqQj4ARcz0J0Carr9E: DFS error 40102: No Search Results.
+[20:27:47]   ERROR ChIJH6uk1f5EtUQRb0FkgqZV6So: DFS error 40102: No Search Results.
+[20:28:28]   ERROR ChIJB1K79kzZICMR2XZGIZCYmLo: DFS error 40102: No Search Results.
+[20:31:45]   ERROR ChIJ_6pvuU3ZnQ8R7oKb0lf6n0U: DFS error 40102: No Search Results.
+[20:32:29]   ERROR ChIJpXAsqKNIEwAR-ASOPCLWfoU: DFS error 40102: No Search Results.
+[20:33:20]   ERROR ChIJtwc42BBS4okR5dhlNmEBFcA: DFS error 40102: No Search Results.
+[20:34:11]   ERROR ChIJ0VlCbJePtocR4mkk1P9Bo8U: DFS error 40102: No Search Results.
+[20:39:36]   ERROR ChIJx9HhKQCfJIYRajuP-Gzxfrs: DFS error 40102: No Search Results.
+[20:40:52]   ERROR ChIJ6TFdSy5f3ogRa-o5Z6dEaUU: DFS error 40102: No Search Results.
+[20:44:57]   ERROR ChIJA2zBW9Tv3ogRxg_jwvR0kOc: DFS error 40102: No Search Results.
+[20:45:05] Phase 1 complete: 36 inserted | 6 already existed | 2176 not a car wash | 101 errors
+[20:45:06] 
+[20:45:06] --- Phase 2: Review mining ---
+[20:45:14] ERROR batch 0: HTTP Error 500: Internal Server Error
+[20:45:42]   ✗ REJECTED: Shield System Car Wash — Billerica, MA
+[20:45:42] Batch 1: scanned=9 touchless=0 total_touchless=0 (36s)
+[20:45:42] Review mining complete.
+[20:45:42] Phase 2 summary: 9 scanned | 0 confirmed touchless
+[20:45:42] 
+[20:45:42] --- Phase 3: Name-promotion for unconfirmed touchless names ---
+[20:45:44] Found 214 OpenMart imports with no review evidence after mining
+[20:45:44]   14 have touchless name signal → promoting to is_touchless=true
+[20:45:44]   200 have no signal at all → leaving as null (not shown in directory)
+[20:45:44] Sample promoted:
+[20:45:44]   ✓ GPM Touchless Car Wash — Marshfield, WI
+[20:45:44]   ✓ Junior's Touchless Car Wash — Wake Village, TX
+[20:45:44]   ✓ Midtown Touchless Car Wash — Wagner, SD
+[20:45:44]   ✓ Fast Touchless Car Wash — Aberdeen, WA
+[20:45:44]   ✓ Auto Spa Touchless Car Wash — Pomona, CA
+[20:45:44]   ✓ Hometown Touchless Automatic Car Wash — Russellville, AL
+[20:45:44]   ✓ SPARKLE & SHINE TOUCHLESS CAR WASH — Humphrey, NE
+[20:45:44]   ✓ Car wash touchless automatic — Loveland, OH
+[20:45:44]   ✓ Bread & Butter Shop Touchless Car Wash — Marshfield, WI
+[20:45:44]   ✓ Royal Laser Wash — Laredo, TX
+[20:45:44]   ... and 4 more
+[20:45:47]   Promoted batch 1: 14 listings
+[20:45:47] 
+[20:45:47] ============================================================
+[20:45:47] IMPORT COMPLETE
+[20:45:47]   Enriched & inserted:    430
+[20:45:47]   Skipped (not car wash / already existed): 4713
+[20:45:47]   Errors:                 176
+[20:45:47]   Confirmed via reviews:  0
+[20:45:47]   Promoted via name:      14
+[20:45:47]   Total new touchless:    14
+[20:45:47] ============================================================
