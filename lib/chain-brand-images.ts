@@ -13,18 +13,20 @@
  *  - Well-lit, no obstructions in the tunnel entrance
  */
 
+const STORAGE = 'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/chain-brands';
+
 export const CHAIN_BRAND_IMAGES: Record<string, string> = {
-  // Source: circlek.com/us/holiday-station/car-wash (header image — only facility photo on site)
-  'Holiday Stationstores': 'https://www.circlek.com/sites/default/files/2024-05/car_wash_header_002-min.png',
+  // Circle K car wash tunnel — hosted in Supabase (471 KB)
+  'Holiday Stationstores': `${STORAGE}/holiday-stationstores.png`,
 
-  // Source: pwrmarket.com — official "Auto Spa" car wash brand page, 16:9 landscape (356 KB)
-  'Power Market': 'https://pwrmarket.com/wp-content/uploads/2025/07/auto-spa-menu-16-9.png',
+  // Kwik Trip Trifoam hero — colorful foam inside the tunnel, hosted in Supabase (361 KB)
+  'Kwik Trip': `${STORAGE}/kwik-trip.jpg`,
 
-  // Source: kwiktrip.com/carwash — Trifoam hero shows colorful foam inside the tunnel (361 KB)
-  'Kwik Trip': 'https://www.kwiktrip.com/wordpress/wp-content/uploads/2020/06/Trifoam_Hero1.jpg',
+  // BellStores Touch Free tunnel image — hosted in Supabase (104 KB)
+  'BellStores': `${STORAGE}/bellstores.png`,
 
-  // Source: bellstores.com/home/our-stores/car-wash — Touch Free tunnel image, full-size original (104 KB)
-  'BellStores': 'https://bellstores.com/assets/Uploads/touch-free-v2.png',
+  // Power Market: no branded car wash photo available (website has video only, no tunnel photos).
+  // Listings fall back to per-location Google photo or street view.
 };
 
 /**
