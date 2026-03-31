@@ -143,8 +143,9 @@ export function useHeroReview() {
   const buildQuery = useCallback(() => {
     let q = supabase
       .from('listings')
-      .select('id, name, address, city, state, slug, hero_image, hero_image_source, photos, google_photo_url, street_view_url, website, photo_enrichment_attempted_at, google_place_id, equipment_brand, equipment_model', { count: 'exact' })
+      .select('id, name, address, city, state, slug, hero_image, hero_image_source, parent_chain, photos, google_photo_url, street_view_url, website, photo_enrichment_attempted_at, google_place_id, equipment_brand, equipment_model', { count: 'exact' })
       .eq('is_touchless', true)
+      .neq('hero_image_source', 'chain_brand')
       .order('photo_enrichment_attempted_at', { ascending: false, nullsFirst: false });
 
     if (filterSource === 'none') {
@@ -173,6 +174,7 @@ export function useHeroReview() {
       const items: HeroListing[] = (data ?? []).map((r) => ({
         ...r,
         hero_image_source: r.hero_image_source as HeroListing['hero_image_source'],
+        parent_chain: r.parent_chain ?? null,
         flagged: flaggedIdsRef.current.has(r.id),
       }));
 

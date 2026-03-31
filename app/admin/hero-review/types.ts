@@ -1,4 +1,4 @@
-export type HeroSource = 'gallery' | 'google' | 'street_view' | 'website' | null;
+export type HeroSource = 'gallery' | 'google' | 'street_view' | 'website' | 'chain_brand' | null;
 
 export type FilterSource = 'all' | 'gallery' | 'google' | 'street_view' | 'website' | 'none';
 
@@ -11,6 +11,7 @@ export interface HeroListing {
   slug: string | null;
   hero_image: string | null;
   hero_image_source: HeroSource;
+  parent_chain: string | null;
   photos: string[] | null;
   google_photo_url: string | null;
   street_view_url: string | null;

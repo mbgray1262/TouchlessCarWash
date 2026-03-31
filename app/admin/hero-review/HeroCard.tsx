@@ -6,6 +6,7 @@ import { HeroListing, ReplacementOption, EQUIPMENT_BRANDS } from './types';
 import HeroImageFallback from '@/components/HeroImageFallback';
 import { CropModal } from './CropModal';
 import { getStateSlug, slugify } from '@/lib/constants';
+import { getChainBrandImage } from '@/lib/chain-brand-images';
 
 /** Strip Google photo resolution params so we can compare base URLs. */
 function normalizePhotoUrl(url: string): string {
@@ -256,10 +257,13 @@ export function HeroCard({
     }
   }, [isFocused]);
 
-  const hasHero = !!listing.hero_image;
+  const chainBrandImage = listing.hero_image_source === 'chain_brand'
+    ? getChainBrandImage(listing.parent_chain) : null;
+  const displayHero = chainBrandImage ?? listing.hero_image;
+  const hasHero = !!displayHero;
   // Use normalized URLs to catch same photo at different resolutions (w800 vs w1600)
   const replacementBases = new Set(replacements.map(r => normalizePhotoUrl(r.url)));
-  const heroBase = listing.hero_image ? normalizePhotoUrl(listing.hero_image) : null;
+  const heroBase = displayHero ? normalizePhotoUrl(displayHero) : null;
   const galleryPhotos = (listing.photos ?? []).filter(p => {
     const base = normalizePhotoUrl(p);
     return base !== heroBase && !replacementBases.has(base);
@@ -417,10 +421,10 @@ export function HeroCard({
       />
 
       <div className="relative bg-gray-100 h-48 overflow-hidden group/hero">
-        {listing.hero_image ? (
+        {displayHero ? (
           <>
             <img
-              src={listing.hero_image}
+              src={displayHero}
               alt={listing.name}
               loading="lazy"
               className="w-full h-full object-cover"

@@ -276,13 +276,13 @@ def main():
     existing_place_ids = {}
     offset = 0
     while True:
-        rows = sb_req('GET', f'/rest/v1/listings?select=id,address,city,state,place_id&limit=1000&offset={offset}')
+        rows = sb_req('GET', f'/rest/v1/listings?select=id,address,city,state,google_place_id&limit=1000&offset={offset}')
         for r in rows:
             if r.get('address') and r.get('city') and r.get('state'):
                 key = f"{r['address'].lower().strip()}|{r['city'].lower().strip()}|{r['state'].upper().strip()}"
                 existing_addresses.add(key)
-            if r.get('place_id'):
-                existing_place_ids[r['place_id']] = r['id']
+            if r.get('google_place_id'):
+                existing_place_ids[r['google_place_id']] = r['id']
         if len(rows) < 1000:
             break
         offset += 1000
@@ -349,7 +349,7 @@ def main():
             'hours':              data['hours'],
             'rating':             data['rating'],
             'review_count':       data['review_count'],
-            'place_id':           data['place_id'],
+            'google_place_id':    data['place_id'],
             # Unclassified — review mining will determine if touchless
             'is_touchless':       None,
             'touchless_verified': None,
