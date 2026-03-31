@@ -25,6 +25,7 @@ import { DEFAULT_OG_IMAGE, ensureHttps, truncateDescription } from '@/lib/seo';
 import { getChainBrandImage } from '@/lib/chain-brand-images';
 import { AdUnit } from '@/components/AdUnit';
 import { ProductsBanner } from '@/components/ProductsBanner';
+import { getChainBrandImage } from '@/lib/chain-brand-images';
 import type { Metadata } from 'next';
 
 const ListingMap = nextDynamic(() => import('@/components/ListingMap'), { ssr: false });
