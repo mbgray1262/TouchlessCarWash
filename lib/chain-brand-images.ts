@@ -16,10 +16,12 @@
 const STORAGE = 'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/chain-brands';
 
 export const CHAIN_BRAND_IMAGES: Record<string, string> = {
-  // Circle K car wash tunnel — hosted in Supabase (471 KB)
+  // Holiday/Circle K car wash building exterior at dusk — red & tan brand colors, "EXIT CAR WASH" signage visible.
+  // Architectural photo of Ledgeview WI location. Hosted in Supabase (565 KB).
   'Holiday Stationstores': `${STORAGE}/holiday-stationstores.png`,
 
-  // Kwik Trip Trifoam hero — colorful foam inside the tunnel, hosted in Supabase (361 KB)
+  // Kwik Trip car wash entrance building — red Kwik Trip fascia stripe, "CARWASH ENTRANCE" signage.
+  // Hosted in Supabase (123 KB).
   'Kwik Trip': `${STORAGE}/kwik-trip.jpg`,
 
   // BellStores Touch Free tunnel image — hosted in Supabase (104 KB)
