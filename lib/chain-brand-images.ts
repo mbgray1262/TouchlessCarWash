@@ -14,17 +14,17 @@
  */
 
 export const CHAIN_BRAND_IMAGES: Record<string, string> = {
-  // Source: circlek.com/us/holiday-station/car-wash (header image)
+  // Source: circlek.com/us/holiday-station/car-wash (header image — only facility photo on site)
   'Holiday Stationstores': 'https://www.circlek.com/sites/default/files/2024-05/car_wash_header_002-min.png',
 
-  // Source: best available photo from Redding, CA Power Market (stored in Supabase)
-  'Power Market': 'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/93883d70-f945-4bdb-8fb9-e238e6f4d85b/google-1774913769885.jpg',
+  // Source: pwrmarket.com — official "Auto Spa" car wash brand page, 16:9 landscape (356 KB)
+  'Power Market': 'https://pwrmarket.com/wp-content/uploads/2025/07/auto-spa-menu-16-9.png',
 
-  // Source: kwiktrip.com/carwash (hero image)
-  'Kwik Trip': 'https://www.kwiktrip.com/wordpress/wp-content/uploads/2024/01/CarWash_Hero.jpg',
+  // Source: kwiktrip.com/carwash — Trifoam hero shows colorful foam inside the tunnel (361 KB)
+  'Kwik Trip': 'https://www.kwiktrip.com/wordpress/wp-content/uploads/2020/06/Trifoam_Hero1.jpg',
 
-  // Source: bellstores.com/home/our-stores/car-wash (Touch Free specific image)
-  'BellStores': 'https://bellstores.com/assets/Uploads/touch-free-v2__ScaleWidthWzExNzBd.png',
+  // Source: bellstores.com/home/our-stores/car-wash — Touch Free tunnel image, full-size original (104 KB)
+  'BellStores': 'https://bellstores.com/assets/Uploads/touch-free-v2.png',
 };
 
 /**
