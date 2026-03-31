@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase, supabaseAnonKey } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 export interface AuditResult {
   id: string;
@@ -463,14 +463,9 @@ export function usePhotoAudit() {
     if (continuingRef.current) return;
     continuingRef.current = true;
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/batch-photo-audit`, {
+      const res = await fetch('/api/admin/batch-photo-audit', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ job_id: jobId }),
       });
       const data = await res.json().catch(() => null);
@@ -569,23 +564,12 @@ export function usePhotoAudit() {
     setRunProgress(`Starting batch job (${limit} listings, ${isNoHero ? 'NO HERO MODE' : isManualReview ? 'MANUAL REVIEW — no AI' : dryRun ? 'DRY RUN' : 'LIVE'})...`);
 
     try {
-      // getSession() returns cached tokens and does NOT auto-refresh expired JWTs.
-      // Proactively refresh if missing or within 2 minutes of expiry to avoid 401s.
-      let { data: { session } } = await supabase.auth.getSession();
-      if (!session || (session.expires_at && session.expires_at * 1000 - Date.now() < 120_000)) {
-        const { data: refreshed } = await supabase.auth.refreshSession();
-        if (refreshed.session) session = refreshed.session;
-      }
-      // Fall back to anon key if session is missing/expired — the edge function
-      // uses the service role key internally so user JWT is only needed for auth middleware
-      const token = session?.access_token ?? supabaseAnonKey;
-
-      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/batch-photo-audit`, {
+      // Use the server-side proxy route to avoid client-side JWT auth issues.
+      // The proxy runs on Netlify (server) and uses the service role key directly,
+      // so expired Supabase sessions can no longer cause 401s.
+      const res = await fetch('/api/admin/batch-photo-audit', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           total_requested: limit,
           dry_run: dryRun,
