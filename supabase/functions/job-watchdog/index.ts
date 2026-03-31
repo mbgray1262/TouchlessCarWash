@@ -262,6 +262,54 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // --- Auto-generate descriptions for listings that don't have one ---
+    // Only runs when no description job is currently running.
+    // Capped at 25 per watchdog cycle to control API costs.
+    const { count: runningDescJobs } = await supabase
+      .from('description_jobs')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'running');
+
+    if ((runningDescJobs ?? 0) === 0) {
+      const { count: noDescCount } = await supabase
+        .from('listings')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_touchless', true)
+        .is('description', null);
+
+      if ((noDescCount ?? 0) > 0) {
+        const descUrl = `${supabaseUrl}/functions/v1/generate-descriptions`;
+        await fetch(descUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anonKey}` },
+          body: JSON.stringify({ action: 'start', limit: Math.min(noDescCount ?? 0, 25) }),
+        }).catch(() => {});
+        report.push({ type: 'descriptions_autostart', no_desc_count: noDescCount, action: 'STARTED new job' });
+      }
+    }
+
+    // --- Auto-detect equipment for listings with a hero image but no equipment brand ---
+    // Runs at most 25 detections per watchdog cycle (one Gemini call per listing).
+    // Skips street_view heroes — those photos rarely show equipment clearly.
+    const { count: noEquipCount } = await supabase
+      .from('listings')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_touchless', true)
+      .not('hero_image', 'is', null)
+      .neq('hero_image_source', 'street_view')
+      .neq('hero_image_source', 'chain_brand')
+      .is('equipment_brand', null);
+
+    if ((noEquipCount ?? 0) > 0) {
+      const equipUrl = `${supabaseUrl}/functions/v1/detect-equipment`;
+      await fetch(equipUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anonKey}` },
+        body: JSON.stringify({ limit: 25, skip_existing: true }),
+      }).catch(() => {});
+      report.push({ type: 'equipment_autodetect', no_equip_count: noEquipCount, action: 'TRIGGERED' });
+    }
+
     const checked_at = new Date().toISOString();
     return new Response(
       JSON.stringify({ checked_at, jobs_checked: report.length, report }),
