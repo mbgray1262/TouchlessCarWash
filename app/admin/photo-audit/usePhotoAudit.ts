@@ -116,10 +116,12 @@ export function usePhotoAudit() {
 
   const loadQueueStats = useCallback(async () => {
     const [totalRes, auditedRes, noHeroRes, noHeroUnprocessedRes] = await Promise.all([
+      // Total = ALL touchless listings (including chain brand locations with null hero_image)
       supabase.from('listings').select('id', { count: 'exact', head: true })
-        .eq('is_touchless', true).not('hero_image', 'is', null),
+        .eq('is_touchless', true),
+      // Audited = all touchless listings that have been photo_audited (any hero state)
       supabase.from('listings').select('id', { count: 'exact', head: true })
-        .eq('is_touchless', true).not('hero_image', 'is', null).not('photo_audited_at', 'is', null),
+        .eq('is_touchless', true).not('photo_audited_at', 'is', null),
       supabase.from('listings').select('id', { count: 'exact', head: true })
         .eq('is_touchless', true).is('hero_image', null),
       // Count only unprocessed No Hero listings (for Run All button)
@@ -565,7 +567,13 @@ export function usePhotoAudit() {
     setRunProgress(`Starting batch job (${limit} listings, ${isNoHero ? 'NO HERO MODE' : isManualReview ? 'MANUAL REVIEW — no AI' : dryRun ? 'DRY RUN' : 'LIVE'})...`);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      // getSession() returns cached tokens and does NOT auto-refresh expired JWTs.
+      // Proactively refresh if missing or within 2 minutes of expiry to avoid 401s.
+      let { data: { session } } = await supabase.auth.getSession();
+      if (!session || (session.expires_at && session.expires_at * 1000 - Date.now() < 120_000)) {
+        const { data: refreshed } = await supabase.auth.refreshSession();
+        if (refreshed.session) session = refreshed.session;
+      }
       // Fall back to anon key if session is missing/expired — the edge function
       // uses the service role key internally so user JWT is only needed for auth middleware
       const token = session?.access_token ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -587,7 +595,7 @@ export function usePhotoAudit() {
       });
 
       if (!res.ok && res.status === 401) {
-        setRunProgress('Error: Session expired — please refresh the page and try again.');
+        setRunProgress('Error: Authentication failed — please sign out and sign back in.');
         setRunning(false);
         return;
       }
