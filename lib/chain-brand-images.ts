@@ -14,14 +14,18 @@
  */
 
 export const CHAIN_BRAND_IMAGES: Record<string, string> = {
-  // TODO: Replace placeholder URLs with actual brand photos once sourced.
-  // Recommended sources: official chain website, press kit, or best manual-approved
-  // photo from any location in this chain.
+  // Source: circlek.com/us/holiday-station/car-wash (header image)
+  'Holiday Stationstores': 'https://www.circlek.com/sites/default/files/2024-05/car_wash_header_002-min.png',
 
-  'Holiday Stationstores': '',   // Touch Free tunnel — source from circlek.com car wash page
-  'Power Market':           '',   // Touch Free drive-through — source from pwrmarket.com
-  'Kwik Trip':              '',   // Touch Free tunnel — source from kwiktrip.com car wash page
-  'BellStores':             '',   // Touch Free wash — source from bellstores.com car wash page
+  // TODO: Find a good photo — pwrmarket.com only has a video embed, no static photo.
+  // Options: use Google Street View of a Power Market wash, or upload a manual photo.
+  'Power Market': '',
+
+  // Source: kwiktrip.com/carwash (hero image)
+  'Kwik Trip': 'https://www.kwiktrip.com/wordpress/wp-content/uploads/2024/01/CarWash_Hero.jpg',
+
+  // Source: bellstores.com/home/our-stores/car-wash (Touch Free specific image)
+  'BellStores': 'https://bellstores.com/assets/Uploads/touch-free-v2__ScaleWidthWzExNzBd.png',
 };
 
 /**
