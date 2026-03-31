@@ -24,9 +24,12 @@ Logs to: scripts/import-openmart.log
 import os, json, ssl, urllib.request, urllib.parse, time, datetime, re, math
 
 def upscale_google_photo(url):
-    """Replace low-res size suffix on Google Photos URLs with w1600-h1200."""
+    """Upscale Google Photos URLs to w1600-h1200. Reject expiring gps-cs-s session tokens."""
     if not url:
         return url
+    # gps-cs-s URLs contain short-lived session tokens — they expire within hours
+    if '/gps-cs-s/' in url:
+        return None
     if 'googleusercontent.com' in url or 'lh3.google' in url:
         base = re.sub(r'=[^/=]+$', '', url)
         return f'{base}=w1600-h1200'
