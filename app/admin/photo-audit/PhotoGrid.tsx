@@ -28,6 +28,9 @@ interface PhotoGridProps {
   onStreetViewOpened?: () => void;
   onFallbackHero?: () => void;
   hasHeroImage?: boolean;
+  // Chain brand fallback: shown when no location-specific hero is chosen
+  chainBrandImageUrl?: string | null;
+  chainBrandName?: string;
 }
 
 const SOURCE_BADGES: Record<string, { label: string; color: string }> = {
@@ -47,6 +50,7 @@ export function PhotoGrid({
   onSetAsHero, onAddToGallery, onRemoveFromGallery, onRemoveHero, onSkipPhoto,
   onCrop, onEnhance, discovering, enhancingId, enhancedIds = [], equipmentSlot,
   streetViewUrl, googlePhotosUrl, listingId, onHeroDropped, onStreetViewOpened, onFallbackHero, hasHeroImage,
+  chainBrandImageUrl, chainBrandName,
 }: PhotoGridProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [heroDragging, setHeroDragging] = useState(false);
@@ -329,6 +333,19 @@ export function PhotoGrid({
                 <p className="text-sm font-semibold text-orange-600">Drop screenshot here</p>
                 <p className="text-xs text-orange-400">Auto-crops to 16:9</p>
               </>
+            ) : chainBrandImageUrl ? (
+              // Chain brand fallback — this is what visitors see on the public page
+              <div className="relative w-full h-full">
+                <img
+                  src={chainBrandImageUrl}
+                  alt={chainBrandName ?? 'Brand default'}
+                  className="w-full h-full object-cover opacity-60"
+                />
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30">
+                  <p className="text-white text-sm font-semibold drop-shadow">Brand default ({chainBrandName})</p>
+                  <p className="text-white/80 text-xs mt-1 drop-shadow">Visitors see this — upload a location photo to override</p>
+                </div>
+              </div>
             ) : (
               <>
                 <ImageOff className="w-10 h-10 mb-2" />

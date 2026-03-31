@@ -7,6 +7,7 @@ import { PhotoGrid } from './PhotoGrid';
 import { CropModal } from '../hero-review/CropModal';
 import { autoEnhanceImage } from '../hero-review/autoEnhance';
 import { EQUIPMENT_BRANDS, EQUIPMENT_MODELS } from '../hero-review/types';
+import { getChainBrandImage } from '@/lib/chain-brand-images';
 
 interface Props {
   listingId: string;
@@ -551,6 +552,14 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                 onStreetViewOpened={() => { awaitingClipboard.current = true; }}
                 onFallbackHero={async () => { await setFallbackHero(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
                 hasHeroImage={!!candidates.find(c => c.tag === 'hero')}
+                chainBrandImageUrl={
+                  // Show chain brand image as the "effective hero" when no location-specific
+                  // hero has been chosen — matches what the public listing page displays.
+                  !candidates.find(c => c.tag === 'hero') && listing.hero_image_source !== 'manual'
+                    ? getChainBrandImage(listing.parent_chain)
+                    : null
+                }
+                chainBrandName={listing.parent_chain ?? undefined}
                 equipmentSlot={
                   <div className="my-3">
                     <div className="flex items-center gap-3 flex-wrap">
