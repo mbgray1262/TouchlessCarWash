@@ -51,7 +51,7 @@ export function PhotoGrid({
   candidates, selectedId, onSelect, onTag,
   onSetAsHero, onAddToGallery, onRemoveFromGallery, onRemoveHero, onSkipPhoto,
   onCrop, onEnhance, discovering, enhancingId, enhancedIds = [], equipmentSlot,
-  streetViewUrl, onGooglePhotos, listingId, onHeroDropped, onStreetViewOpened, onFallbackHero, hasHeroImage,
+  streetViewUrl, googlePhotosUrl, listingId, onHeroDropped, onStreetViewOpened, onFallbackHero, hasHeroImage,
   chainBrandImageUrl, chainBrandName, onClipboardPaste,
 }: PhotoGridProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
