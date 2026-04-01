@@ -2,7 +2,7 @@ import { cache } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import nextDynamic from 'next/dynamic';
-import { notFound, redirect } from 'next/navigation';
+import { notFound, redirect, permanentRedirect } from 'next/navigation';
 import {
   Star, MapPin, Phone, Globe, Clock, CheckCircle, ArrowLeft,
   Sparkles, ExternalLink, ChevronRight, Navigation, HelpCircle,
@@ -852,7 +852,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     // This handles old short slugs (e.g. "rice-street-car-wash") that were replaced
     // with longer address-based slugs (e.g. "rice-street-car-wash-1736-rice-st-...").
     const redirectUrl = await findListingByPartialSlug(params.slug);
-    if (redirectUrl) redirect(redirectUrl);
+    if (redirectUrl) permanentRedirect(redirectUrl); // 308 — tells Google to transfer PageRank to the new slug
 
     // Check if this listing exists but is NOT touchless — show helpful page with noindex
     // Google will de-index these pages when it sees the noindex meta tag
