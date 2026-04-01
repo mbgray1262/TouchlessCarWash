@@ -495,13 +495,6 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                 >
                   <Plus className="w-3.5 h-3.5" /> Paste URL
                 </button>
-                <button
-                  onClick={discoverPhotos}
-                  disabled={discovering}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm text-gray-700 disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${discovering ? 'animate-spin' : ''}`} /> Refresh
-                </button>
               </div>
             </div>
 

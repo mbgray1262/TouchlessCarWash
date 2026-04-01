@@ -815,13 +815,8 @@ Deno.serve(async (req) => {
   // No Hero mode: process 3 at a time for faster feedback (each listing updates the job record)
   const chunkSize = noHeroMode ? 3 : (includeGooglePhotos ? CHUNK_SIZE_GOOGLE : CHUNK_SIZE_NO_GOOGLE);
 
-  let googleApiKey = '';
-  if (includeGooglePhotos) {
-    googleApiKey = Deno.env.get('GOOGLE_PLACES_API_KEY') ?? await getSecret(supabaseUrl, serviceKey, 'GOOGLE_PLACES_API_KEY');
-    if (!googleApiKey) {
-      console.warn('Google Places API key not found — skipping photo enrichment');
-    }
-  }
+  // Google Places API photo enrichment DISABLED — no paid photo API calls
+  const googleApiKey = '';
 
   // Determine how many to process this chunk
   const remaining = job ? Math.max(0, job.total_requested - job.total_processed) : totalRequested;

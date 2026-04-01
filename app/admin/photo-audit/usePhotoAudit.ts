@@ -578,7 +578,7 @@ export function usePhotoAudit() {
         body: JSON.stringify({
           total_requested: limit,
           dry_run: dryRun,
-          include_google_photos: isNoHero ? true : includeGoogle,
+          include_google_photos: false, // Google Places API disabled — no paid photo fetching
           no_hero_mode: isNoHero,
         }),
       });
