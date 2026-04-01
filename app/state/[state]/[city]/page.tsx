@@ -137,9 +137,14 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
   const canonicalUrl = `https://touchlesscarwashfinder.com/state/${params.state}/${params.city}`;
   const title = `Best Touchless & Brushless Car Wash in ${cityName}, ${stateCode} — ${month} ${year}`;
 
+  // Noindex thin city pages — too few listings to be worth indexing and can hurt
+  // overall site quality score. Keep canonical so Google knows the URL is intentional.
+  const thinPage = listings.length < 3;
+
   return {
     title,
     description: metaDescription,
+    ...(thinPage ? { robots: { index: false, follow: true } } : {}),
     alternates: {
       canonical: canonicalUrl,
     },

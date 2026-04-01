@@ -64,6 +64,7 @@ export async function generateMetadata({ params }: FeatureStatePageProps): Promi
   return {
     title: feature.stateSeoTitle(stateName, count),
     description: feature.stateSeoDescription(stateName, count),
+    ...(count < 3 ? { robots: { index: false, follow: true } } : {}),
     alternates: { canonical: `${SITE_URL}/features/${feature.slug}/${params.state}` },
     openGraph: {
       title: feature.stateSeoTitle(stateName, count),
