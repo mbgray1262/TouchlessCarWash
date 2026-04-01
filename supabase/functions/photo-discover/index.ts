@@ -78,23 +78,16 @@ async function fetchGooglePlacesPhotos(placeId: string, apiKey: string): Promise
     const resolved = await Promise.all(
       photoRefs.slice(0, 10).map(async (photo: { name: string; widthPx: number; heightPx: number; authorAttributions?: Array<{ displayName: string }> }) => {
         try {
-          const thumbRes = await fetch(
-            `https://places.googleapis.com/v1/${photo.name}/media?maxHeightPx=400&maxWidthPx=400&key=${apiKey}&skipHttpRedirect=true`,
-            { signal: AbortSignal.timeout(5000) },
-          );
-          if (!thumbRes.ok) return null;
-          const thumbData = await thumbRes.json();
-          if (!thumbData.photoUri) return null;
-
-          const fullRes = await fetch(
+          const photoRes = await fetch(
             `https://places.googleapis.com/v1/${photo.name}/media?maxHeightPx=1600&maxWidthPx=1600&key=${apiKey}&skipHttpRedirect=true`,
             { signal: AbortSignal.timeout(5000) },
           );
-          const fullResData = fullRes.ok ? await fullRes.json() : null;
+          if (!photoRes.ok) return null;
+          const photoData = await photoRes.json();
+          if (!photoData.photoUri) return null;
 
           return {
-            url: thumbData.photoUri,
-            fullResUrl: fullResData?.photoUri ?? thumbData.photoUri,
+            url: photoData.photoUri,
             source: 'google_places' as const,
             label: photo.authorAttributions?.[0]?.displayName ?? 'Google Places',
             googlePhotoName: photo.name,
