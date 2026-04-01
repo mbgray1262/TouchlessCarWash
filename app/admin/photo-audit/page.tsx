@@ -391,20 +391,6 @@ export default function PhotoAuditPage() {
               className="w-24 px-2 py-1.5 border border-gray-300 rounded text-sm"
             />
           </div>
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input
-              type="checkbox"
-              checked={viewFilter === 'no_hero' ? true : includeGooglePhotos}
-              onChange={e => setIncludeGooglePhotos(e.target.checked)}
-              disabled={viewFilter === 'no_hero'}
-              className="rounded border-gray-300 text-orange-500 focus:ring-orange-500 disabled:opacity-50"
-            />
-            <span className="text-gray-700">Fetch Google Photos</span>
-            {viewFilter === 'no_hero'
-              ? <span className="text-xs text-orange-500 font-medium">(required for No Hero)</span>
-              : <span className="text-xs text-gray-400">(+~10s/listing)</span>
-            }
-          </label>
           <button
             onClick={() => runBatch(batchLimit, false, viewFilter === 'no_hero' ? true : includeGooglePhotos)}
             disabled={running || batchLimit < 1}
