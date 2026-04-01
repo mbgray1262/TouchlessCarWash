@@ -13,6 +13,7 @@ import LogoImage from '@/components/LogoImage';
 import HeroImageFallback from '@/components/HeroImageFallback';
 import PhotoGalleryGrid from '@/components/PhotoGalleryGrid';
 import SuggestEditModal from '@/components/SuggestEditModal';
+import VerificationPrompt, { type VerificationStats } from '@/components/VerificationPrompt';
 import { TrackableLink } from '@/components/TrackableLink';
 import { HoursStatusBadge } from '@/components/HoursStatusBadge';
 import { ListingBreadcrumb } from '@/components/ListingBreadcrumb';
@@ -203,6 +204,22 @@ async function getChainListings(listing: Listing, limit = 6): Promise<{ chainNam
   const sameState = data.filter((l) => l.state === listing.state);
   const otherState = data.filter((l) => l.state !== listing.state);
   return { chainName, listings: [...sameState, ...otherState].slice(0, limit) as Listing[] };
+}
+
+async function getVerificationStats(listingId: string): Promise<VerificationStats> {
+  const { data } = await supabase
+    .from('listing_verifications')
+    .select('is_touchless, comment, created_at')
+    .eq('listing_id', listingId)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  const rows = data || [];
+  const yesCount = rows.filter(r => r.is_touchless === true).length;
+  const noCount = rows.filter(r => r.is_touchless === false).length;
+  const recentComments = rows.filter(r => r.comment).slice(0, 5);
+
+  return { yesCount, noCount, recentComments };
 }
 
 async function getReviewSnippets(listingId: string): Promise<ReviewSnippet[]> {
@@ -897,11 +914,12 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     notFound();
   }
 
-  const [nearbyListings, reviewSnippets, rankings, chainResult] = await Promise.all([
+  const [nearbyListings, reviewSnippets, rankings, chainResult, verificationStats] = await Promise.all([
     getNearbyListings(listing),
     getReviewSnippets(listing.id),
     getBestOfRankings(listing.id),
     getChainListings(listing),
+    getVerificationStats(listing.id),
   ]);
 
   const stateCode = getStateCode(params.state);
@@ -1502,6 +1520,12 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                 )}
                 <SuggestEditModal listingId={listing.id} listingName={listing.name} />
               </div>
+
+              <VerificationPrompt
+                listingId={listing.id}
+                listingName={listing.name}
+                stats={verificationStats}
+              />
 
               {listing.latitude && listing.longitude && (
                 <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
