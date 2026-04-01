@@ -288,8 +288,8 @@ export function useFastCuration(listingId: string) {
         });
       }
       if (existing.length > 0) setCandidates(existing);
-      // Then: discover external photos (adds to candidates)
-      discoverPhotos();
+      // External photo discovery (Google Places API, Yelp, etc.) is NOT triggered
+      // automatically — user must click "Google Photos" to avoid unexpected API costs.
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listing?.id]);

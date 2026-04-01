@@ -568,7 +568,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                 enhancedIds={enhancedIds}
                 discovering={discovering}
                 streetViewUrl={listing.latitude && listing.longitude ? `https://www.google.com/maps/@${listing.latitude},${listing.longitude},3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192` : undefined}
-                googlePhotosUrl={listing.google_place_id ? `https://www.google.com/maps/place/?q=place_id:${listing.google_place_id}` : undefined}
+                onGooglePhotos={listing.google_place_id ? discoverPhotos : undefined}
                 listingId={listing.id}
                 onHeroDropped={addHeroDirect}
                 onStreetViewOpened={() => { awaitingClipboard.current = true; }}
