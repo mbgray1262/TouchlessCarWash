@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   ThumbsUp, ThumbsDown, MessageSquare, Users, TrendingUp,
   AlertTriangle, CheckCircle, ExternalLink, Calendar, BarChart3,
-  RefreshCw,
+  RefreshCw, Trash2,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { slugify, US_STATES } from '@/lib/constants';
@@ -68,6 +68,7 @@ export default function CommunityVerificationsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'yes' | 'no' | 'commented'>('all');
   const [page, setPage] = useState(0);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const PAGE_SIZE = 50;
 
   const load = useCallback(async () => {
@@ -151,6 +152,31 @@ export default function CommunityVerificationsPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  async function deleteVerification(id: string) {
+    setDeleting(id);
+    try {
+      const res = await fetch('/api/verify-listing/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) {
+        setVerifications(prev => prev.filter(v => v.id !== id));
+        // Recompute stats
+        const updated = verifications.filter(v => v.id !== id);
+        setStats({
+          total: updated.length,
+          yesCount: updated.filter(v => v.is_touchless).length,
+          noCount: updated.filter(v => !v.is_touchless).length,
+          withComment: updated.filter(v => v.comment).length,
+          uniqueListings: new Set(updated.map(v => v.listing_id)).size,
+        });
+      }
+    } finally {
+      setDeleting(null);
+    }
+  }
 
   const filtered = verifications.filter(v => {
     if (filter === 'yes') return v.is_touchless;
@@ -341,9 +367,19 @@ export default function CommunityVerificationsPage() {
                             </p>
                           )}
                         </div>
-                        <div className="text-xs text-gray-400 shrink-0 flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          {timeAgo(v.created_at)}
+                        <div className="shrink-0 flex items-center gap-2">
+                          <span className="text-xs text-gray-400 flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            {timeAgo(v.created_at)}
+                          </span>
+                          <button
+                            onClick={() => deleteVerification(v.id)}
+                            disabled={deleting === v.id}
+                            title="Delete"
+                            className="p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors disabled:opacity-40"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
                     );
