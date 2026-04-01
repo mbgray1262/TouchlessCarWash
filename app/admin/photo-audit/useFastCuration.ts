@@ -255,8 +255,7 @@ export function useFastCuration(listingId: string) {
         }
       });
       if (existing.length > 0) setCandidates(existing);
-      // Then: discover external photos (adds to candidates)
-      discoverPhotos();
+      // External photo discovery is NOT triggered automatically — user must click "Discover Photos"
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listing?.id]);
