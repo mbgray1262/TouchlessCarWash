@@ -6,6 +6,13 @@ Disallow: /search
 Disallow: /compare
 Disallow: /favorites
 
+# Block Next.js internal RSC fetch URLs (e.g. /state/texas?_rsc=epstx)
+# These are not real pages — crawling them wastes crawl budget
+Disallow: /*?_rsc=
+
+# Block tracking query params that create duplicate URLs
+Disallow: /*?from=
+
 # Prioritize crawling of listing pages and location directories
 # All other pages are in the sitemap
 
