@@ -454,7 +454,10 @@ function buildLocalBusinessSchema(listing: Listing, canonicalUrl: string, hours:
   if (listing.website) schema.sameAs = listing.website;
 
   // Add individual reviews from snippets for rich results
-  if (reviewSnippets.length > 0) {
+  // Only include reviews when aggregateRating is also present — Google requires
+  // aggregateRating whenever multiple Review objects are present, otherwise it
+  // flags the structured data as invalid.
+  if (reviewSnippets.length > 0 && schema.aggregateRating) {
     schema.review = reviewSnippets.map((snippet) => ({
       '@type': 'Review',
       author: { '@type': 'Person', name: snippet.reviewer_name || 'Anonymous' },
