@@ -24,7 +24,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
     classifying, classifyResult, classifyEvidence,
     tagPhoto, setAsHero, addToGallery, removeFromGallery, removeHero, skipPhoto,
     addCapture, addUpload, addHeroDirect, replaceUrl, updateWebsite, setFallbackHero,
-    saveAll, approveAndNext, discoverPhotos, classifyEquipment, setEquipment,
+    saveAll, approveAndNext, classifyEquipment, setEquipment,
     toggleTouchlessVerified, markNotTouchless, deleteListing,
   } = useFastCuration(listingId);
 
@@ -561,7 +561,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                 enhancedIds={enhancedIds}
                 discovering={discovering}
                 streetViewUrl={listing.latitude && listing.longitude ? `https://www.google.com/maps/@${listing.latitude},${listing.longitude},3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192` : undefined}
-                onGooglePhotos={listing.google_place_id ? discoverPhotos : undefined}
+                googlePhotosUrl={listing.google_place_id ? `https://www.google.com/maps/place/?q=place_id:${listing.google_place_id}` : undefined}
                 listingId={listing.id}
                 onHeroDropped={addHeroDirect}
                 onStreetViewOpened={() => { awaitingClipboard.current = true; }}

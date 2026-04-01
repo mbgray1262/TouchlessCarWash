@@ -22,7 +22,7 @@ interface PhotoGridProps {
   equipmentSlot?: React.ReactNode;
   // Street View / Google Photos hero shortcut
   streetViewUrl?: string;
-  onGooglePhotos?: () => void;
+  googlePhotosUrl?: string;
   listingId?: string;
   onHeroDropped?: (url: string) => void;
   onStreetViewOpened?: () => void;
@@ -167,15 +167,18 @@ export function PhotoGrid({
                 Use Fallback
               </button>
             )}
-            {onGooglePhotos && (
-              <button
-                onClick={onGooglePhotos}
+            {googlePhotosUrl && (
+              <a
+                href={googlePhotosUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => onStreetViewOpened?.()}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium transition-colors"
-                title="Fetch photos from Google Places API"
+                title="Browse Google Maps photos, screenshot one (⌘+Ctrl+Shift+4), then switch back — hero is set automatically"
               >
                 <ImageIcon className="w-3.5 h-3.5" />
                 Google Photos
-              </button>
+              </a>
             )}
             {streetViewUrl && (
               <a
