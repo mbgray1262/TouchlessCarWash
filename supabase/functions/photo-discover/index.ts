@@ -572,14 +572,14 @@ Deno.serve(async (req) => {
   const blocked = new Set(listing.blocked_photos ?? []);
 
   // Fire all sources in parallel
-  // Priority: Yelp (location-specific) > Google Maps > Google Places API (paid) > Bing > Website
+  // Google Places API (paid) and Street View API (paid) are DISABLED — use free sources only
   const [yelpPhotos, googleMaps, googlePlaces, bingSearch, websitePhotos, streetView] = await Promise.allSettled([
     fetchYelpPhotos(listing.name, listing.city, listing.state),
     listing.google_place_id ? fetchGoogleMapsPhotos(listing.google_place_id, listing.name, listing.city, listing.state) : Promise.resolve([]),
-    (listing.google_place_id && googleApiKey) ? fetchGooglePlacesPhotos(listing.google_place_id, googleApiKey) : Promise.resolve([]),
-    Promise.resolve([]), // Generic Bing search DISABLED — returned too many irrelevant photos (houses, other businesses)
+    Promise.resolve([]), // Google Places API DISABLED (paid)
+    Promise.resolve([]), // Generic Bing search DISABLED — returned too many irrelevant photos
     listing.website ? fetchWebsitePhotos(listing.website) : Promise.resolve([]),
-    (listing.latitude && listing.longitude && googleApiKey) ? fetchStreetViewThumbnail(listing.latitude, listing.longitude, googleApiKey) : Promise.resolve(null),
+    Promise.resolve(null), // Street View API DISABLED (paid)
   ]);
 
   // Collect existing photos
