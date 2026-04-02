@@ -13,14 +13,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
 
-    const { error } = await supabaseAdmin
+    const { error, count } = await supabaseAdmin
       .from('listing_verifications')
-      .delete()
+      .delete({ count: 'exact' })
       .eq('id', id);
 
     if (error) {
       console.error('Error deleting verification:', error);
-      return NextResponse.json({ error: 'Failed to delete' }, { status: 500 });
+      return NextResponse.json({ error: `Failed to delete: ${error.message}` }, { status: 500 });
+    }
+
+    if (count === 0) {
+      console.warn('Delete matched 0 rows for id:', id);
     }
 
     return NextResponse.json({ success: true });
