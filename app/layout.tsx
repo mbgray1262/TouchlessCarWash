@@ -55,7 +55,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link rel="icon" href="/favicon.ico" sizes="48x48" />
-        <meta name="impact-site-verification" value="f3b814bc-d87d-473f-b3f3-91951d20170e" />
+        <meta name="impact-site-verification" content="f3b814bc-d87d-473f-b3f3-91951d20170e" />
         <link rel="preconnect" href="https://res.cloudinary.com" />
         <link rel="dns-prefetch" href="https://res.cloudinary.com" />
         {process.env.NODE_ENV === 'production' && (
@@ -73,7 +73,6 @@ export default function RootLayout({
             />
             {/* Ezoic Header Script */}
             <Script
-              async
               src="//www.ezojs.com/ezoic/sa.min.js"
               strategy="beforeInteractive"
             />
@@ -100,7 +99,6 @@ export default function RootLayout({
               `}
             </Script>
             <Script
-              async
               src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2012332157653110"
               crossOrigin="anonymous"
               strategy="lazyOnload"
