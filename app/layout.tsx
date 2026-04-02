@@ -55,6 +55,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link rel="icon" href="/favicon.ico" sizes="48x48" />
+        <meta name="impact-site-verification" value="f3b814bc-d87d-473f-b3f3-91951d20170e" />
         <link rel="preconnect" href="https://res.cloudinary.com" />
         <link rel="dns-prefetch" href="https://res.cloudinary.com" />
         {process.env.NODE_ENV === 'production' && (
