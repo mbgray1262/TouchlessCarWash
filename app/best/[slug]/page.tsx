@@ -676,11 +676,24 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
         {/* Affiliate Products */}
         <section className="py-12 px-4 bg-gray-50 border-t border-gray-200">
           <div className="container mx-auto max-w-3xl">
-            <h2 className="text-xl font-bold text-[#0F2744] mb-1">Protect Your Paint Between Visits</h2>
+            <h2 className="text-xl font-bold text-[#0F2744] mb-1">Quick Car Care After Your Wash</h2>
             <p className="text-xs text-gray-400 italic mb-6">
               This section contains affiliate links. As an Amazon Associate we earn from qualifying purchases — at no extra cost to you.
             </p>
             <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-start gap-1">
+                <a
+                  href="https://www.amazon.com/dp/B06WVQ6MVR/?tag=touchlessfind-20"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-[#0F2744] hover:underline shrink-0"
+                >
+                  Meguiar&apos;s Hybrid Ceramic Wax
+                </a>
+                <span className="text-gray-600 sm:ml-1">
+                  <span className="text-yellow-500">&#11088; 4.7/5</span> — Spray on your wet car right after the touchless wash, rinse off, done. Ceramic protection with zero buffing.
+                </span>
+              </div>
               <div className="flex flex-col sm:flex-row sm:items-start gap-1">
                 <a
                   href="https://www.amazon.com/dp/B07G7DSF7C/?tag=touchlessfind-20"
@@ -691,33 +704,20 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
                   Griot&apos;s Garage XL Microfiber Drying Towel
                 </a>
                 <span className="text-gray-600 sm:ml-1">
-                  <span className="text-yellow-500">⭐ 4.9/5</span> — Prevent water spots by drying your car immediately after the wash. Scratch-free and safe for ceramic coatings and PPF.
+                  <span className="text-yellow-500">&#11088; 4.9/5</span> — Prevents water spots after the wash. Scratch-free and safe for ceramic coatings and PPF.
                 </span>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-start gap-1">
                 <a
-                  href="https://www.amazon.com/dp/B0009IQXAE/?tag=touchlessfind-20"
+                  href="https://www.amazon.com/dp/B0B4PR1W7K/?tag=touchlessfind-20"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="font-semibold text-[#0F2744] hover:underline shrink-0"
                 >
-                  Meguiar&apos;s Quik Detailer Mist &amp; Wipe
+                  Chemical Guys Interior Cleaner Wipes
                 </a>
                 <span className="text-gray-600 sm:ml-1">
-                  <span className="text-yellow-500">⭐ 4.8/5</span> — Keep a bottle in the car for fast dust, fingerprint, and light grime removal between washes.
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-start gap-1">
-                <a
-                  href="https://www.amazon.com/dp/B06XKJ8PVB/?tag=touchlessfind-20"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-semibold text-[#0F2744] hover:underline shrink-0"
-                >
-                  Turtle Wax ICE Spray Wax
-                </a>
-                <span className="text-gray-600 sm:ml-1">
-                  <span className="text-yellow-500">⭐ 4.9/5</span> — A quick spray-on wax that adds a protective hydrophobic layer after every wash, repelling water, dirt, and road grime.
+                  <span className="text-yellow-500">&#11088; 4.5/5</span> — Toss in the glovebox. Wipe down dash, seats, and trim while you wait in the car wash line.
                 </span>
               </div>
             </div>
