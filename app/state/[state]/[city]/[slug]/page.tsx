@@ -49,12 +49,6 @@ function getStateCode(stateSlug: string): string | null {
   return state ? state.code : null;
 }
 
-function unslugCity(citySlug: string): string {
-  return citySlug
-    .split('-')
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
-}
 
 async function getListing(slug: string): Promise<Listing | null> {
   const { data, error } = await supabase
@@ -876,7 +870,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     const nonTouchless = await getNonTouchlessListing(params.slug);
     if (nonTouchless) {
       const stateSlug = getStateSlug(nonTouchless.state) || nonTouchless.state.toLowerCase();
-      const citySlug = nonTouchless.city.toLowerCase().replace(/\s+/g, '-');
+      const citySlug = slugify(nonTouchless.city);
       return (
         <>
           <head>
@@ -924,7 +918,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
 
   const stateCode = getStateCode(params.state);
   const stateName = stateCode ? getStateName(stateCode) : '';
-  const cityName = unslugCity(params.city);
+  const cityName = listing.city;
   const todayKey = getTodayKey();
 
   const chainBrandImage = listing.hero_image_source !== 'manual'

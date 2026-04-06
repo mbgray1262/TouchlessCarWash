@@ -222,7 +222,7 @@ export default async function FeatureStatePage({ params, searchParams }: Feature
                   <ListingCard
                     key={listing.id}
                     listing={listing}
-                    href={`/state/${params.state}/${listing.city.toLowerCase().replace(/\s+/g, '-')}/${listing.slug}`}
+                    href={`/state/${params.state}/${slugify(listing.city)}/${listing.slug}`}
                   />
                 ))}
               </div>

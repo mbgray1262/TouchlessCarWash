@@ -33,12 +33,29 @@ function getStateCode(stateSlug: string): string | null {
   return state ? state.code : null;
 }
 
-function unslugCity(citySlug: string): string {
-  return citySlug
-    .split('-')
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
-}
+/**
+ * Resolve a URL slug back to the actual city name stored in the database.
+ * The slugify() function is lossy (e.g. "St. Petersburg" → "st-petersburg",
+ * "Winston-Salem" → "winston-salem") so we can't reverse it by just capitalizing.
+ * Instead, we query distinct city names for the state and find the one whose
+ * slugified form matches the URL slug.
+ */
+const resolveCityName = cache(async (stateCode: string, citySlug: string): Promise<string | null> => {
+  const { data } = await supabase
+    .from('listings')
+    .select('city')
+    .eq('is_touchless', true)
+    .eq('state', stateCode);
+  if (!data) return null;
+
+  const seen = new Set<string>();
+  for (const row of data) {
+    if (seen.has(row.city)) continue;
+    seen.add(row.city);
+    if (slugify(row.city) === citySlug) return row.city;
+  }
+  return null;
+});
 
 // Cached so generateMetadata and component share the same result per request
 const getCityListings = cache(async (stateCode: string, cityName: string): Promise<Listing[]> => {
@@ -80,7 +97,7 @@ async function getCitiesInState(stateCode: string, excludeCitySlug: string): Pro
     .map(({ city, count }) => ({
       city,
       count,
-      slug: city.toLowerCase().replace(/\s+/g, '-'),
+      slug: slugify(city),
     }))
     .filter(c => c.slug !== excludeCitySlug);
 }
@@ -109,7 +126,8 @@ async function getFilterMapForListings(listingIds: string[]): Promise<Record<num
 export async function generateMetadata({ params }: CityPageProps): Promise<Metadata> {
   const stateCode = getStateCode(params.state);
   if (!stateCode) return { title: 'Not Found' };
-  const cityName = unslugCity(params.city);
+  const cityName = await resolveCityName(stateCode, params.city);
+  if (!cityName) return { title: 'Not Found' };
   const stateName = getStateName(stateCode);
 
   const [listings, cityDesc] = await Promise.all([
@@ -164,7 +182,8 @@ export default async function CityPage({ params }: CityPageProps) {
   if (!stateCode) notFound();
 
   const stateName = getStateName(stateCode!);
-  const cityName = unslugCity(params.city);
+  const cityName = await resolveCityName(stateCode!, params.city);
+  if (!cityName) notFound();
 
   // Fetch all base data in a single parallel stage — no waterfalls
   const [allListings, nearbyCities, cityDescription, allFilters] = await Promise.all([

@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { Star, MapPin, Phone, CheckCircle, Navigation, ShieldCheck, Heart, GitCompareArrows } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { type Listing } from '@/lib/supabase';
-import { getStateSlug } from '@/lib/constants';
+import { getStateSlug, slugify } from '@/lib/constants';
 import { useFavorites } from '@/lib/useFavorites';
 import { useCompare } from '@/lib/useCompare';
 import LogoImage from '@/components/LogoImage';
@@ -45,7 +45,7 @@ const WASH_TYPE_LABELS: Record<string, string> = {
 };
 
 export function ListingCard({ listing, href, showVerifiedBadge = false, distance }: ListingCardProps) {
-  const defaultHref = `/state/${getStateSlug(listing.state)}/${listing.city.toLowerCase().replace(/\s+/g, '-')}/${listing.slug}`;
+  const defaultHref = `/state/${getStateSlug(listing.state)}/${slugify(listing.city)}/${listing.slug}`;
   const linkHref = href ?? defaultHref;
 
   // Prefer touchless_wash_types, fallback to amenity-based inference

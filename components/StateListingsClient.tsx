@@ -7,6 +7,7 @@ import { ListingCard } from '@/components/ListingCard';
 import { ClientPagination, PAGE_SIZE } from '@/components/Pagination';
 import { SearchFilters } from '@/components/SearchFilters';
 import type { Listing } from '@/lib/supabase';
+import { slugify } from '@/lib/constants';
 
 const LISTING_CARD_COLUMNS =
   'id, name, slug, city, state, address, phone, rating, review_count, hero_image, google_photo_url, street_view_url, logo_photo, google_logo_url, amenities, touchless_wash_types, extracted_data, hours, is_touchless, is_featured, is_claimed';
@@ -181,7 +182,7 @@ export function StateListingsClient({
             <ListingCard
               key={listing.id}
               listing={listing}
-              href={`/state/${stateSlug}/${listing.city.toLowerCase().replace(/\s+/g, '-')}/${listing.slug}`}
+              href={`/state/${stateSlug}/${slugify(listing.city)}/${listing.slug}`}
             />
           ))}
         </div>

@@ -191,7 +191,7 @@ export default async function StatePage({ params }: StatePageProps) {
       '@type': 'ListItem',
       position: index + 1,
       name: `Touchless Car Washes in ${c.city}, ${stateCode}`,
-      url: `https://touchlesscarwashfinder.com/state/${params.state}/${c.city.toLowerCase().replace(/\s+/g, '-')}`,
+      url: `https://touchlesscarwashfinder.com/state/${params.state}/${slugify(c.city)}`,
     })),
   };
 
@@ -246,7 +246,7 @@ export default async function StatePage({ params }: StatePageProps) {
               {cities.map((c) => (
                 <Link
                   key={c.city}
-                  href={`/state/${params.state}/${c.city.toLowerCase().replace(/\s+/g, '-')}`}
+                  href={`/state/${params.state}/${slugify(c.city)}`}
                 >
                   <Card className="hover:shadow-lg hover:border-primary transition-all cursor-pointer">
                     <CardContent className="p-4">
