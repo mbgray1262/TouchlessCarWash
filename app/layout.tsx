@@ -60,32 +60,6 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://res.cloudinary.com" />
         {process.env.NODE_ENV === 'production' && (
           <>
-            {/* Ezoic Privacy Scripts - must load before header script */}
-            <Script
-              data-cfasync="false"
-              src="https://cmp.gatekeeperconsent.com/min.js"
-              strategy="beforeInteractive"
-            />
-            <Script
-              data-cfasync="false"
-              src="https://the.gatekeeperconsent.com/cmp.min.js"
-              strategy="beforeInteractive"
-            />
-            {/* Ezoic Header Script */}
-            <Script
-              src="//www.ezojs.com/ezoic/sa.min.js"
-              strategy="beforeInteractive"
-            />
-            <Script id="ezoic-init" strategy="beforeInteractive">
-              {`
-                window.ezstandalone = window.ezstandalone || {};
-                ezstandalone.cmd = ezstandalone.cmd || [];
-              `}
-            </Script>
-            <Script
-              src="//ezoicanalytics.com/analytics.js"
-              strategy="lazyOnload"
-            />
             <Script
               src="https://www.googletagmanager.com/gtag/js?id=G-55HHXHEVFP"
               strategy="lazyOnload"
@@ -98,11 +72,6 @@ export default function RootLayout({
                 gtag('config', 'G-55HHXHEVFP');
               `}
             </Script>
-            <Script
-              src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2012332157653110"
-              crossOrigin="anonymous"
-              strategy="lazyOnload"
-            />
           </>
         )}
         {/* Google Maps is loaded on-demand by HeroSection when user interacts with search */}
