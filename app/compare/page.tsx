@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { useCompare } from '@/lib/useCompare';
 import { type Listing } from '@/lib/supabase';
-import { getStateSlug } from '@/lib/constants';
+import { getStateSlug, slugify } from '@/lib/constants';
 
 type ReviewSnippet = {
   id: string;
@@ -27,7 +27,7 @@ type ReviewSnippet = {
 };
 
 function getListingHref(l: Listing) {
-  return `/state/${getStateSlug(l.state)}/${l.city.toLowerCase().replace(/\s+/g, '-')}/${l.slug}`;
+  return `/state/${getStateSlug(l.state)}/${slugify(l.city)}/${l.slug}`;
 }
 
 function formatHours(hours: Record<string, string> | null) {

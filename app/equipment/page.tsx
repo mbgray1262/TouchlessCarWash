@@ -57,7 +57,7 @@ export default async function EquipmentIndexPage() {
   const { counts, heroImages } = await getBrandStats();
 
   const brandsWithListings = EQUIPMENT_BRAND_DATA.filter(
-    (brand) => (counts[brand.slug] || 0) > 0
+    (brand) => (counts[brand.slug] || 0) >= 2
   );
 
   const jsonLd = {

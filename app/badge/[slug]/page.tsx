@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Trophy, Star, MapPin, ExternalLink, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { getStateSlug } from '@/lib/constants';
+import { getStateSlug, slugify } from '@/lib/constants';
 import { BadgeClaimClient } from '@/components/BadgeClaimClient';
 import type { Metadata } from 'next';
 
@@ -91,7 +91,7 @@ export async function generateMetadata({
 
 function buildListingUrl(listing: RankedListing): string {
   const stateSlug = getStateSlug(listing.state);
-  const citySlug = listing.city.toLowerCase().replace(/\s+/g, '-');
+  const citySlug = slugify(listing.city);
   return `https://touchlesscarwashfinder.com/state/${stateSlug}/${citySlug}/${listing.slug}`;
 }
 
@@ -118,7 +118,7 @@ export default async function BadgeClaimPage({
   const top = rankings[0];
   const year = new Date().getFullYear();
   const listingUrl = buildListingUrl(listing);
-  const listingPath = `/state/${getStateSlug(listing.state)}/${listing.city.toLowerCase().replace(/\s+/g, '-')}/${listing.slug}`;
+  const listingPath = `/state/${getStateSlug(listing.state)}/${slugify(listing.city)}/${listing.slug}`;
 
   return (
     <main className="min-h-screen bg-white">

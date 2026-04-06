@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { Star, MapPin, Phone, Award, CheckCircle, ChevronRight, Trophy, MessageSquareQuote, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
-import { getStateSlug } from '@/lib/constants';
+import { getStateSlug, slugify } from '@/lib/constants';
 import { METRO_AREAS, getMetroBySlug, boundingBox, haversineDistance, type MetroArea } from '@/lib/metro-areas';
 import { scoreListing, type ScoredListing } from '@/lib/metro-scoring';
 import { METRO_CONTENT, buildExpertGuide } from '@/lib/metro-content';
@@ -263,7 +263,7 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
           addressRegion: listing.state,
         },
         ...(listing.rating > 0 && listing.review_count > 0 ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: listing.rating, reviewCount: listing.review_count, bestRating: 5 } } : {}),
-        url: `https://touchlesscarwashfinder.com/state/${getStateSlug(listing.state)}/${listing.city.toLowerCase().replace(/\s+/g, '-')}/${listing.slug}`,
+        url: `https://touchlesscarwashfinder.com/state/${getStateSlug(listing.state)}/${slugify(listing.city)}/${listing.slug}`,
       },
     })),
   };
@@ -387,7 +387,7 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
                 const cardImage = rawCardImage ? ensureHttps(rawCardImage) : null;
                 const rawCardLogo = listing.logo_photo ?? listing.google_logo_url ?? null;
                 const cardLogo = rawCardLogo ? ensureHttps(rawCardLogo) : null;
-                const listingHref = `/state/${getStateSlug(listing.state)}/${listing.city.toLowerCase().replace(/\s+/g, '-')}/${listing.slug}`;
+                const listingHref = `/state/${getStateSlug(listing.state)}/${slugify(listing.city)}/${listing.slug}`;
 
                 return (
                   <Link key={listing.id} href={listingHref} className="group block">
