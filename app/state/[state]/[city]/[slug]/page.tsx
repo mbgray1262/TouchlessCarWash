@@ -25,7 +25,7 @@ import { streetAddress, hasStreetAddress } from '@/lib/utils';
 import { DEFAULT_OG_IMAGE, ensureHttps, truncateDescription } from '@/lib/seo';
 import { getChainBrandImage } from '@/lib/chain-brand-images';
 
-import { ProductsBanner } from '@/components/ProductsBanner';
+
 import type { Metadata } from 'next';
 
 const ListingMap = nextDynamic(() => import('@/components/ListingMap'), { ssr: false });
@@ -1608,8 +1608,53 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
             </div>
           )}
 
-          <div className="mt-10">
-            <ProductsBanner />
+          {/* Affiliate Products — inline recommendations for car care */}
+          <div className="mt-10 rounded-2xl bg-gray-50 border border-gray-200 px-6 py-6">
+            <h3 className="text-lg font-bold text-[#0F2744] mb-1">Protect Your Paint Between Washes</h3>
+            <p className="text-xs text-gray-400 italic mb-4">
+              Affiliate links — as an Amazon Associate we earn from qualifying purchases, at no extra cost to you.
+            </p>
+            <div className="space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-start gap-1">
+                <a
+                  href="https://www.amazon.com/dp/B07G7DSF7C/?tag=touchlessfind-20"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-[#0F2744] hover:underline shrink-0"
+                >
+                  Griot&apos;s Garage XL Microfiber Drying Towel
+                </a>
+                <span className="text-gray-600 text-sm sm:ml-1">
+                  <span className="text-yellow-500">&#11088; 4.9</span> — Scratch-free drying, safe for ceramic coatings and PPF.
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-start gap-1">
+                <a
+                  href="https://www.amazon.com/dp/B0009IQXAE/?tag=touchlessfind-20"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-[#0F2744] hover:underline shrink-0"
+                >
+                  Meguiar&apos;s Quik Detailer Mist &amp; Wipe
+                </a>
+                <span className="text-gray-600 text-sm sm:ml-1">
+                  <span className="text-yellow-500">&#11088; 4.8</span> — Fast dust and fingerprint removal between washes.
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-start gap-1">
+                <a
+                  href="https://www.amazon.com/dp/B06XKJ8PVB/?tag=touchlessfind-20"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-[#0F2744] hover:underline shrink-0"
+                >
+                  Turtle Wax ICE Spray Wax
+                </a>
+                <span className="text-gray-600 text-sm sm:ml-1">
+                  <span className="text-yellow-500">&#11088; 4.9</span> — Spray-on hydrophobic layer that repels water and grime.
+                </span>
+              </div>
+            </div>
           </div>
 
           {lastVerified && (
