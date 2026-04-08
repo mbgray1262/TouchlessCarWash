@@ -24,6 +24,7 @@ import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants'
 import { streetAddress, hasStreetAddress } from '@/lib/utils';
 import { DEFAULT_OG_IMAGE, ensureHttps, truncateDescription } from '@/lib/seo';
 import { getChainBrandImage } from '@/lib/chain-brand-images';
+import { isThinListing } from '@/lib/listing-quality';
 
 
 import type { Metadata } from 'next';
@@ -250,10 +251,19 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
     `${ratingPrefix}${rankingPrefix}${listing.name} at ${streetAddress(listing.address, listing.city, listing.state, listing.zip)}, ${listing.city}, ${listing.state}.${amenityPart} Hours, directions & more.`
   );
 
+  // Thin listings (no crawl data and weak review signal) are excluded from
+  // Google's index to stop dragging down the site-wide quality signal. They
+  // remain visible on city/state hub pages — only the standalone detail page
+  // URL is hidden from search results. See lib/listing-quality.ts for the
+  // exact criteria.
+  const thin = isThinListing(listing);
+  const robots = thin ? { index: false, follow: true } : undefined;
+
   return {
     title: { absolute: title },
     description,
     alternates: { canonical: canonicalUrl },
+    ...(robots ? { robots } : {}),
     openGraph: {
       title: ogTitle,
       description,
