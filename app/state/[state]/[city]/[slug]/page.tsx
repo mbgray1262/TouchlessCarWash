@@ -62,7 +62,6 @@ async function getListing(slug: string): Promise<Listing | null> {
   return data as Listing;
 }
 
-/** Check if a listing exists but is NOT touchless (for showing a helpful message instead of 404) */
 /**
  * Build a canonical listing URL from a DB row.
  */
@@ -80,40 +79,6 @@ function buildListingUrl(match: { slug: string; city: string; state: string }): 
  */
 function stripTrailingNumericId(slug: string): string {
   return slug.replace(/-\d+$/, '');
-}
-
-async function getNonTouchlessListing(slug: string): Promise<{ name: string; city: string; state: string } | null> {
-  // Try exact match first (covers listings recently changed from touchless → not-touchless)
-  const { data: exact } = await supabase
-    .from('listings')
-    .select('name, city, state')
-    .eq('slug', slug)
-    .eq('is_touchless', false)
-    .maybeSingle();
-  if (exact) return exact;
-
-  // Try again after stripping a trailing numeric ID (old URL format like "circle-k-car-wash-bradenton-florida-14241")
-  const stripped = stripTrailingNumericId(slug);
-  if (stripped !== slug) {
-    const { data: strippedExact } = await supabase
-      .from('listings')
-      .select('name, city, state')
-      .eq('slug', stripped)
-      .eq('is_touchless', false)
-      .maybeSingle();
-    if (strippedExact) return strippedExact;
-
-    // Also try prefix match on stripped slug for not-touchless listings
-    const { data: prefix } = await supabase
-      .from('listings')
-      .select('name, city, state')
-      .like('slug', `${stripped}-%`)
-      .eq('is_touchless', false)
-      .limit(1);
-    if (prefix?.[0]) return prefix[0];
-  }
-
-  return null;
 }
 
 /**
@@ -865,46 +830,11 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     const redirectUrl = await findListingByPartialSlug(params.slug);
     if (redirectUrl) permanentRedirect(redirectUrl); // 308 — tells Google to transfer PageRank to the new slug
 
-    // Check if this listing exists but is NOT touchless — show helpful page with noindex
-    // Google will de-index these pages when it sees the noindex meta tag
-    const nonTouchless = await getNonTouchlessListing(params.slug);
-    if (nonTouchless) {
-      const stateSlug = getStateSlug(nonTouchless.state) || nonTouchless.state.toLowerCase();
-      const citySlug = slugify(nonTouchless.city);
-      return (
-        <>
-          <head>
-            <meta name="robots" content="noindex, nofollow" />
-            <title>{nonTouchless.name} is not a touchless car wash</title>
-          </head>
-          <div className="max-w-2xl mx-auto px-4 py-16 text-center">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">
-              {nonTouchless.name} is not a touchless car wash
-            </h1>
-            <p className="text-gray-600 mb-8">
-              Our research shows that {nonTouchless.name} in {nonTouchless.city}, {nonTouchless.state} does not offer touchless wash services.
-              They use soft-touch or friction-based equipment that makes contact with your vehicle.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                href={`/state/${stateSlug}/${citySlug}`}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#22C55E] text-white rounded-lg font-medium hover:bg-[#16a34a] transition-colors"
-              >
-                <MapPin className="w-4 h-4" />
-                Find touchless washes in {nonTouchless.city}
-              </Link>
-              <Link
-                href="/search"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
-              >
-                Search all locations
-              </Link>
-            </div>
-          </div>
-        </>
-      );
-    }
-
+    // Non-touchless listings (including those previously flagged touchless and later
+    // re-classified) return a plain 404. Previously this path rendered a "not a
+    // touchless car wash" explainer page at HTTP 200, which Google treated as
+    // low-value content and dropped slowly via noindex. A true 404 is processed
+    // much faster and removes these URLs from Google's index cleanly.
     notFound();
   }
 
