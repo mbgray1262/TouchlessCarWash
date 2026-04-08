@@ -3,6 +3,7 @@ import { US_STATES, getStateSlug, slugify } from '@/lib/constants';
 import { METRO_AREAS, boundingBox, haversineDistance } from '@/lib/metro-areas';
 import { FEATURES } from '@/lib/features';
 import { EQUIPMENT_BRAND_DATA, EQUIPMENT_MODEL_DATA } from '@/lib/equipment-data';
+import { isThinListing } from '@/lib/listing-quality';
 
 const VALID_STATE_CODES = new Set(US_STATES.map(s => s.code));
 
@@ -10,24 +11,80 @@ export async function GET() {
   const baseUrl = 'https://touchlesscarwashfinder.com';
   const now = new Date().toISOString();
 
-  // Paginate past Supabase's default 1000-row limit
-  const allListings: Array<{ slug: string; city: string; state: string; created_at: string; updated_at: string | null; latitude: number | null; longitude: number | null }> = [];
+  // Paginate past Supabase's default 1000-row limit. We fetch the quality-check
+  // fields (rating, review_count, is_claimed, is_featured, and boolean flags for
+  // crawl_snapshot/extracted_data presence) so we can filter out thin listings
+  // client-side using the same isThinListing() predicate used by the listing
+  // detail page. This keeps the sitemap and per-page robots tags in lockstep.
+  //
+  // We don't fetch crawl_snapshot / extracted_data themselves (too large) —
+  // instead we check presence via the .is('field', null) negation. Supabase-js
+  // doesn't support selecting "is null" computed columns, so we fetch both
+  // rows with non-null values via two queries and mark the listings accordingly.
+  type SitemapRow = {
+    slug: string;
+    city: string;
+    state: string;
+    created_at: string;
+    updated_at: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    rating: number | null;
+    review_count: number | null;
+    is_claimed: boolean | null;
+    is_featured: boolean | null;
+    has_crawl_snapshot?: boolean;
+    has_extracted_data?: boolean;
+  };
+  const allListings: SitemapRow[] = [];
   const PAGE_SIZE = 1000;
   let offset = 0;
   while (true) {
     const { data: page } = await supabase
       .from('listings')
-      .select('slug, city, state, created_at, updated_at, latitude, longitude')
+      .select('id, slug, city, state, created_at, updated_at, latitude, longitude, rating, review_count, is_claimed, is_featured, crawl_snapshot, extracted_data')
       .eq('is_touchless', true)
       .range(offset, offset + PAGE_SIZE - 1);
     if (!page || page.length === 0) break;
-    allListings.push(...page);
+    // Convert the heavy JSON fields to boolean flags immediately so we don't
+    // keep megabytes of snapshot/extracted JSON in memory for every listing.
+    for (const row of page) {
+      const typed = row as SitemapRow & { crawl_snapshot: unknown; extracted_data: unknown };
+      allListings.push({
+        slug: typed.slug,
+        city: typed.city,
+        state: typed.state,
+        created_at: typed.created_at,
+        updated_at: typed.updated_at,
+        latitude: typed.latitude,
+        longitude: typed.longitude,
+        rating: typed.rating,
+        review_count: typed.review_count,
+        is_claimed: typed.is_claimed,
+        is_featured: typed.is_featured,
+        has_crawl_snapshot: typed.crawl_snapshot != null,
+        has_extracted_data: typed.extracted_data != null,
+      });
+    }
     if (page.length < PAGE_SIZE) break;
     offset += PAGE_SIZE;
   }
 
-  // Filter to only valid US states (prevents non-US listings from polluting sitemap)
-  const listings = allListings.filter(l => VALID_STATE_CODES.has(l.state));
+  // Filter to only valid US states (prevents non-US listings from polluting
+  // sitemap) AND filter out thin listings so Google isn't advertised pages we
+  // would immediately noindex when it crawled them.
+  const listings = allListings.filter(l => {
+    if (!VALID_STATE_CODES.has(l.state)) return false;
+    if (isThinListing({
+      crawl_snapshot: l.has_crawl_snapshot ? {} : null,
+      extracted_data: l.has_extracted_data ? {} : null,
+      rating: l.rating,
+      review_count: l.review_count,
+      is_claimed: l.is_claimed,
+      is_featured: l.is_featured,
+    })) return false;
+    return true;
+  });
 
   const { data: blogPosts } = await supabase
     .from('blog_posts')
