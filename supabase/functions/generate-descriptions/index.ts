@@ -102,9 +102,19 @@ async function generateDescriptionWithClaude(listing: ListingData, apiKey: strin
     parts.push(`Business subtypes: ${listing.google_subtypes}`);
   }
 
-  // Enrich with extracted_data if available (from crawl snapshot extraction)
-  const ed = listing.extracted_data;
+  // Enrich with extracted_data if available (from crawl snapshot extraction).
+  // Quote taglines verbatim — do not paraphrase brand voice.
+  const ed = listing.extracted_data as Record<string, unknown> | null;
   if (ed) {
+    if (typeof ed.tagline === 'string' && ed.tagline.trim()) {
+      parts.push(`Tagline (quote verbatim): "${ed.tagline.trim()}"`);
+    }
+    if (typeof ed.business_type === 'string' && ed.business_type.trim()) {
+      parts.push(`Business type: ${ed.business_type}`);
+    }
+    if (typeof ed.established === 'string' && ed.established.trim()) {
+      parts.push(`Established: ${ed.established}`);
+    }
     const edPkgs = ed.wash_packages as Array<{ name: string; price?: string; features?: string[] }> | undefined;
     if (Array.isArray(edPkgs) && edPkgs.length > 0 && (!listing.wash_packages || edPkgs.length > listing.wash_packages.length)) {
       const pkgs = edPkgs.map(p => {
@@ -115,9 +125,18 @@ async function generateDescriptionWithClaude(listing: ListingData, apiKey: strin
       }).join('; ');
       parts.push(`Wash packages from website: ${pkgs}`);
     }
-    const plans = ed.membership_plans as Array<{ name: string; price?: string }> | undefined;
+    const plans = ed.membership_plans as Array<{ name: string; price?: string; description?: string }> | undefined;
     if (Array.isArray(plans) && plans.length > 0) {
-      parts.push(`Membership options: ${plans.map(m => `${m.name} at ${m.price}`).join(', ')}`);
+      parts.push(`Membership options: ${plans.map(m => {
+        let s = m.name;
+        if (m.price) s += ` at ${m.price}`;
+        if (m.description) s += ` (${m.description})`;
+        return s;
+      }).join(', ')}`);
+    }
+    const services = ed.service_types as string[] | undefined;
+    if (Array.isArray(services) && services.length > 0) {
+      parts.push(`Service types offered: ${services.join(', ')}`);
     }
     const equip = ed.equipment_technology as string[] | undefined;
     if (Array.isArray(equip) && equip.length > 0) {
@@ -127,12 +146,21 @@ async function generateDescriptionWithClaude(listing: ListingData, apiKey: strin
     if (Array.isArray(features) && features.length > 0) {
       parts.push(`Special features: ${features.join(', ')}`);
     }
+    const amenitiesDetailed = ed.amenities_detailed as Array<string | { name: string; details?: string }> | undefined;
+    if (Array.isArray(amenitiesDetailed) && amenitiesDetailed.length > 0) {
+      const a = amenitiesDetailed.map(x => typeof x === 'string' ? x : (x.details ? `${x.name} (${x.details})` : x.name)).join(', ');
+      parts.push(`Detailed amenities: ${a}`);
+    }
+    const payments = ed.payment_methods as string[] | undefined;
+    if (Array.isArray(payments) && payments.length > 0) {
+      parts.push(`Payment methods accepted: ${payments.join(', ')}`);
+    }
     const usp = ed.unique_selling_points as string[] | undefined;
     if (Array.isArray(usp) && usp.length > 0) {
       parts.push(`Unique selling points: ${usp.join(', ')}`);
     }
     if (ed.review_highlights) {
-      parts.push(`Customer feedback: ${ed.review_highlights}`);
+      parts.push(`Customer feedback: ${JSON.stringify(ed.review_highlights)}`);
     }
   }
 
@@ -144,23 +172,68 @@ async function generateDescriptionWithClaude(listing: ListingData, apiKey: strin
 
   const context = parts.join('\n');
 
-  const hasRichData = !!(ed || snapshotMd);
+  // Count the structured-data fields we have. The richer the data, the longer
+  // and more specific the description should be. Listings with no usable
+  // extracted_data should produce a very short, factual blurb (or, ideally,
+  // shouldn't be regenerated at all — see the rich_only flag in start).
+  const richFieldCount = ed ? [
+    'tagline','wash_packages','membership_plans','service_types','special_features',
+    'amenities_detailed','payment_methods','equipment_technology','unique_selling_points',
+    'business_type','established','review_highlights'
+  ].filter(k => {
+    const v = (ed as Record<string, unknown>)[k];
+    if (v == null) return false;
+    if (Array.isArray(v) && v.length === 0) return false;
+    if (typeof v === 'string' && v.trim() === '') return false;
+    return true;
+  }).length : 0;
 
-  const prompt = `You are writing a helpful, informative description for a car wash business listing page. The description should:
-- Be 2-${hasRichData ? '4' : '3'} concise paragraphs (roughly ${hasRichData ? '100-200' : '80-150'} words total)
-- Naturally highlight the most compelling details: touchless/brushless technology, amenities, ratings, wash options, hours, and location
-${hasRichData ? '- Mention specific equipment or technology if known (e.g., "LaserWash 360 system")\n- Include specific pricing if available (e.g., "starting at $8.99")\n- Reference membership/unlimited plans if offered' : ''}
-- Use a friendly but factual tone — helpful to a customer deciding whether to visit
-- Be optimized for SEO by naturally including the business name, city, and state
-- NOT use generic filler phrases like "look no further" or "best in town"
-- NOT make up any details not provided in the data below
-- NOT include a title/heading — just the paragraph text
-- Each listing's description should be UNIQUE and specific to that business
+  const isRich = richFieldCount >= 3 || !!snapshotMd;
+  const isVeryRich = richFieldCount >= 5;
+
+  const targetWords = isVeryRich ? '180-260' : isRich ? '130-200' : '70-120';
+
+  const prompt = `You are writing a description for one specific car wash business on a directory site. The directory has thousands of listings, and your job is to make THIS page distinctly different from every other listing — by grounding every claim in the specific facts about THIS business.
+
+CRITICAL RULES (the directory has been flagged for low-quality content; these rules exist because past descriptions read as templated and got the site rejected from Google AdSense):
+
+1. EVERY sentence must contain at least one fact that comes specifically from the data block below. If a sentence could appear unchanged on a different car wash's page, delete it.
+
+2. If a tagline is provided, quote it verbatim in double quotes with attribution. Do NOT paraphrase taglines.
+
+3. Use specific named details whenever they exist:
+   - Named wash packages (e.g., "the Ultimate Shine package at $19.99")
+   - Named membership plans (e.g., "the All-Weather Unlimited tier at $34.99/month")
+   - Specific equipment models (e.g., "PDQ LaserWash 360")
+   - Specific amenities by name (e.g., "free vacuums", "soft towels", "vending machines")
+   - Specific service types from the website's own language
+
+4. BANNED PHRASES — these are generic and will trigger duplicate-content detection. Do not use them or any close variant:
+   - "gentle on your vehicle" / "protects your paint"
+   - "state-of-the-art" / "cutting-edge" / "advanced technology"
+   - "look no further" / "best in town" / "top choice"
+   - "trusted" / "reliable" / "convenient choice"
+   - "whether you're a local or just passing through"
+   - "beyond the car wash" / "more than just a car wash"
+   - "in just minutes" / "in no time"
+   - "your vehicle will thank you" / "leave looking like new"
+
+5. NEVER invent facts. If the data doesn't say it, don't say it. No assumptions about what the business "probably" offers.
+
+6. Length target: ${targetWords} words. Do not pad with filler to hit the upper bound — shorter is fine if data is limited. Quality > length.
+
+7. Format: 1-3 paragraphs of plain text. No headings. No bullet lists. No emojis.
+
+8. Tone: factual and informative, like a knowledgeable local writing a quick guide. Not promotional. Not sycophantic.
+
+9. Naturally include the business name, city, and state once each (for SEO), but do not stuff keywords.
+
+10. End with a concrete call to action grounded in real data — e.g., the actual phone number, the actual hours, or "visit during the open hours listed below." Do NOT end with generic exhortations like "stop by today!"
 
 Business data:
 ${context}
 
-Write the description now:`;
+Write the description now. Remember: every sentence must contain a fact specific to THIS business.`;
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -227,6 +300,13 @@ Deno.serve(async (req: Request) => {
       const limit: number = body.limit ?? 0;
       const regenerate: boolean = body.regenerate ?? false;
       const listingIds: string[] | undefined = body.listing_ids;
+      // rich_only: when true, only process listings that have extracted_data —
+      // i.e. listings where we can ground the description in real facts pulled
+      // from the business's own website. This is the recommended mode for
+      // regenerating to fix the "scaled content" problem: thin listings
+      // (handled separately by lib/listing-quality.ts) are noindexed; rich
+      // listings get high-quality, fact-grounded rewrites.
+      const richOnly: boolean = body.rich_only ?? false;
 
       let query = supabase
         .from('listings')
@@ -239,6 +319,10 @@ Deno.serve(async (req: Request) => {
         query = query.in('id', listingIds);
       } else if (!regenerate) {
         query = query.is('description', null);
+      }
+
+      if (richOnly) {
+        query = query.not('extracted_data', 'is', null);
       }
 
       if (limit > 0) query = query.limit(limit);
