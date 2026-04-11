@@ -235,7 +235,7 @@ export function HeroCard({
 }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null); // index into galleryItems (photos only)
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null); // URL of the photo shown in lightbox
   const [heroLightbox, setHeroLightbox] = useState(false); // separate state for hero preview
   const [cropOpen, setCropOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -356,36 +356,36 @@ export function HeroCard({
         onDelete={onDeleteHero}
       />
     )}
-    {lightboxIndex !== null && (() => {
+    {lightboxUrl !== null && (() => {
       const photoItems = galleryItems.filter(i => i.kind === 'photo');
-      const item = photoItems[lightboxIndex];
+      const currentIndex = photoItems.findIndex(i => i.url === lightboxUrl);
+      const item = currentIndex >= 0 ? photoItems[currentIndex] : null;
       if (!item || !item.url) return null;
 
       const handleDeleteAdvance = item.onDelete ? () => {
         const totalAfterDelete = photoItems.length - 1;
         item.onDelete!();
         if (totalAfterDelete <= 0) {
-          // Was the only photo — close the lightbox
-          setLightboxIndex(null);
-        } else if (lightboxIndex >= totalAfterDelete) {
-          // Was the last photo — go to the new last one
-          setLightboxIndex(totalAfterDelete - 1);
+          setLightboxUrl(null);
+        } else if (currentIndex >= totalAfterDelete) {
+          setLightboxUrl(photoItems[totalAfterDelete - 1].url);
+        } else {
+          setLightboxUrl(photoItems[currentIndex + 1]?.url ?? photoItems[0].url);
         }
-        // Otherwise stay at the same index (next photo slides into this position)
       } : undefined;
 
       return (
         <PhotoLightbox
           url={item.url}
           label={item.label}
-          onClose={() => setLightboxIndex(null)}
-          onUseAsHero={() => { item.onUseAsHero(); setLightboxIndex(null); }}
-          onEnhance={async (imageUrl) => { await onEnhance(imageUrl); setLightboxIndex(null); }}
+          onClose={() => setLightboxUrl(null)}
+          onUseAsHero={() => { item.onUseAsHero(); setLightboxUrl(null); }}
+          onEnhance={async (imageUrl) => { await onEnhance(imageUrl); setLightboxUrl(null); }}
           onDelete={item.onDelete}
           onDeleteAdvance={handleDeleteAdvance}
-          onPrev={lightboxIndex > 0 ? () => setLightboxIndex(lightboxIndex - 1) : undefined}
-          onNext={lightboxIndex < photoItems.length - 1 ? () => setLightboxIndex(lightboxIndex + 1) : undefined}
-          position={`${lightboxIndex + 1} / ${photoItems.length}`}
+          onPrev={currentIndex > 0 ? () => setLightboxUrl(photoItems[currentIndex - 1].url) : undefined}
+          onNext={currentIndex < photoItems.length - 1 ? () => setLightboxUrl(photoItems[currentIndex + 1].url) : undefined}
+          position={`${currentIndex + 1} / ${photoItems.length}`}
         />
       );
     })()}
@@ -630,10 +630,7 @@ export function HeroCard({
                     {item.kind === 'photo' && !isConfirmed && (
                       <button
                         onClick={() => {
-                          // Find this item's index among photo-only items
-                          const photoItems = galleryItems.filter(i => i.kind === 'photo');
-                          const photoIdx = photoItems.findIndex(i => i.url === item.url);
-                          setLightboxIndex(photoIdx >= 0 ? photoIdx : 0);
+                          setLightboxUrl(item.url);
                         }}
                         className="absolute inset-0 flex items-center justify-center rounded-md bg-black/0 group-hover/item:bg-black/25 transition-colors opacity-0 group-hover/item:opacity-100"
                         title="View full size (← → to navigate)"
