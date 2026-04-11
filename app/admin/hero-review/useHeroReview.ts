@@ -38,6 +38,7 @@ export function useHeroReview() {
   const [searchName, setSearchName] = useState('');
   const [showFlaggedOnly, setShowFlaggedOnly] = useState(false);
   const [showNoEquipmentOnly, setShowNoEquipmentOnly] = useState(false);
+  const [filterEquipmentBrand, setFilterEquipmentBrand] = useState('');
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [focusedId, setFocusedId] = useState<string | null>(null);
@@ -158,9 +159,10 @@ export function useHeroReview() {
     if (filterVendorId) q = q.eq('vendor_id', parseInt(filterVendorId, 10));
     if (searchName) q = q.ilike('name', `%${searchName}%`);
     if (showNoEquipmentOnly) q = q.is('equipment_brand', null);
+    if (filterEquipmentBrand) q = q.eq('equipment_brand', filterEquipmentBrand);
 
     return q;
-  }, [filterSource, filterState, filterVendorId, searchName, showNoEquipmentOnly]);
+  }, [filterSource, filterState, filterVendorId, searchName, showNoEquipmentOnly, filterEquipmentBrand]);
 
   const loadListings = useCallback(async () => {
     setLoading(true);
@@ -698,6 +700,7 @@ export function useHeroReview() {
     searchName, setSearchName,
     showFlaggedOnly, setShowFlaggedOnly,
     showNoEquipmentOnly, setShowNoEquipmentOnly,
+    filterEquipmentBrand, setFilterEquipmentBrand,
     expandedId, setExpandedId,
     focusedId, setFocusedId,
     confirmMap,

@@ -3,7 +3,7 @@
 import { useEffect, useCallback, useState, useRef } from 'react';
 import { Search, ChevronLeft, ChevronRight, RefreshCw, ChevronsUpDown, X } from 'lucide-react';
 import { US_STATES } from '@/lib/constants';
-import { FilterSource } from './types';
+import { FilterSource, EQUIPMENT_BRANDS } from './types';
 import { HeroCard } from './HeroCard';
 import { StatsBar } from './StatsBar';
 import { useHeroReview } from './useHeroReview';
@@ -121,6 +121,7 @@ export default function HeroReviewPage() {
     searchName, setSearchName,
     showFlaggedOnly, setShowFlaggedOnly,
     showNoEquipmentOnly, setShowNoEquipmentOnly,
+    filterEquipmentBrand, setFilterEquipmentBrand,
     expandedId, setExpandedId,
     focusedId, setFocusedId,
     confirmMap,
@@ -274,6 +275,17 @@ export default function HeroReviewPage() {
             value={filterVendorId}
             onChange={handleVendorChange}
           />
+
+          <select
+            value={filterEquipmentBrand}
+            onChange={(e) => { setFilterEquipmentBrand(e.target.value); setPage(0); }}
+            className="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white"
+          >
+            <option value="">All Equipment</option>
+            {EQUIPMENT_BRANDS.map(b => (
+              <option key={b.value} value={b.value}>{b.label}</option>
+            ))}
+          </select>
 
           <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
             <input
