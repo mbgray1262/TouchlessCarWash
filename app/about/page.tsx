@@ -44,28 +44,20 @@ async function getStats() {
   const listingRes = await supabase.from('listings').select('id', { count: 'exact', head: true }).eq('is_touchless', true);
   const totalListings = listingRes.count ?? 0;
 
-  let totalReviews = 0;
-  let offset = 0;
-  while (true) {
-    const { data } = await supabase
-      .from('listings')
-      .select('review_count')
-      .eq('is_touchless', true)
-      .not('review_count', 'is', null)
-      .gt('review_count', 0)
-      .range(offset, offset + 999);
-    if (!data || data.length === 0) break;
-    totalReviews += data.reduce((sum, l) => sum + (l.review_count || 0), 0);
-    offset += 1000;
-    if (data.length < 1000) break;
-  }
+  // Count actual review snippets stored in the DB — same metric the homepage uses.
+  // Previously this summed listing.review_count across all touchless listings
+  // (the aggregate Google review count), which inflated the number to ~689k and
+  // didn't match the homepage's "Customer Reviews" figure.
+  const { count: totalReviews } = await supabase
+    .from('review_snippets')
+    .select('*', { count: 'exact', head: true });
 
   const roundedListings = Math.floor(totalListings / 10) * 10;
-  const roundedReviews = Math.floor(totalReviews / 100) * 100;
+  const roundedReviews = Math.floor((totalReviews ?? 0) / 100) * 100;
   return [
     { label: 'Verified Locations', value: `${roundedListings.toLocaleString()}+`, icon: MapPin },
     { label: 'States + DC', value: '50', icon: CheckCircle },
-    { label: 'Google Reviews Indexed', value: `${roundedReviews.toLocaleString()}+`, icon: Star },
+    { label: 'Customer Reviews', value: `${roundedReviews.toLocaleString()}+`, icon: Star },
     { label: 'Hours Listings Updated', value: 'Weekly', icon: Clock },
   ];
 }
