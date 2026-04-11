@@ -33,20 +33,28 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const IMAGE_URL = 'https://b3671101.smushcdn.com/3671101/wp-content/uploads/2019/08/60004128_2585065314845938_1998167778514698240_o-1.jpg?lossy=2&strip=1&webp=1';
 const DEST_PATH = 'chain-brands/power-market.jpg';
 const BUCKET = 'listing-photos';
 
 async function main() {
-  console.log('Fetching Power Market brand image...');
-  const res = await fetch(IMAGE_URL, {
-    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; TouchlessCarWash/1.0)' },
-  });
-  if (!res.ok) throw new Error(`Fetch failed: ${res.status} ${res.statusText}`);
+  // Accept a local file path as CLI arg, or fall back to fetching from URL
+  const localPath = process.argv[2];
+  let buffer;
 
-  const contentType = res.headers.get('content-type') || 'image/jpeg';
-  const buffer = Buffer.from(await res.arrayBuffer());
-  console.log(`Downloaded ${buffer.length} bytes (${contentType})`);
+  if (localPath) {
+    console.log(`Reading local file: ${localPath}`);
+    buffer = readFileSync(resolve(localPath));
+    console.log(`Read ${buffer.length} bytes`);
+  } else {
+    const IMAGE_URL = 'https://b3671101.smushcdn.com/3671101/wp-content/uploads/2019/08/60004128_2585065314845938_1998167778514698240_o-1.jpg?lossy=2&strip=1&webp=1';
+    console.log('Fetching Power Market brand image...');
+    const res = await fetch(IMAGE_URL, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; TouchlessCarWash/1.0)' },
+    });
+    if (!res.ok) throw new Error(`Fetch failed: ${res.status} ${res.statusText}`);
+    buffer = Buffer.from(await res.arrayBuffer());
+    console.log(`Downloaded ${buffer.length} bytes`);
+  }
 
   // Upload to Supabase storage
   const { error } = await supabase.storage
