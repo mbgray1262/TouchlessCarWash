@@ -27,8 +27,19 @@ export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
   // BellStores Touch Free tunnel image — hosted in Supabase (104 KB)
   'BellStores': `${STORAGE}/bellstores.png`,
 
-  // Power Market: 3 photos rotated across listings for visual variety.
+  // H&S Energy Group brands — all use identical Istobal touchless equipment,
+  // so they share the same 3 car wash photos rotated across listings.
   'Power Market': [
+    `${STORAGE}/power-market.jpg`,
+    `${STORAGE}/power-market-2.jpg`,
+    `${STORAGE}/power-market-3.jpg`,
+  ],
+  'Extra Mile': [
+    `${STORAGE}/power-market.jpg`,
+    `${STORAGE}/power-market-2.jpg`,
+    `${STORAGE}/power-market-3.jpg`,
+  ],
+  'Pinnacle 365': [
     `${STORAGE}/power-market.jpg`,
     `${STORAGE}/power-market-2.jpg`,
     `${STORAGE}/power-market-3.jpg`,
