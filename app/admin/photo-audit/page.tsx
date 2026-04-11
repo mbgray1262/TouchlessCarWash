@@ -609,7 +609,7 @@ export default function PhotoAuditPage() {
                     ) : (
                       <div className="flex items-center gap-2">
                         {(() => {
-                          const brandUrl = getChainBrandImage(r.listing_parent_chain ?? null);
+                          const brandUrl = getChainBrandImage(r.listing_parent_chain ?? null, r.listing_id);
                           if (!brandUrl) return null;
                           return (
                             <button

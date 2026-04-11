@@ -15,7 +15,7 @@
 
 const STORAGE = 'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/chain-brands';
 
-export const CHAIN_BRAND_IMAGES: Record<string, string> = {
+export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
   // Holiday Stationstores car wash building exterior — from Rogers, MN location hero.
   // Hosted in Supabase (226 KB).
   'Holiday Stationstores': `${STORAGE}/holiday-stationstores.jpg`,
@@ -27,9 +27,12 @@ export const CHAIN_BRAND_IMAGES: Record<string, string> = {
   // BellStores Touch Free tunnel image — hosted in Supabase (104 KB)
   'BellStores': `${STORAGE}/bellstores.png`,
 
-  // Power Market: car wash tunnel entrance with red brushes, WAIT/GO signal, and menu board.
-  // Hosted in Supabase (396 KB, 1600×1067).
-  'Power Market': `${STORAGE}/power-market.jpg`,
+  // Power Market: 3 photos rotated across listings for visual variety.
+  'Power Market': [
+    `${STORAGE}/power-market.jpg`,
+    `${STORAGE}/power-market-2.jpg`,
+    `${STORAGE}/power-market-3.jpg`,
+  ],
 
   // BP gas station canopy with BP sunflower logo — from Monee, IL location. 1600×900. Hosted in Supabase (251 KB).
   'BP': `${STORAGE}/bp.jpg`,
@@ -38,9 +41,19 @@ export const CHAIN_BRAND_IMAGES: Record<string, string> = {
 /**
  * Returns the brand hero image URL for a chain listing, or null if none configured.
  * Returns null (not a placeholder) so callers can fall back to location-specific hero.
+ *
+ * When multiple images are configured for a chain, uses a hash of listingId
+ * to deterministically assign one image per listing.
  */
-export function getChainBrandImage(parentChain: string | null | undefined): string | null {
+export function getChainBrandImage(
+  parentChain: string | null | undefined,
+  listingId?: string,
+): string | null {
   if (!parentChain) return null;
-  const url = CHAIN_BRAND_IMAGES[parentChain];
-  return url || null;
+  const entry = CHAIN_BRAND_IMAGES[parentChain];
+  if (!entry) return null;
+  if (typeof entry === 'string') return entry;
+  // Deterministic pick: parse first 8 hex chars of the UUID as an integer
+  const hash = listingId ? parseInt(listingId.substring(0, 8), 16) || 0 : 0;
+  return entry[hash % entry.length];
 }

@@ -62,7 +62,7 @@ export function ListingCard({ listing, href, showVerifiedBadge = false, distance
   // For chain listings, prefer brand photo over location-specific (often a gas station shot).
   // Exception: manually-approved location photos always win.
   const chainBrandImage = listing.touchless_verified === 'chain' && listing.hero_image_source !== 'manual'
-    ? getChainBrandImage(listing.parent_chain)
+    ? getChainBrandImage(listing.parent_chain, listing.id)
     : null;
   // Don't use street_view_url as card image — often returns 403 and looks broken
   const rawCardImage = chainBrandImage ?? listing.hero_image ?? listing.google_photo_url ?? null;

@@ -572,7 +572,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                   // Show chain brand image as the "effective hero" when no location-specific
                   // hero has been chosen — matches what the public listing page displays.
                   !candidates.find(c => c.tag === 'hero') && listing.hero_image_source !== 'manual'
-                    ? getChainBrandImage(listing.parent_chain)
+                    ? getChainBrandImage(listing.parent_chain, listing.id)
                     : null
                 }
                 chainBrandName={listing.parent_chain ?? undefined}
