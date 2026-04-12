@@ -47,6 +47,15 @@ export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
 
   // BP gas station canopy with BP sunflower logo — from Monee, IL location. 1600×900. Hosted in Supabase (251 KB).
   'BP': `${STORAGE}/bp.jpg`,
+
+  // Elephant Car Wash — employee at car wash entrance, professional photo. Hosted in Supabase (314 KB).
+  'Elephant Car Wash': `${STORAGE}/elephant-car-wash.jpg`,
+
+  // Brown Bear Car Wash — building exterior with bear mascot signage. Hosted in Supabase (59 KB).
+  'Brown Bear': `${STORAGE}/brown-bear.jpg`,
+
+  // Gorilla Wash — facility exterior with Gorilla signage. Hosted in Supabase (261 KB).
+  'Gorilla Wash': `${STORAGE}/gorilla-wash.jpg`,
 };
 
 /**
@@ -56,6 +65,18 @@ export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
  * When multiple images are configured for a chain, uses a hash of listingId
  * to deterministically assign one image per listing.
  */
+/**
+ * Returns the hero image URL for a chain page (always the first/only image).
+ * Unlike getChainBrandImage which rotates per listing, this returns a single
+ * consistent image for use as the chain page hero banner.
+ */
+export function getChainHeroImage(parentChain: string | null | undefined): string | null {
+  if (!parentChain) return null;
+  const entry = CHAIN_BRAND_IMAGES[parentChain];
+  if (!entry) return null;
+  return typeof entry === 'string' ? entry : entry[0];
+}
+
 export function getChainBrandImage(
   parentChain: string | null | undefined,
   listingId?: string,

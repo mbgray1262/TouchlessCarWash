@@ -1,0 +1,267 @@
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { ChevronRight, MapPin } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
+import { getStateName, getStateSlug, slugify } from '@/lib/constants';
+import { CHAINS, getChainBySlug } from '@/lib/chains';
+import { getChainHeroImage } from '@/lib/chain-brand-images';
+import { ListingCard } from '@/components/ListingCard';
+import { DEFAULT_OG_IMAGE } from '@/lib/seo';
+import type { Metadata } from 'next';
+
+export const revalidate = 3600;
+
+const SITE_URL = 'https://touchlesscarwashfinder.com';
+
+interface ChainPageProps {
+  params: { slug: string };
+}
+
+export function generateStaticParams() {
+  return CHAINS.map(c => ({ slug: c.slug }));
+}
+
+async function getChainListings(chainName: string): Promise<Listing[]> {
+  const all: Listing[] = [];
+  for (let offset = 0; offset < 10000; offset += 1000) {
+    const { data } = await supabase
+      .from('listings')
+      .select(LISTING_CARD_COLUMNS)
+      .eq('parent_chain', chainName)
+      .eq('is_touchless', true)
+      .order('state')
+      .order('city')
+      .order('rating', { ascending: false })
+      .range(offset, offset + 999);
+    if (!data || data.length === 0) break;
+    all.push(...(data as Listing[]));
+    if (data.length < 1000) break;
+  }
+  return all;
+}
+
+export async function generateMetadata({ params }: ChainPageProps): Promise<Metadata> {
+  const chain = getChainBySlug(params.slug);
+  if (!chain) return { title: 'Not Found' };
+
+  const { count } = await supabase
+    .from('listings')
+    .select('*', { count: 'exact', head: true })
+    .eq('parent_chain', chain.name)
+    .eq('is_touchless', true);
+
+  const total = count || 0;
+  const now = new Date();
+  const month = now.toLocaleString('en-US', { month: 'long' });
+  const year = now.getFullYear();
+  const canonicalUrl = `${SITE_URL}/chain/${params.slug}`;
+  const heroImage = getChainHeroImage(chain.name);
+
+  return {
+    title: `${chain.name} Touchless Car Wash Locations — ${month} ${year}`,
+    description: `Find all ${total} ${chain.name} touchless car wash locations. Verified maps, photos, ratings & hours.`,
+    alternates: { canonical: canonicalUrl },
+    robots: { index: true, follow: true },
+    openGraph: {
+      title: `${chain.name} Touchless Car Wash Locations`,
+      description: `Find all ${total} ${chain.name} touchless car wash locations. Verified maps, photos, ratings & hours.`,
+      url: canonicalUrl,
+      siteName: 'Touchless Car Wash Finder',
+      ...(heroImage ? { images: [{ url: heroImage }] } : { images: [DEFAULT_OG_IMAGE] }),
+    },
+  };
+}
+
+export default async function ChainPage({ params }: ChainPageProps) {
+  const chain = getChainBySlug(params.slug);
+  if (!chain) notFound();
+
+  const listings = await getChainListings(chain.name);
+  if (listings.length === 0) notFound();
+
+  const heroImage = getChainHeroImage(chain.name);
+
+  // Group listings by state
+  const byState = new Map<string, Listing[]>();
+  for (const listing of listings) {
+    const state = listing.state;
+    if (!byState.has(state)) byState.set(state, []);
+    byState.get(state)!.push(listing);
+  }
+  const stateGroups = Array.from(byState.entries())
+    .map(([code, items]) => ({
+      code,
+      name: getStateName(code) || code,
+      slug: getStateSlug(code),
+      count: items.length,
+      listings: items,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  const totalCount = listings.length;
+  const stateCount = stateGroups.length;
+
+  // Compute avg rating
+  const rated = listings.filter(l => l.rating && l.rating > 0);
+  const avgRating = rated.length > 0
+    ? Math.round((rated.reduce((s, l) => s + (l.rating || 0), 0) / rated.length) * 10) / 10
+    : null;
+
+  const now = new Date();
+  const month = now.toLocaleString('en-US', { month: 'long' });
+  const year = now.getFullYear();
+
+  const otherChains = CHAINS.filter(c => c.slug !== chain.slug);
+
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+      { '@type': 'ListItem', position: 2, name: 'Chains', item: `${SITE_URL}/chains` },
+      { '@type': 'ListItem', position: 3, name: chain.name, item: `${SITE_URL}/chain/${chain.slug}` },
+    ],
+  };
+
+  const itemListJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: `${chain.name} Touchless Car Wash Locations`,
+    numberOfItems: totalCount,
+    itemListElement: listings.slice(0, 50).map((l, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      item: {
+        '@type': 'AutoWash',
+        name: l.name,
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: l.address,
+          addressLocality: l.city,
+          addressRegion: l.state,
+        },
+        url: `${SITE_URL}/state/${getStateSlug(l.state)}/${slugify(l.city)}/${l.slug}`,
+        ...(l.rating && l.review_count ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: l.rating,
+            reviewCount: l.review_count,
+          },
+        } : {}),
+      },
+    })),
+  };
+
+  return (
+    <div className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+      />
+
+      {/* Hero */}
+      <div className="bg-[#0F2744] relative overflow-hidden">
+        {heroImage && (
+          <div
+            className="absolute inset-0 bg-cover bg-center opacity-20"
+            style={{ backgroundImage: `url(${heroImage})` }}
+          />
+        )}
+        <div className="relative container mx-auto px-4 max-w-6xl py-12 md:py-16">
+          <nav className="flex items-center gap-1.5 text-sm text-white/50 mb-5 flex-wrap">
+            <Link href="/" className="hover:text-white transition-colors">Home</Link>
+            <ChevronRight className="w-3.5 h-3.5" />
+            <Link href="/chains" className="hover:text-white transition-colors">Chains</Link>
+            <ChevronRight className="w-3.5 h-3.5" />
+            <span className="text-white">{chain.name}</span>
+          </nav>
+          <h1 className="text-3xl md:text-5xl font-bold text-white mb-3 leading-tight">
+            {chain.name} Touchless Car Wash Locations
+          </h1>
+          <p className="text-lg text-blue-100">
+            {totalCount} verified touchless car wash{totalCount !== 1 ? 'es' : ''} across {stateCount} {stateCount === 1 ? 'state' : 'states'}
+            {avgRating ? ` — ${avgRating}★ average rating` : ''}
+          </p>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 max-w-6xl py-8">
+        {/* Description */}
+        <div className="bg-blue-50 rounded-xl p-6 mb-8">
+          <p className="text-gray-700 leading-relaxed">{chain.description}</p>
+        </div>
+
+        {/* Browse by State */}
+        {stateGroups.length > 1 && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-foreground mb-4">Browse by State</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {stateGroups.map((sg) => (
+                <a key={sg.code} href={`#${sg.code.toLowerCase()}`}>
+                  <Card className="hover:shadow-lg hover:border-primary transition-all cursor-pointer">
+                    <CardContent className="p-4">
+                      <div className="font-semibold text-foreground">{sg.name}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {sg.count} location{sg.count !== 1 ? 's' : ''}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Listings grouped by state */}
+        {stateGroups.map((sg) => (
+          <div key={sg.code} id={sg.code.toLowerCase()} className="mb-10">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-primary" />
+                {sg.name}
+                <span className="text-lg font-normal text-muted-foreground">({sg.count})</span>
+              </h2>
+              <Link
+                href={`/state/${sg.slug}`}
+                className="text-sm text-primary hover:underline"
+              >
+                View all in {sg.name} →
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {sg.listings.map((listing) => (
+                <ListingCard key={listing.id} listing={listing} />
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {/* Other Chains */}
+        <div className="mt-12 mb-8">
+          <h2 className="text-2xl font-bold text-foreground mb-4">Other Touchless Car Wash Chains</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {otherChains.map((c) => (
+              <Link key={c.slug} href={`/chain/${c.slug}`}>
+                <Card className="hover:shadow-lg hover:border-primary transition-all cursor-pointer">
+                  <CardContent className="p-4">
+                    <div className="font-semibold text-foreground">{c.name}</div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer note */}
+        <p className="text-sm text-muted-foreground text-center mt-8">
+          Last updated {month} {year}. All locations verified as touchless/brushless.
+        </p>
+      </div>
+    </div>
+  );
+}

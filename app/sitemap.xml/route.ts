@@ -3,6 +3,7 @@ import { US_STATES, getStateSlug, slugify } from '@/lib/constants';
 import { METRO_AREAS, boundingBox, haversineDistance } from '@/lib/metro-areas';
 import { FEATURES } from '@/lib/features';
 import { EQUIPMENT_BRAND_DATA, EQUIPMENT_MODEL_DATA } from '@/lib/equipment-data';
+import { CHAINS } from '@/lib/chains';
 import { isThinListing } from '@/lib/listing-quality';
 
 const VALID_STATE_CODES = new Set(US_STATES.map(s => s.code));
@@ -273,6 +274,23 @@ export async function GET() {
     }
   }
 
+  // ── Chain pages ──────────────────────────────────────────────────────────────
+  const chainUrls: string[] = [];
+  chainUrls.push(`  <url>
+    <loc>${baseUrl}/chains</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`);
+  for (const chain of CHAINS) {
+    chainUrls.push(`  <url>
+    <loc>${baseUrl}/chain/${chain.slug}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`);
+  }
+
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
@@ -340,6 +358,7 @@ ${featureIndexUrl}
 ${featureHubUrls.join('\n')}
 ${featureStateUrls.join('\n')}
 ${equipmentUrls.join('\n')}
+${chainUrls.join('\n')}
 ${stateUrls.join('\n')}
 ${cityUrls.join('\n')}
 ${listingUrls.join('\n')}
