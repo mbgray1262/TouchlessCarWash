@@ -108,20 +108,23 @@ function renderMarkdown(md: string): string {
       closeList(); closeBlockquote();
       const headerCells = line.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
       i++; // skip separator row
-      let tableHtml = '<div class="overflow-x-auto my-6"><table class="w-full text-sm border-collapse">';
-      tableHtml += '<thead><tr class="bg-gray-50 border-b-2 border-gray-200">';
+      let tableHtml = '<div class="overflow-x-auto my-6 rounded-lg border border-gray-200"><table class="w-full text-sm border-collapse">';
+      tableHtml += '<thead><tr class="bg-[#0F2744] text-white">';
       for (const cell of headerCells) {
-        tableHtml += `<th class="px-4 py-3 text-left font-semibold text-[#0F2744]">${inlineMarkdown(cell)}</th>`;
+        tableHtml += `<th class="px-5 py-3 text-left font-semibold text-sm">${inlineMarkdown(cell)}</th>`;
       }
       tableHtml += '</tr></thead><tbody>';
+      let rowIdx = 0;
       while (i + 1 < lines.length && /^\|(.+)\|$/.test(lines[i + 1].trim())) {
         i++;
         const cells = lines[i].trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
-        tableHtml += '<tr class="border-b border-gray-100">';
+        const rowBg = rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+        tableHtml += `<tr class="${rowBg} border-b border-gray-100">`;
         for (const cell of cells) {
-          tableHtml += `<td class="px-4 py-2.5 text-gray-700">${inlineMarkdown(cell)}</td>`;
+          tableHtml += `<td class="px-5 py-3 text-gray-700">${inlineMarkdown(cell)}</td>`;
         }
         tableHtml += '</tr>';
+        rowIdx++;
       }
       tableHtml += '</tbody></table></div>';
       out.push(tableHtml);
