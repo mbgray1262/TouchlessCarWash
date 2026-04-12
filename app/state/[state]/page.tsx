@@ -101,7 +101,7 @@ export async function generateMetadata({ params }: StatePageProps): Promise<Meta
 
   const metaDescription = stateDesc
     ? stateDesc.substring(0, 155) + (stateDesc.length > 155 ? '...' : '')
-    : `Find ${totalCount} verified touchless, brushless & automatic car wash locations in ${stateName}. Browse by city with ratings, hours, and directions.`;
+    : `Find the ${totalCount}+ best touchless car washes in ${stateName}. Verified maps, photos, and brushless options near you.`;
 
   const canonicalUrl = `https://touchlesscarwashfinder.com/state/${params.state}`;
   const title = `Best Touchless & Brushless Car Washes in ${stateName} — ${month} ${year}`;
@@ -158,7 +158,10 @@ export default async function StatePage({ params }: StatePageProps) {
     notFound();
   }
 
-  // Sort cities alphabetically for display
+  // Top cities by listing count (citiesData is already sorted desc by count from the RPC)
+  const topCities = citiesData.length > 5 ? citiesData.slice(0, 5) : [];
+
+  // Sort cities alphabetically for the full browse list
   const cities = [...citiesData].sort((a, b) => a.city.localeCompare(b.city));
   const nickname = STATE_NICKNAMES[stateCode] ?? stateName;
 
@@ -239,6 +242,29 @@ export default async function StatePage({ params }: StatePageProps) {
               )}
             </p>
           </div>
+
+          {topCities.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-foreground mb-4">Popular Cities</h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                {topCities.map((c) => (
+                  <Link
+                    key={c.city}
+                    href={`/state/${params.state}/${slugify(c.city)}`}
+                  >
+                    <Card className="hover:shadow-lg hover:border-primary transition-all cursor-pointer border-primary/30 bg-primary/5">
+                      <CardContent className="p-4">
+                        <div className="font-bold text-foreground">{c.city}</div>
+                        <div className="text-sm text-primary font-medium">
+                          {c.count} location{c.count !== 1 ? 's' : ''}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-foreground mb-4">Browse by City</h2>
