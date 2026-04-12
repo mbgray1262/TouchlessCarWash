@@ -446,7 +446,7 @@ export default function HeroSection() {
           </h1>
 
           <p className="text-lg md:text-xl text-white/90 mb-8 leading-relaxed">
-            The only directory dedicated exclusively to touchless, touch-free, no-touch, and brushless car washes. Find contactless, automatic car washes with no brushes — just a clean car.
+            Search 4,300+ verified touchless car wash locations across all 50 states. Ratings, hours, photos, and directions.
           </p>
 
           <div className="mb-6" ref={containerRef}>
