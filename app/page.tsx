@@ -202,7 +202,7 @@ export default async function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
 
-      <HeroSection />
+      <HeroSection totalCount={totalCount} />
 
       <section className="bg-[#0F2744] py-12">
         <div className="container mx-auto px-4">

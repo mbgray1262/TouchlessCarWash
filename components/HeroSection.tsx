@@ -112,7 +112,7 @@ function matchMetros(term: string): MetroResult[] {
     .map((m) => ({ name: m.name, displayName: m.displayName, slug: m.slug }));
 }
 
-export default function HeroSection() {
+export default function HeroSection({ totalCount }: { totalCount?: number }) {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [geoLocation, setGeoLocation] = useState<GeoLocation | null>(null);
@@ -446,7 +446,7 @@ export default function HeroSection() {
           </h1>
 
           <p className="text-lg md:text-xl text-white/90 mb-8 leading-relaxed">
-            Search 4,300+ verified touchless car wash locations across all 50 states. Ratings, hours, photos, and directions.
+            Search {totalCount ? `${(Math.floor(totalCount / 100) * 100).toLocaleString()}+` : '4,000+'} verified touchless car wash locations across all 50 states. Ratings, hours, photos, and directions.
           </p>
 
           <div className="mb-6" ref={containerRef}>
