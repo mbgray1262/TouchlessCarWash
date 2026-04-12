@@ -368,9 +368,9 @@ export function HeroCard({
         if (totalAfterDelete <= 0) {
           setLightboxUrl(null);
         } else if (currentIndex >= totalAfterDelete) {
-          setLightboxUrl(photoItems[totalAfterDelete - 1].url);
+          setLightboxUrl(photoItems[totalAfterDelete - 1]?.url ?? null);
         } else {
-          setLightboxUrl(photoItems[currentIndex + 1]?.url ?? photoItems[0].url);
+          setLightboxUrl(photoItems[currentIndex + 1]?.url ?? photoItems[0]?.url ?? null);
         }
       } : undefined;
 
@@ -383,8 +383,8 @@ export function HeroCard({
           onEnhance={async (imageUrl) => { await onEnhance(imageUrl); setLightboxUrl(null); }}
           onDelete={item.onDelete}
           onDeleteAdvance={handleDeleteAdvance}
-          onPrev={currentIndex > 0 ? () => setLightboxUrl(photoItems[currentIndex - 1].url) : undefined}
-          onNext={currentIndex < photoItems.length - 1 ? () => setLightboxUrl(photoItems[currentIndex + 1].url) : undefined}
+          onPrev={currentIndex > 0 ? () => setLightboxUrl(photoItems[currentIndex - 1]?.url ?? null) : undefined}
+          onNext={currentIndex < photoItems.length - 1 ? () => setLightboxUrl(photoItems[currentIndex + 1]?.url ?? null) : undefined}
           position={`${currentIndex + 1} / ${photoItems.length}`}
         />
       );
@@ -630,7 +630,7 @@ export function HeroCard({
                     {item.kind === 'photo' && !isConfirmed && (
                       <button
                         onClick={() => {
-                          setLightboxUrl(item.url);
+                          setLightboxUrl(item.url ?? null);
                         }}
                         className="absolute inset-0 flex items-center justify-center rounded-md bg-black/0 group-hover/item:bg-black/25 transition-colors opacity-0 group-hover/item:opacity-100"
                         title="View full size (← → to navigate)"
