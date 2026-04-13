@@ -284,6 +284,9 @@ Rules:
       "touchfree wash", "touch free wash", "touch free car wash",
       "touchfree car wash", "laser wash", "brushless wash",
       "brushless car wash", "touchless auto wash", "touchless automatic wash",
+      // Equipment names that definitively indicate touchless
+      "touch-free rollover", "touch free rollover", "laserwash 360",
+      "laserwash g5", "washworld razor", "pdq laserwash",
     ];
     const falsePositivePhrases = [
       "touchless drying", "touchless dryer", "touchless payment",
@@ -328,6 +331,27 @@ Rules:
     for (const kw of notTouchlessKeywords) {
       const matches = textContent.match(new RegExp(kw, "gi"));
       if (matches) notTouchlessScore += matches.length;
+    }
+
+    // Also check extracted amenities for touchless equipment evidence
+    const amenities = (extracted.amenities as string[] || []);
+    const touchlessEquipmentPatterns = [
+      /touch[- ]?free/i, /touchless/i, /laser\s*wash/i, /brushless/i, /no[- ]?touch/i,
+      // Known touchless equipment brands/models
+      /pdq\s+laserwash/i, /washworld\s+razor/i, /istobal/i,
+      /mark\s*vii.*touch/i, /laserwash\s*\d/i, /pdq\s+tandem/i,
+    ];
+    for (const amenity of amenities) {
+      for (const pattern of touchlessEquipmentPatterns) {
+        if (pattern.test(amenity)) {
+          touchlessScore += 3; // Strong signal — equipment-level evidence
+          if (!foundKeywords.includes(amenity)) {
+            foundKeywords.push(amenity);
+            evidenceSnippets.push({ keyword: amenity, snippet: `Extracted amenity: "${amenity}"`, type: "touchless_equipment" });
+          }
+          break; // Don't double-count the same amenity
+        }
+      }
     }
 
     let isTouchless: boolean | null = null;
