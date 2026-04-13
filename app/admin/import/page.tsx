@@ -63,6 +63,7 @@ export default function ImportPage() {
   const [listing, setListing] = useState<ImportedListing | null>(null);
   const [stats, setStats] = useState<ImportStats | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [duplicateListing, setDuplicateListing] = useState<{ id: string; name: string; slug: string; city: string; state: string; is_touchless: boolean | null; url: string } | null>(null);
   const [showGallery, setShowGallery] = useState(false);
   const { toast } = useToast();
 
@@ -80,6 +81,7 @@ export default function ImportPage() {
     setListing(null);
     setStats(null);
     setErrorMsg('');
+    setDuplicateListing(null);
     setShowGallery(false);
 
     try {
@@ -97,8 +99,14 @@ export default function ImportPage() {
       const data = await res.json();
 
       if (!data.success) {
-        setStep('error');
-        setErrorMsg(data.error || 'Import failed');
+        if (data.error === 'duplicate' && data.existing_listing) {
+          setStep('error');
+          setErrorMsg(data.message);
+          setDuplicateListing(data.existing_listing);
+        } else {
+          setStep('error');
+          setErrorMsg(data.error || 'Import failed');
+        }
         return;
       }
 
@@ -252,7 +260,31 @@ export default function ImportPage() {
           </CardContent>
         </Card>
 
-        {step === 'error' && (
+        {step === 'error' && duplicateListing && (
+          <Card className="border-amber-200 bg-amber-50 mb-6">
+            <CardContent className="p-5 flex gap-3 items-start">
+              <XCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-semibold text-amber-800 mb-1">Duplicate Listing Found</p>
+                <p className="text-sm text-amber-700 mb-3">{errorMsg}</p>
+                <div className="flex gap-2">
+                  <Button size="sm" asChild variant="outline">
+                    <Link href={`/admin/listings?search=${encodeURIComponent(duplicateListing.name)}`}>
+                      View in Admin
+                    </Link>
+                  </Button>
+                  <Button size="sm" asChild variant="outline">
+                    <Link href={duplicateListing.url} target="_blank">
+                      View on Site
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {step === 'error' && !duplicateListing && (
           <Card className="border-red-200 bg-red-50 mb-6">
             <CardContent className="p-5 flex gap-3 items-start">
               <XCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />

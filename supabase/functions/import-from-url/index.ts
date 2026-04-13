@@ -375,7 +375,46 @@ Rules:
     // Step 4: Extract and rehost photos
     const photoUrls = extractPhotosFromFirecrawl(firecrawlData);
 
-    // Step 5: Build slug and insert listing
+    // Step 5: Check for duplicate listing before inserting
+    const extractedAddress = (extracted.address as string || "").trim();
+    const extractedCity = (extracted.city as string || "").trim();
+    const extractedState = (extracted.state as string || "").trim();
+
+    if (extractedAddress && extractedCity && extractedState) {
+      // Normalize: take first part of address before any comma, lowercase
+      const addrNorm = extractedAddress.toLowerCase().replace(/[.,#]/g, "").split(",")[0].trim();
+      const { data: dupes } = await supabase
+        .from("listings")
+        .select("id, name, slug, city, state, is_touchless")
+        .ilike("address", `%${addrNorm.substring(0, 20)}%`)
+        .ilike("city", `%${extractedCity}%`)
+        .eq("state", extractedState.toUpperCase())
+        .limit(3);
+
+      if (dupes && dupes.length > 0) {
+        const dupe = dupes[0];
+        const stateSlug = extractedState.toLowerCase() === "ca" ? "california" : extractedState.toLowerCase();
+        const citySlug = extractedCity.toLowerCase().replace(/\s+/g, "-");
+        return new Response(
+          JSON.stringify({
+            error: "duplicate",
+            message: `A listing already exists at this address: "${dupe.name}" in ${dupe.city}, ${dupe.state}${dupe.is_touchless ? " (touchless)" : dupe.is_touchless === false ? " (not touchless)" : " (unclassified)"}.`,
+            existing_listing: {
+              id: dupe.id,
+              name: dupe.name,
+              slug: dupe.slug,
+              city: dupe.city,
+              state: dupe.state,
+              is_touchless: dupe.is_touchless,
+              url: `/state/${stateSlug}/${citySlug}/${dupe.slug}`,
+            },
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Step 6: Build slug and insert listing
     const slug = await makeUniqueSlug(supabase, name);
 
     const listingData: Record<string, unknown> = {
@@ -418,7 +457,7 @@ Rules:
       );
     }
 
-    // Step 6: Rehost photos now that we have an ID
+    // Step 7: Rehost photos now that we have an ID
     let rehostedPhotos: string[] = [];
     if (photoUrls.length > 0) {
       rehostedPhotos = await rehostPhotos(supabase, inserted.id, photoUrls);
