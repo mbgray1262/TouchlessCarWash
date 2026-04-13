@@ -117,26 +117,18 @@ def extract_amenities(text):
     return amenities if amenities else None
 
 
-def extract_testimonials(text):
-    """Extract customer quotes/testimonials that mention touchless."""
-    snippets = []
-    lower = text.lower()
-
-    # Look for review-like content near touchless mentions
-    touchless_idx = []
-    for m in re.finditer(r'touch[\s-]?(?:less|free)', lower):
-        touchless_idx.append(m.start())
-
-    for idx in touchless_idx[:3]:
-        # Get surrounding context (larger window for testimonials)
-        start = max(0, idx - 200)
-        end = min(len(text), idx + 200)
-        snippet = text[start:end].strip()
-        # Check if it looks like a review/testimonial
-        if any(kw in snippet.lower() for kw in ['love', 'great', 'best', 'clean', 'recommend', 'always', 'star', '⭐']):
-            snippets.append(snippet[:300])
-
-    return snippets if snippets else None
+def extract_wash_packages(text):
+    """Try to extract wash package names and prices."""
+    packages = []
+    # Look for patterns like "Package Name ... $X.XX" or "Package Name - $X"
+    price_pattern = r'([\w\s&\'-]+?)\s*[-–:]\s*\$(\d+(?:\.\d{2})?)'
+    for m in re.finditer(price_pattern, text):
+        name = m.group(1).strip()
+        price = m.group(2)
+        # Filter out non-wash items
+        if len(name) > 3 and len(name) < 40 and not any(skip in name.lower() for skip in ['copyright', 'phone', 'address', 'zip']):
+            packages.append({'name': name, 'price': f'${price}'})
+    return packages[:8] if packages else None
 
 
 async def main():
@@ -199,8 +191,10 @@ async def main():
                         if amenities:
                             updates['amenities'] = amenities
 
-                    # Extract testimonials
-                    testimonials = extract_testimonials(result.markdown)
+                    # Extract wash packages/pricing if available
+                    packages = extract_wash_packages(result.markdown)
+                    if packages and (not listing.get('wash_packages') or len(listing.get('wash_packages', [])) == 0):
+                        updates['wash_packages'] = packages
 
                     if updates:
                         sb_req('PATCH', f'/rest/v1/listings?id=eq.{listing["id"]}', updates)
