@@ -56,6 +56,12 @@ export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
 
   // Gorilla Wash — facility exterior with Gorilla signage. Hosted in Supabase (261 KB).
   'Gorilla Wash': `${STORAGE}/gorilla-wash.jpg`,
+
+  // Sheetz — 2 car wash photos rotated across listings for variety.
+  'Sheetz': [
+    `${STORAGE}/sheetz.jpg`,
+    `${STORAGE}/sheetz-2.jpg`,
+  ],
 };
 
 /**

@@ -57,6 +57,11 @@ export const CHAINS: Chain[] = [
     slug: 'gorilla-wash',
     description: 'Gorilla Wash operates touchless car wash locations across Iowa, Nebraska, Missouri, and Texas. Their touch-less automatic bays provide a gentle, brushless clean, with many locations tied in with Kum & Go convenience stores.',
   },
+  {
+    name: 'Sheetz',
+    slug: 'sheetz',
+    description: 'Sheetz is a major convenience store chain in the Mid-Atlantic and Midwest, with touchless car washes at many of their locations across Pennsylvania, Ohio, North Carolina, Maryland, Virginia, and West Virginia. Their automated touchless bays offer a quick, scratch-free wash alongside fuel and made-to-order food.',
+  },
 ];
 
 const bySlug = new Map(CHAINS.map(c => [c.slug, c]));
