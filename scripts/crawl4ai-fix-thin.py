@@ -1,10 +1,18 @@
 #!/usr/bin/env python3
 """
-Enrich car wash listings by scraping their websites with Crawl4AI.
-Extracts hours, amenities, touchless evidence, and testimonials.
+Crawl thin touchless listings to save snapshots and fix indexing.
+
+A listing is "thin" when it has no crawl_snapshot, no extracted_data,
+and doesn't meet the review floor (4.0+ rating with 20+ reviews).
+Thin listings get noindexed by Google.
+
+By crawling their websites and saving the markdown as crawl_snapshot +
+extracting hours/amenities into extracted_data, we make them non-thin
+and eligible for Google indexing.
+
 Completely free — uses local Playwright browser.
 
-Run: python3 scripts/crawl4ai-enrich.py [--limit 100]
+Run: python3 scripts/crawl4ai-fix-thin.py [--limit 500]
 """
 import asyncio, json, re, ssl, urllib.request, datetime, sys, os
 
@@ -16,16 +24,16 @@ ssl_ctx.check_hostname = False
 ssl_ctx.verify_mode = ssl.CERT_NONE
 
 SCRIPT_DIR = os.path.dirname(__file__)
-LOG_FILE = os.path.join(SCRIPT_DIR, 'crawl4ai-enrich.log')
+LOG_FILE = os.path.join(SCRIPT_DIR, 'crawl4ai-fix-thin.log')
 
 SKIP_DOMAINS = {
     'facebook.com', 'yelp.com', 'google.com', 'instagram.com', 'twitter.com',
-    'tiktok.com', 'youtube.com', 'bbb.org', 'mapquest.com', 'yellowpages.com',
-    'foursquare.com', 'tripadvisor.com', 'linkedin.com', 'apple.com',
-    'edan.io', 'walmart.com', 'costco.com', 'samsclub.com',
+    'youtube.com', 'bbb.org', 'edan.io', 'linkedin.com', 'apple.com',
+    'tiktok.com', 'mapquest.com', 'yellowpages.com', 'foursquare.com',
+    'tripadvisor.com', 'walmart.com', 'costco.com',
 }
 
-LIMIT = 100
+LIMIT = 500
 for i, arg in enumerate(sys.argv[1:], 1):
     if arg == '--limit' and i < len(sys.argv) - 1:
         LIMIT = int(sys.argv[i + 1])
@@ -50,53 +58,39 @@ def sb_req(method, path, body=None):
         return json.loads(r.read())
 
 
-def get_domain(url):
-    try:
-        from urllib.parse import urlparse
-        return urlparse(url).hostname.replace('www.', '').lower()
-    except:
-        return ''
-
-
 def should_skip(url):
     if not url: return True
-    d = get_domain(url)
-    return any(s in d for s in SKIP_DOMAINS)
+    try:
+        from urllib.parse import urlparse
+        d = urlparse(url).hostname.replace('www.', '').lower()
+        return any(s in d for s in SKIP_DOMAINS)
+    except: return True
 
 
 def extract_hours(text):
-    """Try to extract business hours from page content."""
     hours = {}
     days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-
-    # Pattern: "Monday: 8:00 AM - 10:00 PM" or "Mon-Fri: 7am-9pm"
     for day in days:
         short = day[:3]
         pattern = rf'(?:{day}|{short})[\s:]+(\d{{1,2}}(?::\d{{2}})?\s*(?:AM|PM|am|pm)?)\s*[-–to]+\s*(\d{{1,2}}(?::\d{{2}})?\s*(?:AM|PM|am|pm)?)'
         m = re.search(pattern, text)
         if m:
             hours[day] = f'{m.group(1).strip()} - {m.group(2).strip()}'
-
-    # Check for 24 hours
     if re.search(r'24\s*(?:hours?|hrs?|/\s*7)', text, re.IGNORECASE):
-        if not hours:  # Only set all days if we didn't find specific hours
+        if not hours:
             for day in days:
                 hours[day] = 'Open 24 hours'
-
     return hours if hours else None
 
 
 def extract_amenities(text):
-    """Extract amenities from page content."""
     amenities = []
     lower = text.lower()
-
-    amenity_patterns = {
+    patterns = {
         'Free Vacuum': r'free\s+vacuum',
         'Self-Serve Bays': r'self[\s-]?serv',
         'Dog Wash': r'(?:dog|pet)\s+wash',
         'RV Wash': r'rv\s+wash',
-        'Air Freshener': r'air\s+freshener',
         'Vending': r'vending\s+machine',
         'Tire Shine': r'tire\s+(?:shine|clean)',
         'Undercarriage Wash': r'under(?:carriage|body)',
@@ -109,24 +103,19 @@ def extract_amenities(text):
         'Rain-X': r'rain[\s-]?x',
         'Touchless Automatic': r'touch[\s-]?(?:less|free)\s+(?:auto|wash|car)',
     }
-
-    for name, pattern in amenity_patterns.items():
+    for name, pattern in patterns.items():
         if re.search(pattern, lower):
             amenities.append(name)
-
     return amenities if amenities else None
 
 
 def extract_wash_packages(text):
-    """Try to extract wash package names and prices."""
     packages = []
-    # Look for patterns like "Package Name ... $X.XX" or "Package Name - $X"
     price_pattern = r'([\w\s&\'-]+?)\s*[-–:]\s*\$(\d+(?:\.\d{2})?)'
     for m in re.finditer(price_pattern, text):
         name = m.group(1).strip()
         price = m.group(2)
-        # Filter out non-wash items
-        if len(name) > 3 and len(name) < 40 and not any(skip in name.lower() for skip in ['copyright', 'phone', 'address', 'zip']):
+        if len(name) > 3 and len(name) < 40:
             packages.append({'name': name, 'price': f'${price}'})
     return packages[:8] if packages else None
 
@@ -135,39 +124,38 @@ async def main():
     from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
 
     log('=' * 60)
-    log(f'Crawl4AI Website Enrichment Scanner (limit={LIMIT})')
+    log(f'Crawl4AI Thin Listing Fixer (limit={LIMIT})')
+    log('Saves crawl snapshots + extracts data to fix noindex status')
     log('=' * 60)
 
-    # Get touchless listings missing data, with websites
-    log('Loading listings needing enrichment...')
+    # Find thin touchless listings with scrapeable websites
+    log('Loading thin listings with websites...')
     candidates = []
     offset = 0
     while True:
-        # Prioritize listings missing the most data
         rows = sb_req('GET',
             f'/rest/v1/listings?select=id,name,website,city,state,hours,amenities'
             f'&is_touchless=eq.true'
+            f'&crawl_snapshot=is.null'
+            f'&extracted_data=is.null'
             f'&website=not.is.null'
             f'&order=review_count.desc.nullslast'
             f'&limit=1000&offset={offset}')
         if not rows: break
         for r in rows:
-            if should_skip(r.get('website')): continue
-            missing_hours = not r.get('hours') or len(r.get('hours', {})) == 0
-            missing_amenities = not r.get('amenities') or len(r.get('amenities', [])) == 0
-            if missing_hours or missing_amenities:
+            if not should_skip(r.get('website')):
                 candidates.append(r)
         if len(rows) < 1000: break
         offset += 1000
 
-    log(f'Found {len(candidates)} touchless listings needing enrichment')
+    log(f'Found {len(candidates)} thin listings with scrapeable websites')
     batch = candidates[:LIMIT]
     log(f'Processing batch of {len(batch)}')
 
     config = BrowserConfig(headless=True)
     run_config = CrawlerRunConfig(page_timeout=15000)
 
-    enriched = 0
+    fixed = 0
     errors = 0
 
     async with AsyncWebCrawler(config=config) as crawler:
@@ -179,47 +167,52 @@ async def main():
                 if result and result.markdown and len(result.markdown) > 100:
                     updates = {}
 
-                    # Always save crawl snapshot for future re-mining
-                    updates['crawl_snapshot'] = {'markdown': result.markdown[:50000], 'url': url, 'crawled_at': datetime.datetime.now().isoformat()}
+                    # ALWAYS save the crawl snapshot — this is the key fix
+                    # Truncate to 50KB to avoid DB bloat, but keep enough for future extraction
+                    markdown = result.markdown[:50000]
+                    updates['crawl_snapshot'] = {'markdown': markdown, 'url': url, 'crawled_at': datetime.datetime.now().isoformat()}
                     updates['last_crawled_at'] = datetime.datetime.now().isoformat()
+                    updates['crawl_status'] = 'crawled'
 
-                    # Extract hours if missing
-                    if not listing.get('hours') or len(listing.get('hours', {})) == 0:
-                        hours = extract_hours(result.markdown)
-                        if hours:
+                    # Also extract structured data while we're here
+                    extracted = {}
+                    hours = extract_hours(markdown)
+                    if hours: extracted['hours'] = hours
+                    amenities = extract_amenities(markdown)
+                    if amenities: extracted['amenities'] = amenities
+                    packages = extract_wash_packages(markdown)
+                    if packages: extracted['wash_packages'] = packages
+
+                    if extracted:
+                        updates['extracted_data'] = extracted
+                        # Also update top-level fields if missing
+                        if hours and (not listing.get('hours') or len(listing.get('hours', {})) == 0):
                             updates['hours'] = hours
-
-                    # Extract amenities if missing
-                    if not listing.get('amenities') or len(listing.get('amenities', [])) == 0:
-                        amenities = extract_amenities(result.markdown)
-                        if amenities:
+                        if amenities and (not listing.get('amenities') or len(listing.get('amenities', [])) == 0):
                             updates['amenities'] = amenities
 
-                    # Extract wash packages/pricing if available
-                    packages = extract_wash_packages(result.markdown)
-                    if packages and (not listing.get('wash_packages') or len(listing.get('wash_packages', [])) == 0):
-                        updates['wash_packages'] = packages
+                    sb_req('PATCH', f'/rest/v1/listings?id=eq.{listing["id"]}', updates)
+                    fixed += 1
 
-                    if updates:
-                        sb_req('PATCH', f'/rest/v1/listings?id=eq.{listing["id"]}', updates)
-                        enriched += 1
-                        extracted = ', '.join(updates.keys())
-                        log(f'  ✅ {listing["name"]} — {listing["city"]}, {listing["state"]} ({extracted})')
+                    extracted_fields = list(extracted.keys()) if extracted else ['snapshot only']
+                    if (i + 1) % 10 == 0 or extracted:
+                        log(f'  ✅ {listing["name"]} — {listing["city"]}, {listing["state"]} ({", ".join(extracted_fields)})')
 
             except Exception as e:
                 errors += 1
 
-            if (i + 1) % 25 == 0:
-                log(f'  Progress: {i+1}/{len(batch)} | enriched={enriched} errors={errors}')
+            if (i + 1) % 50 == 0:
+                log(f'  Progress: {i+1}/{len(batch)} | fixed={fixed} errors={errors}')
 
             await asyncio.sleep(0.5)
 
     log('')
     log('=' * 60)
-    log('ENRICHMENT COMPLETE')
+    log('THIN LISTING FIX COMPLETE')
     log(f'  Scanned:  {len(batch)}')
-    log(f'  Enriched: {enriched}')
+    log(f'  Fixed:    {fixed} (now have crawl_snapshot → no longer thin)')
     log(f'  Errors:   {errors}')
+    log(f'  Remaining thin: ~{len(candidates) - fixed}')
     log('=' * 60)
 
 
