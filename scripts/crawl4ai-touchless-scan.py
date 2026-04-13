@@ -74,6 +74,8 @@ FALSE_POSITIVES = [
     'touchless payment', 'touchless pay', 'touchless drying',
     'touchless dryer', 'touchless entry', 'touchless exit',
     'touchless ordering', 'touchless checkout',
+    'contactless payment', 'contactless pay', 'contactless card',
+    'contactless tap', 'contactless transaction', 'contactless delivery',
 ]
 
 DRY_RUN = '--dry-run' in sys.argv
@@ -139,7 +141,11 @@ def should_skip_url(url):
 
 
 def analyze_content(text):
-    """Check page content for touchless evidence. Returns (is_touchless, evidence, score)."""
+    """Check page content for touchless evidence. Returns (is_touchless, evidence, score).
+
+    Now includes negative context detection to avoid false positives like
+    "Our wash isn't touchless" or "Is this a touchless wash? No."
+    """
     if not text:
         return None, [], 0
 
@@ -149,6 +155,18 @@ def analyze_content(text):
     clean = lower
     for fp in FALSE_POSITIVES:
         clean = clean.replace(fp, '')
+
+    # Check for NEGATIVE touchless context first — these override positive signals
+    NEGATIVE_PATTERNS = [
+        r"isn['\u2019]?t\s+touchless", r"not\s+touchless", r"not\s+a\s+touchless",
+        r"no[,.]?\s+(?:we|our|this).{0,20}(?:isn['\u2019]?t|not|aren['\u2019]?t).{0,20}touchless",
+        r"isn['\u2019]?t\s+touch[\s-]?free", r"not\s+touch[\s-]?free",
+        r"isn['\u2019]?t\s+brushless", r"not\s+brushless",
+        r"(?:is|are)\s+(?:this|we|our).{0,20}touchless.{0,30}(?:no\b|not\b)",
+    ]
+    for pattern in NEGATIVE_PATTERNS:
+        if re.search(pattern, clean):
+            return False, [], -10  # Strong negative signal
 
     touchless_score = 0
     brush_score = 0
@@ -171,10 +189,14 @@ def analyze_content(text):
         if matches:
             brush_score += len(matches)
 
-    if touchless_score >= 1:
+    if touchless_score >= 1 and touchless_score > brush_score:
         return True, evidence, touchless_score
     elif brush_score > 0 and touchless_score == 0:
         return False, [], -brush_score
+    elif touchless_score >= 1 and brush_score >= touchless_score:
+        # Both touchless and brush mentions — might be a location with both options
+        # Only classify as touchless if touchless mentions clearly outnumber brush
+        return None, evidence, 0  # Uncertain — needs manual review
     else:
         return None, [], 0
 
