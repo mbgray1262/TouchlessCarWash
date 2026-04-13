@@ -37,9 +37,13 @@ SKIP_DOMAINS = {
 # Touchless keyword patterns
 TOUCHLESS_PATTERNS = [
     # Generic touchless terms
-    r'touch[\s-]?less', r'touch[\s-]?free', r'no[\s-]?touch',
-    r'laser\s*wash', r'brush[\s-]?less', r'brush[\s-]?free',
-    r'contactless\s+wash', r'friction[\s-]?free',
+    r'touch[\s-]?less\s+(?:car\s+)?wash', r'touch[\s-]?less\s+auto', r'touch[\s-]?less\s+clean',
+    r'touch[\s-]?free\s+(?:car\s+)?wash', r'touch[\s-]?free\s+auto', r'touch[\s-]?free\s+rollover',
+    r'no[\s-]?touch\s+(?:car\s+)?wash',
+    r'laser\s*wash', r'brush[\s-]?less\s+(?:car\s+)?wash', r'brush[\s-]?free\s+wash',
+    r'friction[\s-]?free\s+wash',
+    # Also match standalone but only with "wash" or "automatic" nearby
+    r'touchless\s+automatic', r'touch[\s-]?free\s+automatic',
     # PDQ (largest touchless equipment manufacturer)
     r'pdq\s+laserwash', r'pdq\s+tandem', r'pdq\s+access',
     r'laserwash\s*360', r'laserwash\s*g5', r'laserwash\s*4000',
