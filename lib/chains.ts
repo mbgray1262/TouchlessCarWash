@@ -67,6 +67,26 @@ export const CHAINS: Chain[] = [
     slug: 'autowash',
     description: 'Autowash operates 25 automatic touchless car wash locations across Colorado — from Fort Collins and Loveland up north to Denver, Littleton, and Highlands Ranch in the south metro. Every Autowash location features high-pressure touchless automatic bays with no brushes or cloth, keeping your paint scratch-free. Many locations include free self-serve vacuums and detailing bays.',
   },
+  {
+    name: 'Super Wash',
+    slug: 'super-wash',
+    description: 'Super Wash is the largest chain of touchless and self-serve car washes in the United States, with over 100 locations across 18 states from Arizona to New York. Every Super Wash location features touchless automatic bays that use high-pressure water and soap — no brushes or cloth — for a safe, scratch-free clean. Many sites are open 24 hours.',
+  },
+  {
+    name: 'Splash Car Wash',
+    slug: 'splash-car-wash',
+    description: 'Splash Car Wash operates 50+ touchless and touch-free car wash locations across Connecticut, New York, and Vermont. Known for consistently high ratings (many locations above 4.8 stars), Splash offers automatic touchless bays with free vacuums, unlimited membership plans, and oil change services at select sites.',
+  },
+  {
+    name: 'Delta Sonic',
+    slug: 'delta-sonic',
+    description: 'Delta Sonic is a major car wash and fuel chain with 34+ locations across Illinois, New York, and Pennsylvania. Every Delta Sonic location offers automatic touchless car wash service, free self-serve vacuums, detailing bays, and unlimited wash membership plans. Many sites include oil change and full-service fuel.',
+  },
+  {
+    name: 'Drive & Shine',
+    slug: 'drive-and-shine',
+    description: 'Drive & Shine operates 18 highly-rated touchless car wash and oil change centers across Indiana and Michigan. Consistently averaging 4.9 stars with thousands of reviews per location, Drive & Shine is known for their exterior touchless automatic bays, full-service detailing, oil changes, and unlimited membership plans.',
+  },
 ];
 
 const bySlug = new Map(CHAINS.map(c => [c.slug, c]));

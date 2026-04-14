@@ -71,6 +71,34 @@ export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/f4903a39-15d1-4bd7-9eeb-985ffc6f8114/hero-cropped-1774361278204.png',
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/bf17ff39-817e-43f0-8808-dd3e4f41b0fb/place_photo_0_1772041185404.jpg',
   ],
+
+  // Super Wash — 102 locations across 18 states. Reuses curated location hero images.
+  'Super Wash': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/fe4a2837-95b3-44bb-923f-b460cdc5027b/hero-cropped-1773594478645.png',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/12d58166-8c14-4321-a56a-f3cb03e3b78c/upload-1774101912034.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/6a90b3f6-3c91-465f-9a69-79daa02b1754/google_photo.jpg',
+  ],
+
+  // Splash Car Wash — 59 locations across CT/NY/VT. Top-rated locations with curated images.
+  'Splash Car Wash': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/1b618fbf-50a9-4f24-879d-258306188e7e/google-1773923596070.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/5a5d1bdb-4c28-4868-989c-66fdb178852c/google-1773923619267.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/2eabe4d6-39ed-4376-84a3-052def18943b/google-1773923634089.jpg',
+  ],
+
+  // Delta Sonic — 34 locations across IL/NY/PA.
+  'Delta Sonic': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/a009fbfe-a899-4ee7-bd48-bd4a39f64e05/google-1773922529441.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/5fcd4cdd-fe49-4173-92d1-c98bcdb29abc/hero-cropped-1773321507713.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/f84d785d-9b54-49f2-9aed-04ae0393ea32/web_0_1772825416731.jpg',
+  ],
+
+  // Drive & Shine — 18 locations across IN/MI with incredibly high ratings (4.9 avg).
+  'Drive & Shine': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/c7785252-3cc7-4459-8072-43d1f24c29fe/hero-cropped-1774231070115.png',
+    'https://lh3.googleusercontent.com/p/AF1QipPSv8yEE9AFTldrNS4oTvArjnnVidDeyVCh880P=w1600-h1200',
+    'https://lh3.googleusercontent.com/p/AF1QipO2GcHWJkkEdzl55im2LTsr720ZjPv7nVNklnDV=w1600-h1200',
+  ],
 };
 
 /**
