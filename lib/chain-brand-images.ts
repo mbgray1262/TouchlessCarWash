@@ -63,6 +63,14 @@ export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
     `${STORAGE}/sheetz-2.jpg`,
     `${STORAGE}/sheetz-3.jpg`,
   ],
+
+  // Autowash — Colorado chain with 25 touchless locations. Reuses curated hero images
+  // already uploaded for their top-rated locations (Central Park, Northfield, Fox Hill).
+  'Autowash': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/f8a6debf-14e9-4ed7-a8df-0fa2ca9a398c/hero-cropped-1774361829048.png',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/f4903a39-15d1-4bd7-9eeb-985ffc6f8114/hero-cropped-1774361278204.png',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/bf17ff39-817e-43f0-8808-dd3e4f41b0fb/place_photo_0_1772041185404.jpg',
+  ],
 };
 
 /**

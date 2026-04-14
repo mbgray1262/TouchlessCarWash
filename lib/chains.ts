@@ -62,6 +62,11 @@ export const CHAINS: Chain[] = [
     slug: 'sheetz',
     description: 'Sheetz is a major convenience store chain in the Mid-Atlantic and Midwest, with touchless car washes at many of their locations across Pennsylvania, Ohio, North Carolina, Maryland, Virginia, and West Virginia. Their automated touchless bays offer a quick, scratch-free wash alongside fuel and made-to-order food.',
   },
+  {
+    name: 'Autowash',
+    slug: 'autowash',
+    description: 'Autowash operates 25 automatic touchless car wash locations across Colorado — from Fort Collins and Loveland up north to Denver, Littleton, and Highlands Ranch in the south metro. Every Autowash location features high-pressure touchless automatic bays with no brushes or cloth, keeping your paint scratch-free. Many locations include free self-serve vacuums and detailing bays.',
+  },
 ];
 
 const bySlug = new Map(CHAINS.map(c => [c.slug, c]));
