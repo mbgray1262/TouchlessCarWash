@@ -98,7 +98,7 @@ export const CHAINS: Chain[] = [
   {
     name: 'Flagstop Car Wash',
     slug: 'flagstop-car-wash',
-    description: 'Flagstop Car Wash is Virginia\'s premier touchless car wash chain, with {count} locations throughout the Richmond and Henrico metro areas. Every Flagstop site averages 4.8–4.9 stars with thousands of reviews, offering automatic touchless bays, unlimited membership, and free vacuums.',
+    description: 'Flagstop Car Wash is a Virginia chain with 10 locations throughout the Richmond metro area. Most Flagstop sites are express tunnel washes, but their North Chesterfield location (6479 Iron Bridge Rd) offers a dedicated touchless automatic bay — the only one of its kind in the chain. Open 24/7 with free vacuums and unlimited wash membership.',
   },
   {
     name: 'Mr. Magic Car Wash',
