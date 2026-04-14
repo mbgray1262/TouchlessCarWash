@@ -21,14 +21,14 @@ export async function generateMetadata(): Promise<Metadata> {
   const count = await getTotalCount();
   const countStr = count > 0 ? count.toLocaleString() + '+' : '3,000+';
   return {
-    title: { absolute: `Touchless & Brushless Car Wash Near Me — ${countStr} Locations` },
-    description: `Find the nearest touchless, brushless, laser & automatic car wash in your area. Browse ${countStr} verified no-touch, contactless car wash locations across all 50 states + DC.`,
+    title: { absolute: `Automatic Touchless Car Wash Near Me — ${countStr} Locations` },
+    description: `Find the nearest automatic touchless car wash in your area — brushless, laser, no-touch & contactless. Browse ${countStr} verified in-bay automatic touchless locations across all 50 states + DC.`,
     alternates: {
       canonical: SITE_URL + '/',
     },
     openGraph: {
-      title: `Touchless & Brushless Car Wash Near Me — ${countStr} Locations`,
-      description: `Find the nearest touchless, brushless, laser & automatic car wash in your area. Browse ${countStr} verified no-touch, contactless car wash locations across all 50 states + DC.`,
+      title: `Automatic Touchless Car Wash Near Me — ${countStr} Locations`,
+      description: `Find the nearest automatic touchless car wash in your area — brushless, laser, no-touch & contactless. Browse ${countStr} verified in-bay automatic touchless locations across all 50 states + DC.`,
       url: SITE_URL + '/',
       siteName: 'Touchless Car Wash Finder',
       images: [
@@ -43,8 +43,8 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     twitter: {
       card: 'summary_large_image',
-      title: `Touchless & Brushless Car Wash Near Me — ${countStr} Locations`,
-      description: `Find the nearest touchless, brushless, laser & automatic car wash in your area. Browse ${countStr} verified no-touch, contactless car wash locations across all 50 states + DC.`,
+      title: `Automatic Touchless Car Wash Near Me — ${countStr} Locations`,
+      description: `Find the nearest automatic touchless car wash in your area — brushless, laser, no-touch & contactless. Browse ${countStr} verified in-bay automatic touchless locations across all 50 states + DC.`,
       images: ['https://res.cloudinary.com/dret3qhyu/image/upload/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png'],
     },
   };
@@ -56,12 +56,16 @@ const faqItems = [
     answer: 'A touchless car wash — also called a no touch car wash, contactless car wash, touch-free, or laser car wash — is an automated drive-through or in-bay wash that uses high-pressure water jets and specialized detergents to clean your vehicle without any physical contact from brushes, cloth, or foam pads. Because nothing touches your car\'s surface, this brushless wash method eliminates the risk of scratches, swirl marks, and paint damage.',
   },
   {
+    question: 'Is a touchless car wash the same as an automatic car wash?',
+    answer: 'A touchless car wash is one type of automatic car wash. "Automatic car wash" is a broad term that includes any wash where you stay in your vehicle while the equipment does the work — this covers both in-bay automatic touchless washes (which use only high-pressure water and chemistry, no brushes) and tunnel/soft-touch automatic washes (which use spinning brushes, foam pads, or cloth strips that physically touch your car). Every listing in our directory is an automatic touchless car wash — meaning it cleans your vehicle automatically without any brush or cloth contact. We exclude soft-touch tunnels and self-serve wand bays so you only see verified no-touch automatic locations.',
+  },
+  {
     question: 'Are touchless car washes better for your car?',
     answer: 'Yes — touchless (brushless) car washes are widely considered the safest option for your paint. Because touch-free washes use only water pressure and chemistry with no physical contact, they eliminate brush-induced scratches and swirl marks, preserve ceramic coatings and paint protection film (PPF), and are safe for all paint types including matte finishes. This is why owners of Tesla, BMW, Mercedes-Benz, Lexus, Audi, Porsche, and other luxury vehicles prefer touchless washes.',
   },
   {
-    question: 'How do I find a touchless or automated car wash near me?',
-    answer: 'Use the search bar at the top of this page — enter your city, ZIP code, or the name of a car wash and we\'ll show you verified touchless locations nearby. Whether you search for a no touch car wash, contactless car wash, automated car wash, brushless wash, laser car wash, or touch-free wash, our directory lists 3,000+ verified locations across all 50 states + DC.',
+    question: 'How do I find an automatic touchless car wash near me?',
+    answer: 'Use the search bar at the top of this page — enter your city, ZIP code, or the name of a car wash and we\'ll show you verified automatic touchless locations nearby. Whether you search for a no touch car wash, contactless car wash, automatic car wash, brushless wash, laser car wash, or touch-free wash, our directory lists 3,000+ verified in-bay automatic touchless locations across all 50 states + DC.',
   },
   {
     question: 'How much does a touchless car wash cost?',
@@ -230,7 +234,7 @@ export default async function Home() {
               How It Works
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Finding a quality touchless car wash has never been easier
+              Finding a quality automatic touchless car wash has never been easier
             </p>
           </div>
 
@@ -285,7 +289,7 @@ export default async function Home() {
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-                Featured Touchless Car Washes
+                Featured Automatic Touchless Car Washes
               </h2>
               <p className="text-lg text-muted-foreground">
                 Top-rated locations handpicked by our team
@@ -354,7 +358,7 @@ export default async function Home() {
                 Popular States
               </h2>
               <p className="text-lg text-muted-foreground">
-                Explore touchless car wash directories in the most searched states
+                Explore automatic touchless car wash directories in the most searched states
               </p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 max-w-6xl mx-auto">

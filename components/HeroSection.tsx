@@ -442,11 +442,11 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
           </div>
 
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
-            Find Touchless &amp; Brushless Car&nbsp;Washes {headingLocation}
+            Find Automatic Touchless &amp; Brushless Car&nbsp;Washes {headingLocation}
           </h1>
 
           <p className="text-lg md:text-xl text-white/90 mb-8 leading-relaxed">
-            Search {totalCount ? `${(Math.floor(totalCount / 100) * 100).toLocaleString()}+` : '4,000+'} verified touchless car wash locations across all 50 states. Ratings, hours, photos, and directions.
+            Search {totalCount ? `${(Math.floor(totalCount / 100) * 100).toLocaleString()}+` : '4,000+'} verified automatic touchless car wash locations across all 50 states. Ratings, hours, photos, and directions.
           </p>
 
           <div className="mb-6" ref={containerRef}>

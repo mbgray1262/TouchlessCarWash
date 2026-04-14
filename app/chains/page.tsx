@@ -12,12 +12,12 @@ export const revalidate = 3600;
 const SITE_URL = 'https://touchlesscarwashfinder.com';
 
 export const metadata: Metadata = {
-  title: 'Touchless Car Wash Chains — Find Locations Nationwide',
-  description: 'Browse all major touchless car wash chains in the US. Power Market, Holiday Stationstores, Kwik Trip, Elephant Car Wash, and more — with verified locations, maps, and ratings.',
+  title: 'Automatic Touchless Car Wash Chains — Find Locations Nationwide',
+  description: 'Browse all major automatic touchless car wash chains in the US. Power Market, Holiday Stationstores, Kwik Trip, Elephant Car Wash, and more — with verified locations, maps, and ratings.',
   alternates: { canonical: `${SITE_URL}/chains` },
   openGraph: {
-    title: 'Touchless Car Wash Chains | Touchless Car Wash Finder',
-    description: 'Browse all major touchless car wash chains in the US with verified locations, maps, and ratings.',
+    title: 'Automatic Touchless Car Wash Chains | Touchless Car Wash Finder',
+    description: 'Browse all major automatic touchless car wash chains in the US with verified locations, maps, and ratings.',
     url: `${SITE_URL}/chains`,
     siteName: 'Touchless Car Wash Finder',
     type: 'website',
@@ -96,10 +96,10 @@ export default async function ChainsPage() {
             </div>
           </div>
           <h1 className="text-3xl md:text-5xl font-bold text-white mb-3 leading-tight">
-            Touchless Car Wash Chains
+            Automatic Touchless Car Wash Chains
           </h1>
           <p className="text-lg text-blue-100">
-            {chains.length} major chains with {totalLocations} verified touchless locations across the United States.
+            {chains.length} major chains with {totalLocations} verified automatic touchless locations across the United States.
           </p>
         </div>
       </div>

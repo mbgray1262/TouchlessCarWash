@@ -59,13 +59,13 @@ export async function generateMetadata({ params }: ChainPageProps): Promise<Meta
   const heroImage = getChainHeroImage(chain.name);
 
   return {
-    title: `${chain.name} Touchless Car Wash Locations — ${month} ${year}`,
-    description: `Find all ${total} ${chain.name} touchless car wash locations. Verified maps, photos, ratings & hours.`,
+    title: `${chain.name} Automatic Touchless Car Wash Locations — ${month} ${year}`,
+    description: `Find all ${total} ${chain.name} automatic touchless car wash locations. Verified maps, photos, ratings & hours.`,
     alternates: { canonical: canonicalUrl },
     robots: { index: true, follow: true },
     openGraph: {
-      title: `${chain.name} Touchless Car Wash Locations`,
-      description: `Find all ${total} ${chain.name} touchless car wash locations. Verified maps, photos, ratings & hours.`,
+      title: `${chain.name} Automatic Touchless Car Wash Locations`,
+      description: `Find all ${total} ${chain.name} automatic touchless car wash locations. Verified maps, photos, ratings & hours.`,
       url: canonicalUrl,
       siteName: 'Touchless Car Wash Finder',
       ...(heroImage ? { images: [{ url: heroImage }] } : { images: [DEFAULT_OG_IMAGE] }),
@@ -181,10 +181,10 @@ export default async function ChainPage({ params }: ChainPageProps) {
             <span className="text-white">{chain.name}</span>
           </nav>
           <h1 className="text-3xl md:text-5xl font-bold text-white mb-3 leading-tight">
-            {chain.name} Touchless Car Wash Locations
+            {chain.name} Automatic Touchless Car Wash Locations
           </h1>
           <p className="text-lg text-blue-100">
-            {totalCount} verified touchless car wash{totalCount !== 1 ? 'es' : ''} across {stateCount} {stateCount === 1 ? 'state' : 'states'}
+            {totalCount} verified automatic touchless car wash{totalCount !== 1 ? 'es' : ''} across {stateCount} {stateCount === 1 ? 'state' : 'states'}
             {avgRating ? ` — ${avgRating}★ average rating` : ''}
           </p>
         </div>

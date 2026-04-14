@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     default: 'Touchless Car Wash Finder',
     template: '%s | Touchless Car Wash Finder',
   },
-  description: 'Find verified touchless car washes near you. Browse 3,465+ brushless car wash locations across all 50 states + DC.',
+  description: 'Find verified automatic touchless car washes near you. Browse 3,465+ in-bay automatic, brushless & no-touch car wash locations across all 50 states + DC.',
   metadataBase: new URL('https://touchlesscarwashfinder.com'),
   verification: {
     google: 'aO6V2H3Yb4O904NRWtdJRkZZdb2AiVRtPNdf3Hy9Zzk',
