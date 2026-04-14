@@ -193,6 +193,19 @@ export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/e623f3ae-cfe5-49a7-af79-d68b21442260/hero-cropped-1774380443540.png',
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/c3c40946-94cc-4367-8c63-7707e6bcc3e7/place_photo_0_1772041598446.jpg',
   ],
+
+  // Wooly Wash — 12 southern IL locations.
+  'Wooly Wash': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/0be455a1-4c14-4f28-ab93-62016ab72db8/place_photo_0_1774922757718.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/b67c834c-ff5a-4fa5-a760-af495b9e3662/gallery_bp_0_1771873727795.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/ff0e4e33-6ac2-43d8-9413-6c5a98a36c15/gallery_bp_0_1771873869284.jpg',
+  ],
+
+  // Jurassic Car Wash — 4 TX locations (Austin, Cedar Park, San Antonio).
+  'Jurassic Car Wash': [
+    'https://lh3.googleusercontent.com/p/AF1QipNrvR-wamkV13WxJd4Dt0g7914JZP3_jDtunFe0=w1600-h1200',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/c3989e47-b6ad-444d-ab93-ede366c4a4fd/google-1773942002217.jpg',
+  ],
 };
 
 /**

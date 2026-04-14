@@ -175,6 +175,21 @@ export const CHAINS: Chain[] = [
     slug: 'splash-n-shine',
     description: "Splash'n Shine Car Wash operates {count} automatic touchless car wash locations across the Phoenix metro area in Arizona — including Gilbert, Chandler, Phoenix, and Gold Canyon. Every location features touchless automatic bays alongside self-serve bays and free vacuums, with 24/7 access.",
   },
+  {
+    name: 'Wooly Wash',
+    slug: 'wooly-wash',
+    description: 'Wooly Wash operates {count} touchless car wash locations across southern Illinois — including Carbondale, Marion, Mt. Vernon, Benton, Harrisburg, Carterville, West Frankfort, Carmi, and Du Quoin. Every Wooly Wash site offers automatic touchless bays for a safe, scratch-free wash.',
+  },
+  {
+    name: 'Jurassic Car Wash',
+    slug: 'jurassic-car-wash',
+    description: 'Jurassic Car Wash operates {count} automatic touchless car wash locations in Texas — with sites in Austin, Cedar Park, and San Antonio. Open 24/7, every Jurassic location features touchless automatic bays, oversized self-serve bays, and free vacuums.',
+  },
+  {
+    name: 'Cascade Car Wash',
+    slug: 'cascade-car-wash',
+    description: 'Cascade Car Wash operates {count} automatic touchless car wash locations across the Dayton and Cincinnati, Ohio metro areas — including Kettering, Englewood, Springboro, Monroe, and Fairfield. Every Cascade location features touchless automatic bays where only water and cleaning agents touch your vehicle, with hours typically 5:30 AM to 11:00 PM daily.',
+  },
 ];
 
 const bySlug = new Map(CHAINS.map(c => [c.slug, c]));
