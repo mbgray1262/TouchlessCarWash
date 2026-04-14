@@ -265,19 +265,30 @@ async def main():
                 if result and result.markdown and len(result.markdown) > 50:
                     is_touchless, evidence, score = analyze_content(result.markdown)
 
+                    # Always save crawl snapshot for future re-mining
+                    import datetime as _dt
+                    snapshot_update = {
+                        'crawl_snapshot': {'markdown': result.markdown[:50000], 'url': url, 'crawled_at': _dt.datetime.now().isoformat()},
+                        'last_crawled_at': _dt.datetime.now().isoformat(),
+                        'crawl_status': 'crawled',
+                    }
+
                     if is_touchless:
                         kw_list = [e['keyword'] for e in evidence[:3]]
                         log(f'  ✅ TOUCHLESS: {listing["name"]} — {listing["city"]}, {listing["state"]} (score={score}, keywords={kw_list})')
 
                         if not DRY_RUN:
                             sb_req('PATCH', f'/rest/v1/listings?id=eq.{lid}', {
+                                **snapshot_update,
                                 'is_touchless': True,
                                 'touchless_verified': 'website',
                                 'crawl_notes': f'Touchless evidence found on website by Crawl4AI scan. Keywords: {", ".join(kw_list)} (score={score})',
                             })
                         promoted += 1
                     else:
-                        pass  # No evidence or brush-only — leave as-is
+                        # Still save the snapshot even if not touchless
+                        if not DRY_RUN:
+                            sb_req('PATCH', f'/rest/v1/listings?id=eq.{lid}', snapshot_update)
 
                 scanned += 1
                 progress['scanned'].append(lid)
