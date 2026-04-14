@@ -157,13 +157,13 @@ export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/faf087fd-8db8-4602-8bd4-aa8c2b6e280f/google-1773922838353.jpg',
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/30b2494e-b811-4cb7-99b8-b3a97d9efc1b/google-1773922845368.jpg',
   ],
-  // Terrible's — had multiple problematic photos (convenience store, slot parlor,
-  // gas station pumps). Curated 3 clean photos: touchless wash arm through
-  // windshield + building exterior + car in touchless bay.
+  // Terrible's — St Rose Pkwy Henderson exterior as primary (clear TERRIBLE'S
+  // branding visible), plus in-bay touchless gantry (interior POV) and exterior
+  // building shot for variety. All verified brush-free.
   "Terrible's": [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/4112dad5-5e98-40a8-b69d-78a3ec9fd403/google-1774647875466.jpg',
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/9c55115c-2f45-463d-a27d-452a2665149f/hero-cropped-1774142263324.png',
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/042384e2-ca7f-4c05-9d33-8292c800dd9b/hero-cropped-1774648569230.png',
-    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/6ecbfd38-40fb-4317-8d9a-dc17d261633f/hero-cropped-1774647927064.png',
   ],
   'Dirtbuster Car Wash': [
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/2d2e7b66-e6e9-4578-8aaa-47d026f264c9/google-1773922550408.jpg',
