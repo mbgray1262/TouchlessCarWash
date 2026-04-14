@@ -11,6 +11,8 @@ Completely free — uses public Overpass API.
 Run: python3 scripts/osm-carwash-discovery.py [--state OH] [--all]
 """
 import json, math, re, ssl, urllib.request, urllib.parse, time, datetime, sys, os
+sys.path.insert(0, os.path.dirname(__file__))
+from junk_filter import is_junk_listing
 
 SUPABASE_URL = 'https://gteqijdpqjmgxfnyuhvy.supabase.co'
 SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0ZXFpamRwcWptZ3hmbnl1aHZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzOTgzOTIsImV4cCI6MjA4Njk3NDM5Mn0.wGXXfGWax_wdQwFLIBZaZLH6-P580Zw6ROjXeSPlE78'
@@ -222,7 +224,13 @@ def main():
         log(f'  {state}: {len(osm_washes)} OSM → {matched} matched, {len(missing)} missing ({len(touchless_missing)} touchless)')
 
         # Create missing locations
+        skipped_junk = 0
         for loc in missing:
+            # Junk filter — skip hotels, pharmacies, laundromats, pet-only, etc.
+            is_junk, reason = is_junk_listing(loc['name'], loc.get('website'))
+            if is_junk:
+                skipped_junk += 1
+                continue
             slug = make_slug(loc['name'])
             listing = {
                 'name': loc['name'], 'slug': slug,
@@ -244,6 +252,9 @@ def main():
                 our_coords.append((loc['lat'], loc['lon']))
             except:
                 pass
+
+        if skipped_junk:
+            log(f'    (skipped {skipped_junk} junk listings via junk_filter)')
 
         # Be polite to Overpass API — 10s between states to avoid rate limiting
         time.sleep(10)

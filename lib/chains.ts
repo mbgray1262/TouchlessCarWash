@@ -170,6 +170,11 @@ export const CHAINS: Chain[] = [
     slug: 'royal-rinse-car-wash',
     description: 'Royal Rinse Car Wash operates {count} touchless car wash locations across North Carolina, South Carolina, and Virginia — from Goldsboro and Kannapolis up to Williamsburg and Harrisonburg. Every Royal Rinse site features automatic touchless bays.',
   },
+  {
+    name: "Splash'n Shine",
+    slug: 'splash-n-shine',
+    description: "Splash'n Shine Car Wash operates {count} automatic touchless car wash locations across the Phoenix metro area in Arizona — including Gilbert, Chandler, Phoenix, and Gold Canyon. Every location features touchless automatic bays alongside self-serve bays and free vacuums, with 24/7 access.",
+  },
 ];
 
 const bySlug = new Map(CHAINS.map(c => [c.slug, c]));

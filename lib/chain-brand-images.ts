@@ -186,6 +186,13 @@ export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/ec643f4b-6d3d-4842-b7a5-0d1d787e1c5e/google-1773923354877.jpg',
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/cea4d5c4-00ff-4a16-a9a3-fe313aa7c1ba/upload-1774115360119.png',
   ],
+
+  // Splash'n Shine — 4 AZ locations (Gilbert, Chandler, Phoenix, Gold Canyon).
+  "Splash'n Shine": [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/38d8b544-16e8-45ce-94e3-ba82b3c2900c/hero-cropped-1774284226935.png',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/e623f3ae-cfe5-49a7-af79-d68b21442260/hero-cropped-1774380443540.png',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/c3c40946-94cc-4367-8c63-7707e6bcc3e7/place_photo_0_1772041598446.jpg',
+  ],
 };
 
 /**

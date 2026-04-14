@@ -276,6 +276,36 @@ Rules:
       );
     }
 
+    // Junk filter — reject non-car-wash businesses (hotels, pharmacies, laundromats, pet-only, etc.)
+    // Allow through if name contains a vehicle-specific signal (car/auto/truck/rv) or carwash/autowash compound.
+    const carWashSignal = /\b(car|cars|auto|autos|truck|trucks|rv|vehicle)\b|carwash|autowash|laserwash|carspa/i;
+    if (!carWashSignal.test(name)) {
+      const junkPatterns: Array<[RegExp, string]> = [
+        [/\b(hotel|motel|inn|lodge|resort|hostel)\b/i, "hotel"],
+        [/\b(pharmacy|drug\s*store|cvs|walgreens|rite\s*aid)\b/i, "pharmacy"],
+        [/\b(restaurant|cafe|diner|pizza|tavern|bistro|eatery|bakery|deli|bbq|sushi|steakhouse|burger|donut|ice\s*cream)\b/i, "restaurant"],
+        [/\b(hair\s*salon|barber|beauty\s*salon|nail\s*salon|hair\s*studio|day\s*spa|massage|waxing|lash\s*bar)\b/i, "beauty"],
+        [/\b(self[\s\-]*storage|mini[\s\-]*storage|storage\s*units)\b/i, "storage"],
+        [/\b(pet\s*(?:wash|spa|salon|grooming|supplies|boarding)|dog\s*(?:wash|spa|grooming|boarding|daycare))\b/i, "pet"],
+        [/\b(laundromat|laundry|launderette|washeteria|dry\s*clean|coin\s*laundry)\b/i, "laundry"],
+        [/\b(valvoline|take\s*5\s*oil|jiffy\s*lube|express\s*oil|instant\s*oil|quick\s*lube|grease\s*monkey)\b/i, "oil-change"],
+        [/\b(tire\s*center|tire\s*shop|discount\s*tire|mavis|pep\s*boys|firestone)\b/i, "tire"],
+        [/\b(propane\s*(?:refill|exchange|to\s*go))\b/i, "propane"],
+        [/\b(dental|dentist|clinic|urgent\s*care|hospital|medical\s*center)\b/i, "medical"],
+      ];
+      for (const [pattern, category] of junkPatterns) {
+        if (pattern.test(name)) {
+          return new Response(
+            JSON.stringify({
+              error: `This business appears to be a ${category}, not a car wash. If this is incorrect, please let us know.`,
+              junk_category: category,
+            }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+    }
+
     // Step 3: Touchless detection
     const textContent = markdown.toLowerCase();
     const definitiveTouchlessPhrases = [
