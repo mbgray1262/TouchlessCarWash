@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ChevronRight, Building2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/lib/supabase';
-import { CHAINS } from '@/lib/chains';
+import { CHAINS, renderChainDescription } from '@/lib/chains';
 import { getChainHeroImage } from '@/lib/chain-brand-images';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import type { Metadata } from 'next';
@@ -52,7 +52,7 @@ async function getChainStats(): Promise<ChainWithStats[]> {
     results.push({
       name: chain.name,
       slug: chain.slug,
-      description: chain.description,
+      description: renderChainDescription(chain.description, data.length),
       count: data.length,
       states,
       heroImage: getChainHeroImage(chain.name),

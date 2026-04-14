@@ -51,8 +51,13 @@ export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
   // Elephant Car Wash — employee at car wash entrance, professional photo. Hosted in Supabase (314 KB).
   'Elephant Car Wash': `${STORAGE}/elephant-car-wash.jpg`,
 
-  // Brown Bear Car Wash — building exterior with bear mascot signage. Hosted in Supabase (59 KB).
-  'Brown Bear': `${STORAGE}/brown-bear.jpg`,
+  // Brown Bear Car Wash — 3 curated photos from top-rated Seattle, Tacoma, Spokane locations.
+  // The previous single /chain-brands/brown-bear.jpg had a bad crop (only showed sky + roof).
+  'Brown Bear': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/00cc36c7-ee6d-4d60-9c33-85c2afbb8deb/hero-cropped-1775050825841.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/c106128f-3fb9-4287-b2c2-0972b6d5572d/hero-cropped-1775050705191.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/abae0261-2d2f-4b32-bc28-804cc7abd24b/hero-cropped-1774915872558.png',
+  ],
 
   // Gorilla Wash — facility exterior with Gorilla signage. Hosted in Supabase (261 KB).
   'Gorilla Wash': `${STORAGE}/gorilla-wash.jpg`,

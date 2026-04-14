@@ -4,7 +4,7 @@ import { ChevronRight, MapPin } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { getStateName, getStateSlug, slugify } from '@/lib/constants';
-import { CHAINS, getChainBySlug } from '@/lib/chains';
+import { CHAINS, getChainBySlug, renderChainDescription } from '@/lib/chains';
 import { getChainHeroImage } from '@/lib/chain-brand-images';
 import { ListingCard } from '@/components/ListingCard';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
@@ -193,7 +193,7 @@ export default async function ChainPage({ params }: ChainPageProps) {
       <div className="container mx-auto px-4 max-w-6xl py-8">
         {/* Description */}
         <div className="bg-blue-50 rounded-xl p-6 mb-8">
-          <p className="text-gray-700 leading-relaxed">{chain.description}</p>
+          <p className="text-gray-700 leading-relaxed">{renderChainDescription(chain.description, totalCount)}</p>
         </div>
 
         {/* Browse by State */}
