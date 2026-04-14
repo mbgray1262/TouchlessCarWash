@@ -99,6 +99,88 @@ export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
     'https://lh3.googleusercontent.com/p/AF1QipPSv8yEE9AFTldrNS4oTvArjnnVidDeyVCh880P=w1600-h1200',
     'https://lh3.googleusercontent.com/p/AF1QipO2GcHWJkkEdzl55im2LTsr720ZjPv7nVNklnDV=w1600-h1200',
   ],
+
+  // Phase 3 — Tier 2 regional chains. Hero images pulled from top-rated listings per chain.
+  'Prestige Car Wash': [
+    'https://lh3.googleusercontent.com/p/AF1QipM9AsvjiSz_T8ht6sO2SbIk_qgUMVYJWXasu4J7=w1600-h1200',
+    'https://lh3.googleusercontent.com/p/AF1QipN9xVcHv-nCmj8_FwAIuMYOL33T0x7_BeJIpDmZ=w1600-h1200',
+    'https://lh3.googleusercontent.com/p/AF1QipOUxk1zyHN13AdewwiAwqcIVuU-HfQOaPxMkvC8=w1600-h1200',
+  ],
+  'Flagstop Car Wash': [
+    'https://lh3.googleusercontent.com/p/AF1QipPITO9VbG0Ga-Qd6MUIC1Xfxbd96bP8z3xSazcU=w1600-h1200',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/c693d734-b6ab-4e93-87f9-9880d417c70d/google-1773935527664.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/4a189039-00ae-4722-95f6-4e9eb5976110/google-1773922668875.png',
+  ],
+  'Mr. Magic Car Wash': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/fa0816ec-5eb3-4e8d-857c-35a2fd236196/upload-1774027117081.png',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/066caa73-68f5-4afe-851f-bf3923a59761/upload-1774027950773.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/39bffbed-bfaa-4a03-acbe-1f91bbf2c032/upload-1774027315466.jpg',
+  ],
+  "Zappy's Auto Washes": [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/3b63f9b9-d701-4a78-a2c5-f17346bb9641/upload-1774093268722.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/60ccf86e-9465-4788-9e88-79b7b30c386a/upload-1774093721874.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/2b1c1c5f-b238-4557-9d03-d31fd30deaeb/upload-1774091980898.jpg',
+  ],
+  'Rocky Mountain Car Wash': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/ee3805f6-2d52-4380-8f4d-e7a63a520739/google-1773923343579.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/46153ddf-4395-48d5-a59f-2c6c38685c30/gallery_bp_0_1772648346260.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/07c7b0f2-4b52-46c4-98c3-13271f6f1481/hero-cropped-1774144058055.png',
+  ],
+  'Foam & Wash': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/65bd65c2-c4f1-4481-8c66-b8dab64a9c14/web_0_1772814556052.webp',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/fc9abf35-0e87-42c0-ace2-e66b129bf43f/google-1773922687033.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/ed565c6a-d23c-4e66-8b83-3f7d2d591d17/web_0_1772814769704.webp',
+  ],
+  'Blue Tide Car Wash': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/e44b5a06-a728-4dd6-a706-4a1d09945172/place_photo_2_1774924491661.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/ab2d3a29-9e35-4639-b515-88abfda98ccf/upload-1774012699397.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/88d1b031-5943-4925-b378-a6701662dd91/hero-cropped-1774981230049.jpg',
+  ],
+  'Salty Dog Car Wash': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/d054a157-420f-41f9-80e3-f313c27ec7ec/hero-cropped-1773280132659.webp',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/2cc506fb-9d7e-4f69-b764-3104264782f9/hero-cropped-1773660323627.png',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/8f5845e2-9800-4fa6-824a-78caed39800e/hero-cropped-1773326071740.jpg',
+  ],
+  'Auto Spa Speedy Wash': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/6c06dc6a-9f25-47c2-b735-0668ab0d0d57/hero-cropped-1774177718051.png',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/5bec5767-f3e1-4772-8e73-91890153896b/hero-cropped-1774178732803.png',
+    'https://lh3.googleusercontent.com/p/AF1QipMLGEqqke-a9ggi4MjmOxpRvIbW8gxCXQpq2z2P=w1600-h1000-k-no',
+  ],
+  'Hy-Vee': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/2c3f9e77-63f9-4809-9846-a9354e06662d/hero-cropped-1774215816336.png',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/faf087fd-8db8-4602-8bd4-aa8c2b6e280f/google-1773922838353.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/30b2494e-b811-4cb7-99b8-b3a97d9efc1b/google-1773922845368.jpg',
+  ],
+  "Terrible's": [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/5bbde3a1-413c-4290-bfbd-3ef248eaef53/hero_rehost_1772742077875.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/9c55115c-2f45-463d-a27d-452a2665149f/hero-cropped-1774142263324.png',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/b4e127d3-ee7e-40d3-840b-35f433e42615/upload-1774393947429.png',
+  ],
+  'Dirtbuster Car Wash': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/2d2e7b66-e6e9-4578-8aaa-47d026f264c9/google-1773922550408.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/268bf870-ba4d-44bc-90bb-1488d44da13e/google-1773922547021.jpg',
+    'https://lh3.googleusercontent.com/p/AF1QipMo5b74-7A0L5Giv4sPQzw4xijZTtuArpViyt22=w1600-h1200',
+  ],
+  'ProClean Auto Wash': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/d73b0727-1450-4c66-a76d-348399e8a939/hero-cropped-1773267863825.png',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/3f5706c6-bef0-4038-8c38-b6135569a2c8/hero-cropped-1774364755462.png',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/7be73833-0355-4fdb-9ef7-e6b1b5d787e4/hero-cropped-1774365817892.png',
+  ],
+  'Power Wash USA': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/271cee76-4839-47d6-a9fb-cd08094bf310/gallery_bp_0_1772705782191.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/39ba5ea4-ad25-49b4-aff3-371a1324cde1/google-1773923237560.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/afa98633-da37-4f03-890f-d519e2b31879/google-1773923238588.jpg',
+  ],
+  'IQ Car Wash': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/40e08a5b-adc0-4d72-bec8-3b504cfea59b/photo_4_1772047029790.webp',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/335b185a-ee50-4843-bbd1-db72e6eedc1f/photo_1_1771916203239.webp',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/7e0bf82b-6034-4f24-b169-180ac4d7ed23/upload-1774091569609.jpg',
+  ],
+  'Royal Rinse Car Wash': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/f9583b81-9d91-4120-8b7b-099a50194659/place_photo_0_1772732053037.png',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/ec643f4b-6d3d-4842-b7a5-0d1d787e1c5e/google-1773923354877.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/cea4d5c4-00ff-4a16-a9a3-fe313aa7c1ba/upload-1774115360119.png',
+  ],
 };
 
 /**

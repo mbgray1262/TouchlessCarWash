@@ -87,6 +87,86 @@ export const CHAINS: Chain[] = [
     slug: 'drive-and-shine',
     description: 'Drive & Shine operates 18 highly-rated touchless car wash and oil change centers across Indiana and Michigan. Consistently averaging 4.9 stars with thousands of reviews per location, Drive & Shine is known for their exterior touchless automatic bays, full-service detailing, oil changes, and unlimited membership plans.',
   },
+  {
+    name: 'Prestige Car Wash',
+    slug: 'prestige-car-wash',
+    description: 'Prestige Car Wash operates 14 high-end touchless car wash locations across eastern Massachusetts, including Boston, Somerville, Watertown, Quincy, Peabody, Salem, and Cape Cod. Every Prestige location offers automatic touchless bays and consistently earns 4.5+ star ratings with thousands of reviews per site.',
+  },
+  {
+    name: 'Flagstop Car Wash',
+    slug: 'flagstop-car-wash',
+    description: 'Flagstop Car Wash is Virginia\'s premier touchless car wash chain, with 9 locations throughout the Richmond and Henrico metro areas. Every Flagstop site averages 4.8–4.9 stars with thousands of reviews, offering automatic touchless bays, unlimited membership, and free vacuums.',
+  },
+  {
+    name: 'Mr. Magic Car Wash',
+    slug: 'mr-magic-car-wash',
+    description: 'Mr. Magic Car Wash operates 10 touchless car wash locations across the Pittsburgh metro area and West Virginia. Known for their touchless automatic bays, free vacuums, and consistent 4+ star ratings, Mr. Magic is a staple for car owners throughout western Pennsylvania.',
+  },
+  {
+    name: "Zappy's Auto Washes",
+    slug: 'zappys-auto-washes',
+    description: "Zappy's Auto Washes operates 10 touchless car wash locations across northeast Ohio — from Cleveland\'s eastern suburbs through Lake and Geauga counties. Every Zappy's location offers automatic touchless bays with free self-serve vacuums.",
+  },
+  {
+    name: 'Rocky Mountain Car Wash',
+    slug: 'rocky-mountain-car-wash',
+    description: 'Rocky Mountain Car Wash operates 12 touchless car wash locations across Montana and Wyoming — from Helena and Belgrade in Montana to Casper, Laramie, Powell, and Riverton in Wyoming. Every location features touchless automatic bays built to handle tough western weather.',
+  },
+  {
+    name: 'Foam & Wash',
+    slug: 'foam-and-wash',
+    description: 'Foam & Wash operates 14 touchless car wash locations throughout New York\'s Hudson Valley, including Fishkill, Newburgh, Poughkeepsie, Hyde Park, and Vails Gate. Every Foam & Wash site offers automatic touchless bays with free vacuums and unlimited wash plans.',
+  },
+  {
+    name: 'Blue Tide Car Wash',
+    slug: 'blue-tide-car-wash',
+    description: 'Blue Tide Car Wash operates 14 touchless car wash locations across Sioux Falls, South Dakota. Every Blue Tide site features automatic touchless bays for a safe, scratch-free wash, along with free self-serve vacuums.',
+  },
+  {
+    name: 'Salty Dog Car Wash',
+    slug: 'salty-dog-car-wash',
+    description: 'Salty Dog Car Wash operates 10 touchless car wash locations along Florida\'s east coast, including Daytona Beach, New Smyrna Beach, DeLand, DeBary, Edgewater, and Holly Hill. Every location offers automatic touchless bays alongside flex-service detailing.',
+  },
+  {
+    name: 'Auto Spa Speedy Wash',
+    slug: 'auto-spa-speedy-wash',
+    description: 'Auto Spa Speedy Wash operates 10 touchless car wash locations across the greater St. Louis, Missouri metro area — including St. Peters, St. Charles, Wentzville, Troy, Park Hills, and Farmington. Every site features automatic touchless bays and free vacuums.',
+  },
+  {
+    name: 'Hy-Vee',
+    slug: 'hy-vee',
+    description: 'Hy-Vee grocery and fuel stations offer touchless car washes at 10 locations across Iowa, Illinois, Minnesota, Missouri, and Nebraska. Every Hy-Vee car wash features automatic touchless bays for a safe, scratch-free wash.',
+  },
+  {
+    name: "Terrible's",
+    slug: 'terribles',
+    description: "Terrible's (Terrible Herbst) operates 17 touchless car wash locations across Nevada, California, and Arizona. Best known in the Las Vegas area, Terrible's offers automatic touchless bays alongside full-service fuel and convenience stores.",
+  },
+  {
+    name: 'Dirtbuster Car Wash',
+    slug: 'dirtbuster-car-wash',
+    description: 'Dirtbuster Car Wash operates 10 touchless car wash locations across southern Illinois and Indiana — including Mt. Vernon, Paris, Charleston, Linton, Frankfort, Washington, and Sullivan. Every Dirtbuster site offers automatic touchless bays.',
+  },
+  {
+    name: 'ProClean Auto Wash',
+    slug: 'proclean-auto-wash',
+    description: 'ProClean Auto Wash operates 11 touchless car wash locations across the Denver metro area in Colorado — including Aurora, Thornton, Arvada, Edgewater, and Federal Heights. Every ProClean site features automatic touchless bays for a safe, brushless wash.',
+  },
+  {
+    name: 'Power Wash USA',
+    slug: 'power-wash-usa',
+    description: 'Power Wash USA operates 18 touchless car wash locations across Iowa and Nebraska — including Sioux City, South Sioux City, Blair, Denison, and Sergeant Bluff. Every Power Wash USA site offers automatic touchless bays and self-serve detailing.',
+  },
+  {
+    name: 'IQ Car Wash',
+    slug: 'iq-car-wash',
+    description: 'IQ Car Wash operates 11 touchless car wash locations across Oklahoma, Texas, Kansas, and Georgia. Every IQ location features automatic touchless bays with high-pressure water jets for a safe, scratch-free wash.',
+  },
+  {
+    name: 'Royal Rinse Car Wash',
+    slug: 'royal-rinse-car-wash',
+    description: 'Royal Rinse Car Wash operates 11 touchless car wash locations across North Carolina, South Carolina, and Virginia — from Goldsboro and Kannapolis up to Williamsburg and Harrisonburg. Every Royal Rinse site features automatic touchless bays.',
+  },
 ];
 
 const bySlug = new Map(CHAINS.map(c => [c.slug, c]));
