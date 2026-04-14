@@ -157,13 +157,12 @@ export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/faf087fd-8db8-4602-8bd4-aa8c2b6e280f/google-1773922838353.jpg',
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/30b2494e-b811-4cb7-99b8-b3a97d9efc1b/google-1773922845368.jpg',
   ],
-  // Terrible's — St Rose Pkwy Henderson exterior as primary (clear TERRIBLE'S
-  // branding visible), plus in-bay touchless gantry (interior POV) and exterior
-  // building shot for variety. All verified brush-free.
+  // Terrible's — St Rose Pkwy exterior (TERRIBLE'S branded), Lexus in touchless
+  // bay under illuminated "TERRIBLE'S" sign (user-provided), touchless gantry POV.
   "Terrible's": [
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/4112dad5-5e98-40a8-b69d-78a3ec9fd403/google-1774647875466.jpg',
+    `${STORAGE}/terribles-lexus.jpg`,
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/9c55115c-2f45-463d-a27d-452a2665149f/hero-cropped-1774142263324.png',
-    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/042384e2-ca7f-4c05-9d33-8292c800dd9b/hero-cropped-1774648569230.png',
   ],
   'Dirtbuster Car Wash': [
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/2d2e7b66-e6e9-4578-8aaa-47d026f264c9/google-1773922550408.jpg',
@@ -184,6 +183,10 @@ export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
   // every building photo shows "SOFT TOUCH" signage prominently. Only clean option
   // is a close-up of a "TOUCH FREE" bay entrance (Wichita Falls).
   'IQ Car Wash': 'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/3b460353-53e6-46d4-96b8-85f1e3f62955/google-1773942594703.jpg',
+  // Cascade Car Wash — Tesla Cybertruck in touchless bay (premium touchless
+  // demonstration; Cybertruck's stainless steel finish requires brush-free wash).
+  'Cascade Car Wash': `${STORAGE}/cascade-cybertruck.webp`,
+
   'Royal Rinse Car Wash': [
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/f9583b81-9d91-4120-8b7b-099a50194659/place_photo_0_1772732053037.png',
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/ec643f4b-6d3d-4842-b7a5-0d1d787e1c5e/google-1773923354877.jpg',
