@@ -84,11 +84,12 @@ export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/6a90b3f6-3c91-465f-9a69-79daa02b1754/google_photo.jpg',
   ],
 
-  // Splash Car Wash — 59 locations across CT/NY/VT. Top-rated locations with curated images.
+  // Splash Car Wash — 59 locations across CT/NY/VT. All photos verified brush-free &
+  // no hand-washing imagery (critical for touchless positioning).
   'Splash Car Wash': [
-    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/1b618fbf-50a9-4f24-879d-258306188e7e/google-1773923596070.jpg',
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/5a5d1bdb-4c28-4868-989c-66fdb178852c/google-1773923619267.jpg',
-    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/2eabe4d6-39ed-4376-84a3-052def18943b/google-1773923634089.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/1be264c3-5d6e-470d-9452-b2dd07faec4e/google-1773923639025.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/4790046a-6835-4270-b91c-396165a32ecb/google-1773923629097.jpg',
   ],
 
   // Delta Sonic — 34 locations across IL/NY/PA.
@@ -156,10 +157,13 @@ export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/faf087fd-8db8-4602-8bd4-aa8c2b6e280f/google-1773922838353.jpg',
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/30b2494e-b811-4cb7-99b8-b3a97d9efc1b/google-1773922845368.jpg',
   ],
+  // Terrible's — had multiple problematic photos (convenience store, slot parlor,
+  // gas station pumps). Curated 3 clean photos: touchless wash arm through
+  // windshield + building exterior + car in touchless bay.
   "Terrible's": [
-    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/5bbde3a1-413c-4290-bfbd-3ef248eaef53/hero_rehost_1772742077875.jpg',
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/9c55115c-2f45-463d-a27d-452a2665149f/hero-cropped-1774142263324.png',
-    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/b4e127d3-ee7e-40d3-840b-35f433e42615/upload-1774393947429.png',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/042384e2-ca7f-4c05-9d33-8292c800dd9b/hero-cropped-1774648569230.png',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/6ecbfd38-40fb-4317-8d9a-dc17d261633f/hero-cropped-1774647927064.png',
   ],
   'Dirtbuster Car Wash': [
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/2d2e7b66-e6e9-4578-8aaa-47d026f264c9/google-1773922550408.jpg',
@@ -176,11 +180,10 @@ export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/39ba5ea4-ad25-49b4-aff3-371a1324cde1/google-1773923237560.jpg',
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/afa98633-da37-4f03-890f-d519e2b31879/google-1773923238588.jpg',
   ],
-  'IQ Car Wash': [
-    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/40e08a5b-adc0-4d72-bec8-3b504cfea59b/photo_4_1772047029790.webp',
-    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/335b185a-ee50-4843-bbd1-db72e6eedc1f/photo_1_1771916203239.webp',
-    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/7e0bf82b-6034-4f24-b169-180ac4d7ed23/upload-1774091569609.jpg',
-  ],
+  // IQ Car Wash — IQ offers BOTH touchless + soft-touch at every location, so almost
+  // every building photo shows "SOFT TOUCH" signage prominently. Only clean option
+  // is a close-up of a "TOUCH FREE" bay entrance (Wichita Falls).
+  'IQ Car Wash': 'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/3b460353-53e6-46d4-96b8-85f1e3f62955/google-1773942594703.jpg',
   'Royal Rinse Car Wash': [
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/f9583b81-9d91-4120-8b7b-099a50194659/place_photo_0_1772732053037.png',
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/ec643f4b-6d3d-4842-b7a5-0d1d787e1c5e/google-1773923354877.jpg',
@@ -201,10 +204,13 @@ export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/ff0e4e33-6ac2-43d8-9413-6c5a98a36c15/gallery_bp_0_1771873869284.jpg',
   ],
 
-  // Jurassic Car Wash — 4 TX locations (Austin, Cedar Park, San Antonio).
+  // Jurassic Car Wash — 4 TX locations. Austin Google photo REMOVED (it showed
+  // spinning blue brushes — critical policy violation). Using 3 brush-free
+  // Potranco location photos.
   'Jurassic Car Wash': [
-    'https://lh3.googleusercontent.com/p/AF1QipNrvR-wamkV13WxJd4Dt0g7914JZP3_jDtunFe0=w1600-h1200',
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/c3989e47-b6ad-444d-ab93-ede366c4a4fd/google-1773942002217.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/c3989e47-b6ad-444d-ab93-ede366c4a4fd/google-1773764179574.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/c3989e47-b6ad-444d-ab93-ede366c4a4fd/google-1773764319901.jpg',
   ],
 };
 
