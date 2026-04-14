@@ -144,6 +144,59 @@ def should_skip_url(url):
     return False
 
 
+def detect_equipment(text):
+    """Detect car wash equipment brand and model from page content."""
+    if not text:
+        return {}
+    lower = text.lower()
+
+    # Equipment patterns: (regex, brand_slug, model_name)
+    EQUIPMENT = [
+        # PDQ
+        (r'laserwash\s*360\s*plus', 'pdq', 'LaserWash 360 Plus'),
+        (r'laserwash\s*360', 'pdq', 'LaserWash 360'),
+        (r'laserwash\s*g5s', 'pdq', 'LaserWash G5s'),
+        (r'laserwash\s*g5', 'pdq', 'LaserWash G5'),
+        (r'laserwash\s*4000', 'pdq', 'LaserWash 4000'),
+        (r'pdq\s+tandem', 'pdq', 'Tandem'),
+        (r'pdq\s+access', 'pdq', 'Access'),
+        (r'pdq\s+laserwash', 'pdq', 'LaserWash'),
+        (r'(?:pdq|laser\s*wash)\s+(?:touch|in[\s-]?bay)', 'pdq', 'LaserWash'),
+        # Washworld
+        (r'washworld\s+razor\s*xl', 'washworld', 'Razor XL'),
+        (r'washworld\s+razor\s*max', 'washworld', 'Razor MAX'),
+        (r'washworld\s+razor', 'washworld', 'Razor'),
+        (r'washworld\s+profile', 'washworld', 'Profile'),
+        # Mark VII / WashTec
+        (r'mark\s*vii\s+choice\s*wash\s*xt', 'mark_vii', 'ChoiceWash XT'),
+        (r'mark\s*vii\s+choice\s*wash\s*ct', 'mark_vii', 'ChoiceWash CT'),
+        (r'mark\s*vii\s+aqua\s*jet', 'mark_vii', 'AquaJet'),
+        (r'mark\s*vii.*touch[\s-]?free\s+rollover', 'mark_vii', 'Touch-Free Rollover'),
+        (r'mark\s*vii', 'mark_vii', None),
+        (r'washtec', 'mark_vii', None),
+        # Istobal
+        (r"istobal\s+m['\u2019]?nex", 'istobal', "M'NEX"),
+        (r'istobal', 'istobal', None),
+        # Oasis
+        (r'oasis\s+typhoon', 'oasis', 'Typhoon'),
+        (r'oasis\s+eclipse', 'oasis', 'Eclipse'),
+        # Ryko
+        (r'ryko\s+softgloss', 'ryko', 'SoftGloss'),
+        (r'ryko\s+radius', 'ryko', 'Radius'),
+        # D&S / NCS
+        (r'd\s*&\s*s\s+car\s*wash', 'dands', None),
+    ]
+
+    for pattern, brand, model in EQUIPMENT:
+        if re.search(pattern, lower):
+            result = {'equipment_brand': brand}
+            if model:
+                result['equipment_model'] = model
+            return result
+
+    return {}
+
+
 def analyze_content(text):
     """Check page content for touchless evidence. Returns (is_touchless, evidence, score).
 
@@ -265,17 +318,22 @@ async def main():
                 if result and result.markdown and len(result.markdown) > 50:
                     is_touchless, evidence, score = analyze_content(result.markdown)
 
+                    # Detect equipment brand/model from page content
+                    equipment_update = detect_equipment(result.markdown)
+
                     # Always save crawl snapshot for future re-mining
                     import datetime as _dt
                     snapshot_update = {
                         'crawl_snapshot': {'markdown': result.markdown[:50000], 'url': url, 'crawled_at': _dt.datetime.now().isoformat()},
                         'last_crawled_at': _dt.datetime.now().isoformat(),
                         'crawl_status': 'crawled',
+                        **equipment_update,
                     }
 
                     if is_touchless:
                         kw_list = [e['keyword'] for e in evidence[:3]]
-                        log(f'  ✅ TOUCHLESS: {listing["name"]} — {listing["city"]}, {listing["state"]} (score={score}, keywords={kw_list})')
+                        equip_str = f", equipment={equipment_update.get('equipment_brand','?')}/{equipment_update.get('equipment_model','?')}" if equipment_update else ""
+                        log(f'  ✅ TOUCHLESS: {listing["name"]} — {listing["city"]}, {listing["state"]} (score={score}, keywords={kw_list}{equip_str})')
 
                         if not DRY_RUN:
                             sb_req('PATCH', f'/rest/v1/listings?id=eq.{lid}', {
