@@ -5,7 +5,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase, type BlogPost } from '@/lib/supabase';
 import { US_STATES, slugify } from '@/lib/constants';
+import { generateTop10ChainsContent } from '@/lib/dynamic-blog-top10';
 import type { Metadata } from 'next';
+
+export const revalidate = 3600; // Revalidate dynamic blog content hourly
 
 interface BlogPostPageProps {
   params: {
@@ -268,7 +271,13 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     },
   };
 
-  const renderedContent = renderMarkdown(post.content);
+  // Dynamic content for the top-10 chains post — regenerated on each revalidate
+  // so location counts and chain rankings always reflect live DB state.
+  const content =
+    post.slug === 'top-10-touchless-car-wash-chains'
+      ? await generateTop10ChainsContent()
+      : post.content;
+  const renderedContent = renderMarkdown(content);
 
   const breadcrumbJsonLd = {
     '@context': 'https://schema.org',
