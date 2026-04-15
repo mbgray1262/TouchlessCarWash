@@ -6,7 +6,7 @@ import { Search, MapPin, Building2, Trophy } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
-import { getStateSlug, slugify } from '@/lib/constants';
+import { getStateSlug, slugify, US_STATES } from '@/lib/constants';
 import { METRO_AREAS } from '@/lib/metro-areas';
 import { CHAINS } from '@/lib/chains';
 
@@ -101,6 +101,47 @@ function normalizeName(name: string): string {
     .trim();
 }
 
+/** Parse a multi-word query into a (namePart, locationPart) tuple.
+ *  Returns null for locationPart if no location component detected. */
+function parseQuery(term: string): { namePart: string; locationPart: string | null; zipPart: string | null } {
+  const trimmed = term.trim();
+  // ZIP code at end: "sparkle 02118"
+  const zipMatch = trimmed.match(/^(.+?)\s+(\d{5})$/);
+  if (zipMatch) return { namePart: zipMatch[1].trim(), locationPart: null, zipPart: zipMatch[2] };
+
+  // Full query is just a ZIP
+  if (/^\d{5}$/.test(trimmed)) return { namePart: '', locationPart: null, zipPart: trimmed };
+
+  const words = trimmed.split(/\s+/);
+  if (words.length < 2) return { namePart: trimmed, locationPart: null, zipPart: null };
+
+  // Build set of known locations: state names, state codes, city names from metros
+  const locationTokens = new Set<string>();
+  for (const s of US_STATES) {
+    locationTokens.add(s.code.toLowerCase());
+    locationTokens.add(s.name.toLowerCase());
+  }
+  for (const m of METRO_AREAS) {
+    locationTokens.add(m.name.toLowerCase());
+    // Also allow individual words in multi-word metros ("San Francisco" → "san francisco")
+  }
+
+  // Try progressively longer trailing slices (last 1, 2, 3 words) as location
+  for (let take = Math.min(3, words.length - 1); take >= 1; take--) {
+    const trailing = words.slice(-take).join(' ').toLowerCase();
+    if (locationTokens.has(trailing)) {
+      return {
+        namePart: words.slice(0, words.length - take).join(' '),
+        locationPart: trailing,
+        zipPart: null,
+      };
+    }
+  }
+
+  // No location part detected — treat whole query as name
+  return { namePart: trimmed, locationPart: null, zipPart: null };
+}
+
 /** Fetch listing name matches, group by name, and return a mix of grouped and
  *  singleton results. Groups (e.g., "Mr Sparkle Car Wash") link to the search
  *  page; singletons link directly to the listing.
@@ -110,23 +151,45 @@ function normalizeName(name: string): string {
  *  review_count.
  */
 async function fetchListingMatches(term: string): Promise<{ results: ListingResult[]; total: number }> {
-  const patterns: string[] = [`%${term}%`];
-  if (term.includes('&')) {
-    patterns.push(`%${term.replace(/&/g, ' & ')}%`);
-    patterns.push(`%${term.replace(/&/g, ' and ')}%`);
-  } else if (term.includes(' & ')) {
-    patterns.push(`%${term.replace(/ & /g, '&')}%`);
-  } else if (term.toLowerCase().includes(' and ')) {
-    patterns.push(`%${term.replace(/ and /gi, '&')}%`);
-    patterns.push(`%${term.replace(/ and /gi, ' & ')}%`);
+  // Parse query — split into (namePart, locationPart) for "sparkle boston" style queries
+  const parsed = parseQuery(term);
+  // What we use to filter on name (falls back to full term if parsing found no location)
+  const nameTerm = parsed.namePart || term;
+
+  const patterns: string[] = [`%${nameTerm}%`];
+  if (nameTerm.includes('&')) {
+    patterns.push(`%${nameTerm.replace(/&/g, ' & ')}%`);
+    patterns.push(`%${nameTerm.replace(/&/g, ' and ')}%`);
+  } else if (nameTerm.includes(' & ')) {
+    patterns.push(`%${nameTerm.replace(/ & /g, '&')}%`);
+  } else if (nameTerm.toLowerCase().includes(' and ')) {
+    patterns.push(`%${nameTerm.replace(/ and /gi, '&')}%`);
+    patterns.push(`%${nameTerm.replace(/ and /gi, ' & ')}%`);
   }
 
-  const filter = patterns.map((p) => `name.ilike.${p}`).join(',');
-  // Fetch up to 100 so we can group. Sort by review_count desc so quality comes first.
-  const { data, count } = await supabase
+  let query = supabase
     .from('listings')
-    .select('id, name, slug, city, state, review_count, rating', { count: 'exact' })
-    .or(filter)
+    .select('id, name, slug, city, state, review_count, rating', { count: 'exact' });
+
+  // Apply name filter only if there's a name component
+  if (nameTerm) {
+    const nameFilter = patterns.map((p) => `name.ilike.${p}`).join(',');
+    query = query.or(nameFilter);
+  }
+
+  // Apply location filter if parsed (city or state matching)
+  if (parsed.locationPart) {
+    const loc = parsed.locationPart;
+    // Match state code exactly (2-char), state name, or city name
+    const locFilter = loc.length === 2
+      ? `state.ilike.${loc},city.ilike.%${loc}%`
+      : `city.ilike.%${loc}%,state.ilike.%${loc}%`;
+    query = query.or(locFilter);
+  } else if (parsed.zipPart) {
+    query = query.eq('zip', parsed.zipPart);
+  }
+
+  const { data, count } = await query
     .eq('is_touchless', true)
     .order('review_count', { ascending: false, nullsFirst: false })
     .limit(100);
@@ -138,7 +201,6 @@ async function fetchListingMatches(term: string): Promise<{ results: ListingResu
   const total = count ?? rows.length;
 
   // Group by normalized name
-  const termLower = term.toLowerCase();
   type Group = { name: string; members: typeof rows; normalized: string };
   const groups = new Map<string, Group>();
   for (const r of rows) {
@@ -152,9 +214,10 @@ async function fetchListingMatches(term: string): Promise<{ results: ListingResu
   }
 
   // Rank groups: prefix match on normalized name first, then by size
+  const rankTerm = (nameTerm || term).toLowerCase();
   const ranked = Array.from(groups.values()).sort((a, b) => {
-    const aPrefix = a.normalized.startsWith(termLower) ? 0 : 1;
-    const bPrefix = b.normalized.startsWith(termLower) ? 0 : 1;
+    const aPrefix = a.normalized.startsWith(rankTerm) ? 0 : 1;
+    const bPrefix = b.normalized.startsWith(rankTerm) ? 0 : 1;
     if (aPrefix !== bPrefix) return aPrefix - bPrefix;
     if (a.members.length !== b.members.length) return b.members.length - a.members.length;
     // Within same tier, sort by best singleton's review count
@@ -480,37 +543,56 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
     setIsSubmitting(true);
 
     try {
-      // Check for direct listing name match first
-      // Handle "&" variations: "K&D" should match "K & D", etc.
-      const namePatterns: string[] = [`name.ilike.%${q}%`];
-      if (q.includes('&')) {
-        namePatterns.push(`name.ilike.%${q.replace(/&/g, ' & ')}%`);
-        namePatterns.push(`name.ilike.%${q.replace(/&/g, ' and ')}%`);
-      } else if (q.includes(' & ')) {
-        namePatterns.push(`name.ilike.%${q.replace(/ & /g, '&')}%`);
-      }
-      const { data: nameMatch } = await supabase
-        .from('listings')
-        .select('id, name, slug, city, state')
-        .or(namePatterns.join(','))
-        .eq('is_touchless', true)
-        .order('rating', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      // Parse for multi-word "name location" pattern (e.g., "sparkle boston")
+      const parsed = parseQuery(q);
 
-      if (nameMatch) {
-        router.push(`/state/${getStateSlug(nameMatch.state)}/${slugify(nameMatch.city)}/${nameMatch.slug}`);
+      // If parsed a location qualifier, go straight to /search with geocoded location +
+      // the NAME part as the text query. This gives "Sparkle in Boston" behavior.
+      if (parsed.locationPart) {
+        const locCoords = await forwardGeocode(parsed.locationPart);
+        const searchQ = parsed.namePart || q;
+        if (locCoords) {
+          router.push(`/search?q=${encodeURIComponent(searchQ)}&lat=${locCoords.lat}&lng=${locCoords.lng}`);
+          return;
+        }
+        router.push(`/search?q=${encodeURIComponent(q)}`);
         return;
       }
 
-      // Try to geocode the query for proximity search
+      // Single-name query: check for direct listing match first
+      const nameTerm = parsed.namePart || q;
+      const namePatterns: string[] = [`name.ilike.%${nameTerm}%`];
+      if (nameTerm.includes('&')) {
+        namePatterns.push(`name.ilike.%${nameTerm.replace(/&/g, ' & ')}%`);
+        namePatterns.push(`name.ilike.%${nameTerm.replace(/&/g, ' and ')}%`);
+      } else if (nameTerm.includes(' & ')) {
+        namePatterns.push(`name.ilike.%${nameTerm.replace(/ & /g, '&')}%`);
+      }
+      // How many listings match? If exactly 1, jump to it. If >1, go to search page.
+      const { data: matches, count: matchCount } = await supabase
+        .from('listings')
+        .select('id, name, slug, city, state', { count: 'exact' })
+        .or(namePatterns.join(','))
+        .eq('is_touchless', true)
+        .order('review_count', { ascending: false, nullsFirst: false })
+        .limit(2);
+
+      if (matchCount === 1 && matches && matches.length > 0) {
+        const m = matches[0];
+        router.push(`/state/${getStateSlug(m.state)}/${slugify(m.city)}/${m.slug}`);
+        return;
+      }
+      if (matchCount && matchCount > 1) {
+        router.push(`/search?q=${encodeURIComponent(q)}`);
+        return;
+      }
+
+      // No name matches — try geocoding as a pure location query
       const coords = await forwardGeocode(q);
       if (coords) {
         router.push(`/search?q=${encodeURIComponent(q)}&lat=${coords.lat}&lng=${coords.lng}`);
         return;
       }
-
-      // Fallback: text-only search
       router.push(`/search?q=${encodeURIComponent(q)}`);
     } finally {
       setIsSubmitting(false);
