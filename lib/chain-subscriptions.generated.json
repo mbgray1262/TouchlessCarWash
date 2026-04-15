@@ -1,0 +1,386 @@
+{
+  "generatedAt": "2026-04-15T12:40:21.575Z",
+  "source": "existing crawl_snapshot records, regex extraction (zero API cost)",
+  "chains": [
+    {
+      "slug": "sheetz",
+      "name": "Sheetz",
+      "snapshotsMined": 133,
+      "totalListings": 133,
+      "prices": [],
+      "minPrice": null,
+      "maxPrice": null,
+      "planNames": [],
+      "features": {
+        "hasUnlimited": false,
+        "hasFamilyPlan": false,
+        "hasCeramic": false,
+        "hasFreeVacuums": false,
+        "has24Hour": true,
+        "cancelAnytime": false
+      }
+    },
+    {
+      "slug": "delta-sonic",
+      "name": "Delta Sonic",
+      "snapshotsMined": 31,
+      "totalListings": 31,
+      "prices": [],
+      "minPrice": null,
+      "maxPrice": null,
+      "planNames": [
+        "Unlimited Plan",
+        "Unlimited Wash Club",
+        "Wash Club"
+      ],
+      "features": {
+        "hasUnlimited": true,
+        "hasFamilyPlan": false,
+        "hasCeramic": true,
+        "hasFreeVacuums": true,
+        "has24Hour": true,
+        "cancelAnytime": false
+      }
+    },
+    {
+      "slug": "drive-and-shine",
+      "name": "Drive & Shine",
+      "snapshotsMined": 21,
+      "totalListings": 21,
+      "prices": [
+        53.98,
+        71.98,
+        77.98,
+        89.98,
+        101.96,
+        103.97,
+        107.98,
+        125.95,
+        129.97,
+        135.96,
+        152.98,
+        155.97,
+        167.95,
+        169.96
+      ],
+      "minPrice": 53.98,
+      "maxPrice": 169.96,
+      "planNames": [
+        "Unlimited VIP Wash",
+        "Unlimited VIP Memberships",
+        "unlimited wash club",
+        "wash club",
+        "Family Plans",
+        "Family Plan"
+      ],
+      "features": {
+        "hasUnlimited": true,
+        "hasFamilyPlan": true,
+        "hasCeramic": true,
+        "hasFreeVacuums": false,
+        "has24Hour": true,
+        "cancelAnytime": true
+      }
+    },
+    {
+      "slug": "kwik-trip",
+      "name": "Kwik Trip",
+      "snapshotsMined": 121,
+      "totalListings": 121,
+      "prices": [],
+      "minPrice": null,
+      "maxPrice": null,
+      "planNames": [],
+      "features": {
+        "hasUnlimited": false,
+        "hasFamilyPlan": false,
+        "hasCeramic": false,
+        "hasFreeVacuums": false,
+        "has24Hour": true,
+        "cancelAnytime": false
+      }
+    },
+    {
+      "slug": "splash-car-wash",
+      "name": "Splash Car Wash",
+      "snapshotsMined": 19,
+      "totalListings": 19,
+      "prices": [],
+      "minPrice": null,
+      "maxPrice": null,
+      "planNames": [
+        "Splash Unlimited",
+        "Wash Club"
+      ],
+      "features": {
+        "hasUnlimited": false,
+        "hasFamilyPlan": false,
+        "hasCeramic": true,
+        "hasFreeVacuums": false,
+        "has24Hour": true,
+        "cancelAnytime": false
+      }
+    },
+    {
+      "slug": "prestige-car-wash",
+      "name": "Prestige Car Wash",
+      "snapshotsMined": 9,
+      "totalListings": 9,
+      "prices": [],
+      "minPrice": null,
+      "maxPrice": null,
+      "planNames": [
+        "VIP Wash Club",
+        "Wash Club",
+        "monthly pass"
+      ],
+      "features": {
+        "hasUnlimited": false,
+        "hasFamilyPlan": false,
+        "hasCeramic": false,
+        "hasFreeVacuums": true,
+        "has24Hour": false,
+        "cancelAnytime": true
+      }
+    },
+    {
+      "slug": "flagstop-car-wash",
+      "name": "Flagstop Car Wash",
+      "snapshotsMined": 1,
+      "totalListings": 1,
+      "prices": [],
+      "minPrice": null,
+      "maxPrice": null,
+      "planNames": [
+        "Unlimited Wash Club",
+        "Wash Club"
+      ],
+      "features": {
+        "hasUnlimited": true,
+        "hasFamilyPlan": false,
+        "hasCeramic": false,
+        "hasFreeVacuums": false,
+        "has24Hour": true,
+        "cancelAnytime": true
+      }
+    },
+    {
+      "slug": "foam-and-wash",
+      "name": "Foam & Wash",
+      "snapshotsMined": 13,
+      "totalListings": 13,
+      "prices": [
+        29.95,
+        39.95,
+        49.95,
+        59.95
+      ],
+      "minPrice": 29.95,
+      "maxPrice": 59.95,
+      "planNames": [],
+      "features": {
+        "hasUnlimited": true,
+        "hasFamilyPlan": false,
+        "hasCeramic": true,
+        "hasFreeVacuums": false,
+        "has24Hour": true,
+        "cancelAnytime": false
+      }
+    },
+    {
+      "slug": "mr-magic-car-wash",
+      "name": "Mr. Magic Car Wash",
+      "snapshotsMined": 9,
+      "totalListings": 9,
+      "prices": [
+        19.99,
+        34.99,
+        44.99,
+        59.99
+      ],
+      "minPrice": 19.99,
+      "maxPrice": 59.99,
+      "planNames": [
+        "Unlimited Wash Club",
+        "WASH CLUB",
+        "Unlimited Plan",
+        "MONTHLY WASH CLUB",
+        "family PLAN"
+      ],
+      "features": {
+        "hasUnlimited": true,
+        "hasFamilyPlan": true,
+        "hasCeramic": false,
+        "hasFreeVacuums": true,
+        "has24Hour": false,
+        "cancelAnytime": false
+      }
+    },
+    {
+      "slug": "autowash",
+      "name": "Autowash",
+      "snapshotsMined": 25,
+      "totalListings": 25,
+      "prices": [
+        24.99,
+        35,
+        44.99,
+        59.99
+      ],
+      "minPrice": 24.99,
+      "maxPrice": 59.99,
+      "planNames": [
+        "monthly pass"
+      ],
+      "features": {
+        "hasUnlimited": true,
+        "hasFamilyPlan": false,
+        "hasCeramic": true,
+        "hasFreeVacuums": false,
+        "has24Hour": true,
+        "cancelAnytime": true
+      }
+    },
+    {
+      "slug": "super-wash",
+      "name": "Super Wash",
+      "snapshotsMined": 104,
+      "totalListings": 104,
+      "prices": [
+        24.99,
+        29.99,
+        34.99
+      ],
+      "minPrice": 24.99,
+      "maxPrice": 34.99,
+      "planNames": [
+        "Wash Club",
+        "Monthly Wash Club",
+        "unlimited plan"
+      ],
+      "features": {
+        "hasUnlimited": true,
+        "hasFamilyPlan": false,
+        "hasCeramic": true,
+        "hasFreeVacuums": true,
+        "has24Hour": true,
+        "cancelAnytime": true
+      }
+    },
+    {
+      "slug": "brown-bear",
+      "name": "Brown Bear",
+      "snapshotsMined": 12,
+      "totalListings": 12,
+      "prices": [],
+      "minPrice": null,
+      "maxPrice": null,
+      "planNames": [
+        "Unlimited Wash Club",
+        "Wash Club"
+      ],
+      "features": {
+        "hasUnlimited": true,
+        "hasFamilyPlan": false,
+        "hasCeramic": false,
+        "hasFreeVacuums": false,
+        "has24Hour": true,
+        "cancelAnytime": false
+      }
+    },
+    {
+      "slug": "holiday-stationstores",
+      "name": "Holiday Stationstores",
+      "snapshotsMined": 135,
+      "totalListings": 135,
+      "prices": [],
+      "minPrice": null,
+      "maxPrice": null,
+      "planNames": [
+        "Wash Club"
+      ],
+      "features": {
+        "hasUnlimited": true,
+        "hasFamilyPlan": false,
+        "hasCeramic": false,
+        "hasFreeVacuums": false,
+        "has24Hour": true,
+        "cancelAnytime": false
+      }
+    },
+    {
+      "slug": "salty-dog-car-wash",
+      "name": "Salty Dog Car Wash",
+      "snapshotsMined": 10,
+      "totalListings": 10,
+      "prices": [],
+      "minPrice": null,
+      "maxPrice": null,
+      "planNames": [
+        "wash club"
+      ],
+      "features": {
+        "hasUnlimited": false,
+        "hasFamilyPlan": false,
+        "hasCeramic": false,
+        "hasFreeVacuums": false,
+        "has24Hour": false,
+        "cancelAnytime": false
+      }
+    },
+    {
+      "slug": "power-market",
+      "name": "Power Market",
+      "snapshotsMined": 97,
+      "totalListings": 97,
+      "prices": [],
+      "minPrice": null,
+      "maxPrice": null,
+      "planNames": [],
+      "features": {
+        "hasUnlimited": false,
+        "hasFamilyPlan": false,
+        "hasCeramic": false,
+        "hasFreeVacuums": false,
+        "has24Hour": true,
+        "cancelAnytime": false
+      }
+    },
+    {
+      "slug": "extra-mile",
+      "name": "Extra Mile",
+      "snapshotsMined": 48,
+      "totalListings": 48,
+      "prices": [],
+      "minPrice": null,
+      "maxPrice": null,
+      "planNames": [],
+      "features": {
+        "hasUnlimited": false,
+        "hasFamilyPlan": false,
+        "hasCeramic": false,
+        "hasFreeVacuums": false,
+        "has24Hour": true,
+        "cancelAnytime": false
+      }
+    },
+    {
+      "slug": "pinnacle-365",
+      "name": "Pinnacle 365",
+      "snapshotsMined": 42,
+      "totalListings": 42,
+      "prices": [],
+      "minPrice": null,
+      "maxPrice": null,
+      "planNames": [],
+      "features": {
+        "hasUnlimited": false,
+        "hasFamilyPlan": false,
+        "hasCeramic": false,
+        "hasFreeVacuums": false,
+        "has24Hour": true,
+        "cancelAnytime": false
+      }
+    }
+  ]
+}

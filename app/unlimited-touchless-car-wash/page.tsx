@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { CHAINS } from '@/lib/chains';
+import { getChainSubscriptionDisplay } from '@/lib/chain-subscriptions';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import type { Metadata } from 'next';
 
@@ -39,6 +40,8 @@ type ChainRow = {
   slug: string;
   count: number;
   states: string[];
+  priceLabel: string;
+  planName: string | null;
 };
 
 async function getUnlimitedChains(): Promise<ChainRow[]> {
@@ -52,7 +55,15 @@ async function getUnlimitedChains(): Promise<ChainRow[]> {
       .eq('is_touchless', true);
     if (!data || data.length === 0) continue;
     const states = Array.from(new Set(data.map(r => r.state))).sort();
-    results.push({ name: chain.name, slug: chain.slug, count: data.length, states });
+    const sub = getChainSubscriptionDisplay(chain.slug);
+    results.push({
+      name: chain.name,
+      slug: chain.slug,
+      count: data.length,
+      states,
+      priceLabel: sub?.priceLabel ?? 'Monthly plan available',
+      planName: sub?.planName ?? null,
+    });
   }
   return results.sort((a, b) => b.count - a.count);
 }
@@ -245,8 +256,9 @@ export default async function UnlimitedHubPage() {
               <thead className="bg-[#0F2744] text-white">
                 <tr>
                   <th className="px-4 py-3 text-left font-semibold">Chain</th>
-                  <th className="px-4 py-3 text-right font-semibold">Touchless Locations</th>
-                  <th className="px-4 py-3 text-right font-semibold">States</th>
+                  <th className="px-4 py-3 text-left font-semibold">Plan Name</th>
+                  <th className="px-4 py-3 text-left font-semibold">Price</th>
+                  <th className="px-4 py-3 text-right font-semibold">Locations</th>
                   <th className="px-4 py-3 text-left font-semibold">Coverage</th>
                 </tr>
               </thead>
@@ -258,16 +270,18 @@ export default async function UnlimitedHubPage() {
                         {c.name}
                       </Link>
                     </td>
+                    <td className="px-4 py-3 text-gray-700">{c.planName ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-700 font-medium">{c.priceLabel}</td>
                     <td className="px-4 py-3 text-right text-gray-700">{c.count.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right text-gray-700">{c.states.length}</td>
                     <td className="px-4 py-3 text-gray-600">
-                      {c.states.length <= 4 ? c.states.join(', ') : `${c.states.slice(0, 3).join(', ')} +${c.states.length - 3} more`}
+                      {c.states.length <= 3 ? c.states.join(', ') : `${c.states.slice(0, 3).join(', ')} +${c.states.length - 3}`}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          <p className="text-xs text-gray-500 mt-2 italic">Pricing ranges reflect publicly published monthly rates and may vary by location. Always confirm with the chain before signing up.</p>
         </div>
 
         {/* Pricing guide */}

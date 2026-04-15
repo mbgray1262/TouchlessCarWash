@@ -8,6 +8,7 @@
  */
 import { supabase } from '@/lib/supabase';
 import { CHAINS } from '@/lib/chains';
+import { getChainSubscriptionDisplay } from '@/lib/chain-subscriptions';
 
 type SubscriptionChainStats = {
   name: string;
@@ -17,13 +18,15 @@ type SubscriptionChainStats = {
   avgRating: number;
   totalReviews: number;
   planBlurb: string;
-  approxPrice: string;
+  priceLabel: string;
+  planName: string | null;
+  priceSource: 'mined' | 'estimate';
 };
 
-// Curated chain-specific subscription details. These match the hub page's
-// UNLIMITED_CHAIN_SLUGS set. Details come from each chain's published plans
-// and public pricing pages.
-const SUBSCRIPTION_DETAILS: Record<string, { planBlurb: string; approxPrice: string }> = {
+// Kept only for the narrative blurbs. Pricing and plan names are now pulled
+// from lib/chain-subscriptions.ts (mined from existing crawl_snapshot data,
+// no new API calls). Historical legacy shape preserved for readability.
+const LEGACY_BLURBS: Record<string, { planBlurb: string; approxPrice: string }> = {
   'sheetz': {
     planBlurb: 'Unlimited LaserWash 360 Plus touchless washes at Sheetz car wash locations. Sheetz runs multiple tiers on the PDQ LaserWash — base touchless, plus upgrade tiers with rain protectant and wax.',
     approxPrice: '$25–$40/mo',
@@ -94,7 +97,7 @@ const SUBSCRIPTION_DETAILS: Record<string, { planBlurb: string; approxPrice: str
   },
 };
 
-const SUBSCRIPTION_CHAIN_SLUGS = Object.keys(SUBSCRIPTION_DETAILS);
+const SUBSCRIPTION_CHAIN_SLUGS = Object.keys(LEGACY_BLURBS);
 
 async function getSubscriptionStats(): Promise<SubscriptionChainStats[]> {
   const stats: SubscriptionChainStats[] = [];
@@ -120,7 +123,7 @@ async function getSubscriptionStats(): Promise<SubscriptionChainStats[]> {
       if (r.review_count) totalReviews += r.review_count;
     }
 
-    const detail = SUBSCRIPTION_DETAILS[chain.slug];
+    const sub = getChainSubscriptionDisplay(chain.slug);
     stats.push({
       name: chain.name,
       slug: chain.slug,
@@ -128,8 +131,10 @@ async function getSubscriptionStats(): Promise<SubscriptionChainStats[]> {
       states: Array.from(stateSet).sort(),
       avgRating: ratedCount > 0 ? totalRating / ratedCount : 0,
       totalReviews,
-      planBlurb: detail.planBlurb,
-      approxPrice: detail.approxPrice,
+      planBlurb: sub?.blurb ?? LEGACY_BLURBS[chain.slug].planBlurb,
+      priceLabel: sub?.priceLabel ?? LEGACY_BLURBS[chain.slug].approxPrice,
+      planName: sub?.planName ?? null,
+      priceSource: sub?.priceSource ?? 'estimate',
     });
   }
   stats.sort((a, b) => b.count - a.count);
@@ -154,13 +159,15 @@ export async function generateSubscriptionsContent(): Promise<string> {
   md += `We also built a companion [/unlimited-touchless-car-wash hub](/unlimited-touchless-car-wash) with pricing tiers and FAQs if you want the full primer on how these plans work.\n\n`;
 
   // Comparison table
-  md += `| # | Chain | Touchless Locations | States | Approx. Price | Avg Rating |\n`;
-  md += `|---|---|---:|---:|---|---:|\n`;
+  md += `| # | Chain | Plan Name | Touchless Locations | States | Price | Avg Rating |\n`;
+  md += `|---|---|---|---:|---:|---|---:|\n`;
   for (let i = 0; i < stats.length; i++) {
     const s = stats[i];
     const rating = s.avgRating > 0 ? `${s.avgRating.toFixed(1)}★` : '—';
-    md += `| ${i + 1} | [${s.name}](/chain/${s.slug}) | ${s.count.toLocaleString()} | ${s.states.length} | ${s.approxPrice} | ${rating} |\n`;
+    const priceCell = s.priceSource === 'mined' ? `**${s.priceLabel}**` : s.priceLabel;
+    md += `| ${i + 1} | [${s.name}](/chain/${s.slug}) | ${s.planName ?? '—'} | ${s.count.toLocaleString()} | ${s.states.length} | ${priceCell} | ${rating} |\n`;
   }
+  md += `\n*Prices in bold are pulled live from each chain's published pricing page. Italics indicate industry-typical estimates where the chain doesn't publish monthly rates publicly.*\n`;
   md += `\n---\n\n`;
 
   md += `## How we built this list\n\n`;
@@ -171,7 +178,8 @@ export async function generateSubscriptionsContent(): Promise<string> {
   for (let i = 0; i < stats.length; i++) {
     const s = stats[i];
     md += `## ${i + 1}. ${s.name} — ${s.count.toLocaleString()} touchless location${s.count === 1 ? '' : 's'} (${regionFromStates(s.states)})\n\n`;
-    md += `**Approx. plan pricing:** ${s.approxPrice}\n\n`;
+    const priceLead = s.priceSource === 'mined' ? 'Published plan pricing' : 'Approx. plan pricing';
+    md += `**${priceLead}:** ${s.priceLabel}${s.planName ? ` — ${s.planName}` : ''}\n\n`;
     md += `${s.planBlurb}\n\n`;
     if (s.avgRating > 0 && s.totalReviews > 500) {
       md += `**Customer average across all ${s.name} touchless locations:** ${s.avgRating.toFixed(1)}★ (${s.totalReviews.toLocaleString()}+ reviews).\n\n`;
