@@ -1,0 +1,318 @@
+[
+  {
+    "id": "7a27ed67-3695-4d64-976d-e3cd642d3e10",
+    "name": "Champion Hand Car Wash",
+    "city": "Staten Island",
+    "state": "NY",
+    "hits": [
+      "Touchless Car Wash",
+      "Brushless Car Wash"
+    ]
+  },
+  {
+    "id": "905fcd0b-e2c1-41a1-8cd0-29810e94654a",
+    "name": "The Auto Spa",
+    "city": "Durant",
+    "state": "OK",
+    "hits": [
+      "touchless automatic",
+      "no brushes"
+    ]
+  },
+  {
+    "id": "090a1fd1-7053-4c7b-80ad-a58269ba89a3",
+    "name": "Red Carpet Car Wash South",
+    "city": "Bend",
+    "state": "OR",
+    "hits": [
+      "Touch-less Car Wash"
+    ]
+  },
+  {
+    "id": "5f9c8abb-fa96-47bb-abcb-db329c1d9515",
+    "name": "Express Car Wash",
+    "city": "Chicago",
+    "state": "IL",
+    "hits": [
+      "TOUCHLESS WASH"
+    ]
+  },
+  {
+    "id": "86cda38b-eb5d-4524-8551-53de368a680f",
+    "name": "Delta Sonic Car Wash",
+    "city": "Downers Grove",
+    "state": "IL",
+    "hits": [
+      "Touch-Less wash"
+    ]
+  },
+  {
+    "id": "e5a28004-8802-440d-b1e2-d43b70be9d77",
+    "name": "Downtown Car Wash & Detaling",
+    "city": "Yonkers",
+    "state": "NY",
+    "hits": [
+      "Touchless Car Wash",
+      "Brushless Car Wash"
+    ]
+  },
+  {
+    "id": "3d1f526c-c492-441d-9b6e-0b413ff55965",
+    "name": "Delta Sonic Car Wash",
+    "city": "Victor",
+    "state": "NY",
+    "hits": [
+      "Touch-Less wash"
+    ]
+  },
+  {
+    "id": "c66e51b1-ad0a-46c1-846c-08a021318629",
+    "name": "Auto Shine Hand Car Wash",
+    "city": "Yonkers",
+    "state": "NY",
+    "hits": [
+      "Touchless Car Wash",
+      "Brushless Car Wash"
+    ]
+  },
+  {
+    "id": "625a7c12-cf20-472d-8e7a-1c4c7a701c30",
+    "name": "Wildcat Auto Spa",
+    "city": "Madill",
+    "state": "OK",
+    "hits": [
+      "touchless automatic",
+      "no brushes"
+    ]
+  },
+  {
+    "id": "87d60396-299e-44ff-997d-e13d021fc5e3",
+    "name": "Tunnel Wash",
+    "city": "Woodward",
+    "state": "OK",
+    "hits": [
+      "Laserwash",
+      "Laserwash"
+    ]
+  },
+  {
+    "id": "3f0c5327-0c10-4f25-a296-371a141f4070",
+    "name": "Lemon Laundry and Car Wash",
+    "city": "Missoula",
+    "state": "MT",
+    "hits": [
+      "touchless automatic"
+    ]
+  },
+  {
+    "id": "83f42652-28c9-4a0d-86ae-e5f05fb8843f",
+    "name": "Central Garage Car Wash",
+    "city": "Aylett",
+    "state": "VA",
+    "hits": [
+      "Touchless Wash"
+    ]
+  },
+  {
+    "id": "15d9677c-e1e6-4800-b571-d5bc30f0b3e3",
+    "name": "Gentle bear car wash",
+    "city": "Presque Isle",
+    "state": "ME",
+    "hits": [
+      "touchless wash"
+    ]
+  },
+  {
+    "id": "090a1fd1-7053-4c7b-80ad-a58269ba89a3",
+    "name": "Red Carpet Car Wash South",
+    "city": "Bend",
+    "state": "OR",
+    "hits": [
+      "Touch-less Car Wash"
+    ]
+  },
+  {
+    "id": "5f9c8abb-fa96-47bb-abcb-db329c1d9515",
+    "name": "Express Car Wash",
+    "city": "Chicago",
+    "state": "IL",
+    "hits": [
+      "TOUCHLESS WASH"
+    ]
+  },
+  {
+    "id": "016f0bf6-3d2a-4751-8305-115d25c35ca8",
+    "name": "Fullerton Express Car Wash",
+    "city": "Chicago",
+    "state": "IL",
+    "hits": [
+      "TOUCHLESS WASH"
+    ]
+  },
+  {
+    "id": "0ad02417-3cf9-4529-bce2-cb8454dd4fd8",
+    "name": "Drake's Carwash Wilkins PA",
+    "city": "Pittsburgh",
+    "state": "PA",
+    "hits": [
+      "touchless carwash"
+    ]
+  },
+  {
+    "id": "58847442-fac6-455d-814d-4493549995d9",
+    "name": "Pro Shine Car Wash",
+    "city": "Minerva",
+    "state": "OH",
+    "hits": [
+      "touchless car wash"
+    ]
+  },
+  {
+    "id": "b129207d-a7a0-439d-84d8-20c0e8130fc4",
+    "name": "Tsunami Car Wash",
+    "city": "Gurnee",
+    "state": "IL",
+    "hits": [
+      "TOUCHLESS WASH"
+    ]
+  },
+  {
+    "id": "de762907-7d65-49c9-b166-f04babb4cdcc",
+    "name": "Viking Car Wash",
+    "city": "Reedsburg",
+    "state": "WI",
+    "hits": [
+      "TOUCHLESS CAR WASH"
+    ]
+  },
+  {
+    "id": "016f0bf6-3d2a-4751-8305-115d25c35ca8",
+    "name": "Fullerton Express Car Wash",
+    "city": "Chicago",
+    "state": "IL",
+    "hits": [
+      "TOUCHLESS WASH"
+    ]
+  },
+  {
+    "id": "11fd6386-9b8a-4676-8da1-0f475149d104",
+    "name": "Dog House Auto Spa",
+    "city": "Skiatook",
+    "state": "OK",
+    "hits": [
+      "Touchless Car Wash",
+      "Brushless Car Wash"
+    ]
+  },
+  {
+    "id": "5328dcf8-c795-4085-a051-39b164d9e184",
+    "name": "Main Street Auto Spa",
+    "city": "Durant",
+    "state": "OK",
+    "hits": [
+      "touchless automatic",
+      "no brushes"
+    ]
+  },
+  {
+    "id": "b51ca40c-1a43-4c44-9704-ee94bfc17a58",
+    "name": "Go Clean Car Wash",
+    "city": "Tallahassee",
+    "state": "FL",
+    "hits": [
+      "Touchless Car Wash",
+      "Brushless Car Wash"
+    ]
+  },
+  {
+    "id": "9bf7fedc-ed17-409f-9574-0af03648559a",
+    "name": "Squeeky's Car Wash Palm Springs",
+    "city": "Palm Springs",
+    "state": "FL",
+    "hits": [
+      "touchless car wash"
+    ]
+  },
+  {
+    "id": "1c85e7f2-b474-44f3-8d1d-7f08f70a3118",
+    "name": "Fast Pass Car Wash Inc",
+    "city": "Lompoc",
+    "state": "CA",
+    "hits": [
+      "Touchless Car Wash"
+    ]
+  },
+  {
+    "id": "e8ea4e60-ffa6-4d07-85a0-d12f3acd6db6",
+    "name": "5 Star Express Car Wash",
+    "city": "Santa Maria",
+    "state": "CA",
+    "hits": [
+      "Touchless Automatic"
+    ]
+  },
+  {
+    "id": "71b716a3-4434-4775-810b-fdcf1a2f5adc",
+    "name": "Delta Sonic Car Wash",
+    "city": "Cheektowaga",
+    "state": "NY",
+    "hits": [
+      "Touch-Less wash"
+    ]
+  },
+  {
+    "id": "f2bf7aa2-0f2b-487f-ac30-9d7b2bcfa781",
+    "name": "Sofi's Carwash",
+    "city": "Lakeland",
+    "state": "FL",
+    "hits": [
+      "Touchless Car Wash",
+      "Brushless Car Wash"
+    ]
+  },
+  {
+    "id": "cc306bd6-7727-457f-b8f4-c7515ef8fa10",
+    "name": "Titan Gas & Car Wash",
+    "city": "Medford",
+    "state": "MA",
+    "hits": [
+      "brushless car wash"
+    ]
+  },
+  {
+    "id": "49e51bfa-3327-412e-b869-52c7b4b0831b",
+    "name": "Whale of a Wash Car Wash",
+    "city": "Hedgesville",
+    "state": "WV",
+    "hits": [
+      "Touchless Auto"
+    ]
+  },
+  {
+    "id": "5dbf9e16-bf7f-42ca-a1d7-725fbd7a487c",
+    "name": "The Wash House Carwash",
+    "city": "Jefferson",
+    "state": "GA",
+    "hits": [
+      "Touchless Car Wash"
+    ]
+  },
+  {
+    "id": "016f0bf6-3d2a-4751-8305-115d25c35ca8",
+    "name": "Fullerton Express Car Wash",
+    "city": "Chicago",
+    "state": "IL",
+    "hits": [
+      "TOUCHLESS WASH"
+    ]
+  },
+  {
+    "id": "016f0bf6-3d2a-4751-8305-115d25c35ca8",
+    "name": "Fullerton Express Car Wash",
+    "city": "Chicago",
+    "state": "IL",
+    "hits": [
+      "TOUCHLESS WASH"
+    ]
+  }
+]
