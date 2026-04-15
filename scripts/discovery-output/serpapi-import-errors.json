@@ -1,0 +1,42 @@
+[
+  {
+    "place_id": "ChIJp_JrrNY_24gRLg7WX7rOgJQ",
+    "name": "Surfside Car Wash",
+    "reason": "duplicate key value violates unique constraint \"listings_slug_key\""
+  },
+  {
+    "place_id": "ChIJkZt0sIET04kRy-kgAioyTfI",
+    "name": "Bubbles Car Wash",
+    "reason": "unparseable state from \"255 Garrison Rd, Fort Erie, ON L2A 1M9, Canada\""
+  },
+  {
+    "place_id": "ChIJA2AlyKcV04kRlhIZ6IMRi8I",
+    "name": "Northern Touch Truck Wash of Fort Erie, ON",
+    "reason": "unparseable state from \"1637 Pettit Rd, Fort Erie, ON L2A 5M4, Canada\""
+  },
+  {
+    "place_id": "ChIJ25JQezEU04kRUipxt1XBwUU",
+    "name": "Crescent Park Car Wash",
+    "reason": "unparseable state from \"1405 Dominion Rd, Fort Erie, ON L2A 1J8, Canada\""
+  },
+  {
+    "place_id": "ChIJGfbr80MsO4gRh1RynJqY9cg",
+    "name": "Super Wash Touchfree",
+    "reason": "unparseable state from \"Eugenie St W, Windsor, ON N8X 4Y6, Canada\""
+  },
+  {
+    "place_id": "ChIJL-v6EoE8w4gRK4D1vkyQLhg",
+    "name": "Car Wash",
+    "reason": "unparseable state from \"Florida 34208\""
+  },
+  {
+    "place_id": "ChIJsTVNYb0tO4gRmKyzFiNwhD4",
+    "name": "Touchless Car Wash",
+    "reason": "unparseable state from \"Windsor, ON N9B 1W5, Canada\""
+  },
+  {
+    "place_id": "ChIJs_lD_13VOogRyazQpuNXTHk",
+    "name": "Touchless Car Wash",
+    "reason": "unparseable state from \"11475 Tecumseh Rd E, Windsor, ON N8R 1B1, Canada\""
+  }
+]
