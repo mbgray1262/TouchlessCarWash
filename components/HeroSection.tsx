@@ -251,14 +251,27 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
             resolve([]);
             return;
           }
-          resolve(
-            predictions.slice(0, 5).map((p) => ({
+          // Filter out fuzzy matches: Google sometimes returns "Shrub Oak" for "scrub"
+          // because of phonetic-like fuzzy matching. Only keep predictions whose main
+          // text starts with (or clearly contains as a word-boundary) the query.
+          const termLower = term.toLowerCase();
+          const filtered = predictions
+            .map((p) => ({
               placeId: p.place_id,
               description: p.description,
               mainText: p.structured_formatting.main_text,
               secondaryText: p.structured_formatting.secondary_text,
             }))
-          );
+            .filter((p) => {
+              const main = p.mainText.toLowerCase();
+              // Accept if main text starts with the query, OR contains it as a whole word,
+              // OR the description contains it as a whole word (catches "Hwy 101 Auburn" for "auburn")
+              if (main.startsWith(termLower)) return true;
+              const wordRe = new RegExp(`\\b${termLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
+              return wordRe.test(p.mainText) || wordRe.test(p.description);
+            })
+            .slice(0, 5);
+          resolve(filtered);
         }
       );
     });
@@ -506,7 +519,7 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
                 />
 
                 {(open || noResults) && (
-                  <div className="absolute left-0 right-0 top-[calc(100%+4px)] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50">
+                  <div className="absolute left-0 right-0 top-[calc(100%+4px)] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-y-auto max-h-[70vh] z-50">
                     {noResults ? (
                       <div className="px-4 py-5 text-sm text-gray-500 text-center">
                         {/^\d{3,5}$/.test(query.trim())

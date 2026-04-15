@@ -190,6 +190,11 @@ export const CHAINS: Chain[] = [
     slug: 'cascade-car-wash',
     description: 'Cascade Car Wash operates {count} automatic touchless car wash locations across the Dayton and Cincinnati, Ohio metro areas — including Kettering, Englewood, Springboro, Monroe, and Fairfield. Every Cascade location features touchless automatic bays where only water and cleaning agents touch your vehicle, with hours typically 5:30 AM to 11:00 PM daily.',
   },
+  {
+    name: 'ScrubaDub',
+    slug: 'scrubadub',
+    description: 'ScrubaDub is a New England car wash chain with {count} locations that offer dedicated touchless (laser wash) bays across Massachusetts, New Hampshire, and Rhode Island. While most ScrubaDub locations are tunnel washes, select sites also operate touchless in-bay automatic systems — those are what we list here.',
+  },
 ];
 
 const bySlug = new Map(CHAINS.map(c => [c.slug, c]));
