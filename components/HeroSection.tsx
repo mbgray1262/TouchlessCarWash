@@ -450,13 +450,42 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
       const term = value.trim();
       const isZipLike = /^\d{3,5}$/.test(term);
 
+      // Each promise is wrapped so a single failure can't take down the whole dropdown.
+      const googlePromise = fetchGooglePlaces(term).catch((err) => {
+        console.error('[search] fetchGooglePlaces failed:', err);
+        return [] as GooglePlaceResult[];
+      });
+      const listingsPromise = isZipLike
+        ? Promise.resolve({ results: [] as ListingResult[], total: 0 })
+        : fetchListingMatches(term).catch((err) => {
+            console.error('[search] fetchListingMatches failed:', err);
+            return { results: [] as ListingResult[], total: 0 };
+          });
+      const chainsPromise = isZipLike
+        ? Promise.resolve([] as ChainResult[])
+        : matchChains(term).catch((err) => {
+            console.error('[search] matchChains failed:', err);
+            return [] as ChainResult[];
+          });
+
       const [googlePlaces, listingsResult, chains] = await Promise.all([
-        fetchGooglePlaces(term),
-        isZipLike ? Promise.resolve({ results: [] as ListingResult[], total: 0 }) : fetchListingMatches(term),
-        isZipLike ? Promise.resolve([] as ChainResult[]) : matchChains(term),
+        googlePromise,
+        listingsPromise,
+        chainsPromise,
       ]);
 
       const metros = isZipLike ? [] : matchMetros(term);
+
+      // Diagnostic so we can see in the browser console what came back
+      if (typeof window !== 'undefined') {
+        console.log('[search]', term, {
+          chains: chains.length,
+          metros: metros.length,
+          googlePlaces: googlePlaces.length,
+          listings: listingsResult.results.length,
+          totalListings: listingsResult.total,
+        });
+      }
 
       setResults({
         chains,
