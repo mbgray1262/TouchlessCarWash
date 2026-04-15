@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { getStateSlug, slugify } from '@/lib/constants';
 import { METRO_AREAS } from '@/lib/metro-areas';
+import { CHAINS } from '@/lib/chains';
 
 const DEFAULT_PLACEHOLDER = 'Search by city, ZIP, or car wash name';
 
@@ -31,6 +32,12 @@ interface MetroResult {
   slug: string;
 }
 
+interface ChainResult {
+  name: string;
+  slug: string;
+  count: number;
+}
+
 interface GooglePlaceResult {
   placeId: string;
   description: string;
@@ -39,6 +46,7 @@ interface GooglePlaceResult {
 }
 
 interface AutocompleteResults {
+  chains: ChainResult[];
   metros: MetroResult[];
   locations: GooglePlaceResult[];
   listings: ListingResult[];
@@ -98,8 +106,8 @@ async function fetchListingMatches(term: string): Promise<ListingResult[]> {
     .select('id, name, slug, city, state')
     .or(filter)
     .eq('is_touchless', true)
-    .order('rating', { ascending: false })
-    .limit(5);
+    .order('rating', { ascending: false, nullsFirst: false })
+    .limit(8);
   return (data ?? []) as ListingResult[];
 }
 
@@ -112,12 +120,36 @@ function matchMetros(term: string): MetroResult[] {
     .map((m) => ({ name: m.name, displayName: m.displayName, slug: m.slug }));
 }
 
+/** Match chains by name. If term matches a chain, return it so users see
+ *  "Browse all N Kwik Trip locations" instead of 5 specific Kwik Trips. */
+async function matchChains(term: string): Promise<ChainResult[]> {
+  const termLower = term.toLowerCase();
+  const matching = CHAINS.filter(
+    (c) =>
+      c.name.toLowerCase().includes(termLower) ||
+      c.slug.toLowerCase().includes(termLower.replace(/\s+/g, '-'))
+  ).slice(0, 3);
+  if (matching.length === 0) return [];
+  // Get touchless counts for each match
+  const results = await Promise.all(
+    matching.map(async (c) => {
+      const { count } = await supabase
+        .from('listings')
+        .select('*', { count: 'exact', head: true })
+        .eq('parent_chain', c.name)
+        .eq('is_touchless', true);
+      return { name: c.name, slug: c.slug, count: count ?? 0 };
+    })
+  );
+  return results.filter((r) => r.count >= 2); // Only show chains with 2+ locations
+}
+
 export default function HeroSection({ totalCount }: { totalCount?: number }) {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [geoLocation, setGeoLocation] = useState<GeoLocation | null>(null);
   const [geoResolved, setGeoResolved] = useState(false);
-  const [results, setResults] = useState<AutocompleteResults>({ metros: [], locations: [], listings: [] });
+  const [results, setResults] = useState<AutocompleteResults>({ chains: [], metros: [], locations: [], listings: [] });
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -258,7 +290,7 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
 
     if (value.trim().length < 2) {
-      setResults({ metros: [], locations: [], listings: [] });
+      setResults({ chains: [], metros: [], locations: [], listings: [] });
       setOpen(false);
       return;
     }
@@ -268,21 +300,23 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
       const isZipLike = /^\d{3,5}$/.test(term);
 
       // Run queries in parallel
-      const [googlePlaces, listings] = await Promise.all([
+      const [googlePlaces, listings, chains] = await Promise.all([
         fetchGooglePlaces(term),
         isZipLike ? Promise.resolve([] as ListingResult[]) : fetchListingMatches(term),
+        isZipLike ? Promise.resolve([] as ChainResult[]) : matchChains(term),
       ]);
 
       // Match metros locally (skip for ZIP-like queries)
       const metros = isZipLike ? [] : matchMetros(term);
 
-      setResults({ metros, locations: googlePlaces, listings });
-      setOpen(metros.length > 0 || googlePlaces.length > 0 || listings.length > 0);
+      setResults({ chains, metros, locations: googlePlaces, listings });
+      setOpen(chains.length > 0 || metros.length > 0 || googlePlaces.length > 0 || listings.length > 0);
     }, 200);
   }, []);
 
   // ── Build flat list of all items for keyboard nav ───────────────────
   const allItems = [
+    ...results.chains.map((c) => ({ type: 'chain' as const, data: c })),
     ...results.metros.map((m) => ({ type: 'metro' as const, data: m })),
     ...results.locations.map((l) => ({ type: 'location' as const, data: l })),
     ...results.listings.map((l) => ({ type: 'listing' as const, data: l })),
@@ -293,7 +327,10 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
     setOpen(false);
     setQuery('');
 
-    if (item.type === 'metro') {
+    if (item.type === 'chain') {
+      const c = item.data as ChainResult;
+      router.push(`/chain/${c.slug}`);
+    } else if (item.type === 'metro') {
       const m = item.data as MetroResult;
       router.push(`/best/${m.slug}`);
     } else if (item.type === 'location') {
@@ -400,7 +437,7 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
     ? `Near\u00a0${geoLocation.city},\u00a0${geoLocation.state}`
     : 'Near\u00a0You';
 
-  const noResults = open && results.metros.length === 0 && results.locations.length === 0 && results.listings.length === 0 && query.trim().length >= 2;
+  const noResults = open && results.chains.length === 0 && results.metros.length === 0 && results.locations.length === 0 && results.listings.length === 0 && query.trim().length >= 2;
 
   let itemIndex = -1;
 
@@ -462,7 +499,7 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
                   onKeyDown={handleKeyDown}
                   onFocus={() => {
                     loadGoogleMaps();
-                    if (results.metros.length > 0 || results.locations.length > 0 || results.listings.length > 0) setOpen(true);
+                    if (results.chains.length > 0 || results.metros.length > 0 || results.locations.length > 0 || results.listings.length > 0) setOpen(true);
                   }}
                   autoComplete="off"
                   className="pl-12 h-14 text-base bg-white text-gray-900 rounded-l-lg border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -478,8 +515,38 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
                       </div>
                     ) : (
                       <>
-                        {results.metros.length > 0 && (
+                        {results.chains.length > 0 && (
                           <div>
+                            <div className="flex items-center gap-1.5 px-4 pt-3 pb-1.5">
+                              <Building2 className="w-3.5 h-3.5 text-green-600" />
+                              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Chains</span>
+                            </div>
+                            {results.chains.map((chain) => {
+                              itemIndex += 1;
+                              const idx = itemIndex;
+                              return (
+                                <button
+                                  key={chain.slug}
+                                  type="button"
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => navigateToItem({ type: 'chain', data: chain })}
+                                  onMouseEnter={() => setActiveIndex(idx)}
+                                  className={`w-full flex items-center justify-between px-4 py-2.5 text-left transition-colors ${activeIndex === idx ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                                >
+                                  <span className="text-sm font-medium text-gray-900">
+                                    Browse all {chain.count.toLocaleString()} {chain.name} locations
+                                  </span>
+                                  <span className="text-xs text-green-600 ml-4 shrink-0 font-medium">
+                                    Chain
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {results.metros.length > 0 && (
+                          <div className={results.chains.length > 0 ? 'border-t border-gray-100' : ''}>
                             <div className="flex items-center gap-1.5 px-4 pt-3 pb-1.5">
                               <Trophy className="w-3.5 h-3.5 text-amber-500" />
                               <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Best Of</span>
@@ -509,7 +576,7 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
                         )}
 
                         {results.locations.length > 0 && (
-                          <div className={results.metros.length > 0 ? 'border-t border-gray-100' : ''}>
+                          <div className={(results.chains.length > 0 || results.metros.length > 0) ? 'border-t border-gray-100' : ''}>
                             <div className="flex items-center gap-1.5 px-4 pt-3 pb-1.5">
                               <MapPin className="w-3.5 h-3.5 text-gray-400" />
                               <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Locations</span>
@@ -537,7 +604,7 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
                         )}
 
                         {results.listings.length > 0 && (
-                          <div className={(results.metros.length > 0 || results.locations.length > 0) ? 'border-t border-gray-100' : ''}>
+                          <div className={(results.chains.length > 0 || results.metros.length > 0 || results.locations.length > 0) ? 'border-t border-gray-100' : ''}>
                             <div className="flex items-center gap-1.5 px-4 pt-3 pb-1.5">
                               <Building2 className="w-3.5 h-3.5 text-gray-400" />
                               <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Car Washes</span>
