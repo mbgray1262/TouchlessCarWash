@@ -330,6 +330,12 @@ export async function GET() {
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>${baseUrl}/unlimited-touchless-car-wash</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
     <loc>${baseUrl}/privacy-policy</loc>
     <lastmod>${now}</lastmod>
     <changefreq>yearly</changefreq>
