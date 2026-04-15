@@ -213,18 +213,27 @@ async function fetchListingMatches(term: string): Promise<{ results: ListingResu
     g.members.push(r);
   }
 
-  // Rank groups: prefix match on normalized name first, then by size
+  // Rank groups by a relevance score that balances several signals.
+  //
+  // Users searching "sparkle" expect to see Mr. Sparkle (13 locations) as
+  // prominently as Sparkle Self Service (2 locations) — both are clearly
+  // relevant. Previously a strict prefix-only sort buried Mr. Sparkle
+  // behind 10 one-off prefix matches.
+  //
+  // New formula — higher score wins:
+  //   +log10(member_count) × 20   → more locations = more relevant
+  //   +log10(top_review_count) × 3 → more reviews = more established
+  //   +5 bonus if normalized name STARTS with query term (slight prefix tiebreaker)
   const rankTerm = (nameTerm || term).toLowerCase();
-  const ranked = Array.from(groups.values()).sort((a, b) => {
-    const aPrefix = a.normalized.startsWith(rankTerm) ? 0 : 1;
-    const bPrefix = b.normalized.startsWith(rankTerm) ? 0 : 1;
-    if (aPrefix !== bPrefix) return aPrefix - bPrefix;
-    if (a.members.length !== b.members.length) return b.members.length - a.members.length;
-    // Within same tier, sort by best singleton's review count
-    const aRv = a.members[0].review_count ?? 0;
-    const bRv = b.members[0].review_count ?? 0;
-    return bRv - aRv;
-  });
+  function score(g: Group): number {
+    const members = g.members.length;
+    const topReviews = Math.max(0, g.members[0].review_count ?? 0);
+    const prefixBonus = g.normalized.startsWith(rankTerm) ? 5 : 0;
+    return Math.log10(members + 1) * 20
+      + Math.log10(topReviews + 1) * 3
+      + prefixBonus;
+  }
+  const ranked = Array.from(groups.values()).sort((a, b) => score(b) - score(a));
 
   // Convert to results — up to 10 entries, blending groups and singletons
   const results: ListingResult[] = ranked.slice(0, 10).map((g) => {
