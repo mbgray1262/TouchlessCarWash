@@ -19,11 +19,13 @@ interface GeoLocation {
 }
 
 interface ListingResult {
-  id: string;
+  // For a group of listings sharing the same name, id is null and count > 1
+  id: string | null;
   name: string;
   slug: string;
   city: string;
   state: string;
+  count: number; // 1 for singleton, >1 for a grouped name
 }
 
 interface MetroResult {
@@ -50,6 +52,7 @@ interface AutocompleteResults {
   metros: MetroResult[];
   locations: GooglePlaceResult[];
   listings: ListingResult[];
+  totalListings: number; // Total matching listings (for "See all N" footer)
 }
 
 async function reverseGeocode(lat: number, lon: number): Promise<GeoLocation | null> {
@@ -88,27 +91,90 @@ async function forwardGeocode(query: string): Promise<{ lat: number; lng: number
   }
 }
 
-/** Fetch listing name matches from Supabase (for non-ZIP queries only). */
-async function fetchListingMatches(term: string): Promise<ListingResult[]> {
-  // Build alternate patterns to handle "&" variations:
-  // "K&D" should also match "K & D", "K and D", etc.
+/** Normalize a wash name for grouping: strip punctuation, lowercase, collapse whitespace.
+ *  "Mr Sparkle Car Wash" and "Mr. Sparkle Car Wash" normalize to the same key. */
+function normalizeName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[.,'`"!?@#$%^*()\[\]{}]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Fetch listing name matches, group by name, and return a mix of grouped and
+ *  singleton results. Groups (e.g., "Mr Sparkle Car Wash") link to the search
+ *  page; singletons link directly to the listing.
+ *
+ *  Ranking: prefix matches first (name starts with query), then substring
+ *  matches. Within each tier, groups ranked by group size, singletons by
+ *  review_count.
+ */
+async function fetchListingMatches(term: string): Promise<{ results: ListingResult[]; total: number }> {
   const patterns: string[] = [`%${term}%`];
   if (term.includes('&')) {
-    patterns.push(`%${term.replace(/&/g, ' & ')}%`); // "K&D" → "K & D"
-    patterns.push(`%${term.replace(/&/g, ' and ')}%`); // "K&D" → "K and D"
+    patterns.push(`%${term.replace(/&/g, ' & ')}%`);
+    patterns.push(`%${term.replace(/&/g, ' and ')}%`);
   } else if (term.includes(' & ')) {
-    patterns.push(`%${term.replace(/ & /g, '&')}%`); // "K & D" → "K&D"
+    patterns.push(`%${term.replace(/ & /g, '&')}%`);
+  } else if (term.toLowerCase().includes(' and ')) {
+    patterns.push(`%${term.replace(/ and /gi, '&')}%`);
+    patterns.push(`%${term.replace(/ and /gi, ' & ')}%`);
   }
 
-  const filter = patterns.map(p => `name.ilike.${p}`).join(',');
-  const { data } = await supabase
+  const filter = patterns.map((p) => `name.ilike.${p}`).join(',');
+  // Fetch up to 100 so we can group. Sort by review_count desc so quality comes first.
+  const { data, count } = await supabase
     .from('listings')
-    .select('id, name, slug, city, state')
+    .select('id, name, slug, city, state, review_count, rating', { count: 'exact' })
     .or(filter)
     .eq('is_touchless', true)
-    .order('rating', { ascending: false, nullsFirst: false })
-    .limit(8);
-  return (data ?? []) as ListingResult[];
+    .order('review_count', { ascending: false, nullsFirst: false })
+    .limit(100);
+
+  const rows = (data ?? []) as Array<{
+    id: string; name: string; slug: string; city: string; state: string;
+    review_count: number | null; rating: number | null;
+  }>;
+  const total = count ?? rows.length;
+
+  // Group by normalized name
+  const termLower = term.toLowerCase();
+  type Group = { name: string; members: typeof rows; normalized: string };
+  const groups = new Map<string, Group>();
+  for (const r of rows) {
+    const norm = normalizeName(r.name);
+    let g = groups.get(norm);
+    if (!g) {
+      g = { name: r.name, members: [], normalized: norm };
+      groups.set(norm, g);
+    }
+    g.members.push(r);
+  }
+
+  // Rank groups: prefix match on normalized name first, then by size
+  const ranked = Array.from(groups.values()).sort((a, b) => {
+    const aPrefix = a.normalized.startsWith(termLower) ? 0 : 1;
+    const bPrefix = b.normalized.startsWith(termLower) ? 0 : 1;
+    if (aPrefix !== bPrefix) return aPrefix - bPrefix;
+    if (a.members.length !== b.members.length) return b.members.length - a.members.length;
+    // Within same tier, sort by best singleton's review count
+    const aRv = a.members[0].review_count ?? 0;
+    const bRv = b.members[0].review_count ?? 0;
+    return bRv - aRv;
+  });
+
+  // Convert to results — up to 10 entries, blending groups and singletons
+  const results: ListingResult[] = ranked.slice(0, 10).map((g) => {
+    if (g.members.length === 1) {
+      const m = g.members[0];
+      return { id: m.id, name: m.name, slug: m.slug, city: m.city, state: m.state, count: 1 };
+    }
+    // Group — use the most-reviewed member's slug as a representative
+    const top = g.members[0];
+    return { id: null, name: g.name, slug: top.slug, city: '', state: '', count: g.members.length };
+  });
+
+  return { results, total };
 }
 
 /** Match metro areas from the local METRO_AREAS array. */
@@ -149,7 +215,7 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
   const [query, setQuery] = useState('');
   const [geoLocation, setGeoLocation] = useState<GeoLocation | null>(null);
   const [geoResolved, setGeoResolved] = useState(false);
-  const [results, setResults] = useState<AutocompleteResults>({ chains: [], metros: [], locations: [], listings: [] });
+  const [results, setResults] = useState<AutocompleteResults>({ chains: [], metros: [], locations: [], listings: [], totalListings: 0 });
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -303,7 +369,7 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
 
     if (value.trim().length < 2) {
-      setResults({ chains: [], metros: [], locations: [], listings: [] });
+      setResults({ chains: [], metros: [], locations: [], listings: [], totalListings: 0 });
       setOpen(false);
       return;
     }
@@ -312,18 +378,22 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
       const term = value.trim();
       const isZipLike = /^\d{3,5}$/.test(term);
 
-      // Run queries in parallel
-      const [googlePlaces, listings, chains] = await Promise.all([
+      const [googlePlaces, listingsResult, chains] = await Promise.all([
         fetchGooglePlaces(term),
-        isZipLike ? Promise.resolve([] as ListingResult[]) : fetchListingMatches(term),
+        isZipLike ? Promise.resolve({ results: [] as ListingResult[], total: 0 }) : fetchListingMatches(term),
         isZipLike ? Promise.resolve([] as ChainResult[]) : matchChains(term),
       ]);
 
-      // Match metros locally (skip for ZIP-like queries)
       const metros = isZipLike ? [] : matchMetros(term);
 
-      setResults({ chains, metros, locations: googlePlaces, listings });
-      setOpen(chains.length > 0 || metros.length > 0 || googlePlaces.length > 0 || listings.length > 0);
+      setResults({
+        chains,
+        metros,
+        locations: googlePlaces,
+        listings: listingsResult.results,
+        totalListings: listingsResult.total,
+      });
+      setOpen(chains.length > 0 || metros.length > 0 || googlePlaces.length > 0 || listingsResult.results.length > 0);
     }, 200);
   }, []);
 
@@ -366,7 +436,12 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
       }
     } else {
       const l = item.data as ListingResult;
-      router.push(`/state/${getStateSlug(l.state)}/${slugify(l.city)}/${l.slug}`);
+      if (l.count > 1 || !l.id) {
+        // Grouped result — go to the full search page with the group name as query
+        router.push(`/search?q=${encodeURIComponent(l.name)}`);
+      } else {
+        router.push(`/state/${getStateSlug(l.state)}/${slugify(l.city)}/${l.slug}`);
+      }
     }
   }, [router]);
 
@@ -622,12 +697,13 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
                               <Building2 className="w-3.5 h-3.5 text-gray-400" />
                               <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Car Washes</span>
                             </div>
-                            {results.listings.map((listing) => {
+                            {results.listings.map((listing, i) => {
                               itemIndex += 1;
                               const idx = itemIndex;
+                              const isGroup = listing.count > 1;
                               return (
                                 <button
-                                  key={listing.id}
+                                  key={listing.id ?? `group-${listing.name}-${i}`}
                                   type="button"
                                   onMouseDown={(e) => e.preventDefault()}
                                   onClick={() => navigateToItem({ type: 'listing', data: listing })}
@@ -636,11 +712,26 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
                                 >
                                   <span className="text-sm font-medium text-gray-900 truncate pr-2">{listing.name}</span>
                                   <span className="text-xs text-gray-400 shrink-0">
-                                    {listing.city}, {listing.state}
+                                    {isGroup ? `${listing.count} locations` : `${listing.city}, ${listing.state}`}
                                   </span>
                                 </button>
                               );
                             })}
+                            {results.totalListings > results.listings.length && (
+                              <button
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => {
+                                  setOpen(false);
+                                  const q = query.trim();
+                                  setQuery('');
+                                  router.push(`/search?q=${encodeURIComponent(q)}`);
+                                }}
+                                className="w-full px-4 py-2.5 text-center text-sm font-semibold text-blue-600 hover:bg-blue-50 border-t border-gray-100 transition-colors"
+                              >
+                                See all {results.totalListings} matches →
+                              </button>
+                            )}
                           </div>
                         )}
                       </>
