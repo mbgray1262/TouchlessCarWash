@@ -20,9 +20,16 @@ export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
   // Hosted in Supabase (226 KB).
   'Holiday Stationstores': `${STORAGE}/holiday-stationstores.jpg`,
 
-  // Kwik Trip car wash entrance building — red Kwik Trip fascia stripe, "CARWASH ENTRANCE" signage.
-  // Hosted in Supabase (123 KB).
-  'Kwik Trip': `${STORAGE}/kwik-trip.jpg`,
+  // Kwik Trip — rotation of 4 clean exterior photos, all touchless bays visible
+  // without the problematic "SOFT TOUCH" signage from the previous single image.
+  // Previous fallback /chain-brands/kwik-trip.jpg showed "Touch Free OR Soft Touch"
+  // which could confuse users on our touchless-only directory.
+  'Kwik Trip': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/370cc967-f39d-4804-bd7d-4a05552126e7/hero-cropped-1774973708483.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/c6daf1fb-a229-438a-b45b-4516750d74dd/hero-cropped-1774973046421.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/dce69812-e998-4ee1-a0ae-6b4ec52ba2f2/hero-cropped-1774980731630.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/66af98d7-e91c-488a-a2cd-a13a5d64b5db/hero-cropped-1775158076683.jpg',
+  ],
 
   // BellStores Touch Free tunnel image — hosted in Supabase (104 KB)
   'BellStores': `${STORAGE}/bellstores.png`,
