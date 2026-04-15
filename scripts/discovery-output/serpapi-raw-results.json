@@ -1,0 +1,1502 @@
+{
+  "generatedAt": "2026-04-15T13:23:09.219Z",
+  "queriesRun": 303,
+  "errors": 99,
+  "metros": 101,
+  "existingPlaceIds": 40000,
+  "newCandidates": 1273,
+  "nameIsTouchlessCount": 111,
+  "resultsByMetroQuery": [
+    {
+      "metro": "new-york-city",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "new-york-city",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "new-york-city",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "boston",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "boston",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "boston",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "philadelphia",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "philadelphia",
+      "query": "laser car wash",
+      "count": 0
+    },
+    {
+      "metro": "philadelphia",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "pittsburgh",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "pittsburgh",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "pittsburgh",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "hartford",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "hartford",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "hartford",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "providence",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "providence",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "providence",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "buffalo",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "buffalo",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "buffalo",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "rochester",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "rochester",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "rochester",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "albany",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "albany",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "albany",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "syracuse",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "syracuse",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "syracuse",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "northern-new-jersey",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "northern-new-jersey",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "northern-new-jersey",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "baltimore",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "baltimore",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "baltimore",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "washington-dc",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "washington-dc",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "washington-dc",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "miami",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "miami",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "miami",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "tampa",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "tampa",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "tampa",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "orlando",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "orlando",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "orlando",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "jacksonville",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "jacksonville",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "jacksonville",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "fort-myers",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "fort-myers",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "fort-myers",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "atlanta",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "atlanta",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "atlanta",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "charlotte",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "charlotte",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "charlotte",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "raleigh-durham",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "raleigh-durham",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "raleigh-durham",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "nashville",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "nashville",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "nashville",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "memphis",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "memphis",
+      "query": "laser car wash",
+      "count": 9
+    },
+    {
+      "metro": "memphis",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "louisville",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "louisville",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "louisville",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "richmond",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "richmond",
+      "query": "laser car wash",
+      "count": 19
+    },
+    {
+      "metro": "richmond",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "virginia-beach",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "virginia-beach",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "virginia-beach",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "charleston",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "charleston",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "charleston",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "new-orleans",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "new-orleans",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "new-orleans",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "birmingham",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "birmingham",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "birmingham",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "knoxville",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "knoxville",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "knoxville",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "greenville",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "greenville",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "greenville",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "sarasota",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "sarasota",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "sarasota",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "chicago",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "chicago",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "chicago",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "detroit",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "detroit",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "detroit",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "minneapolis",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "minneapolis",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "minneapolis",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "cleveland",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "cleveland",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "cleveland",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "columbus",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "columbus",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "columbus",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "cincinnati",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "cincinnati",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "cincinnati",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "indianapolis",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "indianapolis",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "indianapolis",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "milwaukee",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "milwaukee",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "milwaukee",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "kansas-city",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "kansas-city",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "kansas-city",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "st-louis",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "st-louis",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "st-louis",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "grand-rapids",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "grand-rapids",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "grand-rapids",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "madison",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "madison",
+      "query": "laser car wash",
+      "count": 16
+    },
+    {
+      "metro": "madison",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "des-moines",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "des-moines",
+      "query": "laser car wash",
+      "count": 19
+    },
+    {
+      "metro": "des-moines",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "omaha",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "omaha",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "omaha",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "dayton",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "dayton",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "dayton",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "toledo",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "toledo",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "toledo",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "akron",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "akron",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "akron",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "wichita",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "wichita",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "wichita",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "houston",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "houston",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "houston",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "dallas-fort-worth",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "dallas-fort-worth",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "dallas-fort-worth",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "san-antonio",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "san-antonio",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "san-antonio",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "austin",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "austin",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "austin",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "el-paso",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "el-paso",
+      "query": "laser car wash",
+      "count": 14
+    },
+    {
+      "metro": "el-paso",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "phoenix",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "phoenix",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "phoenix",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "tucson",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "tucson",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "tucson",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "albuquerque",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "albuquerque",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "albuquerque",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "oklahoma-city",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "oklahoma-city",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "oklahoma-city",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "tulsa",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "tulsa",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "tulsa",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "las-vegas",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "las-vegas",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "las-vegas",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "little-rock",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "little-rock",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "little-rock",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "mcallen",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "mcallen",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "mcallen",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "los-angeles",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "los-angeles",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "los-angeles",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "san-francisco",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "san-francisco",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "san-francisco",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "san-diego",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "san-diego",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "san-diego",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "sacramento",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "sacramento",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "sacramento",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "seattle",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "seattle",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "seattle",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "denver",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "colorado-springs",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "colorado-springs",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "colorado-springs",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "salt-lake-city",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "salt-lake-city",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "salt-lake-city",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "boise",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "boise",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "boise",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "inland-empire",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "inland-empire",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "inland-empire",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "fresno",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "fresno",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "fresno",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "bakersfield",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "bakersfield",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "bakersfield",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "honolulu",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "honolulu",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "honolulu",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "anchorage",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "anchorage",
+      "query": "laser car wash",
+      "count": 16
+    },
+    {
+      "metro": "anchorage",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "reno",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "reno",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "reno",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "sioux-falls",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "sioux-falls",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "sioux-falls",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "rockford",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "rockford",
+      "query": "laser car wash",
+      "count": 14
+    },
+    {
+      "metro": "rockford",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "south-bend",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "south-bend",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "south-bend",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "fort-wayne",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "fort-wayne",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "fort-wayne",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "elkhart",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "elkhart",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "elkhart",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "lincoln",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "lincoln",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "lincoln",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "greensboro",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "greensboro",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "greensboro",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "fayetteville",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "fayetteville",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "fayetteville",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "wilmington",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "wilmington",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "wilmington",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "erie",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "erie",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "erie",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "york",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "york",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "york",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "chambersburg",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "chambersburg",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "chambersburg",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "medford-or",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "medford-or",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "medford-or",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "grants-pass",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "grants-pass",
+      "query": "laser car wash",
+      "count": 18
+    },
+    {
+      "metro": "grants-pass",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "grand-junction",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "grand-junction",
+      "query": "laser car wash",
+      "count": 14
+    },
+    {
+      "metro": "grand-junction",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "longmont",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "longmont",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "longmont",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "spokane",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "spokane",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "spokane",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "tacoma",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "tacoma",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "tacoma",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "san-jose",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "san-jose",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "san-jose",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "stockton",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "stockton",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "stockton",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "modesto",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "modesto",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "modesto",
+      "query": "brushless car wash",
+      "count": 20
+    },
+    {
+      "metro": "eugene",
+      "query": "touchless car wash",
+      "count": 20
+    },
+    {
+      "metro": "eugene",
+      "query": "laser car wash",
+      "count": 20
+    },
+    {
+      "metro": "eugene",
+      "query": "brushless car wash",
+      "count": 20
+    }
+  ],
+  "retryRunAt": "2026-04-15T14:04:39.123Z"
+}
