@@ -1,0 +1,427 @@
+{
+  "runAt": "2026-04-15T18:32:55.866Z",
+  "totalFound": 28038,
+  "totalMatched": 9899,
+  "totalMissing": 12963,
+  "totalTouchless": 79,
+  "byState": [
+    {
+      "state": "AL",
+      "found": 391,
+      "matched": 160,
+      "missing": 231,
+      "touchless": 0
+    },
+    {
+      "state": "AK",
+      "found": 58,
+      "matched": 0,
+      "missing": 39,
+      "touchless": 6,
+      "error": true
+    },
+    {
+      "state": "AZ",
+      "found": 669,
+      "matched": 351,
+      "missing": 318,
+      "touchless": 3
+    },
+    {
+      "state": "AR",
+      "found": 298,
+      "matched": 112,
+      "missing": 186,
+      "touchless": 0
+    },
+    {
+      "state": "CA-N",
+      "found": 862,
+      "matched": 560,
+      "missing": 302,
+      "touchless": 3
+    },
+    {
+      "state": "CA-S",
+      "found": 1050,
+      "matched": 0,
+      "missing": 501,
+      "touchless": 1,
+      "error": true
+    },
+    {
+      "state": "CO",
+      "found": 824,
+      "matched": 507,
+      "missing": 317,
+      "touchless": 0
+    },
+    {
+      "state": "CT",
+      "found": 153,
+      "matched": 119,
+      "missing": 34,
+      "touchless": 0
+    },
+    {
+      "state": "DE",
+      "found": 78,
+      "matched": 56,
+      "missing": 22,
+      "touchless": 0
+    },
+    {
+      "state": "FL-N",
+      "found": 331,
+      "matched": 0,
+      "missing": 185,
+      "touchless": 1,
+      "error": true
+    },
+    {
+      "state": "FL-S",
+      "found": 580,
+      "matched": 353,
+      "missing": 227,
+      "touchless": 1
+    },
+    {
+      "state": "GA",
+      "found": 913,
+      "matched": 0,
+      "missing": 355,
+      "touchless": 0,
+      "error": true
+    },
+    {
+      "state": "HI",
+      "found": 24,
+      "matched": 20,
+      "missing": 4,
+      "touchless": 0
+    },
+    {
+      "state": "ID",
+      "found": 238,
+      "matched": 0,
+      "missing": 130,
+      "touchless": 0,
+      "error": true
+    },
+    {
+      "state": "IL",
+      "found": 1295,
+      "matched": 0,
+      "missing": 649,
+      "touchless": 1,
+      "error": true
+    },
+    {
+      "state": "IN",
+      "found": 576,
+      "matched": 272,
+      "missing": 304,
+      "touchless": 0
+    },
+    {
+      "state": "IA",
+      "found": 571,
+      "matched": 0,
+      "missing": 296,
+      "touchless": 2,
+      "error": true
+    },
+    {
+      "state": "KS",
+      "found": 295,
+      "matched": 92,
+      "missing": 203,
+      "touchless": 3
+    },
+    {
+      "state": "KY",
+      "found": 465,
+      "matched": 238,
+      "missing": 227,
+      "touchless": 0
+    },
+    {
+      "state": "LA",
+      "found": 229,
+      "matched": 0,
+      "missing": 149,
+      "touchless": 0,
+      "error": true
+    },
+    {
+      "state": "ME",
+      "found": 104,
+      "matched": 0,
+      "missing": 65,
+      "touchless": 0,
+      "error": true
+    },
+    {
+      "state": "MD",
+      "found": 713,
+      "matched": 0,
+      "missing": 510,
+      "touchless": 3,
+      "error": true
+    },
+    {
+      "state": "MA",
+      "found": 0,
+      "matched": 0,
+      "missing": 0,
+      "touchless": 0,
+      "error": true
+    },
+    {
+      "state": "MI",
+      "found": 1804,
+      "matched": 1177,
+      "missing": 627,
+      "touchless": 2
+    },
+    {
+      "state": "MN",
+      "found": 775,
+      "matched": 529,
+      "missing": 246,
+      "touchless": 0
+    },
+    {
+      "state": "MS",
+      "found": 235,
+      "matched": 0,
+      "missing": 166,
+      "touchless": 0,
+      "error": true
+    },
+    {
+      "state": "MO",
+      "found": 0,
+      "matched": 0,
+      "missing": 0,
+      "touchless": 0,
+      "error": true
+    },
+    {
+      "state": "MT",
+      "found": 127,
+      "matched": 74,
+      "missing": 53,
+      "touchless": 0
+    },
+    {
+      "state": "NE",
+      "found": 333,
+      "matched": 163,
+      "missing": 170,
+      "touchless": 0
+    },
+    {
+      "state": "NV",
+      "found": 338,
+      "matched": 215,
+      "missing": 123,
+      "touchless": 0
+    },
+    {
+      "state": "NH",
+      "found": 154,
+      "matched": 0,
+      "missing": 65,
+      "touchless": 0,
+      "error": true
+    },
+    {
+      "state": "NJ",
+      "found": 490,
+      "matched": 0,
+      "missing": 204,
+      "touchless": 0,
+      "error": true
+    },
+    {
+      "state": "NM",
+      "found": 291,
+      "matched": 180,
+      "missing": 111,
+      "touchless": 1
+    },
+    {
+      "state": "NY-U",
+      "found": 855,
+      "matched": 436,
+      "missing": 419,
+      "touchless": 16
+    },
+    {
+      "state": "NY-NYC",
+      "found": 250,
+      "matched": 192,
+      "missing": 58,
+      "touchless": 0
+    },
+    {
+      "state": "NC",
+      "found": 1234,
+      "matched": 0,
+      "missing": 538,
+      "touchless": 2,
+      "error": true
+    },
+    {
+      "state": "ND",
+      "found": 0,
+      "matched": 0,
+      "missing": 0,
+      "touchless": 0,
+      "error": true
+    },
+    {
+      "state": "OH",
+      "found": 1131,
+      "matched": 519,
+      "missing": 612,
+      "touchless": 12
+    },
+    {
+      "state": "OK",
+      "found": 460,
+      "matched": 0,
+      "missing": 225,
+      "touchless": 0,
+      "error": true
+    },
+    {
+      "state": "OR",
+      "found": 362,
+      "matched": 262,
+      "missing": 100,
+      "touchless": 0
+    },
+    {
+      "state": "PA-E",
+      "found": 566,
+      "matched": 0,
+      "missing": 206,
+      "touchless": 2,
+      "error": true
+    },
+    {
+      "state": "PA-W",
+      "found": 310,
+      "matched": 179,
+      "missing": 131,
+      "touchless": 1
+    },
+    {
+      "state": "RI",
+      "found": 23,
+      "matched": 0,
+      "missing": 6,
+      "touchless": 0,
+      "error": true
+    },
+    {
+      "state": "SC",
+      "found": 614,
+      "matched": 322,
+      "missing": 292,
+      "touchless": 0
+    },
+    {
+      "state": "SD",
+      "found": 153,
+      "matched": 100,
+      "missing": 53,
+      "touchless": 0
+    },
+    {
+      "state": "TN",
+      "found": 525,
+      "matched": 274,
+      "missing": 251,
+      "touchless": 0
+    },
+    {
+      "state": "TX-E",
+      "found": 2281,
+      "matched": 1285,
+      "missing": 996,
+      "touchless": 4
+    },
+    {
+      "state": "TX-W",
+      "found": 363,
+      "matched": 0,
+      "missing": 197,
+      "touchless": 1,
+      "error": true
+    },
+    {
+      "state": "UT",
+      "found": 400,
+      "matched": 0,
+      "missing": 273,
+      "touchless": 2,
+      "error": true
+    },
+    {
+      "state": "VT",
+      "found": 91,
+      "matched": 0,
+      "missing": 35,
+      "touchless": 1,
+      "error": true
+    },
+    {
+      "state": "VA",
+      "found": 1201,
+      "matched": 0,
+      "missing": 758,
+      "touchless": 6,
+      "error": true
+    },
+    {
+      "state": "WA",
+      "found": 639,
+      "matched": 385,
+      "missing": 254,
+      "touchless": 2
+    },
+    {
+      "state": "WV",
+      "found": 531,
+      "matched": 275,
+      "missing": 256,
+      "touchless": 1
+    },
+    {
+      "state": "WI",
+      "found": 708,
+      "matched": 464,
+      "missing": 244,
+      "touchless": 1
+    },
+    {
+      "state": "WY",
+      "found": 53,
+      "matched": 28,
+      "missing": 25,
+      "touchless": 1
+    },
+    {
+      "state": "DC",
+      "found": 24,
+      "matched": 0,
+      "missing": 15,
+      "touchless": 0,
+      "error": true
+    }
+  ],
+  "retryRunAt": "2026-04-15T18:48:06.865Z"
+}
