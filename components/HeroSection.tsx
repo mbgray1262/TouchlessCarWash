@@ -652,8 +652,11 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
   return (
     <section
       id="search"
-      className="relative min-h-[70vh] md:min-h-[80vh] flex items-center overflow-hidden"
+      className="relative min-h-[70vh] md:min-h-[80vh] flex items-center"
     >
+      {/* Background image wrapper — keeps overflow-hidden on the IMAGE only so the
+          autocomplete dropdown can escape the hero section. */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
       {/* <picture> with AVIF/WebP responsive srcset — serves 19-70 KB instead of 180 KB */}
       <picture>
         <source
@@ -678,6 +681,7 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
         className="absolute inset-0 bg-gradient-to-r from-[#0a1628]/95 via-[#0a1628]/75 via-40% to-transparent"
         aria-hidden="true"
       />
+      </div>
 
       <div className="container mx-auto px-4 md:px-8 relative z-10">
         <div className="max-w-2xl">
