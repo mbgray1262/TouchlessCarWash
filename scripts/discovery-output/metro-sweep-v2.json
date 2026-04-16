@@ -1,0 +1,727 @@
+{
+  "creditsUsed": 50,
+  "promotions": 217,
+  "topDomains": [
+    {
+      "domain": "way.com",
+      "count": 35,
+      "metros": [
+        "Springfield, MA",
+        "Providence, RI",
+        "Baltimore, MD",
+        "Annapolis, MD",
+        "Savannah, GA",
+        "Augusta, GA",
+        "Charlotte, NC",
+        "Greensboro, NC",
+        "Durham, NC",
+        "Richmond, VA",
+        "Roanoke, VA",
+        "Spokane, WA",
+        "Tacoma, WA",
+        "Milwaukee, WI",
+        "Madison, WI",
+        "Green Bay, WI",
+        "Minneapolis, MN",
+        "Duluth, MN",
+        "Kansas City, MO",
+        "St. Louis, MO",
+        "Springfield, MO",
+        "Wichita, KS",
+        "Topeka, KS",
+        "Indianapolis, IN",
+        "Fort Wayne, IN",
+        "Cincinnati, OH",
+        "Cleveland, OH",
+        "Columbus, OH",
+        "Toledo, OH",
+        "Philadelphia, PA",
+        "Harrisburg, PA",
+        "Buffalo, NY",
+        "Syracuse, NY",
+        "Albany, NY"
+      ]
+    },
+    {
+      "domain": "touchlesscarwashfinder.com",
+      "count": 28,
+      "metros": [
+        "Springfield, MA",
+        "Savannah, GA",
+        "Augusta, GA",
+        "Roanoke, VA",
+        "Denver, CO",
+        "Boulder, CO",
+        "Green Bay, WI",
+        "Duluth, MN",
+        "Cedar Rapids, IA",
+        "Kansas City, MO",
+        "Springfield, MO",
+        "Wichita, KS",
+        "Topeka, KS",
+        "Indianapolis, IN",
+        "Fort Wayne, IN",
+        "Evansville, IN",
+        "Cincinnati, OH",
+        "Cleveland, OH",
+        "Toledo, OH",
+        "Philadelphia, PA",
+        "Harrisburg, PA",
+        "Buffalo, NY"
+      ]
+    },
+    {
+      "domain": "whistleexpresscarwash.com",
+      "count": 10,
+      "metros": [
+        "Atlanta, GA",
+        "Charlotte, NC",
+        "Raleigh, NC",
+        "Greensboro, NC",
+        "Richmond, VA",
+        "Norfolk, VA",
+        "Denver, CO",
+        "Colorado Springs, CO",
+        "Cleveland, OH"
+      ]
+    },
+    {
+      "domain": "tidalwaveautospa.com",
+      "count": 7,
+      "metros": [
+        "Atlanta, GA",
+        "Savannah, GA",
+        "Augusta, GA",
+        "Raleigh, NC",
+        "Greensboro, NC",
+        "Indianapolis, IN"
+      ]
+    },
+    {
+      "domain": "maps.apple.com",
+      "count": 5,
+      "metros": [
+        "Worcester, MA",
+        "Virginia Beach, VA",
+        "Boulder, CO",
+        "Milwaukee, WI",
+        "Columbus, OH"
+      ]
+    },
+    {
+      "domain": "teslamotorsclub.com",
+      "count": 5,
+      "metros": [
+        "Charlotte, NC",
+        "Seattle, WA",
+        "Denver, CO",
+        "Kansas City, MO",
+        "Philadelphia, PA"
+      ]
+    },
+    {
+      "domain": "scrubadub.com",
+      "count": 4,
+      "metros": [
+        "Worcester, MA",
+        "Providence, RI"
+      ]
+    },
+    {
+      "domain": "waze.com",
+      "count": 4,
+      "metros": [
+        "Virginia Beach, VA",
+        "Seattle, WA",
+        "Cincinnati, OH"
+      ]
+    },
+    {
+      "domain": "soapsnsuds.com",
+      "count": 3,
+      "metros": [
+        "Virginia Beach, VA",
+        "Norfolk, VA"
+      ]
+    },
+    {
+      "domain": "brownbear.com",
+      "count": 3,
+      "metros": [
+        "Seattle, WA",
+        "Spokane, WA"
+      ]
+    },
+    {
+      "domain": "local.yahoo.com",
+      "count": 3,
+      "metros": [
+        "Tacoma, WA",
+        "St. Paul, MN",
+        "Syracuse, NY"
+      ]
+    },
+    {
+      "domain": "glosswash.co",
+      "count": 3,
+      "metros": [
+        "Boulder, CO"
+      ]
+    },
+    {
+      "domain": "circlek.com",
+      "count": 3,
+      "metros": [
+        "Minneapolis, MN",
+        "St. Paul, MN",
+        "Duluth, MN"
+      ]
+    },
+    {
+      "domain": "touchfreecarwashing.com",
+      "count": 3,
+      "metros": [
+        "Pittsburgh, PA",
+        "Rochester, NY"
+      ]
+    },
+    {
+      "domain": "dirkscarwash.com",
+      "count": 3,
+      "metros": [
+        "Pittsburgh, PA"
+      ]
+    },
+    {
+      "domain": "hoffmancarwash.com",
+      "count": 3,
+      "metros": [
+        "Albany, NY"
+      ]
+    },
+    {
+      "domain": "neponsetcirclecarwash.com",
+      "count": 2,
+      "metros": [
+        "Boston, MA"
+      ]
+    },
+    {
+      "domain": "poshwash.com",
+      "count": 2,
+      "metros": [
+        "Providence, RI"
+      ]
+    },
+    {
+      "domain": "ccwcarwash.com",
+      "count": 2,
+      "metros": [
+        "Baltimore, MD"
+      ]
+    },
+    {
+      "domain": "corvetteforum.com",
+      "count": 2,
+      "metros": [
+        "Baltimore, MD",
+        "Philadelphia, PA"
+      ]
+    },
+    {
+      "domain": "waterworksmd.com",
+      "count": 2,
+      "metros": [
+        "Annapolis, MD"
+      ]
+    },
+    {
+      "domain": "leisuwashtouchless.com",
+      "count": 2,
+      "metros": [
+        "Augusta, GA",
+        "Tacoma, WA"
+      ]
+    },
+    {
+      "domain": "galleriaexpresscarwash.com",
+      "count": 2,
+      "metros": [
+        "Charlotte, NC"
+      ]
+    },
+    {
+      "domain": "indeed.com",
+      "count": 2,
+      "metros": [
+        "Norfolk, VA",
+        "Topeka, KS"
+      ]
+    },
+    {
+      "domain": "carwashmke.com",
+      "count": 2,
+      "metros": [
+        "Milwaukee, WI"
+      ]
+    },
+    {
+      "domain": "reviews.birdeye.com",
+      "count": 2,
+      "metros": [
+        "Milwaukee, WI",
+        "Cedar Rapids, IA"
+      ]
+    },
+    {
+      "domain": "nextdoor.com",
+      "count": 2,
+      "metros": [
+        "St. Louis, MO",
+        "Syracuse, NY"
+      ]
+    },
+    {
+      "domain": "halocarwashes.com",
+      "count": 2,
+      "metros": [
+        "Evansville, IN"
+      ]
+    },
+    {
+      "domain": "touchfreecarwashing.smarttecommerce.com",
+      "count": 2,
+      "metros": [
+        "Pittsburgh, PA",
+        "Rochester, NY"
+      ]
+    },
+    {
+      "domain": "prestigewash.com",
+      "count": 1,
+      "metros": [
+        "Boston, MA"
+      ]
+    },
+    {
+      "domain": "dexknows.com",
+      "count": 1,
+      "metros": [
+        "Worcester, MA"
+      ]
+    },
+    {
+      "domain": "softtouchautowash.com",
+      "count": 1,
+      "metros": [
+        "Springfield, MA"
+      ]
+    },
+    {
+      "domain": "friendlycarwashes.com",
+      "count": 1,
+      "metros": [
+        "Springfield, MA"
+      ]
+    },
+    {
+      "domain": "shine-on-auto-wash-touchless-automatic.com-place.com",
+      "count": 1,
+      "metros": [
+        "Providence, RI"
+      ]
+    },
+    {
+      "domain": "threebrothers.net",
+      "count": 1,
+      "metros": [
+        "Baltimore, MD"
+      ]
+    },
+    {
+      "domain": "m.facebook.com",
+      "count": 1,
+      "metros": [
+        "Annapolis, MD"
+      ]
+    },
+    {
+      "domain": "vintage-mustang.com",
+      "count": 1,
+      "metros": [
+        "Savannah, GA"
+      ]
+    },
+    {
+      "domain": "washandroll.net",
+      "count": 1,
+      "metros": [
+        "Raleigh, NC"
+      ]
+    },
+    {
+      "domain": "americanpridexpress.com",
+      "count": 1,
+      "metros": [
+        "Raleigh, NC"
+      ]
+    },
+    {
+      "domain": "washandrollnc.com",
+      "count": 1,
+      "metros": [
+        "Raleigh, NC"
+      ]
+    },
+    {
+      "domain": "evershinenc.com",
+      "count": 1,
+      "metros": [
+        "Greensboro, NC"
+      ]
+    },
+    {
+      "domain": "ft-carwash.com",
+      "count": 1,
+      "metros": [
+        "Richmond, VA"
+      ]
+    },
+    {
+      "domain": "autospaofvirginia.com",
+      "count": 1,
+      "metros": [
+        "Richmond, VA"
+      ]
+    },
+    {
+      "domain": "coolwavecarwash.com",
+      "count": 1,
+      "metros": [
+        "Virginia Beach, VA"
+      ]
+    },
+    {
+      "domain": "ikescarwash.com",
+      "count": 1,
+      "metros": [
+        "Seattle, WA"
+      ]
+    },
+    {
+      "domain": "elephantcarwash.com",
+      "count": 1,
+      "metros": [
+        "Seattle, WA"
+      ]
+    },
+    {
+      "domain": "carwashplaza.com",
+      "count": 1,
+      "metros": [
+        "Spokane, WA"
+      ]
+    },
+    {
+      "domain": "metroexpresscarwash.com",
+      "count": 1,
+      "metros": [
+        "Spokane, WA"
+      ]
+    },
+    {
+      "domain": "classychassis.com",
+      "count": 1,
+      "metros": [
+        "Tacoma, WA"
+      ]
+    },
+    {
+      "domain": "autowashco.com",
+      "count": 1,
+      "metros": [
+        "Denver, CO"
+      ]
+    },
+    {
+      "domain": "bigwave-carwash.com",
+      "count": 1,
+      "metros": [
+        "Colorado Springs, CO"
+      ]
+    },
+    {
+      "domain": "5starcarwash.net",
+      "count": 1,
+      "metros": [
+        "Colorado Springs, CO"
+      ]
+    },
+    {
+      "domain": "bigsplashcarwash.com",
+      "count": 1,
+      "metros": [
+        "Colorado Springs, CO"
+      ]
+    },
+    {
+      "domain": "supersudscaranddogwash.com",
+      "count": 1,
+      "metros": [
+        "Colorado Springs, CO"
+      ]
+    },
+    {
+      "domain": "short-stop-co.com",
+      "count": 1,
+      "metros": [
+        "Boulder, CO"
+      ]
+    },
+    {
+      "domain": "magicwashcarwash.com",
+      "count": 1,
+      "metros": [
+        "Madison, WI"
+      ]
+    },
+    {
+      "domain": "zimbrick.com",
+      "count": 1,
+      "metros": [
+        "Madison, WI"
+      ]
+    },
+    {
+      "domain": "smarttoyota.com",
+      "count": 1,
+      "metros": [
+        "Madison, WI"
+      ]
+    },
+    {
+      "domain": "forum.silveradoss.com",
+      "count": 1,
+      "metros": [
+        "Minneapolis, MN"
+      ]
+    },
+    {
+      "domain": "ferrarilakeforest.com",
+      "count": 1,
+      "metros": [
+        "Minneapolis, MN"
+      ]
+    },
+    {
+      "domain": "ricestreetcarwash.com",
+      "count": 1,
+      "metros": [
+        "St. Paul, MN"
+      ]
+    },
+    {
+      "domain": "spotfreecarwash.com",
+      "count": 1,
+      "metros": [
+        "Des Moines, IA"
+      ]
+    },
+    {
+      "domain": "jordancreekcarwash.com",
+      "count": 1,
+      "metros": [
+        "Des Moines, IA"
+      ]
+    },
+    {
+      "domain": "parkavenuecarwash.com",
+      "count": 1,
+      "metros": [
+        "Des Moines, IA"
+      ]
+    },
+    {
+      "domain": "desmoinescarwash.com",
+      "count": 1,
+      "metros": [
+        "Des Moines, IA"
+      ]
+    },
+    {
+      "domain": "loopnet.com",
+      "count": 1,
+      "metros": [
+        "Cedar Rapids, IA"
+      ]
+    },
+    {
+      "domain": "staples.com",
+      "count": 1,
+      "metros": [
+        "Cedar Rapids, IA"
+      ]
+    },
+    {
+      "domain": "thebetterwash.com",
+      "count": 1,
+      "metros": [
+        "Kansas City, MO"
+      ]
+    },
+    {
+      "domain": "polishmastersautodetail.com",
+      "count": 1,
+      "metros": [
+        "St. Louis, MO"
+      ]
+    },
+    {
+      "domain": "patriotautowash.com",
+      "count": 1,
+      "metros": [
+        "Springfield, MO"
+      ]
+    },
+    {
+      "domain": "joescarwashwichita.com",
+      "count": 1,
+      "metros": [
+        "Wichita, KS"
+      ]
+    },
+    {
+      "domain": "driveandshine.com",
+      "count": 1,
+      "metros": [
+        "Fort Wayne, IN"
+      ]
+    },
+    {
+      "domain": "poyst.com",
+      "count": 1,
+      "metros": [
+        "Fort Wayne, IN"
+      ]
+    },
+    {
+      "domain": "lazrtek.com",
+      "count": 1,
+      "metros": [
+        "Fort Wayne, IN"
+      ]
+    },
+    {
+      "domain": "washboss.com",
+      "count": 1,
+      "metros": [
+        "Evansville, IN"
+      ]
+    },
+    {
+      "domain": "tomwebbsautobody.com",
+      "count": 1,
+      "metros": [
+        "Cincinnati, OH"
+      ]
+    },
+    {
+      "domain": "thecarwash1.com",
+      "count": 1,
+      "metros": [
+        "Cleveland, OH"
+      ]
+    },
+    {
+      "domain": "touchlessexpress.com",
+      "count": 1,
+      "metros": [
+        "Columbus, OH"
+      ]
+    },
+    {
+      "domain": "mrsudzcarwash.com",
+      "count": 1,
+      "metros": [
+        "Columbus, OH"
+      ]
+    },
+    {
+      "domain": "sparklekcarwash.com",
+      "count": 1,
+      "metros": [
+        "Toledo, OH"
+      ]
+    },
+    {
+      "domain": "yelp.ca",
+      "count": 1,
+      "metros": [
+        "Pittsburgh, PA"
+      ]
+    },
+    {
+      "domain": "sonicwavecarwash.com",
+      "count": 1,
+      "metros": [
+        "Pittsburgh, PA"
+      ]
+    },
+    {
+      "domain": "m.yelp.ca",
+      "count": 1,
+      "metros": [
+        "Pittsburgh, PA"
+      ]
+    },
+    {
+      "domain": "infinitifx.org",
+      "count": 1,
+      "metros": [
+        "Philadelphia, PA"
+      ]
+    },
+    {
+      "domain": "moovitapp.com",
+      "count": 1,
+      "metros": [
+        "Buffalo, NY"
+      ]
+    },
+    {
+      "domain": "rusiniaks.com",
+      "count": 1,
+      "metros": [
+        "Buffalo, NY"
+      ]
+    },
+    {
+      "domain": "malchoscarwash.com",
+      "count": 1,
+      "metros": [
+        "Rochester, NY"
+      ]
+    },
+    {
+      "domain": "shinyridecarwash.com",
+      "count": 1,
+      "metros": [
+        "Rochester, NY"
+      ]
+    },
+    {
+      "domain": "glenmontcarwash.com",
+      "count": 1,
+      "metros": [
+        "Albany, NY"
+      ]
+    },
+    {
+      "domain": "broadwayautoclinic.com",
+      "count": 1,
+      "metros": [
+        "Albany, NY"
+      ]
+    }
+  ]
+}

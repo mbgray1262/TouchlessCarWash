@@ -45,7 +45,7 @@ interface ListingData {
   extracted_data: Record<string, unknown> | null;
 }
 
-async function generateDescriptionWithClaude(listing: ListingData, apiKey: string): Promise<string> {
+async function generateDescriptionWithGemini(listing: ListingData, apiKey: string): Promise<string> {
   const parts: string[] = [];
 
   parts.push(`Business name: ${listing.name}`);
@@ -235,23 +235,28 @@ ${context}
 
 Write the description now. Remember: every sentence must contain a fact specific to THIS business.`;
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 600,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  });
+  // Gemini 2.5 Flash — free tier for directory-scale use. Same sophisticated
+  // prompt as before; we just swap the model endpoint.
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 800,
+          topP: 0.9,
+        },
+      }),
+    }
+  );
 
-  if (!res.ok) throw new Error(`Claude error ${res.status}: ${await res.text()}`);
-  const data = await res.json() as { content: Array<{ text: string }> };
-  return (data.content?.[0]?.text ?? '').trim();
+  if (!res.ok) throw new Error(`Gemini error ${res.status}: ${await res.text()}`);
+  const data = await res.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+  return text.trim();
 }
 
 Deno.serve(async (req: Request) => {
@@ -262,7 +267,7 @@ Deno.serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY') ?? await getSecret(supabaseUrl, serviceKey, 'ANTHROPIC_API_KEY');
+    const geminiKey = Deno.env.get('GEMINI_API_KEY') ?? await getSecret(supabaseUrl, serviceKey, 'GEMINI_API_KEY');
 
     const supabase = createClient(supabaseUrl, serviceKey);
     const body = await req.json().catch(() => ({}));
@@ -293,8 +298,8 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === 'start') {
-      if (!anthropicKey) {
-        return Response.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500, headers: corsHeaders });
+      if (!geminiKey) {
+        return Response.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500, headers: corsHeaders });
       }
 
       const limit: number = body.limit ?? 0;
@@ -363,8 +368,8 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === 'process_batch') {
-      if (!anthropicKey) {
-        return Response.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500, headers: corsHeaders });
+      if (!geminiKey) {
+        return Response.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500, headers: corsHeaders });
       }
 
       const jobId = body.job_id;
@@ -409,7 +414,7 @@ Deno.serve(async (req: Request) => {
           .maybeSingle();
 
         if (listing) {
-          const description = await generateDescriptionWithClaude(listing as ListingData, anthropicKey);
+          const description = await generateDescriptionWithGemini(listing as ListingData, geminiKey);
           if (description && description.length > 20) {
             await supabase.from('listings').update({
               description,

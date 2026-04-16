@@ -1,0 +1,291 @@
+{
+  "creditsUsed": 29,
+  "promotions": 19,
+  "tunnelBlocked": [
+    {
+      "domain": "way.com",
+      "count": 15
+    },
+    {
+      "domain": "tidalwaveautospa.com",
+      "count": 1
+    }
+  ],
+  "topDomains": [
+    {
+      "domain": "touchlesscarwashfinder.com",
+      "count": 17,
+      "metros": [
+        "Gulfport, MS",
+        "Cheyenne, WY",
+        "Casper, WY",
+        "Albuquerque, NM",
+        "Las Cruces, NM",
+        "Warwick, RI",
+        "Dover, DE",
+        "Provo, UT",
+        "Ogden, UT",
+        "Fairbanks, AK",
+        "Little Rock, AR",
+        "Fayetteville, AR",
+        "Fort Smith, AR"
+      ]
+    },
+    {
+      "domain": "rockymountaincarwash.com",
+      "count": 4,
+      "metros": [
+        "Cheyenne, WY",
+        "Casper, WY"
+      ]
+    },
+    {
+      "domain": "scrubadub.com",
+      "count": 3,
+      "metros": [
+        "Providence, RI",
+        "Warwick, RI"
+      ]
+    },
+    {
+      "domain": "poshwash.com",
+      "count": 2,
+      "metros": [
+        "Providence, RI"
+      ]
+    },
+    {
+      "domain": "greenhillcarwash.com",
+      "count": 2,
+      "metros": [
+        "Wilmington, DE"
+      ]
+    },
+    {
+      "domain": "truckranch.com",
+      "count": 2,
+      "metros": [
+        "Salt Lake City, UT",
+        "Provo, UT"
+      ]
+    },
+    {
+      "domain": "alaskalaserwash.com",
+      "count": 2,
+      "metros": [
+        "Anchorage, AK"
+      ]
+    },
+    {
+      "domain": "glidexwash.com",
+      "count": 2,
+      "metros": [
+        "Little Rock, AR",
+        "Fayetteville, AR"
+      ]
+    },
+    {
+      "domain": "lazrtek.com",
+      "count": 1,
+      "metros": [
+        "Jackson, MS"
+      ]
+    },
+    {
+      "domain": "coastalcarwash.com",
+      "count": 1,
+      "metros": [
+        "Gulfport, MS"
+      ]
+    },
+    {
+      "domain": "classychassis94.wixsite.com",
+      "count": 1,
+      "metros": [
+        "Biloxi, MS"
+      ]
+    },
+    {
+      "domain": "carwashesofamerica.com",
+      "count": 1,
+      "metros": [
+        "Biloxi, MS"
+      ]
+    },
+    {
+      "domain": "viveautostyling.com",
+      "count": 1,
+      "metros": [
+        "Casper, WY"
+      ]
+    },
+    {
+      "domain": "oilcity.news",
+      "count": 1,
+      "metros": [
+        "Casper, WY"
+      ]
+    },
+    {
+      "domain": "lscarwash.com",
+      "count": 1,
+      "metros": [
+        "Albuquerque, NM"
+      ]
+    },
+    {
+      "domain": "bellcarwashsantafe.com",
+      "count": 1,
+      "metros": [
+        "Santa Fe, NM"
+      ]
+    },
+    {
+      "domain": "santafenewmexican.com",
+      "count": 1,
+      "metros": [
+        "Santa Fe, NM"
+      ]
+    },
+    {
+      "domain": "bell-touchless-automatic-self-service-car-wash.wheree.com",
+      "count": 1,
+      "metros": [
+        "Santa Fe, NM"
+      ]
+    },
+    {
+      "domain": "aggiecarwash.com",
+      "count": 1,
+      "metros": [
+        "Las Cruces, NM"
+      ]
+    },
+    {
+      "domain": "dandb.com",
+      "count": 1,
+      "metros": [
+        "Las Cruces, NM"
+      ]
+    },
+    {
+      "domain": "shine-on-auto-wash-touchless-automatic.com-place.com",
+      "count": 1,
+      "metros": [
+        "Providence, RI"
+      ]
+    },
+    {
+      "domain": "shine-on-auto-wash-touchless-automatic-1.wheree.com",
+      "count": 1,
+      "metros": [
+        "Warwick, RI"
+      ]
+    },
+    {
+      "domain": "regalcarwash.com",
+      "count": 1,
+      "metros": [
+        "Wilmington, DE"
+      ]
+    },
+    {
+      "domain": "iqsdirectory.com",
+      "count": 1,
+      "metros": [
+        "Salt Lake City, UT"
+      ]
+    },
+    {
+      "domain": "quickandcleanwashogden.com",
+      "count": 1,
+      "metros": [
+        "Ogden, UT"
+      ]
+    },
+    {
+      "domain": "carwashutah.com",
+      "count": 1,
+      "metros": [
+        "Ogden, UT"
+      ]
+    },
+    {
+      "domain": "rmiautodetail.com",
+      "count": 1,
+      "metros": [
+        "Ogden, UT"
+      ]
+    },
+    {
+      "domain": "renntech.org",
+      "count": 1,
+      "metros": [
+        "Ogden, UT"
+      ]
+    },
+    {
+      "domain": "arcticblastwash.com",
+      "count": 1,
+      "metros": [
+        "Anchorage, AK"
+      ]
+    },
+    {
+      "domain": "monsterwash.net",
+      "count": 1,
+      "metros": [
+        "Anchorage, AK"
+      ]
+    },
+    {
+      "domain": "anchorage.net",
+      "count": 1,
+      "metros": [
+        "Anchorage, AK"
+      ]
+    },
+    {
+      "domain": "f150forum.com",
+      "count": 1,
+      "metros": [
+        "Fairbanks, AK"
+      ]
+    },
+    {
+      "domain": "ranger-forums.com",
+      "count": 1,
+      "metros": [
+        "Fairbanks, AK"
+      ]
+    },
+    {
+      "domain": "local.yahoo.com",
+      "count": 1,
+      "metros": [
+        "Little Rock, AR"
+      ]
+    },
+    {
+      "domain": "portsidenwa.com",
+      "count": 1,
+      "metros": [
+        "Fayetteville, AR"
+      ]
+    },
+    {
+      "domain": "nextdoor.com",
+      "count": 1,
+      "metros": [
+        "Fayetteville, AR"
+      ]
+    },
+    {
+      "domain": "car-washes.cmac.ws",
+      "count": 1,
+      "metros": [
+        "Fort Smith, AR"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,752 @@
+{
+  "creditsUsed": 41,
+  "promotions": 169,
+  "topDomains": [
+    {
+      "domain": "way.com",
+      "count": 23,
+      "metros": [
+        "New York, NY",
+        "Brooklyn, NY",
+        "Queens, NY",
+        "Bronx, NY",
+        "Austin, TX",
+        "Dallas, TX",
+        "Fort Worth, TX",
+        "San Jose, CA",
+        "Sacramento, CA",
+        "Tampa, FL",
+        "Jacksonville, FL",
+        "Fort Lauderdale, FL",
+        "Detroit, MI",
+        "Oklahoma City, OK",
+        "Nashville, TN",
+        "Memphis, TN",
+        "Knoxville, TN",
+        "Portland, OR",
+        "Salem, OR",
+        "Eugene, OR",
+        "Charleston, SC",
+        "Greenville, SC",
+        "Louisville, KY"
+      ],
+      "sample": "https://www.way.com/car-wash-near-me/manhattan-ny"
+    },
+    {
+      "domain": "touchlesscarwashfinder.com",
+      "count": 17,
+      "metros": [
+        "Austin, TX",
+        "Dallas, TX",
+        "San Diego, CA",
+        "Miami, FL",
+        "Fort Lauderdale, FL",
+        "Henderson, NV",
+        "Tucson, AZ",
+        "Mesa, AZ",
+        "Tulsa, OK",
+        "Nashville, TN",
+        "Salem, OR",
+        "Eugene, OR",
+        "Charleston, SC",
+        "Greenville, SC",
+        "Lexington, KY"
+      ],
+      "sample": "https://touchlesscarwashfinder.com/state/texas/austin/laserwash-iii-3004-w-slaughter-ln-austin-tx-78748-austin-texas"
+    },
+    {
+      "domain": "tidalwaveautospa.com",
+      "count": 8,
+      "metros": [
+        "Houston, TX",
+        "Fort Worth, TX",
+        "Orlando, FL",
+        "Knoxville, TN",
+        "Charleston, SC",
+        "Columbia, SC",
+        "Lexington, KY"
+      ],
+      "sample": "https://www.tidalwaveautospa.com/location/houston-tx/"
+    },
+    {
+      "domain": "whistleexpresscarwash.com",
+      "count": 7,
+      "metros": [
+        "Jacksonville, FL",
+        "Charleston, SC",
+        "Greenville, SC",
+        "Louisville, KY"
+      ],
+      "sample": "https://whistleexpresscarwash.com/locations/6929-103rd-street-jacksonville-fl/"
+    },
+    {
+      "domain": "reviews.birdeye.com",
+      "count": 4,
+      "metros": [
+        "New York, NY",
+        "San Diego, CA",
+        "Memphis, TN"
+      ],
+      "sample": "https://reviews.birdeye.com/atlantic-brushless-car-wash-156057510284153"
+    },
+    {
+      "domain": "teslamotorsclub.com",
+      "count": 4,
+      "metros": [
+        "Austin, TX",
+        "Dallas, TX",
+        "Los Angeles, CA",
+        "San Diego, CA"
+      ],
+      "sample": "https://teslamotorsclub.com/tmc/threads/car-wash-in-austin-tx.248653/"
+    },
+    {
+      "domain": "waze.com",
+      "count": 3,
+      "metros": [
+        "Miami, FL",
+        "Oklahoma City, OK",
+        "Louisville, KY"
+      ],
+      "sample": "https://www.waze.com/live-map/directions/us/fl/miami/touch-free-car-wash?to=place.ChIJbzPDdr_B2YgRH1Rgk_4qmcg"
+    },
+    {
+      "domain": "maps.apple.com",
+      "count": 2,
+      "metros": [
+        "Brooklyn, NY",
+        "Tampa, FL"
+      ],
+      "sample": "https://maps.apple.com/place?place-id=IA341F3476766B295"
+    },
+    {
+      "domain": "lazrtek.com",
+      "count": 2,
+      "metros": [
+        "Brooklyn, NY",
+        "Eugene, OR"
+      ],
+      "sample": "https://lazrtek.com/touchless-drive-through-car-wash/brooklyn-ny"
+    },
+    {
+      "domain": "ft86club.com",
+      "count": 2,
+      "metros": [
+        "Bronx, NY",
+        "Portland, OR"
+      ],
+      "sample": "https://www.ft86club.com/forums/showthread.php?t=21477"
+    },
+    {
+      "domain": "gorillacarwashcompany.com",
+      "count": 2,
+      "metros": [
+        "San Antonio, TX"
+      ],
+      "sample": "https://www.gorillacarwashcompany.com/"
+    },
+    {
+      "domain": "spotfreecar.com",
+      "count": 2,
+      "metros": [
+        "Los Angeles, CA"
+      ],
+      "sample": "https://www.spotfreecar.com/the-best-touchless-car-wash-in-los-angeles-is-here/"
+    },
+    {
+      "domain": "pwrmarket.com",
+      "count": 2,
+      "metros": [
+        "Los Angeles, CA",
+        "Sacramento, CA"
+      ],
+      "sample": "https://pwrmarket.com/locations-category/car-wash-touchless-drive-through/"
+    },
+    {
+      "domain": "nextdoor.com",
+      "count": 2,
+      "metros": [
+        "San Jose, CA",
+        "Mesa, AZ"
+      ],
+      "sample": "https://nextdoor.com/pages/san-jose-touchless-car-wash-san-jose-ca/"
+    },
+    {
+      "domain": "local.yahoo.com",
+      "count": 2,
+      "metros": [
+        "San Jose, CA",
+        "Mesa, AZ"
+      ],
+      "sample": "https://local.yahoo.com/info-21590579-san-jose-touchless-car-wash-san-jose/"
+    },
+    {
+      "domain": "myexpresscarwash.com",
+      "count": 2,
+      "metros": [
+        "Chicago, IL"
+      ],
+      "sample": "https://www.myexpresscarwash.com/5450-n-damen-ave-chicago-il-60625"
+    },
+    {
+      "domain": "surecleancarwash.com",
+      "count": 2,
+      "metros": [
+        "Reno, NV"
+      ],
+      "sample": "https://surecleancarwash.com/"
+    },
+    {
+      "domain": "27thavecarwash.com",
+      "count": 2,
+      "metros": [
+        "Phoenix, AZ"
+      ],
+      "sample": "https://www.27thavecarwash.com/"
+    },
+    {
+      "domain": "thesafaricarwash.com",
+      "count": 2,
+      "metros": [
+        "Nashville, TN"
+      ],
+      "sample": "https://thesafaricarwash.com/"
+    },
+    {
+      "domain": "jaguarmanhattan.com",
+      "count": 1,
+      "metros": [
+        "New York, NY"
+      ],
+      "sample": "https://www.jaguarmanhattan.com/service/service-and-parts-tips/hand-car-wash-vs-touchless-car-wash/"
+    },
+    {
+      "domain": "rennlist.com",
+      "count": 1,
+      "metros": [
+        "New York, NY"
+      ],
+      "sample": "https://rennlist.com/forums/997-forum/665686-touchless-carwash-safe-for-cabriolet.html"
+    },
+    {
+      "domain": "bizbuysell.com",
+      "count": 1,
+      "metros": [
+        "New York, NY"
+      ],
+      "sample": "https://www.bizbuysell.com/business-real-estate-for-sale/laserwash-touchfree-car-wash-portfolio-rochester-ny-metro/2363032/"
+    },
+    {
+      "domain": "showmelocal.com",
+      "count": 1,
+      "metros": [
+        "Brooklyn, NY"
+      ],
+      "sample": "https://www.showmelocal.com/25943089-atlantic-brushless-car-wash-brooklyn"
+    },
+    {
+      "domain": "majorworldchryslerdodgejeepram.com",
+      "count": 1,
+      "metros": [
+        "Queens, NY"
+      ],
+      "sample": "https://www.majorworldchryslerdodgejeepram.com/service-department/service-tips/hand-car-wash-vs-touchless-car-wash/"
+    },
+    {
+      "domain": "nostressautony.com",
+      "count": 1,
+      "metros": [
+        "Queens, NY"
+      ],
+      "sample": "https://nostressautony.com/touchless-car-wash/"
+    },
+    {
+      "domain": "victorymitsubishi.com",
+      "count": 1,
+      "metros": [
+        "Bronx, NY"
+      ],
+      "sample": "https://www.victorymitsubishi.com/service/service-tips/hand-car-wash-vs-touchless-car-wash/"
+    },
+    {
+      "domain": "lastmiledr.app",
+      "count": 1,
+      "metros": [
+        "Bronx, NY"
+      ],
+      "sample": "https://www.lastmiledr.app/services/truck-wash/zip/10461"
+    },
+    {
+      "domain": "iqsdirectory.com",
+      "count": 1,
+      "metros": [
+        "Bronx, NY"
+      ],
+      "sample": "https://www.iqsdirectory.com/touchless-car-wash/touchless-car-wash-2/"
+    },
+    {
+      "domain": "armstrongcarwash.com",
+      "count": 1,
+      "metros": [
+        "Staten Island, NY"
+      ],
+      "sample": "https://armstrongcarwash.com/"
+    },
+    {
+      "domain": "washhounds.com",
+      "count": 1,
+      "metros": [
+        "Staten Island, NY"
+      ],
+      "sample": "https://washhounds.com/soft-touch-car-wash-vs-touch-free-car-wash/"
+    },
+    {
+      "domain": "e46fanatics.com",
+      "count": 1,
+      "metros": [
+        "Staten Island, NY"
+      ],
+      "sample": "https://www.e46fanatics.com/threads/touchless-car-washes-in-nyc.138108/"
+    },
+    {
+      "domain": "swift-autocare.com",
+      "count": 1,
+      "metros": [
+        "Staten Island, NY"
+      ],
+      "sample": "https://swift-autocare.com/pages/contact"
+    },
+    {
+      "domain": "carwashsupershine.com",
+      "count": 1,
+      "metros": [
+        "Houston, TX"
+      ],
+      "sample": "https://carwashsupershine.com/"
+    },
+    {
+      "domain": "f150forum.com",
+      "count": 1,
+      "metros": [
+        "Houston, TX"
+      ],
+      "sample": "https://www.f150forum.com/f41/touchfree-car-washes-houston-497024/"
+    },
+    {
+      "domain": "mrscleancarwash.com",
+      "count": 1,
+      "metros": [
+        "San Antonio, TX"
+      ],
+      "sample": "https://www.mrscleancarwash.com/"
+    },
+    {
+      "domain": "jurassiccarwash.com",
+      "count": 1,
+      "metros": [
+        "San Antonio, TX"
+      ],
+      "sample": "https://www.jurassiccarwash.com/locations/potranco"
+    },
+    {
+      "domain": "washshop.com",
+      "count": 1,
+      "metros": [
+        "Austin, TX"
+      ],
+      "sample": "https://washshop.com/research-blvd-austin-tx/"
+    },
+    {
+      "domain": "redcarpetftw.com",
+      "count": 1,
+      "metros": [
+        "Fort Worth, TX"
+      ],
+      "sample": "https://www.redcarpetftw.com/"
+    },
+    {
+      "domain": "benscarwash.com",
+      "count": 1,
+      "metros": [
+        "Fort Worth, TX"
+      ],
+      "sample": "https://benscarwash.com/"
+    },
+    {
+      "domain": "firstplacecw.com",
+      "count": 1,
+      "metros": [
+        "Fort Worth, TX"
+      ],
+      "sample": "https://firstplacecw.com/"
+    },
+    {
+      "domain": "pr.newsaegis.com",
+      "count": 1,
+      "metros": [
+        "Fort Worth, TX"
+      ],
+      "sample": "https://pr.newsaegis.com/article/Bens-ScratchFree-Car-Wash-Is-the-Fastest-and-Safest-Touchless-Car-Wash-in-Fort-Worth-Now-Washing-Dually-Trucks-and-Vehicles-Up-to-8-Feet-Tall?storyId=69a5d20373c6430002d9dea5"
+    },
+    {
+      "domain": "happycowcarwash.com",
+      "count": 1,
+      "metros": [
+        "San Diego, CA"
+      ],
+      "sample": "https://happycowcarwash.com/"
+    },
+    {
+      "domain": "e90post.com",
+      "count": 1,
+      "metros": [
+        "San Diego, CA"
+      ],
+      "sample": "https://www.e90post.com/forums/showthread.php?t=72746"
+    },
+    {
+      "domain": "navylifesw.com",
+      "count": 1,
+      "metros": [
+        "San Diego, CA"
+      ],
+      "sample": "https://www.navylifesw.com/programs/e0de28eb-70aa-42c8-9cc3-cb4fc1d2b966"
+    },
+    {
+      "domain": "bimmerpost.com",
+      "count": 1,
+      "metros": [
+        "San Jose, CA"
+      ],
+      "sample": "https://bimmerpost.com/forums/showthread.php?t=699640"
+    },
+    {
+      "domain": "royalwavecarwash.com",
+      "count": 1,
+      "metros": [
+        "Sacramento, CA"
+      ],
+      "sample": "https://www.royalwavecarwash.com/"
+    },
+    {
+      "domain": "supercleanmycar.com",
+      "count": 1,
+      "metros": [
+        "Sacramento, CA"
+      ],
+      "sample": "https://supercleanmycar.com/"
+    },
+    {
+      "domain": "orbitwash.com",
+      "count": 1,
+      "metros": [
+        "Sacramento, CA"
+      ],
+      "sample": "https://orbitwash.com/"
+    },
+    {
+      "domain": "excaliburmobiledetail.com",
+      "count": 1,
+      "metros": [
+        "Fresno, CA"
+      ],
+      "sample": "https://excaliburmobiledetail.com/mobile-touchless/"
+    },
+    {
+      "domain": "silverstarcarwash.com",
+      "count": 1,
+      "metros": [
+        "Miami, FL"
+      ],
+      "sample": "https://silverstarcarwash.com/water-spots-scratches-8-reasons-a-touchless-car-wash-is-the-best-solution/"
+    },
+    {
+      "domain": "bubblebrotherscarwash.com",
+      "count": 1,
+      "metros": [
+        "Orlando, FL"
+      ],
+      "sample": "https://bubblebrotherscarwash.com/blog/drive-through-car-wash-orlando-fl/"
+    },
+    {
+      "domain": "corvetteforum.com",
+      "count": 1,
+      "metros": [
+        "Orlando, FL"
+      ],
+      "sample": "https://www.corvetteforum.com/forums/c7-general-discussion/3924241-touchless-car-wash.html"
+    },
+    {
+      "domain": "squeekyscarwash.com",
+      "count": 1,
+      "metros": [
+        "Tampa, FL"
+      ],
+      "sample": "https://squeekyscarwash.com/locations/fl/tampa-fl/"
+    },
+    {
+      "domain": "bluswancarwashtampa.com",
+      "count": 1,
+      "metros": [
+        "Tampa, FL"
+      ],
+      "sample": "https://bluswancarwashtampa.com/"
+    },
+    {
+      "domain": "baywashcarwash.com",
+      "count": 1,
+      "metros": [
+        "Tampa, FL"
+      ],
+      "sample": "http://www.baywashcarwash.com/"
+    },
+    {
+      "domain": "gotouchlesscarwash.com",
+      "count": 1,
+      "metros": [
+        "Jacksonville, FL"
+      ],
+      "sample": "https://gotouchlesscarwash.com/"
+    },
+    {
+      "domain": "majesticcarwashflorida.com",
+      "count": 1,
+      "metros": [
+        "Fort Lauderdale, FL"
+      ],
+      "sample": "https://majesticcarwashflorida.com/"
+    },
+    {
+      "domain": "carrectly.com",
+      "count": 1,
+      "metros": [
+        "Chicago, IL"
+      ],
+      "sample": "https://carrectly.com/blog/detailing/car-wash-in-chicago"
+    },
+    {
+      "domain": "7post.com",
+      "count": 1,
+      "metros": [
+        "Chicago, IL"
+      ],
+      "sample": "https://7post.com/forums/showthread.php?t=44782"
+    },
+    {
+      "domain": "m.facebook.com",
+      "count": 1,
+      "metros": [
+        "Detroit, MI"
+      ],
+      "sample": "https://m.facebook.com/jaxkarwash/photos/%EF%B8%8Fexciting-news-%EF%B8%8Fjaxs-first-touchless-car-wash-is-now-open-49720-gratiot-ave-new-/1120489976742713/"
+    },
+    {
+      "domain": "decaturwash.com",
+      "count": 1,
+      "metros": [
+        "Las Vegas, NV"
+      ],
+      "sample": "https://decaturwash.com/"
+    },
+    {
+      "domain": "vwvortex.com",
+      "count": 1,
+      "metros": [
+        "Las Vegas, NV"
+      ],
+      "sample": "https://www.vwvortex.com/threads/vegas-any-touchless-car-washes.7207448/"
+    },
+    {
+      "domain": "oasisautospanv.com",
+      "count": 1,
+      "metros": [
+        "Henderson, NV"
+      ],
+      "sample": "https://www.oasisautospanv.com/"
+    },
+    {
+      "domain": "renocarwashllc.com",
+      "count": 1,
+      "metros": [
+        "Reno, NV"
+      ],
+      "sample": "https://renocarwashllc.com/"
+    },
+    {
+      "domain": "tahoebluewash.com",
+      "count": 1,
+      "metros": [
+        "Reno, NV"
+      ],
+      "sample": "https://www.tahoebluewash.com/"
+    },
+    {
+      "domain": "elephantcarwash.com",
+      "count": 1,
+      "metros": [
+        "Phoenix, AZ"
+      ],
+      "sample": "https://www.elephantcarwash.com/our-arizona-wash-locations"
+    },
+    {
+      "domain": "f30.bimmerpost.com",
+      "count": 1,
+      "metros": [
+        "Phoenix, AZ"
+      ],
+      "sample": "https://f30.bimmerpost.com/forums/showthread.php?t=1892123"
+    },
+    {
+      "domain": "cleanerquickercarwash.com",
+      "count": 1,
+      "metros": [
+        "Tucson, AZ"
+      ],
+      "sample": "https://cleanerquickercarwash.com/state-of-the-art-technology/"
+    },
+    {
+      "domain": "m.youtube.com",
+      "count": 1,
+      "metros": [
+        "Mesa, AZ"
+      ],
+      "sample": "https://m.youtube.com/watch?v=vFsBjpAywWY"
+    },
+    {
+      "domain": "superkleancarwash.com",
+      "count": 1,
+      "metros": [
+        "Tulsa, OK"
+      ],
+      "sample": "https://superkleancarwash.com/f/the-different-brushless-car-wash-systems-we-offer-at-super-klean"
+    },
+    {
+      "domain": "ultravioletok.com",
+      "count": 1,
+      "metros": [
+        "Tulsa, OK"
+      ],
+      "sample": "https://www.ultravioletok.com/"
+    },
+    {
+      "domain": "thunderautowash.com",
+      "count": 1,
+      "metros": [
+        "Oklahoma City, OK"
+      ],
+      "sample": "https://thunderautowash.com/"
+    },
+    {
+      "domain": "quicknclean.net",
+      "count": 1,
+      "metros": [
+        "Oklahoma City, OK"
+      ],
+      "sample": "https://quicknclean.net/oklahoma-locations/oklahoma-car-wash-reno-avenue/"
+    },
+    {
+      "domain": "laserwashofwoodward.com",
+      "count": 1,
+      "metros": [
+        "Oklahoma City, OK"
+      ],
+      "sample": "https://laserwashofwoodward.com/"
+    },
+    {
+      "domain": "glidexwash.com",
+      "count": 1,
+      "metros": [
+        "Memphis, TN"
+      ],
+      "sample": "https://www.glidexwash.com/locations/memphis-tn-austin-peay-hwy/"
+    },
+    {
+      "domain": "xpressolube.com",
+      "count": 1,
+      "metros": [
+        "Portland, OR"
+      ],
+      "sample": "https://xpressolube.com/car-wash/"
+    },
+    {
+      "domain": "jlwranglerforums.com",
+      "count": 1,
+      "metros": [
+        "Salem, OR"
+      ],
+      "sample": "https://www.jlwranglerforums.com/forum/threads/can-the-premium-soft-top-be-taken-through-automated-car-wash.10088/"
+    },
+    {
+      "domain": "delta-car-wash.wheree.com",
+      "count": 1,
+      "metros": [
+        "Eugene, OR"
+      ],
+      "sample": "https://delta-car-wash.wheree.com/"
+    },
+    {
+      "domain": "autec-carwash.com",
+      "count": 1,
+      "metros": [
+        "Columbia, SC"
+      ],
+      "sample": "https://autec-carwash.com/blog/news/reaping-the-rewards-of-a-car-wash-franchise-without-the-franchise-fee/"
+    },
+    {
+      "domain": "washmeautowash.com",
+      "count": 1,
+      "metros": [
+        "Greenville, SC"
+      ],
+      "sample": "https://www.washmeautowash.com/"
+    },
+    {
+      "domain": "mobysautospa.com",
+      "count": 1,
+      "metros": [
+        "Louisville, KY"
+      ],
+      "sample": "https://www.mobysautospa.com/"
+    },
+    {
+      "domain": "clementinescarwash.com",
+      "count": 1,
+      "metros": [
+        "Louisville, KY"
+      ],
+      "sample": "https://www.clementinescarwash.com/"
+    },
+    {
+      "domain": "mistergscarwash.com",
+      "count": 1,
+      "metros": [
+        "Louisville, KY"
+      ],
+      "sample": "https://www.mistergscarwash.com/louisville"
+    },
+    {
+      "domain": "shammyslex.com",
+      "count": 1,
+      "metros": [
+        "Lexington, KY"
+      ],
+      "sample": "https://shammyslex.com/"
+    },
+    {
+      "domain": "samiscarwash.com",
+      "count": 1,
+      "metros": [
+        "Lexington, KY"
+      ],
+      "sample": "https://samiscarwash.com/"
+    },
+    {
+      "domain": "poyst.com",
+      "count": 1,
+      "metros": [
+        "Lexington, KY"
+      ],
+      "sample": "https://www.poyst.com/business/samis-car-wash"
+    }
+  ]
+}
