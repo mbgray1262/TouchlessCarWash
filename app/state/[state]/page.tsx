@@ -61,7 +61,12 @@ const getStateListingCount = cache(async (stateCode: string): Promise<number> =>
   return count ?? 0;
 });
 
-const getStateDescription = cache(async (stateCode: string): Promise<string | null> => {
+// Returns the STATIC TEMPLATE with placeholders like {{TOTAL_LISTINGS}}.
+// The placeholders get substituted at render time via renderStateDescription
+// so counts stay fresh even when listings are added/removed from the DB
+// (no stale-number problem — GSC flagged these as "duplicate without
+// user-selected canonical" when counts went stale).
+const getStateDescriptionTemplate = cache(async (stateCode: string): Promise<string | null> => {
   const { data } = await supabase
     .from('state_descriptions')
     .select('description')
@@ -69,6 +74,22 @@ const getStateDescription = cache(async (stateCode: string): Promise<string | nu
     .maybeSingle();
   return data?.description ?? null;
 });
+
+/**
+ * Substitute {{TOTAL_LISTINGS}}, {{UNIQUE_CITIES}}, {{TOP_CITY}},
+ * {{TOP_CITY_COUNT}} with live values at render time.
+ */
+function renderStateDescription(
+  template: string | null,
+  stats: { total: number; uniqueCities: number; topCity?: string; topCityCount?: number },
+): string | null {
+  if (!template) return null;
+  return template
+    .replace(/\{\{TOTAL_LISTINGS\}\}/g, String(stats.total))
+    .replace(/\{\{UNIQUE_CITIES\}\}/g, String(stats.uniqueCities))
+    .replace(/\{\{TOP_CITY\}\}/g, stats.topCity ?? '')
+    .replace(/\{\{TOP_CITY_COUNT\}\}/g, String(stats.topCityCount ?? 0));
+}
 
 // Uses existing RPC — returns {city, count}[] sorted by count desc
 async function getCitiesInState(stateCode: string): Promise<{ city: string; count: number }[]> {
@@ -94,10 +115,20 @@ export async function generateMetadata({ params }: StatePageProps): Promise<Meta
   const month = now.toLocaleString('default', { month: 'long' });
   const year = now.getFullYear();
 
-  const [totalCount, stateDesc] = await Promise.all([
+  const [totalCount, descTemplate, citiesData] = await Promise.all([
     getStateListingCount(stateCode),
-    getStateDescription(stateCode),
+    getStateDescriptionTemplate(stateCode),
+    getCitiesInState(stateCode),
   ]);
+
+  // Substitute placeholders with live counts so the meta description
+  // never goes stale as listings are added/removed from the DB
+  const stateDesc = renderStateDescription(descTemplate, {
+    total: totalCount,
+    uniqueCities: citiesData.length,
+    topCity: citiesData[0]?.city,
+    topCityCount: citiesData[0]?.count,
+  });
 
   const metaDescription = stateDesc
     ? stateDesc.substring(0, 155) + (stateDesc.length > 155 ? '...' : '')
@@ -133,12 +164,12 @@ export default async function StatePage({ params }: StatePageProps) {
   const stateName = getStateName(stateCode);
 
   // Fetch ALL base data in a single parallel stage — no waterfalls
-  const [allFilters, totalCount, citiesData, statesWithListings, stateDescription, initialListings, featureCountsRaw] = await Promise.all([
+  const [allFilters, totalCount, citiesData, statesWithListings, descTemplate, initialListings, featureCountsRaw] = await Promise.all([
     getFilters(),
     getStateListingCount(stateCode),
     getCitiesInState(stateCode),
     getStatesWithListings(),
-    getStateDescription(stateCode),
+    getStateDescriptionTemplate(stateCode),
     // Fetch first page of listings (no filters) for the static render
     getStateListingsPaginated(stateCode, 1, null),
     // Fetch feature counts in a single parallel batch
@@ -150,6 +181,15 @@ export default async function StatePage({ params }: StatePageProps) {
       }),
     ),
   ]);
+
+  // Substitute live counts into the description template — counts stay
+  // fresh across every render (no stale-number dupe-content issue)
+  const stateDescription = renderStateDescription(descTemplate, {
+    total: totalCount,
+    uniqueCities: citiesData.length,
+    topCity: citiesData[0]?.city,
+    topCityCount: citiesData[0]?.count,
+  });
 
   const availableFeatures = featureCountsRaw.filter((f): f is { slug: string; name: string; count: number } => f !== null && f.count >= 3);
 
