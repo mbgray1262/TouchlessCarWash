@@ -179,6 +179,23 @@ export const METRO_AREAS: MetroArea[] = [
   { name: 'Stockton', displayName: 'Stockton, CA', slug: 'stockton', lat: 37.9577, lng: -121.2908, radiusMiles: 20, states: ['CA'], region: 'West' },
   { name: 'Modesto', displayName: 'Modesto, CA', slug: 'modesto', lat: 37.6391, lng: -120.9969, radiusMiles: 20, states: ['CA'], region: 'West' },
   { name: 'Eugene', displayName: 'Eugene, OR', slug: 'eugene', lat: 44.0521, lng: -123.0868, radiusMiles: 20, states: ['OR'], region: 'West' },
+
+  // Added April 16 2026 after metro-sweep + domain-discovery + Crawl4AI enrichment
+  // revealed new touchless clusters (5+ approved listings within the radius).
+  { name: 'Worcester', displayName: 'Worcester, MA', slug: 'worcester', lat: 42.2626, lng: -71.8023, radiusMiles: 15, states: ['MA'], region: 'Northeast' },
+  { name: 'Charlottesville', displayName: 'Charlottesville, VA', slug: 'charlottesville', lat: 38.0293, lng: -78.4767, radiusMiles: 20, states: ['VA'], region: 'Southeast' },
+  { name: 'Kalamazoo', displayName: 'Kalamazoo, MI', slug: 'kalamazoo', lat: 42.2917, lng: -85.5872, radiusMiles: 15, states: ['MI'], region: 'Midwest' },
+  { name: 'Springfield', displayName: 'Springfield, IL', slug: 'springfield-il', lat: 39.7817, lng: -89.6501, radiusMiles: 20, states: ['IL'], region: 'Midwest' },
+  { name: 'Evansville', displayName: 'Evansville, IN', slug: 'evansville', lat: 37.9716, lng: -87.5711, radiusMiles: 20, states: ['IN', 'KY'], region: 'Midwest' },
+  { name: 'Warren-Youngstown', displayName: 'Warren-Youngstown, OH', slug: 'warren-youngstown', lat: 41.2376, lng: -80.8184, radiusMiles: 20, states: ['OH'], region: 'Midwest' },
+  { name: 'Valparaiso', displayName: 'Valparaiso, IN', slug: 'valparaiso', lat: 41.4731, lng: -87.0611, radiusMiles: 15, states: ['IN'], region: 'Midwest' },
+  { name: 'Janesville', displayName: 'Janesville, WI', slug: 'janesville', lat: 42.6828, lng: -89.0187, radiusMiles: 20, states: ['WI'], region: 'Midwest' },
+  { name: 'Waterloo-Cedar Falls', displayName: 'Waterloo-Cedar Falls, IA', slug: 'waterloo-cedar-falls', lat: 42.4928, lng: -92.3427, radiusMiles: 15, states: ['IA'], region: 'Midwest' },
+  { name: 'Cedar Rapids', displayName: 'Cedar Rapids, IA', slug: 'cedar-rapids', lat: 41.9779, lng: -91.6656, radiusMiles: 20, states: ['IA'], region: 'Midwest' },
+  { name: 'Quad Cities', displayName: 'Quad Cities, IA-IL', slug: 'quad-cities', lat: 41.5236, lng: -90.5776, radiusMiles: 20, states: ['IA', 'IL'], region: 'Midwest' },
+  { name: 'Fort Collins', displayName: 'Fort Collins, CO', slug: 'fort-collins', lat: 40.5853, lng: -105.0844, radiusMiles: 20, states: ['CO'], region: 'West' },
+  { name: 'Billings', displayName: 'Billings, MT', slug: 'billings', lat: 45.7833, lng: -108.5007, radiusMiles: 20, states: ['MT'], region: 'West' },
+  { name: 'Bend', displayName: 'Bend, OR', slug: 'bend', lat: 44.0582, lng: -121.3153, radiusMiles: 20, states: ['OR'], region: 'West' },
 ];
 
 // ── Lookup helpers ─────────────────────────────────────────────────────
