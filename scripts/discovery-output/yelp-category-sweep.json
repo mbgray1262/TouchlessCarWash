@@ -1,0 +1,1836 @@
+{
+  "timestamp": "2026-04-16T14:36:08.209732",
+  "summary": {
+    "metros_processed": 104,
+    "biz_pages_crawled": 494,
+    "blocklisted_skipped": 38,
+    "matched_existing_listings": 113,
+    "matched_existing_touchless_evidence_added": 34,
+    "promotion_candidates_count": 79,
+    "new_business_candidates_count": 123,
+    "snippets_saved": 270,
+    "errors": 4
+  },
+  "promotion_candidates": [
+    {
+      "id": "1080ab8d-d34f-40ca-a2e8-8ab5a3481134",
+      "name": "Speedway",
+      "city": "Buffalo",
+      "state": "NY",
+      "yelp_url": "https://www.yelp.com/biz/speedway-buffalo",
+      "positive_count": 1,
+      "sample": "Additionally, there is a 1-bay touchless car wash located behind the building."
+    },
+    {
+      "id": "fd614abd-17fb-49a3-bc01-03e480ace0a1",
+      "name": "Dr. Huggs Car Wash",
+      "city": "Buffalo",
+      "state": "NY",
+      "yelp_url": "https://www.yelp.com/biz/dr-huggs-car-wash-buffalo-2",
+      "positive_count": 2,
+      "sample": "I only use the soapy power wash so it is completely touch free."
+    },
+    {
+      "id": "662d6221-033b-4713-93e8-98de165f0820",
+      "name": "Perinton Express Car Wash",
+      "city": "Fairport",
+      "state": "NY",
+      "yelp_url": "https://www.yelp.com/biz/perinton-express-car-wash-fairport",
+      "positive_count": 2,
+      "sample": "Manager Perinton Express Car Wash is a family-owned and operated business that is dedicated to providing our customers with the finest self-serve, touch-free, soft foam touch tunnel available today."
+    },
+    {
+      "id": "8a9211c7-9017-4c20-a94d-1f106e41423e",
+      "name": "CLASSY CHASSY CAR WASH",
+      "city": "Rochester",
+      "state": "NY",
+      "yelp_url": "https://www.yelp.com/biz/classy-chassy-car-wash-rochester",
+      "positive_count": 3,
+      "sample": "People also searched for Self Serve Car Wash Touchless Carwash Do It Yourself Car Wash Automotive Free Air Engine Cleaning Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "id": "1d06a323-d7c1-4fe0-854e-698572c86a3d",
+      "name": "Hoffman Car Wash",
+      "city": "Albany",
+      "state": "NY",
+      "yelp_url": "https://www.yelp.com/biz/hoffman-car-wash-albany",
+      "positive_count": 3,
+      "sample": "People also searched for Free Vacuum Car Wash Touchless Carwash 24 Hour Self Car Wash Do It Yourself Car Wash Self Car Vacuum Underbody Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "id": "f7c2a924-cac8-4b96-8e40-3665d41518f2",
+      "name": "Wet Willy's Car Wash",
+      "city": "Latham",
+      "state": "NY",
+      "yelp_url": "https://www.yelp.com/biz/wet-willys-car-wash-latham",
+      "positive_count": 4,
+      "sample": "\u201d in 3 reviews \u201c WWCW is a convenient , clean modern touch free car wash that performs better than most automated touchless places."
+    },
+    {
+      "id": "48fc509c-f3c2-47f2-bff6-7c814af01584",
+      "name": "Hoffman Car Wash",
+      "city": "Latham",
+      "state": "NY",
+      "yelp_url": "https://www.yelp.com/biz/hoffman-car-wash-latham",
+      "positive_count": 1,
+      "sample": "People also searched for Interior Car Cleaning Free Vacuum Car Wash Self Car Vacuum Car Detailing Free Air Touchless Carwash Recommended Reviews Loading..."
+    },
+    {
+      "id": "9a03ceee-e0fe-4b4e-9374-4cf77d04d20e",
+      "name": "Sudsy Bucket Auto Wash",
+      "city": "Syracuse",
+      "state": "NY",
+      "yelp_url": "https://www.yelp.com/biz/sudsy-bucket-auto-wash-syracuse-2",
+      "positive_count": 2,
+      "sample": "read more in Auto Parts Supplies, Battery Stores About the Business The Sudsy Bucket Auto Wash is a touchless Automatic carwash, designed to clean your car so you don't have to."
+    },
+    {
+      "id": "6a003f37-c6c2-4208-948d-a51422447b83",
+      "name": "4 Seasons Car Wash",
+      "city": "Liverpool",
+      "state": "NY",
+      "yelp_url": "https://www.yelp.com/biz/4-seasons-car-wash-liverpool-4",
+      "positive_count": 3,
+      "sample": "- Liverpool, NY\",\"contentLocation\":{\"@type\":\"Place\",\"address\":{\"@type\":\"PostalAddress\",\"streetAddress\":\"7795 Oswego Rd\",\"addressLocality\":\"Liverpool\",\"addressRegion\":\"NY\",\"postalCode\":\"13090\",\"addressCountry\":\"US\"}}}],\"name\":\"Media Showcase\"} Services Offered Verified by Business Auto detailing work"
+    },
+    {
+      "id": "6a003f37-c6c2-4208-948d-a51422447b83",
+      "name": "4 Seasons car Wash",
+      "city": "Liverpool",
+      "state": "NY",
+      "yelp_url": "https://www.yelp.com/biz/4-seasons-car-wash-liverpool-6",
+      "positive_count": 1,
+      "sample": "The touch-free car wash left my vehicle dirty and 100% didn't even start to clean the tailgate of my truck."
+    },
+    {
+      "id": "168ad7d0-d85e-4b2c-81ec-4e669a64dd36",
+      "name": "Allston Car Wash",
+      "city": "Allston",
+      "state": "MA",
+      "yelp_url": "https://www.yelp.com/biz/allston-car-wash-allston",
+      "positive_count": 1,
+      "sample": "1 year ago See question details See all 6 questions People also searched for Touchless Car Wash Do It Yourself Car Wash Self Car Wash Drive Through Car Wash Self Car Vacuum Carwash Recommended Reviews Loading..."
+    },
+    {
+      "id": "0aea170f-02b2-4227-b09c-f5b4014138c5",
+      "name": "Golden Nozzle Car Wash",
+      "city": "East Longmeadow",
+      "state": "MA",
+      "yelp_url": "https://www.yelp.com/biz/golden-nozzle-car-wash-east-longmeadow-7",
+      "positive_count": 2,
+      "sample": "People also searched for Touchless Carwash Free Vacuum Underbody Wash Tires Self Serve Car Wash Car Rental Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "id": "6c8ed575-c48a-4ead-a3bd-211d8e7807d0",
+      "name": "Flash Car Wash",
+      "city": "Cranston",
+      "state": "RI",
+      "yelp_url": "https://www.yelp.com/biz/flash-car-wash-cranston",
+      "positive_count": 1,
+      "sample": "If you wash your car regularly, it is a\u2026\" read more in Car Wash Location Hours Suggest an edit 208 Gansett Ave Cranston, RI 02910 Get directions Mon 7:00 AM - 9:00 PM Tue 7:00 AM - 9:00 PM Wed 7:00 AM - 9:00 PM Thu 7:00 AM - 9:00 PM Open now Fri 7:00 AM - 9:00 PM Sat 7:00 AM - 9:00 PM Sun 7:00 AM - "
+    },
+    {
+      "id": "99c99f06-56e3-403e-b0ff-a220da480e04",
+      "name": "Final Touch Detailing",
+      "city": "Central Falls",
+      "state": "RI",
+      "yelp_url": "https://www.yelp.com/biz/final-touch-detailing-central-falls",
+      "positive_count": 1,
+      "sample": "People also searched for Car Detailing Self Serve Car Wash Detailing Mobile Detailing Services Touchless Car Wash Drive Thru Hand Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "id": "d56d5b9a-d54e-4035-96a5-c388a3983fbe",
+      "name": "Golden Nozzle Car Wash",
+      "city": "Hartford",
+      "state": "CT",
+      "yelp_url": "https://www.yelp.com/biz/golden-nozzle-car-wash-hartford-12",
+      "positive_count": 1,
+      "sample": "It's also the smallest/shortest automatic, touchless wash."
+    },
+    {
+      "id": "335c86ff-bebb-43f0-833b-c986fa4c8e4e",
+      "name": "Spring Garden Wash &amp; Lube",
+      "city": "Philadelphia",
+      "state": "PA",
+      "yelp_url": "https://www.yelp.com/biz/spring-garden-wash-and-lube-philadelphia",
+      "positive_count": 1,
+      "sample": "See all 2 questions People also searched for Car Wash Drive Through Car Detailing Free Air 24 Hour Car Wash Touchless Carwash Car Inspection Recommended Reviews Loading..."
+    },
+    {
+      "id": "c24aaf6b-b490-4510-a189-c73f3e740ab6",
+      "name": "ModWash",
+      "city": "Bridgeville",
+      "state": "PA",
+      "yelp_url": "https://www.yelp.com/biz/modwash-bridgeville",
+      "positive_count": 2,
+      "sample": "- Bridgeville, PA\",\"contentLocation\":{\"@type\":\"Place\",\"address\":{\"@type\":\"PostalAddress\",\"streetAddress\":\"3101 Washington Pike\",\"addressLocality\":\"Bridgeville\",\"addressRegion\":\"PA\",\"postalCode\":\"15017\",\"addressCountry\":\"US\"}},\"review\":{\"@type\":\"Review\",\"author\":{\"@type\":\"Person\",\"name\":\"Jeff D.\"},\"i"
+    },
+    {
+      "id": "57658a8c-d076-4bbd-ba32-4fe6e79ee499",
+      "name": "Steel City Auto Spa",
+      "city": "Pittsburgh",
+      "state": "PA",
+      "yelp_url": "https://www.yelp.com/biz/steel-city-auto-spa-pittsburgh",
+      "positive_count": 1,
+      "sample": "People also searched for Touchless Car Wash Hand Car Wash Ceramic Coating Brushless Car Wash Full Service Car Wash Mobile Car Detailing Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "id": "f336ca71-d513-45e1-bcde-f4ea54a2bdad",
+      "name": "Fast Lane Auto Wash Linglestown",
+      "city": "Harrisburg",
+      "state": "PA",
+      "yelp_url": "https://www.yelp.com/biz/fast-lane-auto-wash-linglestown-harrisburg",
+      "positive_count": 1,
+      "sample": "People also searched for Touchless Carwash Self Serve Car Wash Do It Yourself Car Wash Car Detailing Automotive Machine Shop Open Now Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "id": "7fd77f50-a317-4de2-84eb-f708e429bfc5",
+      "name": "All in the Detail- Hand Car Wash &amp; Detail Center",
+      "city": "Elizabeth",
+      "state": "NJ",
+      "yelp_url": "https://www.yelp.com/biz/all-in-the-detail-hand-car-wash-and-detail-center-elizabeth",
+      "positive_count": 1,
+      "sample": "- Elizabeth, NJ\",\"contentLocation\":{\"@type\":\"Place\",\"address\":{\"@type\":\"PostalAddress\",\"streetAddress\":\"512 Pennsylvania Ave\",\"addressLocality\":\"Elizabeth\",\"addressRegion\":\"NJ\",\"postalCode\":\"07201\",\"addressCountry\":\"US\"}}}],\"name\":\"Media Showcase\"} Services Offered Verified by Business Auto detailin"
+    },
+    {
+      "id": "d4eb4d6f-8786-4c86-b1ae-a30cae0d33e5",
+      "name": "Secaucus Super Car Wash",
+      "city": "Secaucus",
+      "state": "NJ",
+      "yelp_url": "https://www.yelp.com/biz/secaucus-super-car-wash-secaucus",
+      "positive_count": 1,
+      "sample": "- Secaucus, NJ\",\"contentLocation\":{\"@type\":\"Place\",\"address\":{\"@type\":\"PostalAddress\",\"streetAddress\":\"200 Flanagan Way\",\"addressLocality\":\"Secaucus\",\"addressRegion\":\"NJ\",\"postalCode\":\"07094\",\"addressCountry\":\"US\"}}}],\"name\":\"Media Showcase\"} Services Offered Verified by Business Auto detailing work"
+    },
+    {
+      "id": "8472bd04-4c70-40e0-bac6-198cb9d111bd",
+      "name": "The Car Wash",
+      "city": "Parkville",
+      "state": "MD",
+      "yelp_url": "https://www.yelp.com/biz/the-car-wash-parkville-3",
+      "positive_count": 1,
+      "sample": "Business Owner The Car Wash offers self-service vacuums, 2 touch free laser-wash tunnels, and 6 self-service bays."
+    },
+    {
+      "id": "dad0f4c2-5b32-464e-8a32-7dc9c6c46484",
+      "name": "Wash Works",
+      "city": "Baltimore",
+      "state": "MD",
+      "yelp_url": "https://www.yelp.com/biz/wash-works-baltimore-2",
+      "positive_count": 2,
+      "sample": "Thanks to our loyal customers, our Touchless Car Wash has been voted \"Baltimore's Best Car Wash\" 12 times since our opening."
+    },
+    {
+      "id": "1fee08fd-7b30-4ed3-8475-3b287441b50e",
+      "name": "Sunoco",
+      "city": "Falls Church",
+      "state": "VA",
+      "yelp_url": "https://www.yelp.com/biz/sunoco-falls-church-2",
+      "positive_count": 2,
+      "sample": "People also searched for Drive Thru Car Wash Underbody Wash Touchless Carwash Self Serve Car Wash Gas Station Vacuum Do It Yourself Car Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "id": "941349c6-4816-4b06-865b-237a9e44e367",
+      "name": "Flagstop Car Wash",
+      "city": "Richmond",
+      "state": "VA",
+      "yelp_url": "https://www.yelp.com/biz/flagstop-car-wash-richmond-8",
+      "positive_count": 1,
+      "sample": "See 1 question People also searched for Underbody Wash Self Serve Car Wash Touchless Carwash Drive Thru Car Wash Self Car Vacuum Cheap Car Rental Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "id": "f6a91781-84cd-4025-bec6-dd616e13f0b3",
+      "name": "Buggy Bathe Auto Wash &amp; Detail Shoppe",
+      "city": "Virginia Beach",
+      "state": "VA",
+      "yelp_url": "https://www.yelp.com/biz/buggy-bathe-auto-wash-and-detail-shoppe-virginia-beach-2",
+      "positive_count": 1,
+      "sample": "People also searched for Car Detailing Underbody Wash Mobile Detailing Self Serve Car Wash Drive Thru Car Wash Touchless Carwash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "id": "c50063ce-00f4-4b81-99da-64cc8e16cc5f",
+      "name": "Car Spa",
+      "city": "Virginia Beach",
+      "state": "VA",
+      "yelp_url": "https://www.yelp.com/biz/car-spa-virginia-beach-11",
+      "positive_count": 1,
+      "sample": "See 1 question People also searched for Car Detailing Drive Thru Car Wash Touchless Carwash Interior Car Cleaning State Inspection Free Vacuum Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "id": "f6a91781-84cd-4025-bec6-dd616e13f0b3",
+      "name": "Buggy Bathe Auto Wash &amp; Detail Shoppe",
+      "city": "Virginia Beach",
+      "state": "VA",
+      "yelp_url": "https://www.yelp.com/biz/buggy-bathe-auto-wash-and-detail-shoppe-virginia-beach-2",
+      "positive_count": 1,
+      "sample": "People also searched for Car Detailing Underbody Wash Mobile Detailing Self Serve Car Wash Drive Thru Car Wash Touchless Carwash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "id": "338befee-a66f-4076-a4cd-b9f2ee541b7f",
+      "name": "ModWash",
+      "city": "Fort Mill",
+      "state": "SC",
+      "yelp_url": "https://www.yelp.com/biz/modwash-fort-mill",
+      "positive_count": 1,
+      "sample": "People also searched for Car Detailing Self Serve Car Wash Hand Wash Drive Thru Car Wash Touchless Carwash Coin Operated Car Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "id": "3036fa5e-0ca8-43cc-8a01-91b5f503431d",
+      "name": "American Wash Systems",
+      "city": "Charlotte",
+      "state": "NC",
+      "yelp_url": "https://www.yelp.com/biz/american-wash-systems-charlotte",
+      "positive_count": 1,
+      "sample": "\u201d in 2 reviews \u201c I opted for the touchless and was amazed at the result after going through it."
+    },
+    {
+      "id": "207691c1-f31a-46f6-bc25-ad4cca45613e",
+      "name": "Sam's Xpress Car Wash",
+      "city": "Raleigh",
+      "state": "NC",
+      "yelp_url": "https://www.yelp.com/biz/sams-xpress-car-wash-raleigh-2",
+      "positive_count": 3,
+      "sample": "\u201d in 2 reviews You Might Also Consider Sponsored Wright Way Car Wash 3.0 (1 review) 14.0 miles away from Sam's Xpress Car Wash We specialize in using the latest technology in touchless car washing in our Razor automatic car wash."
+    },
+    {
+      "id": "10ca27c4-d801-4d1b-9cbb-d0bc5999d4b2",
+      "name": "Sheetz",
+      "city": "Raleigh",
+      "state": "NC",
+      "yelp_url": "https://www.yelp.com/biz/sheetz-raleigh-2",
+      "positive_count": 1,
+      "sample": "If you're looking for auto\u2026 read more in Auto Repair, Gas Stations, Propane Wright Way Car Wash 3.0 (1 review) 19.1 miles away from Sheetz We specialize in using the latest technology in touchless car washing in our Razor automatic car wash."
+    },
+    {
+      "id": "19b03266-00af-42ed-b36c-9954ebe78b74",
+      "name": "The RipTide Car Wash &amp; Detail Center",
+      "city": "Durham",
+      "state": "NC",
+      "yelp_url": "https://www.yelp.com/biz/the-riptide-car-wash-and-detail-center-durham",
+      "positive_count": 2,
+      "sample": "W., Business Manager 5 years ago 1 person found this helpful See question details People also searched for Drive Thru Car Wash Car Detailing Interior Car Cleaning Self Car Vacuum Free Vacuum Car Wash Touchless Carwash Recommended Reviews Loading..."
+    },
+    {
+      "id": "66d2942a-5148-4b43-a3fd-a85564b66a56",
+      "name": "Autorific Car Wash",
+      "city": "Hillsborough",
+      "state": "NC",
+      "yelp_url": "https://www.yelp.com/biz/autorific-car-wash-hillsborough",
+      "positive_count": 3,
+      "sample": "- Hillsborough, NC\",\"contentLocation\":{\"@type\":\"Place\",\"address\":{\"@type\":\"PostalAddress\",\"streetAddress\":\"369 S Churton St\",\"addressLocality\":\"Hillsborough\",\"addressRegion\":\"NC\",\"postalCode\":\"27278\",\"addressCountry\":\"US\"}},\"review\":{\"@type\":\"Review\",\"author\":{\"@type\":\"Person\",\"name\":\"M B.\"},\"itemRe"
+    },
+    {
+      "id": "207691c1-f31a-46f6-bc25-ad4cca45613e",
+      "name": "Sam's Xpress Car Wash",
+      "city": "Raleigh",
+      "state": "NC",
+      "yelp_url": "https://www.yelp.com/biz/sams-xpress-car-wash-raleigh-2",
+      "positive_count": 2,
+      "sample": "People also searched for Drive Thru Car Wash Self Car Vacuum Free Vacuum Car Wash Underbody Wash Touchless Carwash Free Vacuum Recommended Reviews Loading..."
+    },
+    {
+      "id": "aae5c8b1-b0bf-4aff-93d8-6d48e86a9839",
+      "name": "Autobell Car Wash",
+      "city": "Durham",
+      "state": "NC",
+      "yelp_url": "https://www.yelp.com/biz/autobell-car-wash-durham",
+      "positive_count": 1,
+      "sample": "You Might Also Consider Sponsored Autorific Car Wash 16.2 miles away from Autobell Car Wash Autorific Car wash specializes in Touch-Free Wash Laserwash, Soft-Touch Wash Tandem Surfline, Self-Service Wash, Free Vacuums, Car Wash services, Eco- friendly car wash."
+    },
+    {
+      "id": "0067458e-6a8a-4273-b9df-cc27369e701a",
+      "name": "Autobell Car Wash",
+      "city": "Greensboro",
+      "state": "NC",
+      "yelp_url": "https://www.yelp.com/biz/autobell-car-wash-greensboro",
+      "positive_count": 1,
+      "sample": "People also searched for Drive Thru Car Wash Underbody Wash Free Vacuum Touchless Carwash Self Serve Car Wash Interior Car Cleaning Recommended Reviews Loading..."
+    },
+    {
+      "id": "5c1a8dd7-2b76-46c6-bb7b-e0364b16711b",
+      "name": "Soap Hand Car Wash",
+      "city": "Atlanta",
+      "state": "GA",
+      "yelp_url": "https://www.yelp.com/biz/soap-hand-car-wash-atlanta",
+      "positive_count": 1,
+      "sample": "A: 30 dollars David M., Business Owner 5 years ago See question details See all 3 questions People also searched for Car Detailing Interior Car Cleaning Self Car Vacuum Hand Wash Touchless Carwash Drive Through Car Wash Recommended Reviews Loading..."
+    },
+    {
+      "id": "d088747a-2d9c-4239-b771-32d3dd810e08",
+      "name": "LUV Car Wash",
+      "city": "Atlanta",
+      "state": "GA",
+      "yelp_url": "https://www.yelp.com/biz/luv-car-wash-atlanta-2",
+      "positive_count": 1,
+      "sample": "See 1 question People also searched for Drive Through Car Wash Free Vacuum Self Car Vacuum Self Serve Car Wash Touchless Carwash Car Detailing Recommended Reviews Loading..."
+    },
+    {
+      "id": "71704059-3d58-4a36-80ad-c7d5a6daeec9",
+      "name": "Busy Bee Car Wash",
+      "city": "Miami",
+      "state": "FL",
+      "yelp_url": "https://www.yelp.com/biz/busy-bee-car-wash-biscayne-blvd-miami",
+      "positive_count": 1,
+      "sample": "David J., Business Manager More than 5 years ago See question details See all 2 questions People also searched for Drive Thru Car Wash Self Serve Car Wash Self Car Vacuum Free Vacuum Do It Yourself Car Wash Touchless Carwash Recommended Reviews Loading..."
+    },
+    {
+      "id": "2f05f1d3-3f29-40e2-a2d0-42e74ae68eee",
+      "name": "Mobil",
+      "city": "Doral",
+      "state": "FL",
+      "yelp_url": "https://www.yelp.com/biz/mobil-doral-2",
+      "positive_count": 1,
+      "sample": "See 1 question People also searched for Touchless Carwash Drive Thru Car Wash Gas Station Carwash Touch Free Car Wash Laser Wash Diesel Fuel Recommended Reviews Loading..."
+    },
+    {
+      "id": "be0302de-c3a8-4e3b-a81f-5dd2ea82f711",
+      "name": "Chevron Station",
+      "city": "Miami",
+      "state": "FL",
+      "yelp_url": "https://www.yelp.com/biz/chevron-station-miami-2",
+      "positive_count": 4,
+      "sample": "People also searched for Drive Thru Car Wash Gas Station Carwash Car Wash Free Vacuum Touchless Carwash Full Service Gas Station Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "id": "84d19a93-faa5-4e0c-8ea7-2b54dc85d6c6",
+      "name": "Shell",
+      "city": "Miami",
+      "state": "FL",
+      "yelp_url": "https://www.yelp.com/biz/shell-miami-22",
+      "positive_count": 2,
+      "sample": "Yes No Maybe Services Offered Verified by Business Car wash People also searched for Gas Station With Car Wash Drive Thru Car Wash Cheap Gas Touchless Carwash Do It Yourself Car Wash Propane Tank Exchange Location Hours Suggest an edit 2701 W Flagler St Miami, FL 33135 West Flagler Get directions Mo"
+    },
+    {
+      "id": "0841fa1a-38be-4607-adb6-04d68efbc68e",
+      "name": "Sport Car Wash",
+      "city": "Doral",
+      "state": "FL",
+      "yelp_url": "https://www.yelp.com/biz/sport-car-wash-doral",
+      "positive_count": 1,
+      "sample": "People also searched for Self Serve Car Wash Free Vacuum Do It Yourself Car Wash Drive Thru Car Wash Touchless Carwash Interior Car Cleaning Recommended Reviews Loading..."
+    },
+    {
+      "id": "13ec02dc-00d9-46b3-9ebd-c496747ccf64",
+      "name": "Dazzle Car Wash",
+      "city": "Orlando",
+      "state": "FL",
+      "yelp_url": "https://www.yelp.com/biz/dazzle-car-wash-no-title",
+      "positive_count": 2,
+      "sample": "People also searched for Drive Thru Car Wash 24 Hour Self Car Wash Touchless Carwash Truck Wash Underbody Wash Laser Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "id": "b2fc7ad7-7bf8-4d64-be05-72258437589d",
+      "name": "Joe's Express Car Wash",
+      "city": "Orlando",
+      "state": "FL",
+      "yelp_url": "https://www.yelp.com/biz/joes-express-car-wash-orlando",
+      "positive_count": 1,
+      "sample": "See 1 question People also searched for Drive Thru Car Wash Free Vacuum Self Car Vacuum Touchless Carwash Free Air Underbody Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "id": "d6522cb1-a497-418e-97f8-a2c9c7d72916",
+      "name": "ModWash",
+      "city": "Kissimmee",
+      "state": "FL",
+      "yelp_url": "https://www.yelp.com/biz/modwash-kissimmee",
+      "positive_count": 2,
+      "sample": "See 1 question People also searched for Touchless Car Wash Self Car Wash Brushless Car Wash Self Car Vacuum Free Vacuum Full Service Car Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "id": "46776d91-d2de-4042-8466-5930e22c9baa",
+      "name": "Auto Spa America",
+      "city": "Tampa",
+      "state": "FL",
+      "yelp_url": "https://www.yelp.com/biz/auto-spa-america-tampa",
+      "positive_count": 1,
+      "sample": "- Tampa, FL\",\"contentLocation\":{\"@type\":\"Place\",\"address\":{\"@type\":\"PostalAddress\",\"streetAddress\":\"2223 N Westshore Blvd, International Plaza Mall\",\"addressLocality\":\"Tampa\",\"addressRegion\":\"FL\",\"postalCode\":\"33607\",\"addressCountry\":\"US\"}}}],\"name\":\"Media Showcase\"} Services Offered Verified by Bus"
+    },
+    {
+      "id": "a954e745-677a-4939-8278-add7b74fa250",
+      "name": "Ducky\u2019s Car Wash",
+      "city": "Jacksonville",
+      "state": "FL",
+      "yelp_url": "https://www.yelp.com/biz/ducky-s-car-wash-jacksonville",
+      "positive_count": 1,
+      "sample": "Highly recommended to anyone with a classic /\u2026\" read more in Home Window Tinting, Car Window Tinting Location Hours Suggest an edit 12095 Beach Blvd Jacksonville, FL 32246 Greater Arlington Get directions People also searched for Touchless Carwash Underbody Wash Touch Free Car Wash 24 Hour Car Wash "
+    },
+    {
+      "id": "e0aecd44-6f3d-480d-8ac5-c6be3156446c",
+      "name": "Sud Stop Car Wash",
+      "city": "Pembroke Park",
+      "state": "FL",
+      "yelp_url": "https://www.yelp.com/biz/sud-stop-car-wash-pembroke-park",
+      "positive_count": 1,
+      "sample": "People also searched for Drive Thru Car Wash Do It Yourself Car Wash Self Serve Car Wash Free Vacuum Car Wash Scratch Removal Touchless Carwash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "id": "3d25142a-7bad-49c3-adf9-38feccd7ecca",
+      "name": "Exxon",
+      "city": "Fort Lauderdale",
+      "state": "FL",
+      "yelp_url": "https://www.yelp.com/biz/exxon-fort-lauderdale",
+      "positive_count": 1,
+      "sample": "With that said, they recommended going to a touchless (no brushes/ mats/flaps etc that a lot of drive through car washes have) and this was the first one I found!"
+    },
+    {
+      "id": "4c47df0c-c76d-4b2e-b5a8-7aa8441796aa",
+      "name": "IWash",
+      "city": "Brentwood",
+      "state": "TN",
+      "yelp_url": "https://www.yelp.com/biz/iwash-brentwood",
+      "positive_count": 5,
+      "sample": "\u201d in 3 reviews \u201c I have been coming to iWash since it opened, and have always been pleased with how clean my car looks after using the touch-free wash ."
+    },
+    {
+      "id": "e7c4b61a-71b1-480a-8667-454ddfe3b441",
+      "name": "Memphis Wash",
+      "city": "Memphis",
+      "state": "TN",
+      "yelp_url": "https://www.yelp.com/biz/memphis-wash-memphis-3",
+      "positive_count": 1,
+      "sample": "Whether you're in for a quick rinse or a deep clean, our state-of-the-art facility and expert team ensure your vehicle g\u2026 \u2026 Read more Location Hours Suggest an edit 2019 Union Ave Memphis, TN 38104 Midtown Get directions Mon 8:00 AM - 6:00 PM Tue 8:00 AM - 6:00 PM Wed 8:00 AM - 6:00 PM Thu 8:00 AM -"
+    },
+    {
+      "id": "02b4b3ac-c501-4fd6-90ce-ef9b1f197c7a",
+      "name": "ModWash",
+      "city": "Chattanooga",
+      "state": "TN",
+      "yelp_url": "https://www.yelp.com/biz/modwash-chattanooga-2",
+      "positive_count": 1,
+      "sample": "- Chattanooga, TN\",\"contentLocation\":{\"@type\":\"Place\",\"address\":{\"@type\":\"PostalAddress\",\"streetAddress\":\"1240 E Main St\",\"addressLocality\":\"Chattanooga\",\"addressRegion\":\"TN\",\"postalCode\":\"37408\",\"addressCountry\":\"US\"}}}],\"name\":\"Media Showcase\"} Services Offered Verified by Business Auto detailing "
+    },
+    {
+      "id": "b11e704f-196b-4260-913f-8cc9dff2116b",
+      "name": "Synergy Auto Wash",
+      "city": "Knoxville",
+      "state": "TN",
+      "yelp_url": "https://www.yelp.com/biz/synergy-auto-wash-knoxville-2",
+      "positive_count": 3,
+      "sample": "From brakes, suspension, and maintenance\u2026 read more in Commercial Truck Repair, Transmission Repair Location Hours Suggest an edit 109 Lovell Heights Rd Knoxville, TN 37922 Get directions People also searched for Underbody Wash Touchless Carwash Drive Through Car Wash Truck Bed Covers Replace Side V"
+    },
+    {
+      "id": "36c4aff4-2345-4e5a-8666-b2e659fd84c7",
+      "name": "John's Island Car Wash",
+      "city": "Johns Island",
+      "state": "SC",
+      "yelp_url": "https://www.yelp.com/biz/johns-island-car-wash-johns-island",
+      "positive_count": 2,
+      "sample": "People also searched for Self Car Vacuum Self Serve Car Wash Drive Thru Car Wash Truck Wash Touchless Carwash Hand Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "id": "d51d345b-428e-49c9-8154-1a58620d157b",
+      "name": "Spinx",
+      "city": "GREENVILLE",
+      "state": "SC",
+      "yelp_url": "https://www.yelp.com/biz/spinx-greenville-16",
+      "positive_count": 2,
+      "sample": "Yes No Maybe People also searched for Touchless Carwash Free Vacuum Car Wash Propane Tank Exchange Car Wash Cheap Gas Off Road Diesel Fuel Location Hours Suggest an edit 461 S Pleasantburg Dr GREENVILLE, SC 29607 Get directions Mon Open 24 hours Tue Open 24 hours Wed Open 24 hours Thu Open 24 hours "
+    },
+    {
+      "id": "9cb69a71-6751-4aec-8f54-4215b9a3f10f",
+      "name": "Speedwash Car Wash",
+      "city": "Louisville",
+      "state": "KY",
+      "yelp_url": "https://www.yelp.com/biz/speedwash-car-wash-louisville-2",
+      "positive_count": 2,
+      "sample": "\u2026 Read more Location Hours Suggest an edit 3315 Bardstown Rd Louisville, KY 40218 Get directions Mon 8:00 AM - 9:00 PM Tue 8:00 AM - 9:00 PM Wed 8:00 AM - 9:00 PM Thu 8:00 AM - 9:00 PM Open now Fri 8:00 AM - 9:00 PM Sat 8:00 AM - 9:00 PM Sun 8:00 AM - 9:00 PM Amenities and More Accepts credit cards "
+    },
+    {
+      "id": "eda79e01-c4f0-475c-ab84-16d0def547b2",
+      "name": "Magic Sparkle Automatic/Self-Serve Car Wash",
+      "city": "Louisville",
+      "state": "KY",
+      "yelp_url": "https://www.yelp.com/biz/magic-sparkle-automatic-self-serve-car-wash-louisville",
+      "positive_count": 2,
+      "sample": "Louisville, KY 77 35 69 Jun 9, 2014 The touch free automatic car wash was very good."
+    },
+    {
+      "id": "aed77e11-ca69-4aa0-bfa2-e4d38dfeb2f0",
+      "name": "Clean Sweep",
+      "city": "Lexington",
+      "state": "KY",
+      "yelp_url": "https://www.yelp.com/biz/clean-sweep-lexington-3",
+      "positive_count": 1,
+      "sample": "I much prefer a touchless car washes."
+    },
+    {
+      "id": "274e6fdf-da9a-4347-979e-d19722a33c9b",
+      "name": "Anthony's Full Service &amp; Express Car Wash - Hoover",
+      "city": "Hoover",
+      "state": "AL",
+      "yelp_url": "https://www.yelp.com/biz/anthonys-full-service-and-express-car-wash-hoover-hoover",
+      "positive_count": 1,
+      "sample": "We offer services from a 3-minute\u2026 \u2026 Read more Location Hours Suggest an edit 3037 AL Hwy 150 Hoover, AL 35244 Get directions Mon 7:30 AM - 8:00 PM Tue 7:30 AM - 8:00 PM Wed 7:30 AM - 8:00 PM Thu 7:30 AM - 8:00 PM Open now Fri 7:30 AM - 8:00 PM Sat 7:30 AM - 8:00 PM Sun 9:00 AM - 7:00 PM Amenities a"
+    },
+    {
+      "id": "45c42d76-1042-47ff-8028-13580ddd74d4",
+      "name": "Washlab Autospa",
+      "city": "Huntsville",
+      "state": "AL",
+      "yelp_url": "https://www.yelp.com/biz/washlab-autospa-huntsville",
+      "positive_count": 3,
+      "sample": "People also searched for Car Detailing Touchless Carwash Underbody Wash Do It Yourself Car Wash Interior Car Cleaning Self Serve Car Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "id": "a1c4105c-83fb-4ca2-adae-3e68a28666a2",
+      "name": "Sho Nuff Clean Auto Spa",
+      "city": "Mobile",
+      "state": "AL",
+      "yelp_url": "https://www.yelp.com/biz/sho-nuff-clean-auto-spa-mobile",
+      "positive_count": 1,
+      "sample": "People also searched for Interior Car Cleaning Car Detailing Boat Detailing Touchless Car Wash Drive Thru Self Serve Car Wash Mercedes Benz Repair Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "id": "52853765-8e44-47e1-9fae-6a8fc595af8f",
+      "name": "Magic Bubbles 24hrs Car Wash",
+      "city": "New Orleans",
+      "state": "LA",
+      "yelp_url": "https://www.yelp.com/biz/magic-bubbles-24hrs-car-wash-new-orleans-4",
+      "positive_count": 2,
+      "sample": "One side of the street is a vacuum, carpet shampooer and manual car wash station, and across the street is a touchless/auto car wash."
+    },
+    {
+      "id": "92553fba-2784-450a-bab7-d3f1e691d65c",
+      "name": "Pelican Pointe Car Wash",
+      "city": "Metairie",
+      "state": "LA",
+      "yelp_url": "https://www.yelp.com/biz/pelican-pointe-car-wash-metairie",
+      "positive_count": 1,
+      "sample": "People also searched for Free Vacuum Self Car Vacuum Self Serve Car Wash Truck Wash Free Air Touchless Carwash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "id": "52853765-8e44-47e1-9fae-6a8fc595af8f",
+      "name": "Magic Bubbles",
+      "city": "New Orleans",
+      "state": "LA",
+      "yelp_url": "https://www.yelp.com/biz/magic-bubbles-new-orleans-6",
+      "positive_count": 1,
+      "sample": "People also searched for Touchless Car Wash Car Wash Self Service Drive Through Car Wash Brushless Car Wash Hand Car Wash Coin Operated Car Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "id": "97e651bf-fadd-4e10-bc49-72f8ef708e69",
+      "name": "Black Diamond Car Wash",
+      "city": "Prairieville",
+      "state": "LA",
+      "yelp_url": "https://www.yelp.com/biz/black-diamond-car-wash-prairieville",
+      "positive_count": 1,
+      "sample": "People also searched for Car Detailing Touchless Carwash Drive Thru Car Wash Free Vacuum Underbody Wash Hand Wash Recommended Reviews Loading..."
+    },
+    {
+      "id": "f877e725-0252-4af9-b5fc-8f874e6984ef",
+      "name": "Geaux Clean Car Wash",
+      "city": "Baton Rouge",
+      "state": "LA",
+      "yelp_url": "https://www.yelp.com/biz/geaux-clean-car-wash-baton-rouge-3",
+      "positive_count": 1,
+      "sample": "People also searched for Touchless Carwash Touchless Car Wash Drive Thru Free Vacuum Truck Wash Mobile Detailing Services Automotive Recommended Reviews Loading..."
+    },
+    {
+      "id": "97350732-8e80-4f83-bd3c-cffa53e7b0ef",
+      "name": "ClearWater Express Wash",
+      "city": "Katy",
+      "state": "TX",
+      "yelp_url": "https://www.yelp.com/biz/clearwater-express-wash-katy-4",
+      "positive_count": 1,
+      "sample": "People also searched for Free Vacuum Self Serve Car Wash Drive Through Car Wash Free Vacuum Car Wash Do It Yourself Car Wash Touchless Carwash Recommended Reviews Loading..."
+    },
+    {
+      "id": "e5b9c2dc-97c5-4a9d-af8d-67ec4ce2d263",
+      "name": "CARisma Wash",
+      "city": "Houston",
+      "state": "TX",
+      "yelp_url": "https://www.yelp.com/biz/carisma-wash-houston-5",
+      "positive_count": 1,
+      "sample": "People also searched for Free Vacuum Car Wash Drive Through Car Wash Self Car Vacuum Self Serve Car Wash Touchless Carwash Free Vacuum Recommended Reviews Loading..."
+    },
+    {
+      "id": "e56caac6-1462-4767-8c6e-ccdeab95f6d7",
+      "name": "Mr Express",
+      "city": "Houston",
+      "state": "TX",
+      "yelp_url": "https://www.yelp.com/biz/mr-express-houston-4",
+      "positive_count": 1,
+      "sample": "People also searched for Touchless Car Wash Drive Through Car Wash Tunnel Car Wash Express Car Wash Hand Car Wash Self Service Car Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "id": "c1c5ff3b-146d-4e64-9e3c-13df87a0538f",
+      "name": "Caliber Car Wash",
+      "city": "Rowlett",
+      "state": "TX",
+      "yelp_url": "https://www.yelp.com/biz/caliber-car-wash-rowlett",
+      "positive_count": 2,
+      "sample": "People also searched for Touchless Carwash Interior Detailing Car Detailing Hand Wash Underbody Wash Self Serve Car Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "id": "acc7d28a-01ee-4bcd-945d-f91f05e5f661",
+      "name": "Xpress Carwash",
+      "city": "Austin",
+      "state": "TX",
+      "yelp_url": "https://www.yelp.com/biz/xpress-carwash-austin",
+      "positive_count": 7,
+      "sample": "Laser automatic starts as low as $5 and self Carwash starts at $2 - Austin, TX\",\"contentLocation\":{\"@type\":\"Place\",\"address\":{\"@type\":\"PostalAddress\",\"streetAddress\":\"6508 McNeil Dr\",\"addressLocality\":\"Austin\",\"addressRegion\":\"TX\",\"postalCode\":\"78729\",\"addressCountry\":\"US\"}}}],\"name\":\"Media Showcase"
+    },
+    {
+      "id": "5ff8e332-022a-4856-a423-2c8d438bc4b2",
+      "name": "Waves Express Car Wash",
+      "city": "Austin",
+      "state": "TX",
+      "yelp_url": "https://www.yelp.com/biz/waves-express-car-wash-austin",
+      "positive_count": 1,
+      "sample": "People also searched for Drive Thru Car Wash Touchless Carwash Self Serve Car Wash Do It Yourself Car Wash Self Car Vacuum Car Detailing Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "id": "206a3037-79d6-498a-942c-8d1acbdcfe5a",
+      "name": "Carwash at MLK",
+      "city": "Austin",
+      "state": "TX",
+      "yelp_url": "https://www.yelp.com/biz/carwash-at-mlk-austin",
+      "positive_count": 1,
+      "sample": "The service provider was extremely friendly and their brushless automatic wash was very good for $14!"
+    },
+    {
+      "id": "02dfc5be-a6e1-4c50-b64f-f9c698517ff8",
+      "name": "BlueWave Express Car Wash",
+      "city": "San Antonio",
+      "state": "TX",
+      "yelp_url": "https://www.yelp.com/biz/bluewave-express-car-wash-san-antonio-5",
+      "positive_count": 1,
+      "sample": "- San Antonio, TX\",\"contentLocation\":{\"@type\":\"Place\",\"address\":{\"@type\":\"PostalAddress\",\"streetAddress\":\"8414 Broadway St\",\"addressLocality\":\"San Antonio\",\"addressRegion\":\"TX\",\"postalCode\":\"78209\",\"addressCountry\":\"US\"}},\"review\":{\"@type\":\"Review\",\"author\":{\"@type\":\"Person\",\"name\":\"Kimberlee O.\"},\""
+    },
+    {
+      "id": "16f72839-a6ef-4466-bff8-8a1747d38f75",
+      "name": "The Wash Tub",
+      "city": "San Antonio",
+      "state": "TX",
+      "yelp_url": "https://www.yelp.com/biz/the-wash-tub-san-antonio-24",
+      "positive_count": 1,
+      "sample": "People also searched for Car Detailing Drive Thru Car Wash Self Serve Car Wash Touch Free Car Wash Free Vacuum Hand Wash Recommended Reviews Loading..."
+    },
+    {
+      "id": "22e58d73-d6d9-4c68-8505-f1a09bc20445",
+      "name": "Texas Star Autowash",
+      "city": "Fort Worth",
+      "state": "TX",
+      "yelp_url": "https://www.yelp.com/biz/texas-star-autowash-fort-worth",
+      "positive_count": 4,
+      "sample": "People also searched for Self Serve Car Wash Touchless Carwash Self Car Vacuum 24 Hour Car Wash Coin Operated Car Wash Touch Free Car Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "id": "6a30c1ac-d17b-4858-aba6-c22c9edaf791",
+      "name": "Shine Express Car Wash",
+      "city": "Fort Worth",
+      "state": "TX",
+      "yelp_url": "https://www.yelp.com/biz/shine-express-car-wash-fort-worth-11",
+      "positive_count": 1,
+      "sample": "See 1 question People also searched for Drive Thru Car Wash Free Vacuum Free Vacuum Car Wash Touchless Carwash Self Car Vacuum Car Detailing Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    }
+  ],
+  "new_business_candidates": [
+    {
+      "yelp_url": "https://www.yelp.com/biz/mft-car-wash-south-hackensack",
+      "name": "MFT Car Wash",
+      "address": "456 US Hwy 46 W",
+      "city": "South Hackensack",
+      "state": "NJ",
+      "positive_count": 2,
+      "sample": "People also searched for Self Serve Car Wash Free Vacuum Coin Operated Car Wash 24 Hour Car Wash Touchless Carwash Self Car Vacuum Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/spotless-auto-laundries-hackensack-3",
+      "name": "Spotless Auto Laundries",
+      "address": "424 River St",
+      "city": "Hackensack",
+      "state": "NJ",
+      "positive_count": 10,
+      "sample": "People also searched for Self Serve Car Wash Self Car Vacuum Touchless Carwash Coin Operated Car Wash Drive Thru Car Wash Free Vacuum Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/one-stop-car-wash-hamburg-3",
+      "name": "One Stop Car Wash",
+      "address": "4071 Saint Francis Dr",
+      "city": "Hamburg",
+      "state": "NY",
+      "positive_count": 1,
+      "sample": "I didn't realize that it was touchless."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/rapid-laser-wash-rochester",
+      "name": "RAPID LASER WASH",
+      "address": "125 Saginaw Dr",
+      "city": "Rochester",
+      "state": "NY",
+      "positive_count": 10,
+      "sample": "Save up to $10 on your next visit read more in Oil Change Stations Advance Auto Parts 3.2 (5 reviews) 2.7 miles away from RAPID LASER WASH Andrew P."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/raider-wash-macedon-3",
+      "name": "Raider Wash",
+      "address": "992 Pittsford Palmyra Rd",
+      "city": "Macedon",
+      "state": "NY",
+      "positive_count": 1,
+      "sample": "People also searched for Self Car Wash Touchless Car Wash Self Car Vacuum Do It Yourself Car Wash Free Vacuum Laser Car Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/suds-and-shine-albany",
+      "name": "Suds &amp; Shine",
+      "address": "1025 Central Ave",
+      "city": "Albany",
+      "state": "NY",
+      "positive_count": 1,
+      "sample": "Albany, NY 0 7 2 Jan 20, 2026 2 photos The initial touchless spray was performed well, however the automated wash left a thick layer of foam on my car."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/colonial-car-wash-guilderland",
+      "name": "Colonial Car Wash",
+      "address": "1769 Western Ave",
+      "city": "Guilderland",
+      "state": "NY",
+      "positive_count": 2,
+      "sample": "I had a minor problem with the automated brushless car wash."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/curry-road-car-wash-schenectady",
+      "name": "Curry Road Car Wash",
+      "address": "1156 Curry Rd",
+      "city": "Schenectady",
+      "state": "NY",
+      "positive_count": 2,
+      "sample": "Schenectady, NY 0 3 0 Jul 11, 2018 Updated review Forget about all of those touchless car wash establishments."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/north-salina-car-wash-syracuse",
+      "name": "North Salina Car Wash",
+      "address": "1600 N Salina St",
+      "city": "Syracuse",
+      "state": "NY",
+      "positive_count": 1,
+      "sample": "If you choose a 10.00 wash touch free you will be charge 11.25."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/empire-car-wash-east-syracuse",
+      "name": "Empire Car Wash",
+      "address": "6913 Manlius Center Rd",
+      "city": "East Syracuse",
+      "state": "NY",
+      "positive_count": 1,
+      "sample": "East Syracuse, NY 0 51 25 Feb 19, 2023 The best touchless carwash in the area!"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/lakeland-touchless-car-wash-syracuse",
+      "name": "Lakeland Touchless Car Wash",
+      "address": "869 State Fair Blvd",
+      "city": "Syracuse",
+      "state": "NY",
+      "positive_count": 7,
+      "sample": "Yes No Maybe Photos videos See all 1 photos Add photo {\"@context\":\"https://schema.org\",\"@type\":\"ItemList\",\"itemListElement\":[{\"@context\":\"https://schema.org\",\"@type\":\"ImageObject\",\"position\":1,\"name\":\"https://s3-media0.fl.yelpcdn.com/bphoto/kKa1XTyqdCKOar6nuzO8aQ/l.jpg\",\"url\":\"https://s3-media0.fl.y"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/scrubadub-medford",
+      "name": "ScrubaDub",
+      "address": "2 Fulbright St",
+      "city": "Medford",
+      "state": "MA",
+      "positive_count": 1,
+      "sample": "People also searched for Interior Car Cleaning Self Serve Car Wash Do It Yourself Car Wash Touchless Carwash Underbody Wash Free Vacuum Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/rojo-car-wash-norwood",
+      "name": "Rojo Car Wash",
+      "address": "69 Providence Hwy",
+      "city": "Norwood",
+      "state": "MA",
+      "positive_count": 2,
+      "sample": "\u201d in 3 reviews \u201c The Laser ( touchless ) Wash is great, although I think the pricing is a little high ($24 if you want the works)."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/scrubadub-auto-wash-centers-worcester-4",
+      "name": "ScrubaDub Auto Wash Centers",
+      "address": "11 Jennings St",
+      "city": "Worcester",
+      "state": "MA",
+      "positive_count": 1,
+      "sample": "People also searched for 24 Hour Self Car Wash Touchless Carwash Truck Wash Self Service Dog Wash Free Air Engine Cleaning Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/big-kahuna-car-wash-auburn",
+      "name": "Big Kahuna Car Wash",
+      "address": "88 SouthBridge St",
+      "city": "Auburn",
+      "state": "MA",
+      "positive_count": 6,
+      "sample": "People also searched for Free Vacuum Underbody Wash Touchless Carwash Hand Wash Do It Yourself Car Wash Self Car Vacuum Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/fullers-car-laundry-auburn",
+      "name": "Fuller's Car Laundry",
+      "address": "68 Auburn St",
+      "city": "Auburn",
+      "state": "MA",
+      "positive_count": 1,
+      "sample": "The rear window of ny car sfter a $24 touchless car wash at Fuller's Car Laundry."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/fitzys-car-and-pet-wash-north-grafton",
+      "name": "Fitzy's Car and Pet Wash",
+      "address": "85 Worcester St",
+      "city": "North Grafton",
+      "state": "MA",
+      "positive_count": 10,
+      "sample": "- North Grafton, MA\",\"contentLocation\":{\"@type\":\"Place\",\"address\":{\"@type\":\"PostalAddress\",\"streetAddress\":\"85 Worcester St\",\"addressLocality\":\"North Grafton\",\"addressRegion\":\"MA\",\"postalCode\":\"01536\",\"addressCountry\":\"US\"}},\"review\":{\"@type\":\"Review\",\"author\":{\"@type\":\"Person\",\"name\":\"Renee L.\"},\"i"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/premiere-car-wash-worcester",
+      "name": "Premiere Car Wash",
+      "address": "235 Southbridge St",
+      "city": "Worcester",
+      "state": "MA",
+      "positive_count": 3,
+      "sample": "People also searched for 24 Hour Car Wash Free Vacuum Touchless Carwash Touchless Car Wash Drive Thru Self Car Vacuum Underbody Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/primrose-touchfree-car-wash-westborough",
+      "name": "Primrose Touchfree Car Wash",
+      "address": "336 Turnpike Rd",
+      "city": "Westborough",
+      "state": "MA",
+      "positive_count": 10,
+      "sample": "Yes No Maybe Photos videos See all 2 photos Add photo {\"@context\":\"https://schema.org\",\"@type\":\"ItemList\",\"itemListElement\":[{\"@context\":\"https://schema.org\",\"@type\":\"ImageObject\",\"position\":1,\"name\":\"https://s3-media0.fl.yelpcdn.com/bphoto/_d-OWM5-KZ38G2NRUUDqFQ/l.jpg\",\"url\":\"https://s3-media0.fl.y"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/soapy-noble-feeding-hill",
+      "name": "Soapy Noble",
+      "address": "219 S Westfield St",
+      "city": "Feeding Hill",
+      "state": "MA",
+      "positive_count": 1,
+      "sample": "People also searched for Self Serve Car Wash Underbody Wash Touchless Car Wash Drive Thru Touchless Carwash Hand Wash Small Businesses Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/automated-laser-car-wash-springfield-2",
+      "name": "Automated Laser Car Wash",
+      "address": "410 Cooley St",
+      "city": "Springfield",
+      "state": "MA",
+      "positive_count": 2,
+      "sample": "People also searched for Touchless Carwash Underbody Wash Self Serve Car Wash Truck Wash Car Vacuum Automotive Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/magic-minit-touchless-systems-ii-enfield",
+      "name": "Magic Minit Touchless Systems II",
+      "address": "290 Enfield St",
+      "city": "Enfield",
+      "state": "CT",
+      "positive_count": 5,
+      "sample": "With a focus on quality and building strong relationships, every project is treated as a\u2026 read more in Printing Services, Vehicle Wraps, Signmaking Clean Queen Car Wash 3.0 (1 review) 17.8 miles away from Magic Minit Touchless Systems II Welcome to Clean Queen Car Wash, where royal treatment meets p"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/soft-touch-auto-wash-chicopee-2",
+      "name": "Soft Touch Auto Wash",
+      "address": "1469 Granby Rd",
+      "city": "Chicopee",
+      "state": "MA",
+      "positive_count": 1,
+      "sample": "People also searched for Interior Car Cleaning Self Serve Car Wash Truck Wash Touchless Carwash Underbody Wash Car Vacuum Recommended Reviews Loading..."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/bmc-car-wash-johnston",
+      "name": "BMC Car Wash",
+      "address": "135 Putnam Pike",
+      "city": "Johnston",
+      "state": "RI",
+      "positive_count": 1,
+      "sample": "People also searched for Car Detailing Interior Car Cleaning Touchless Car Wash Drive Thru Hand Wash Underbody Wash Self Serve Car Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/providence-detailing-providence",
+      "name": "Providence Detailing &amp; Hand Wash",
+      "address": "30 N Davis St",
+      "city": "Providence",
+      "state": "RI",
+      "positive_count": 1,
+      "sample": "People also searched for Hand Car Wash Touchless Car Wash Mobile Car Detailing Service Car Wash and Detail Full Service Car Wash Underbody Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/touchless-automatic-providence",
+      "name": "Touchless Automatic",
+      "address": "18 Belden St",
+      "city": "Providence",
+      "state": "RI",
+      "positive_count": 4,
+      "sample": "Yes No Maybe Photos videos Add photo Services Offered Verified by Business Car wash You Might Also Consider Sponsored Safeway Oil Change Automotive Services 2.6 miles away from Touchless Automatic Safeway Oil Change Automotive Services provides full-service auto maintenance and repair services in Cr"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/reaper-recon-cranston-2",
+      "name": "Reaper Recon",
+      "address": null,
+      "city": "Cranston",
+      "state": "RI",
+      "positive_count": 1,
+      "sample": "People also searched for Touchless Car Wash Mobile Car Wash Free Vacuum Car Wash Car Detailing Headlight Restoration Truck Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/mr-sparkle-car-wash-wethersfield",
+      "name": "Mr Sparkle Car Wash",
+      "address": "752 Silas Deane Hwy",
+      "city": "Wethersfield",
+      "state": "CT",
+      "positive_count": 4,
+      "sample": "We offer a full line of automotive services including: - CT Emissions Test Center - Suspensions -\u2026 read more in Tires, Oil Change Stations, Auto Repair About the Business Express exterior car wash tunnel along with 1 touchless automatic wash and 5 self-service bays, complimented by 9 vacuums for a q"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/bt-car-wash-wethersfield",
+      "name": "BT Car Wash",
+      "address": "1715 Berlin Tpke",
+      "city": "Wethersfield",
+      "state": "CT",
+      "positive_count": 6,
+      "sample": "Suave Auto Detailing came to my house in\u2026\" read more in Auto Repair, Auto Detailing, Auto Customization About the Business State of the art soft touch and touchless car wash."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/aston-car-wash-aston",
+      "name": "Aston Car Wash",
+      "address": "3344 Market St",
+      "city": "Aston",
+      "state": "PA",
+      "positive_count": 7,
+      "sample": "People also searched for Self Car Wash Touchless Car Wash Brushless Car Wash Hand Car Wash Carwash Drive Thru Car Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/auto-spa-xpress-huntingdon-valley",
+      "name": "Auto Spa Xpress",
+      "address": "2245 Huntingdon Pike",
+      "city": "Huntingdon Valley",
+      "state": "PA",
+      "positive_count": 4,
+      "sample": "People also searched for Free Vacuum Touchless Carwash Self Serve Car Wash Self Car Vacuum 24 Hour Car Wash Drive Thru Car Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/mr-magic-car-wash-bridgeville",
+      "name": "Mr Magic Car Wash",
+      "address": "1185 Washington Pike",
+      "city": "Bridgeville",
+      "state": "PA",
+      "positive_count": 3,
+      "sample": "See 1 question People also searched for Self Car Vacuum Free Vacuum Drive Thru Car Wash Touchless Carwash Truck Wash Free Vacuum Car Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/tunnel-o-suds-munhall",
+      "name": "Tunnel O Suds",
+      "address": "321E 7th Ave",
+      "city": "Munhall",
+      "state": "PA",
+      "positive_count": 2,
+      "sample": "More than 5 years ago See question details People also searched for Drive Thru Car Wash Self Serve Car Wash Underbody Wash Touchless Carwash Interior Car Cleaning Truck Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/getgo-fuel-station-west-mifflin",
+      "name": "GetGo Fuel Station",
+      "address": "1001 Lebanon &amp; Noble Rd",
+      "city": "West Mifflin",
+      "state": "PA",
+      "positive_count": 2,
+      "sample": "Yes No Maybe Services Offered Verified by Business Car wash People also searched for Free Vacuum Free Vacuum Car Wash Gas Stations With Air Pumps Touchless Carwash Free Air High Octane Gas Location Hours Suggest an edit 1001 Lebanon Noble Rd West Mifflin, PA 15122 Get directions You Might Also Consi"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/nuwave-car-wash-harrisburg",
+      "name": "Nuwave Car Wash",
+      "address": null,
+      "city": "Harrisburg",
+      "state": "PA",
+      "positive_count": 1,
+      "sample": "People also searched for Touchless Car Wash Drive Thru Underbody Wash Self Serve Car Wash 24 Hour Car Wash Free Air Vehicle Upholstery Cleaning Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/ultimate-car-wash-and-lube-hummelstown",
+      "name": "Ultimate Car Wash &amp; Lube",
+      "address": "1900 Kaylor Rd",
+      "city": "Hummelstown",
+      "state": "PA",
+      "positive_count": 5,
+      "sample": "People also searched for Car Vacuum Free Vacuum Self Serve Car Wash Underbody Wash Oil Change Touchless Carwash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/ultimate-car-wash-hummelstown-2",
+      "name": "Ultimate Car Wash",
+      "address": "1900 Kaylor Rd",
+      "city": "Hummelstown",
+      "state": "PA",
+      "positive_count": 1,
+      "sample": "People also searched for Self Serve Car Wash Touchless Car Wash Drive Thru Underbody Wash Car Rental Touchless Carwash Truck Wash Recommended Reviews Loading..."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/capital-city-car-wash-camp-hill",
+      "name": "Capital City Car Wash",
+      "address": "3525 Hartzdale Dr",
+      "city": "Camp Hill",
+      "state": "PA",
+      "positive_count": 1,
+      "sample": "Manager Capital City Car Wash provides a full-service car wash, touchless automotive washing, self serve washing, and detailing to the Camp Hill, PA area."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/skyway-car-wash-newark-2",
+      "name": "Skyway Car Wash",
+      "address": "221 Raymond Blvd",
+      "city": "Newark",
+      "state": "NJ",
+      "positive_count": 1,
+      "sample": "- Newark, NJ\",\"contentLocation\":{\"@type\":\"Place\",\"address\":{\"@type\":\"PostalAddress\",\"streetAddress\":\"221 Raymond Blvd\",\"addressLocality\":\"Newark\",\"addressRegion\":\"NJ\",\"postalCode\":\"07105\",\"addressCountry\":\"US\"}}}],\"name\":\"Media Showcase\"} Services Offered Verified by Business Auto detailing work Car"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/waterworks-touchless-car-wash-jersey-city",
+      "name": "Waterworks Touchless Car Wash",
+      "address": "758 Garfield Ave",
+      "city": "Jersey City",
+      "state": "NJ",
+      "positive_count": 6,
+      "sample": "We specialize in premium auto detailing, self-healing PPF, custom vehicle wraps, and multi-year ceramic coatings to\u2026 read more in Auto Detailing, Car Wash Jade Auto Detailing 4.5 miles away from Waterworks Touchless Car Wash At Jade Auto Detail, we may be a new business, but our work speaks for itse"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/clean-supreme-nj-linden-3",
+      "name": "Clean Supreme NJ",
+      "address": null,
+      "city": "Linden",
+      "state": "NJ",
+      "positive_count": 1,
+      "sample": "People also searched for Touchless Carwash 24 Hour Car Wash Car Detailing Interior Car Cleaning Engine Cleaning Self Serve Car Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/waterworks-touchless-car-wash-jersey-city",
+      "name": "Waterworks Touchless Car Wash",
+      "address": "758 Garfield Ave",
+      "city": "Jersey City",
+      "state": "NJ",
+      "positive_count": 7,
+      "sample": "Save up to $10 on your next visit read more in Oil Change Stations Jade Auto Detailing 4.5 miles away from Waterworks Touchless Car Wash At Jade Auto Detail, we may be a new business, but our work speaks for itself."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/skyway-car-wash-newark-2",
+      "name": "Skyway Car Wash",
+      "address": "221 Raymond Blvd",
+      "city": "Newark",
+      "state": "NJ",
+      "positive_count": 1,
+      "sample": "- Newark, NJ\",\"contentLocation\":{\"@type\":\"Place\",\"address\":{\"@type\":\"PostalAddress\",\"streetAddress\":\"221 Raymond Blvd\",\"addressLocality\":\"Newark\",\"addressRegion\":\"NJ\",\"postalCode\":\"07105\",\"addressCountry\":\"US\"}}}],\"name\":\"Media Showcase\"} Services Offered Verified by Business Auto detailing work Car"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/water-works-car-wash-catonsville-catonsville",
+      "name": "Water Works Car Wash-Catonsville",
+      "address": "5604 Talbott Pl",
+      "city": "Catonsville",
+      "state": "MD",
+      "positive_count": 1,
+      "sample": "Business Owner This Water Works location offers a Touchless automatic wash, Self-service handbays, Vacuums and Auto-Detailing Supplies."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/flagship-carwash-cockeysville",
+      "name": "Flagship Carwash",
+      "address": "10117 York Rd",
+      "city": "Cockeysville",
+      "state": "MD",
+      "positive_count": 1,
+      "sample": "People also searched for Drive Thru Car Wash Free Vacuum Self Serve Car Wash Free Vacuum Car Wash Touchless Carwash Car Detailing Recommended Reviews Loading..."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/flagship-carwash-washington-5",
+      "name": "Flagship Carwash",
+      "address": "5020 Wisconsin Ave NW",
+      "city": "Washington, DC",
+      "state": "DC",
+      "positive_count": 1,
+      "sample": "People also searched for Drive Thru Car Wash Self Car Vacuum Free Vacuum Self Serve Car Wash Touchless Carwash Interior Car Cleaning Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/seven-corners-sunoco-falls-church",
+      "name": "Seven Corners Sunoco",
+      "address": "6301 Leesburg Pike",
+      "city": "Falls Church",
+      "state": "VA",
+      "positive_count": 6,
+      "sample": "read more in Towing, Roadside Assistance Carsmart 11.7 miles away from Seven Corners Sunoco in Used Car Dealers Location Hours Suggest an edit 6301 Leesburg Pike Falls Church, VA 22044 Get directions Amenities and More Accepts credit cards Ask the Community Ask a question Q: Does this place have bru"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/megawash-ashland-2",
+      "name": "MegaWash",
+      "address": "10500 Vermeer Pl",
+      "city": "Ashland",
+      "state": "VA",
+      "positive_count": 3,
+      "sample": "If our 75\u2032 touchless tunnel can't fit your vehicle, our 100\u2032 large vehicle wash definitely can."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/splash-n-dash-car-wash-and-detailing-henrico",
+      "name": "Splash-N-Dash Car Wash &amp; Detailing",
+      "address": "9940 Mayland Dr",
+      "city": "Henrico",
+      "state": "VA",
+      "positive_count": 1,
+      "sample": "Get a quick Wash at our Touch Free and Soft Touch automated Bays."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/ye-olde-carwash-richmond",
+      "name": "Ye Olde Carwash",
+      "address": "10010 Midlothian Turnpike",
+      "city": "Richmond",
+      "state": "VA",
+      "positive_count": 1,
+      "sample": "People also searched for Free Vacuum Car Wash Self Serve Car Wash Free Vacuum Underbody Wash Truck Wash Touchless Carwash Recommended Reviews Loading..."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/touchless-car-wash-virginia-beach",
+      "name": "Touchless Car Wash",
+      "address": "1217 Oceana Blvd",
+      "city": "Virginia Beach",
+      "state": "VA",
+      "positive_count": 3,
+      "sample": "read more in Car Wash, Auto Detailing Shine Mobile Detailing 5.0 (1 review) 7.5 miles away from Touchless Car Wash At Shine Mobile Detailing, we're not just about cars; we're about the people who drive them."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/rio-car-wash-virginia-beach-10",
+      "name": "Rio Car Wash",
+      "address": "1108 Lynnhaven Pkwy",
+      "city": "Virginia Beach",
+      "state": "VA",
+      "positive_count": 1,
+      "sample": "People also searched for Drive Thru Car Wash Free Vacuum Self Car Vacuum Touchless Carwash Car Detailing Underbody Wash Recommended Reviews Loading..."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/sams-xpress-car-wash-suffolk-3",
+      "name": "Sam's Xpress Car Wash",
+      "address": "6460 Hampton Roads Pkwy",
+      "city": "Suffolk",
+      "state": "VA",
+      "positive_count": 1,
+      "sample": "People also searched for Underbody Wash Self Serve Car Wash Do It Yourself Car Wash Touchless Carwash Hand Wash Free Vacuum Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/fw-express-car-wash-virginia-beach-2",
+      "name": "FW Express Car Wash",
+      "address": "2526 Lynnhaven Pkwy",
+      "city": "Virginia Beach",
+      "state": "VA",
+      "positive_count": 1,
+      "sample": "People also searched for Self Car Wash Touchless Car Wash Hand Car Wash Coin Car Wash Truck Wash Unlimited Car Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/tlc-touchless-loving-car-wash-hampton",
+      "name": "Tlc Touchless Loving Car Wash",
+      "address": "1824 Todds Ln",
+      "city": "Hampton",
+      "state": "VA",
+      "positive_count": 6,
+      "sample": "Dedicated to\u2026 read more in Auto Repair Gotchu Hooked 5.0 (1 review) Affordable towing near you Newport News Hampton VA 60$ 10 mile tows you call we come read more in Towing Location Hours Suggest an edit 1824 Todds Ln Hampton, VA 23666 Get directions Ask the Community Ask a question Yelp users haven"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/galleria-express-car-wash-charlotte",
+      "name": "Galleria Express Car Wash",
+      "address": "1906 Sardis Rd N",
+      "city": "Charlotte",
+      "state": "NC",
+      "positive_count": 3,
+      "sample": "- Charlotte, NC\",\"contentLocation\":{\"@type\":\"Place\",\"address\":{\"@type\":\"PostalAddress\",\"streetAddress\":\"1906 Sardis Rd N\",\"addressLocality\":\"Charlotte\",\"addressRegion\":\"NC\",\"postalCode\":\"28270\",\"addressCountry\":\"US\"}},\"review\":{\"@type\":\"Review\",\"author\":{\"@type\":\"Person\",\"name\":\"Kiley S.\"},\"itemRevi"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/suds-n-shine-cornelius",
+      "name": "Sud's N Shine",
+      "address": "18341 Old Statesville Rd",
+      "city": "Cornelius",
+      "state": "NC",
+      "positive_count": 10,
+      "sample": "\u201d in 3 reviews \u201c I noticed that you had a new check-in machine for $15 payment but did not come across the choice for touchless ."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/touchless-automatic-laserwash-harrisburg",
+      "name": "Touchless Automatic Laserwash",
+      "address": "4916 State Hwy 49",
+      "city": "Harrisburg",
+      "state": "NC",
+      "positive_count": 1,
+      "sample": "Yes No Maybe Photos videos Add photo Services Offered Verified by Business Car wash Location Hours Suggest an edit 4916 State Hwy 49 Harrisburg, NC 28075 Get directions People also searched for Touchless Car Wash Carwash Hand Car Wash Truck Wash Self Serve Car Wash Automatic Car Wash Recommended Rev"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/bp-raleigh-28",
+      "name": null,
+      "address": "4123 Glenwood Ave",
+      "city": "Raleigh",
+      "state": "NC",
+      "positive_count": 1,
+      "sample": "Raleigh, NC 64 258 106 Jan 3, 2015 First to Review Decent sized gas station with a touch free car wash and vacuums."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/autorific-laserwash-durham",
+      "name": "Autorific Laserwash",
+      "address": "3529 Hillsborough Rd",
+      "city": "Durham",
+      "state": "NC",
+      "positive_count": 3,
+      "sample": "We are a family owned and operated business\u2026 read more in Car Wash Location Hours Suggest an edit 3529 Hillsborough Rd Durham, NC 27705 Get directions Amenities and More Accepts credit cards Ask the Community Ask a question Yelp users haven\u2019t asked any questions yet about Autorific Laserwash ."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/autorific-high-performance-car-wash-durham",
+      "name": "Autorific High Performance Car Wash",
+      "address": "2925 Guess Rd",
+      "city": "Durham",
+      "state": "NC",
+      "positive_count": 3,
+      "sample": "People also searched for Free Vacuum Car Wash Drive Thru Car Wash Self Car Vacuum Self Serve Car Wash Free Vacuum Touchless Carwash Recommended Reviews Loading..."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/421-waterworks-carwash-greensboro",
+      "name": "421 Waterworks Carwash",
+      "address": "2213 Martin Luther King Jr Dr",
+      "city": "Greensboro",
+      "state": "NC",
+      "positive_count": 1,
+      "sample": "- Greensboro, NC\",\"contentLocation\":{\"@type\":\"Place\",\"address\":{\"@type\":\"PostalAddress\",\"streetAddress\":\"2213 Martin Luther King Jr Dr\",\"addressLocality\":\"Greensboro\",\"addressRegion\":\"NC\",\"postalCode\":\"27406\",\"addressCountry\":\"US\"}}}],\"name\":\"Media Showcase\"} Services Offered Verified by Business Au"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/carolina-car-wash-greensboro",
+      "name": "Carolina Car Wash",
+      "address": "2300 Battleground Ave",
+      "city": "Greensboro",
+      "state": "NC",
+      "positive_count": 1,
+      "sample": "People also searched for Self Service Car Wash Touchless Car Wash Self Car Vacuum Free Vacuum Automatic Car Wash Hand Car Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/west-market-st-carwash-greensboro-2",
+      "name": "West Market St Carwash",
+      "address": "6120 W Market St",
+      "city": "Greensboro",
+      "state": "NC",
+      "positive_count": 1,
+      "sample": "People also searched for Self Serve Car Wash 24 Hour Car Wash Coin Operated Car Wash Touchless Car Wash Drive Thru Car Detailing Hand Wash Recommended Reviews Loading..."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/two-minit-car-wash-atlanta",
+      "name": "Two Minit Car Wash",
+      "address": "1836 Piedmont Ave NE",
+      "city": "Atlanta",
+      "state": "GA",
+      "positive_count": 1,
+      "sample": "People also searched for Drive Through Car Wash Coin Operated Car Wash Touchless Carwash Car Detailing Self Serve Car Wash Self Car Vacuum Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/carwash-express-ii-richmond-hill-2",
+      "name": "Carwash Express Ii",
+      "address": "130 Mulberry Commercial Park Dr",
+      "city": "Richmond Hill",
+      "state": "GA",
+      "positive_count": 1,
+      "sample": "Savannah, GA 147 14 1 Jan 14, 2018 Great place I love touch free car washes and this is the only open one in 48\u00b0 weather so fae Helpful 0 Helpful 1 Thanks 0 Thanks 1 Love this 0 Love this 1 Oh no 0 Oh no 1 What do you think?"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/veals-mobile-car-wash-and-detailing-port-wentworth-2",
+      "name": "Veals Mobile Car Wash and Detailing",
+      "address": null,
+      "city": "Port Wentworth",
+      "state": "GA",
+      "positive_count": 1,
+      "sample": "Www.vealsmobilecarwashanddetailing.com - Port Wentworth, GA\"}],\"name\":\"Media Showcase\"} Services Offered Verified by Business Auto detailing work Car wash Protection Touchless wash Paint and exterior protection Interior detailing Handwashing Wheel and rim detailing You Might Also Consider Sponsored "
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/down-by-the-sea-pressure-washing-savannah",
+      "name": "DOWN BY THE SEA PRESSURE WASHING",
+      "address": null,
+      "city": "Savannah",
+      "state": "GA",
+      "positive_count": 1,
+      "sample": "People also searched for Truck Wash Self Serve Car Wash Underbody Wash Touchless Car Wash Drive Thru Do It Yourself Car Wash Automotive Recommended Reviews Loading..."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/mr-splash-coral-gables",
+      "name": "Mr. Splash",
+      "address": "4401 SW 8th St",
+      "city": "Coral Gables",
+      "state": "FL",
+      "positive_count": 2,
+      "sample": "Splash - Coral Gables, FL\",\"contentLocation\":{\"@type\":\"Place\",\"address\":{\"@type\":\"PostalAddress\",\"streetAddress\":\"4401 SW 8th St\",\"addressLocality\":\"Coral Gables\",\"addressRegion\":\"FL\",\"postalCode\":\"33134\",\"addressCountry\":\"US\"}}}],\"name\":\"Media Showcase\"} Services Offered Verified by Business Auto d"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/zoom-express-car-wash-orlando",
+      "name": "Zoom Express Car Wash",
+      "address": "6525 E Colonial Dr",
+      "city": "Orlando",
+      "state": "FL",
+      "positive_count": 1,
+      "sample": "2 prior trips to the dealership and they never resolved the issue so I called Brembo since my car was equipped with their braking system.\u2026\" read more in Tires, Auto Repair, Towing Location Hours Suggest an edit 6525 E Colonial Dr Orlando, FL 32807 Get directions Mon 7:00 AM - 8:00 PM Tue 7:00 AM - 8"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/baywash-orlando-2",
+      "name": "Baywash",
+      "address": "755 S Goldenrod Rd",
+      "city": "Orlando",
+      "state": "FL",
+      "positive_count": 3,
+      "sample": "Yes No Maybe Photos videos See all 12 photos Add photo {\"@context\":\"https://schema.org\",\"@type\":\"ItemList\",\"itemListElement\":[{\"@context\":\"https://schema.org\",\"@type\":\"ImageObject\",\"position\":1,\"name\":\"https://s3-media0.fl.yelpcdn.com/bphoto/ywMBiM_GBK1S9uUSMj6-nw/l.jpg\",\"url\":\"https://s3-media0.fl."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/laser-brite-car-wash-2-orlando",
+      "name": "Laser Brite Car Wash 2",
+      "address": "381 E Michigan St",
+      "city": "Orlando",
+      "state": "FL",
+      "positive_count": 1,
+      "sample": "People also searched for Touchless Car Wash Self Car Wash Brushless Car Wash Drive Thru Car Wash Self Car Vacuum Automatic Car Wash Recommended Reviews Loading..."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/bubble-down-carwash-palm-harbor",
+      "name": "Bubble Down Carwash",
+      "address": "35952 US Hwy 19 N",
+      "city": "Palm Harbor",
+      "state": "FL",
+      "positive_count": 2,
+      "sample": "\u2026 Read more Location Hours Suggest an edit 35952 US Hwy 19 N Palm Harbor, FL 34684 Get directions Mon 8:00 AM - 8:00 PM Tue 8:00 AM - 8:00 PM Wed 8:00 AM - 8:00 PM Thu 8:00 AM - 8:00 PM Open now Fri 8:00 AM - 8:00 PM Sat 8:00 AM - 8:00 PM Sun 8:00 AM - 8:00 PM Amenities and More Accepts credit cards"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/keep-it-kleen-car-wash-new-port-richey",
+      "name": "Keep It Kleen Car Wash",
+      "address": "6741 State Rd 54",
+      "city": "New Port Richey",
+      "state": "FL",
+      "positive_count": 1,
+      "sample": "read more in Mobile Dent Repair, Body Shops Location Hours Suggest an edit 6741 State Rd 54 New Port Richey, FL 34653 Get directions Amenities and More Accepts credit cards People also searched for Touchless Carwash Touch Free Car Wash Drive Through Car Wash Self Serve Car Wash Do It Yourself Car Wa"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/clean-car-car-wash-jacksonville",
+      "name": "Clean Car Car Wash",
+      "address": "1545 Cassat Ave",
+      "city": "Jacksonville",
+      "state": "FL",
+      "positive_count": 1,
+      "sample": "People also searched for Touchless Carwash Free Vacuum Self Serve Car Wash Self Car Vacuum Drive Thru Car Wash Touch Free Car Wash Recommended Reviews Loading..."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/suds-on-sadler-car-wash-fernandina-beach",
+      "name": "Suds on Sadler Car Wash",
+      "address": "2123 Sadler Rd",
+      "city": "Fernandina Beach",
+      "state": "FL",
+      "positive_count": 1,
+      "sample": "See 1 question People also searched for Self Serve Car Wash Free Air Do It Yourself Car Wash Truck Wash Hand Wash Touchless Carwash Recommended Reviews Loading..."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/caldwell-detailing-jacksonville",
+      "name": "Caldwell Detailing",
+      "address": null,
+      "city": "Jacksonville",
+      "state": "FL",
+      "positive_count": 1,
+      "sample": "- Jacksonville, FL\"},{\"@context\":\"https://schema.org\",\"@type\":\"ImageObject\",\"position\":7,\"name\":\"https://s3-media0.fl.yelpcdn.com/bphoto/7ZgLfCwGwkABSfHWlHZ2aA/l.jpg\",\"url\":\"https://s3-media0.fl.yelpcdn.com/bphoto/7ZgLfCwGwkABSfHWlHZ2aA/l.jpg\",\"contentUrl\":\"https://s3-media0.fl.yelpcdn.com/bphoto/7Z"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/touch-free-car-wash-jacksonville",
+      "name": "Touch Free Car Wash",
+      "address": "12777 Atlantic Blvd",
+      "city": "Jacksonville",
+      "state": "FL",
+      "positive_count": 4,
+      "sample": "Make sure to try the True LUV wash option, it's $27 but it's definitely worth it, includes graphene which makes the water roll right off your\u2026\" read more in Car Wash Roadside Responder 14.4 miles away from Touch Free Car Wash Dead battery?"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/shell-gas-station-fort-lauderdale-3",
+      "name": "Shell Gas Station",
+      "address": "1819 Fed Hwy",
+      "city": "Fort Lauderdale",
+      "state": "FL",
+      "positive_count": 1,
+      "sample": "People also searched for Touchless Car Wash Gas Station Carwash Convenience Stores Gas Prices Cheap Gas Full Service Gas Station Recommended Reviews Loading..."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/majestic-car-wash-fort-lauderdale-2",
+      "name": "Majestic Car Wash",
+      "address": "2781 N Federal Hwy",
+      "city": "Fort Lauderdale",
+      "state": "FL",
+      "positive_count": 1,
+      "sample": "People also searched for Drive Thru Car Wash Touchless Carwash Car Detailing Free Vacuum Car Wash Self Car Vacuum Free Vacuum Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/poinciana-car-wash-and-service-oakland-park-2",
+      "name": "Poinciana Car Wash &amp; Service",
+      "address": "423 E Oakland Park Blvd",
+      "city": "Oakland Park",
+      "state": "FL",
+      "positive_count": 1,
+      "sample": "Answer this question People also searched for Drive Thru Car Wash Self Serve Car Wash Self Car Vacuum Touchless Carwash Gas Station Carwash Free Vacuum Car Wash Recommended Reviews Loading..."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/u-wash-self-serve-car-wash-nashville",
+      "name": "U-Wash Self Serve Car Wash",
+      "address": "323 Donelson Pike",
+      "city": "Nashville",
+      "state": "TN",
+      "positive_count": 1,
+      "sample": "People also searched for Self Car Vacuum Touchless Carwash Free Vacuum Truck Wash Do It Yourself Car Wash Hand Wash Recommended Reviews Loading..."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/safari-car-wash-franklin",
+      "name": "Safari Car Wash",
+      "address": "1004 Center Point Pl",
+      "city": "Franklin",
+      "state": "TN",
+      "positive_count": 3,
+      "sample": "- Franklin, TN\",\"contentLocation\":{\"@type\":\"Place\",\"address\":{\"@type\":\"PostalAddress\",\"streetAddress\":\"1004 Center Point Pl\",\"addressLocality\":\"Franklin\",\"addressRegion\":\"TN\",\"postalCode\":\"37064\",\"addressCountry\":\"US\"}}}],\"name\":\"Media Showcase\"} Services Offered Verified by Business Auto detailing "
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/recharged-wash-nashville",
+      "name": "Recharged Wash",
+      "address": "6339 Charlotte Pike Unit",
+      "city": "Nashville",
+      "state": "TN",
+      "positive_count": 1,
+      "sample": "People also searched for Touchless Car Wash Self Serve Car Wash Hand Car Wash Car Detailing Full Service Car Wash Interior Car Cleaning Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/glide-xpress-car-wash-southaven",
+      "name": "Glide Xpress Car Wash",
+      "address": "602 Goodman Rd E",
+      "city": "Southaven",
+      "state": "MS",
+      "positive_count": 1,
+      "sample": "Powered by our signature \"Ride the Glide\u2122\"\u2026 \u2026 Read more Location Hours Suggest an edit 602 Goodman Rd E Southaven, MS 38671 Southaven Get directions Mon 7:00 AM - 7:00 PM Tue 7:00 AM - 7:00 PM Wed 7:00 AM - 7:00 PM Thu 7:00 AM - 7:00 PM Open now Fri 7:00 AM - 7:00 PM Sat 7:00 AM - 7:00 PM Sun 7:00 A"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/quick-shine-express-wash-memphis",
+      "name": "Quick Shine Express Wash",
+      "address": "1202 Getwell Rd",
+      "city": "Memphis",
+      "state": "TN",
+      "positive_count": 1,
+      "sample": "People also searched for Touchless Carwash Free Vacuum Self Serve Car Wash Self Car Vacuum Free Vacuum Car Wash Drive Thru Car Wash Recommended Reviews Loading..."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/the-neighborhood-car-wash-chattanooga",
+      "name": "The Neighborhood Car Wash",
+      "address": "1410 Joiner Rd",
+      "city": "Chattanooga",
+      "state": "TN",
+      "positive_count": 1,
+      "sample": "Business Owner We provide a clean, well maintained car wash with the following services: * Touch-free Automatic Wash * Under Carriage Wash * Three Regular Self Service Bays * Four \"Extra\" Pressure Self Service Bays * Four Self Service Bays have Hand Held Dryers * Eight Vacuums - 3 motors each for su"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/sutherland-ave-car-wash-knoxville",
+      "name": "Sutherland Ave Car Wash",
+      "address": "3365 Sutherland Ave",
+      "city": "Knoxville",
+      "state": "TN",
+      "positive_count": 1,
+      "sample": "People also searched for Self Serve Car Wash Car Vacuum Touchless Carwash Drive Through Car Wash Truck Wash Coin Operated Car Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/sportsmans-wash-oliver-springs",
+      "name": "Sportsman's Wash",
+      "address": "1049 E Tri County Blvd",
+      "city": "Oliver Springs",
+      "state": "TN",
+      "positive_count": 3,
+      "sample": "People also searched for Self Serve Car Wash Do It Yourself Car Wash Truck Wash Drive Through Car Wash Pressure Washers Touchless Carwash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/ingles-wash-express-farragut",
+      "name": "Ingles Wash Express",
+      "address": "11819 Kingston Pike",
+      "city": "Farragut",
+      "state": "TN",
+      "positive_count": 2,
+      "sample": "This carwash is poorly maintained but it's one of the few brushless car washes on this side of town."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/laserwash-charleston",
+      "name": "Laserwash",
+      "address": "895 Folly Rd",
+      "city": "Charleston",
+      "state": "SC",
+      "positive_count": 6,
+      "sample": "Yes No Maybe Photos videos See all 7 photos Add photo {\"@context\":\"https://schema.org\",\"@type\":\"ItemList\",\"itemListElement\":[{\"@context\":\"https://schema.org\",\"@type\":\"ImageObject\",\"position\":1,\"name\":\"https://s3-media0.fl.yelpcdn.com/bphoto/z7Lqedur9rW-rQ67rLKSLA/l.jpg\",\"url\":\"https://s3-media0.fl.y"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/circle-k-charleston-3",
+      "name": "Circle K",
+      "address": "1811 Sam Rittenberg Blvd",
+      "city": "Charleston",
+      "state": "SC",
+      "positive_count": 2,
+      "sample": "See all 6 Inside 6 photos See all 9 Outside 9 photos See all 21 All photos 21 photos People also searched for Touchless Carwash Full Service Gas Station Service Stations Truck Wash Restaurants Open Now Car Wash Location Hours Suggest an edit 1811 Sam Rittenberg Blvd Charleston, SC 29407 West Ashley "
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/the-wash-zone-express-car-and-pet-wash-summerville",
+      "name": "The Wash Zone - Express Car &amp; Pet Wash",
+      "address": "4390 Ladson Rd",
+      "city": "Summerville",
+      "state": "SC",
+      "positive_count": 2,
+      "sample": "Yes No Maybe Services Offered Verified by Business Car wash Touchless wash Self-serve wash Review Highlights \u201c For starters I thing it is a great idea to have both the car wash and the dog wash all in one."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/marty-s-car-wash-lexington-4",
+      "name": "Marty\u2019s Car Wash",
+      "address": "251 Columbia Ave",
+      "city": "Lexington",
+      "state": "SC",
+      "positive_count": 1,
+      "sample": "- Lexington, SC\",\"contentLocation\":{\"@type\":\"Place\",\"address\":{\"@type\":\"PostalAddress\",\"streetAddress\":\"251 Columbia Ave\",\"addressLocality\":\"Lexington\",\"addressRegion\":\"SC\",\"postalCode\":\"29072\",\"addressCountry\":\"US\"}}}],\"name\":\"Media Showcase\"} Services Offered Verified by Business Auto detailing wo"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/modwash-columbia",
+      "name": "ModWash",
+      "address": "102 Harban Ct",
+      "city": "Columbia",
+      "state": "SC",
+      "positive_count": 1,
+      "sample": "People also searched for Hand Wash Self Serve Car Wash Free Vacuum Car Wash Touchless Car Wash Drive Thru Car Vacuum Touchless Carwash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/mr-suds-columbia-2",
+      "name": "Mr Suds",
+      "address": "7341 Garners Ferry Rd",
+      "city": "Columbia",
+      "state": "SC",
+      "positive_count": 2,
+      "sample": "I have since returned to this shop and had some work done on\u2026\" read more in Tires, Oil Change Stations, Auto Repair Location Hours Suggest an edit 7341 Garners Ferry Rd Columbia, SC 29209 Get directions Mon Open 24 hours Tue Open 24 hours Wed Open 24 hours Thu Open 24 hours Open now Fri Open 24 hour"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/rev-express-car-wash-greenville-2",
+      "name": "Rev Express Car Wash",
+      "address": "509 S Pleasantburg Dr",
+      "city": "Greenville",
+      "state": "SC",
+      "positive_count": 1,
+      "sample": "People also searched for Drive Through Car Wash Free Vacuum Car Wash Self Serve Car Wash Touchless Carwash Free Vacuum Car Vacuum Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/wash-me-auto-wash-mauldin",
+      "name": "Wash Me Auto Wash",
+      "address": "1133 E Butler Rd",
+      "city": "Mauldin",
+      "state": "SC",
+      "positive_count": 2,
+      "sample": "We have a touch free and feather touch washes along with 4 self service bays and 7 vacuum islands."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/shammys-auto-wash-lexington",
+      "name": "Shammy's Auto Wash",
+      "address": "2632 Richmond Rd",
+      "city": "Lexington",
+      "state": "KY",
+      "positive_count": 4,
+      "sample": "People also searched for Free Vacuum Truck Wash Car Vacuum Self Serve Car Wash Drive Thru Car Wash Touchless Carwash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/rich-nicholasville",
+      "name": "Rich",
+      "address": null,
+      "city": "Nicholasville ",
+      "state": "KY",
+      "positive_count": 1,
+      "sample": "People also searched for Touchless Car Wash Hand Car Wash Car Detailing Mobile Detailing Services Automatic Car Wash Drive Thru Car Wash Recommended Reviews Loading..."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/goo-goo-express-wash-lexington",
+      "name": "Goo-Goo Express Wash",
+      "address": "1537 N Limestone St",
+      "city": "Lexington",
+      "state": "KY",
+      "positive_count": 1,
+      "sample": "For a touch free car wash this is the type of wash you should look for, no damage to paint, no swirls and no debris filled sponges and rags scratching up your paint."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/red-mile-car-wash-lexington",
+      "name": "Red Mile Car Wash",
+      "address": "651 Red Mile Rd",
+      "city": "Lexington",
+      "state": "KY",
+      "positive_count": 2,
+      "sample": "Lexington, KY 0 1 0 Mar 1, 2026 Spent $20 for touch free car wash."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/l-and-c-car-wash-prichard",
+      "name": "L &amp; C Car Wash",
+      "address": "1806 St Stephens Rd",
+      "city": "Prichard",
+      "state": "AL",
+      "positive_count": 1,
+      "sample": "People also searched for Hand Car Wash Touchless Car Wash Engine Cleaning Carwash Interior Car Cleaning Full Service Car Wash Recommended Reviews Loading..."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/pelican-pointe-carwash-harvey",
+      "name": "Pelican Pointe Carwash",
+      "address": "1420 Lapalco Blvd",
+      "city": "Harvey",
+      "state": "LA",
+      "positive_count": 1,
+      "sample": "People also searched for Car Detailing Touchless Carwash Self Serve Car Wash Self Car Vacuum Free Air Underbody Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/wow-car-wash-marrero",
+      "name": "Wow Car Wash",
+      "address": "4900 Lapalco Blvd",
+      "city": "Marrero",
+      "state": "LA",
+      "positive_count": 2,
+      "sample": "See 1 question People also searched for Touchless Carwash Drive Through Car Wash Free Vacuum Coin Operated Car Wash Free Air Self Serve Car Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/h2o-auto-spa-baton-rouge",
+      "name": "H2O Auto Spa",
+      "address": "9860 Jefferson Hwy",
+      "city": "Baton Rouge",
+      "state": "LA",
+      "positive_count": 4,
+      "sample": "People also searched for Car Detailing Ceramic Coating Scratch Removal Touchless Carwash 24 Hour Car Wash Self Serve Car Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/edwin-detailing-baton-rouge",
+      "name": "Edwin Detailing",
+      "address": null,
+      "city": "Baton Rouge",
+      "state": "LA",
+      "positive_count": 1,
+      "sample": "People also searched for Touchless Car Wash Mobile Detailing Services Car Wash Self Service Car Interior Detailing Engine Cleaning Recommended Reviews Loading..."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/chevron-touchless-car-wash-baton-rouge",
+      "name": "Chevron Touchless Car Wash",
+      "address": "9390 Old Hammond Hwy",
+      "city": "Baton Rouge",
+      "state": "LA",
+      "positive_count": 4,
+      "sample": "Yes No Maybe Photos videos Add photo Services Offered Verified by Business Car wash You Might Also Consider Sponsored Legendary Import Group 3.0 (2 reviews) 1.6 miles away from Chevron Touchless Car Wash We are Louisiana's Legendary Pre-Owned Car Dealership."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/clean-and-green-car-wash-denton",
+      "name": "Clean &amp; Green Car Wash",
+      "address": "4105 Teasley Ln",
+      "city": "Denton",
+      "state": "TX",
+      "positive_count": 1,
+      "sample": "We use biodegradable soaps and water-efficient systems that deliver a spotless\u2026 \u2026 Read more Location Hours Suggest an edit 4105 Teasley Ln Denton, TX 76210 Get directions Mon Open 24 hours Tue Open 24 hours Wed Open 24 hours Thu Open 24 hours Open now Fri Open 24 hours Sat Open 24 hours Sun 12:00 AM"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/tommy-terrifics-car-wash-plano-2",
+      "name": "Tommy Terrific's Car Wash",
+      "address": "1101 Coit Rd",
+      "city": "Plano",
+      "state": "TX",
+      "positive_count": 1,
+      "sample": "Tom M., Business Owner 2 months ago See question details See all 14 questions People also searched for Car Detailing Drive Thru Car Wash Interior Car Cleaning Touchless Carwash Truck Wash Free Vacuum Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their rev"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/wash-your-stuff-grand-prairie-grand-prairie-9",
+      "name": "Wash Your Stuff - Grand Prairie",
+      "address": "718  Davis St",
+      "city": "Grand Prairie",
+      "state": "TX",
+      "positive_count": 2,
+      "sample": "With our touch-free (and scratch-free) laser wash and our self-serve wash ba\u2026 \u2026 Read more Location Hours Suggest an edit 718 Davis St Grand Prairie, TX 75050 Get directions Mon Open 24 hours Tue Open 24 hours Wed Open 24 hours Thu Open 24 hours Open now Fri Open 24 hours Sat Open 24 hours Sun Open 2"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/505-solutions-arlington",
+      "name": "505 Solutions",
+      "address": null,
+      "city": "Arlington",
+      "state": "TX",
+      "positive_count": 1,
+      "sample": "People also searched for Touchless Car Wash Hand Car Wash Car Detailing Full Service Car Wash Interior Car Cleaning Self Car Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/splish-splash-auto-bath-mckinney",
+      "name": "Splish Splash Auto Bath",
+      "address": "1600 W Eldorado Pkwy",
+      "city": "McKinney",
+      "state": "TX",
+      "positive_count": 6,
+      "sample": "People also searched for Self Serve Car Wash Touchless Carwash Hand Wash Free Vacuum Car Wash 24 Hour Car Wash Touchless Car Wash Drive Thru Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/the-bubble-zone-car-wash-and-lube-center-garland",
+      "name": "The Bubble Zone Car Wash &amp; Lube",
+      "address": "5243 Naaman Forest Blvd",
+      "city": "GARLAND",
+      "state": "TX",
+      "positive_count": 1,
+      "sample": "A: You can stop by We do offer membership Tarek K., Business Owner 1 year ago See question details See all 2 questions People also searched for Hand Wash Underbody Wash Touchless Carwash Free Vacuum Car Wash Emissions Test Locations Drive Thru Car Wash Recommended Reviews Your trust is our priority,"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/brush-and-go-garland",
+      "name": "Brush and Go",
+      "address": "3120 S Shiloh Rd",
+      "city": "Garland",
+      "state": "TX",
+      "positive_count": 2,
+      "sample": "People also searched for Touchless Car Wash Self Service Car Wash Rv Wash Hand Car Wash Truck Wash Brushless Car Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/otters-express-car-wash-cedar-park-2",
+      "name": "Otters Express Car Wash",
+      "address": "1350 E Whitestone Blvd",
+      "city": "Cedar Park",
+      "state": "TX",
+      "positive_count": 1,
+      "sample": "- Cedar Park, TX\",\"contentLocation\":{\"@type\":\"Place\",\"address\":{\"@type\":\"PostalAddress\",\"streetAddress\":\"1350 E Whitestone Blvd\",\"addressLocality\":\"Cedar Park\",\"addressRegion\":\"TX\",\"postalCode\":\"78613\",\"addressCountry\":\"US\"}}}],\"name\":\"Media Showcase\"} Services Offered Verified by Business Auto deta"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/slg-touchfree-car-wash-no-title",
+      "name": "SLG Touchfree Car Wash",
+      "address": "1030 Patricia Dr",
+      "city": "San Antonio",
+      "state": "TX",
+      "positive_count": 6,
+      "sample": "Business Owner Our car wash is a fully automatic touch-less or touch-free which only use soap and high pressure water to clean cars."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/sterling-h2o-car-wash-san-antonio",
+      "name": "Sterling H2o Car Wash",
+      "address": "1030 Patricia Dr",
+      "city": "San Antonio",
+      "state": "TX",
+      "positive_count": 2,
+      "sample": "I filed\u2026\" read more in Auto Repair, Oil Change Stations Motor Spud Global in Car Rental, Used Car Dealers, Auto Parts Supplies About the Business We are a touch free carwash no scratches here!"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/gorilla-car-wash-san-antonio",
+      "name": "Gorilla Car Wash",
+      "address": "12610 Jones Maltsberger Rd",
+      "city": "San Antonio",
+      "state": "TX",
+      "positive_count": 1,
+      "sample": "People also searched for Self Car Vacuum Do It Yourself Car Wash Self Serve Car Wash Hand Wash Touch Free Car Wash Truck Wash Recommended Reviews Loading..."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/usa-laserwash-fort-worth-2",
+      "name": "USA Laserwash",
+      "address": "6851 Plz Pkwy",
+      "city": "Fort Worth",
+      "state": "TX",
+      "positive_count": 7,
+      "sample": "People also searched for Touchless Carwash Self Serve Car Wash Touch Free Car Wash Laser Wash Drive Thru Car Wash Truck Wash Recommended Reviews Your trust is our priority, so businesses can't pay to alter or remove their reviews."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/red-carpet-fort-worth-2",
+      "name": "Red Carpet Car Wash",
+      "address": "5829 Curzon Ave",
+      "city": "Fort Worth",
+      "state": "TX",
+      "positive_count": 5,
+      "sample": "\u201d in 2 reviews You Might Also Consider Sponsored Glightyearz 4.4 miles away from Red Carpet Car Wash We specialize in vehicle customizations here is my business Instagram page check us out @glightyearz \u2022 starlight \u2022 full body wraps \u2022 under glow \u2022 tint \u2022 caliper paint \u2022 vehicle security theft And muc"
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/505-solutions-arlington",
+      "name": "505 Solutions",
+      "address": null,
+      "city": "Arlington",
+      "state": "TX",
+      "positive_count": 1,
+      "sample": "People also searched for Touchless Car Wash Hand Car Wash Car Detailing Full Service Car Wash Interior Car Cleaning Self Car Wash Recommended Reviews Loading..."
+    },
+    {
+      "yelp_url": "https://www.yelp.com/biz/wash-your-stuff-grand-prairie-grand-prairie-9",
+      "name": "Wash Your Stuff - Grand Prairie",
+      "address": "718  Davis St",
+      "city": "Grand Prairie",
+      "state": "TX",
+      "positive_count": 2,
+      "sample": "With our touch-free (and scratch-free) laser wash and our self-serve wash ba\u2026 \u2026 Read more Location Hours Suggest an edit 718 Davis St Grand Prairie, TX 75050 Get directions Mon Open 24 hours Tue Open 24 hours Wed Open 24 hours Thu Open 24 hours Open now Fri Open 24 hours Sat Open 24 hours Sun Open 2"
+    }
+  ]
+}

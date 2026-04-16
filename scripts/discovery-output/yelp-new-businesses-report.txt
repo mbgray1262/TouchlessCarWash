@@ -1,0 +1,268 @@
+=== Top-evidence NEW business candidates (sorted by # of positive reviews) ===
+Total: 123
+
+--- AL (1) ---
+  [ 1] L & C Car Wash                           Prichard           addr=1806 St Stephens Rd
+       https://www.yelp.com/biz/l-and-c-car-wash-prichard
+--- CT (3) ---
+  [ 6] BT Car Wash                              Wethersfield       addr=1715 Berlin Tpke
+       https://www.yelp.com/biz/bt-car-wash-wethersfield
+  [ 5] Magic Minit Touchless Systems II         Enfield            addr=290 Enfield St
+       https://www.yelp.com/biz/magic-minit-touchless-systems-ii-enfield
+  [ 4] Mr Sparkle Car Wash                      Wethersfield       addr=752 Silas Deane Hwy
+       https://www.yelp.com/biz/mr-sparkle-car-wash-wethersfield
+--- DC (1) ---
+  [ 1] Flagship Carwash                         Washington, DC     addr=5020 Wisconsin Ave NW
+       https://www.yelp.com/biz/flagship-carwash-washington-5
+--- FL (13) ---
+  [ 4] Touch Free Car Wash                      Jacksonville       addr=12777 Atlantic Blvd
+       https://www.yelp.com/biz/touch-free-car-wash-jacksonville
+  [ 3] Baywash                                  Orlando            addr=755 S Goldenrod Rd
+       https://www.yelp.com/biz/baywash-orlando-2
+  [ 2] Mr. Splash                               Coral Gables       addr=4401 SW 8th St
+       https://www.yelp.com/biz/mr-splash-coral-gables
+  [ 2] Bubble Down Carwash                      Palm Harbor        addr=35952 US Hwy 19 N
+       https://www.yelp.com/biz/bubble-down-carwash-palm-harbor
+  [ 1] Zoom Express Car Wash                    Orlando            addr=6525 E Colonial Dr
+       https://www.yelp.com/biz/zoom-express-car-wash-orlando
+  [ 1] Laser Brite Car Wash 2                   Orlando            addr=381 E Michigan St
+       https://www.yelp.com/biz/laser-brite-car-wash-2-orlando
+  [ 1] Keep It Kleen Car Wash                   New Port Richey    addr=6741 State Rd 54
+       https://www.yelp.com/biz/keep-it-kleen-car-wash-new-port-richey
+  [ 1] Clean Car Car Wash                       Jacksonville       addr=1545 Cassat Ave
+       https://www.yelp.com/biz/clean-car-car-wash-jacksonville
+  [ 1] Suds on Sadler Car Wash                  Fernandina Beach   addr=2123 Sadler Rd
+       https://www.yelp.com/biz/suds-on-sadler-car-wash-fernandina-beach
+  [ 1] Caldwell Detailing                       Jacksonville       addr=(none)
+       https://www.yelp.com/biz/caldwell-detailing-jacksonville
+  [ 1] Shell Gas Station                        Fort Lauderdale    addr=1819 Fed Hwy
+       https://www.yelp.com/biz/shell-gas-station-fort-lauderdale-3
+  [ 1] Majestic Car Wash                        Fort Lauderdale    addr=2781 N Federal Hwy
+       https://www.yelp.com/biz/majestic-car-wash-fort-lauderdale-2
+  [ 1] Poinciana Car Wash & Service             Oakland Park       addr=423 E Oakland Park Blvd
+       https://www.yelp.com/biz/poinciana-car-wash-and-service-oakland-park-2
+--- GA (4) ---
+  [ 1] Two Minit Car Wash                       Atlanta            addr=1836 Piedmont Ave NE
+       https://www.yelp.com/biz/two-minit-car-wash-atlanta
+  [ 1] Carwash Express Ii                       Richmond Hill      addr=130 Mulberry Commercial Park Dr
+       https://www.yelp.com/biz/carwash-express-ii-richmond-hill-2
+  [ 1] Veals Mobile Car Wash and Detailing      Port Wentworth     addr=(none)
+       https://www.yelp.com/biz/veals-mobile-car-wash-and-detailing-port-wentworth-2
+  [ 1] DOWN BY THE SEA PRESSURE WASHING         Savannah           addr=(none)
+       https://www.yelp.com/biz/down-by-the-sea-pressure-washing-savannah
+--- KY (4) ---
+  [ 4] Shammy's Auto Wash                       Lexington          addr=2632 Richmond Rd
+       https://www.yelp.com/biz/shammys-auto-wash-lexington
+  [ 2] Red Mile Car Wash                        Lexington          addr=651 Red Mile Rd
+       https://www.yelp.com/biz/red-mile-car-wash-lexington
+  [ 1] Rich                                     Nicholasville      addr=(none)
+       https://www.yelp.com/biz/rich-nicholasville
+  [ 1] Goo-Goo Express Wash                     Lexington          addr=1537 N Limestone St
+       https://www.yelp.com/biz/goo-goo-express-wash-lexington
+--- LA (5) ---
+  [ 4] H2O Auto Spa                             Baton Rouge        addr=9860 Jefferson Hwy
+       https://www.yelp.com/biz/h2o-auto-spa-baton-rouge
+  [ 4] Chevron Touchless Car Wash               Baton Rouge        addr=9390 Old Hammond Hwy
+       https://www.yelp.com/biz/chevron-touchless-car-wash-baton-rouge
+  [ 2] Wow Car Wash                             Marrero            addr=4900 Lapalco Blvd
+       https://www.yelp.com/biz/wow-car-wash-marrero
+  [ 1] Pelican Pointe Carwash                   Harvey             addr=1420 Lapalco Blvd
+       https://www.yelp.com/biz/pelican-pointe-carwash-harvey
+  [ 1] Edwin Detailing                          Baton Rouge        addr=(none)
+       https://www.yelp.com/biz/edwin-detailing-baton-rouge
+--- MA (11) ---
+  [10] Fitzy's Car and Pet Wash                 North Grafton      addr=85 Worcester St
+       https://www.yelp.com/biz/fitzys-car-and-pet-wash-north-grafton
+  [10] Primrose Touchfree Car Wash              Westborough        addr=336 Turnpike Rd
+       https://www.yelp.com/biz/primrose-touchfree-car-wash-westborough
+  [ 6] Big Kahuna Car Wash                      Auburn             addr=88 SouthBridge St
+       https://www.yelp.com/biz/big-kahuna-car-wash-auburn
+  [ 3] Premiere Car Wash                        Worcester          addr=235 Southbridge St
+       https://www.yelp.com/biz/premiere-car-wash-worcester
+  [ 2] Rojo Car Wash                            Norwood            addr=69 Providence Hwy
+       https://www.yelp.com/biz/rojo-car-wash-norwood
+  [ 2] Automated Laser Car Wash                 Springfield        addr=410 Cooley St
+       https://www.yelp.com/biz/automated-laser-car-wash-springfield-2
+  [ 1] ScrubaDub                                Medford            addr=2 Fulbright St
+       https://www.yelp.com/biz/scrubadub-medford
+  [ 1] ScrubaDub Auto Wash Centers              Worcester          addr=11 Jennings St
+       https://www.yelp.com/biz/scrubadub-auto-wash-centers-worcester-4
+  [ 1] Fuller's Car Laundry                     Auburn             addr=68 Auburn St
+       https://www.yelp.com/biz/fullers-car-laundry-auburn
+  [ 1] Soapy Noble                              Feeding Hill       addr=219 S Westfield St
+       https://www.yelp.com/biz/soapy-noble-feeding-hill
+  [ 1] Soft Touch Auto Wash                     Chicopee           addr=1469 Granby Rd
+       https://www.yelp.com/biz/soft-touch-auto-wash-chicopee-2
+--- MD (2) ---
+  [ 1] Water Works Car Wash-Catonsville         Catonsville        addr=5604 Talbott Pl
+       https://www.yelp.com/biz/water-works-car-wash-catonsville-catonsville
+  [ 1] Flagship Carwash                         Cockeysville       addr=10117 York Rd
+       https://www.yelp.com/biz/flagship-carwash-cockeysville
+--- MS (1) ---
+  [ 1] Glide Xpress Car Wash                    Southaven          addr=602 Goodman Rd E
+       https://www.yelp.com/biz/glide-xpress-car-wash-southaven
+--- NC (9) ---
+  [10] Sud's N Shine                            Cornelius          addr=18341 Old Statesville Rd
+       https://www.yelp.com/biz/suds-n-shine-cornelius
+  [ 3] Galleria Express Car Wash                Charlotte          addr=1906 Sardis Rd N
+       https://www.yelp.com/biz/galleria-express-car-wash-charlotte
+  [ 3] Autorific Laserwash                      Durham             addr=3529 Hillsborough Rd
+       https://www.yelp.com/biz/autorific-laserwash-durham
+  [ 3] Autorific High Performance Car Wash      Durham             addr=2925 Guess Rd
+       https://www.yelp.com/biz/autorific-high-performance-car-wash-durham
+  [ 1] Touchless Automatic Laserwash            Harrisburg         addr=4916 State Hwy 49
+       https://www.yelp.com/biz/touchless-automatic-laserwash-harrisburg
+  [ 1]                                          Raleigh            addr=4123 Glenwood Ave
+       https://www.yelp.com/biz/bp-raleigh-28
+  [ 1] 421 Waterworks Carwash                   Greensboro         addr=2213 Martin Luther King Jr Dr
+       https://www.yelp.com/biz/421-waterworks-carwash-greensboro
+  [ 1] Carolina Car Wash                        Greensboro         addr=2300 Battleground Ave
+       https://www.yelp.com/biz/carolina-car-wash-greensboro
+  [ 1] West Market St Carwash                   Greensboro         addr=6120 W Market St
+       https://www.yelp.com/biz/west-market-st-carwash-greensboro-2
+--- NJ (7) ---
+  [10] Spotless Auto Laundries                  Hackensack         addr=424 River St
+       https://www.yelp.com/biz/spotless-auto-laundries-hackensack-3
+  [ 7] Waterworks Touchless Car Wash            Jersey City        addr=758 Garfield Ave
+       https://www.yelp.com/biz/waterworks-touchless-car-wash-jersey-city
+  [ 6] Waterworks Touchless Car Wash            Jersey City        addr=758 Garfield Ave
+       https://www.yelp.com/biz/waterworks-touchless-car-wash-jersey-city
+  [ 2] MFT Car Wash                             South Hackensack   addr=456 US Hwy 46 W
+       https://www.yelp.com/biz/mft-car-wash-south-hackensack
+  [ 1] Skyway Car Wash                          Newark             addr=221 Raymond Blvd
+       https://www.yelp.com/biz/skyway-car-wash-newark-2
+  [ 1] Clean Supreme NJ                         Linden             addr=(none)
+       https://www.yelp.com/biz/clean-supreme-nj-linden-3
+  [ 1] Skyway Car Wash                          Newark             addr=221 Raymond Blvd
+       https://www.yelp.com/biz/skyway-car-wash-newark-2
+--- NY (9) ---
+  [10] RAPID LASER WASH                         Rochester          addr=125 Saginaw Dr
+       https://www.yelp.com/biz/rapid-laser-wash-rochester
+  [ 7] Lakeland Touchless Car Wash              Syracuse           addr=869 State Fair Blvd
+       https://www.yelp.com/biz/lakeland-touchless-car-wash-syracuse
+  [ 2] Colonial Car Wash                        Guilderland        addr=1769 Western Ave
+       https://www.yelp.com/biz/colonial-car-wash-guilderland
+  [ 2] Curry Road Car Wash                      Schenectady        addr=1156 Curry Rd
+       https://www.yelp.com/biz/curry-road-car-wash-schenectady
+  [ 1] One Stop Car Wash                        Hamburg            addr=4071 Saint Francis Dr
+       https://www.yelp.com/biz/one-stop-car-wash-hamburg-3
+  [ 1] Raider Wash                              Macedon            addr=992 Pittsford Palmyra Rd
+       https://www.yelp.com/biz/raider-wash-macedon-3
+  [ 1] Suds & Shine                             Albany             addr=1025 Central Ave
+       https://www.yelp.com/biz/suds-and-shine-albany
+  [ 1] North Salina Car Wash                    Syracuse           addr=1600 N Salina St
+       https://www.yelp.com/biz/north-salina-car-wash-syracuse
+  [ 1] Empire Car Wash                          East Syracuse      addr=6913 Manlius Center Rd
+       https://www.yelp.com/biz/empire-car-wash-east-syracuse
+--- PA (9) ---
+  [ 7] Aston Car Wash                           Aston              addr=3344 Market St
+       https://www.yelp.com/biz/aston-car-wash-aston
+  [ 5] Ultimate Car Wash & Lube                 Hummelstown        addr=1900 Kaylor Rd
+       https://www.yelp.com/biz/ultimate-car-wash-and-lube-hummelstown
+  [ 4] Auto Spa Xpress                          Huntingdon Valley  addr=2245 Huntingdon Pike
+       https://www.yelp.com/biz/auto-spa-xpress-huntingdon-valley
+  [ 3] Mr Magic Car Wash                        Bridgeville        addr=1185 Washington Pike
+       https://www.yelp.com/biz/mr-magic-car-wash-bridgeville
+  [ 2] Tunnel O Suds                            Munhall            addr=321E 7th Ave
+       https://www.yelp.com/biz/tunnel-o-suds-munhall
+  [ 2] GetGo Fuel Station                       West Mifflin       addr=1001 Lebanon &amp; Noble Rd
+       https://www.yelp.com/biz/getgo-fuel-station-west-mifflin
+  [ 1] Nuwave Car Wash                          Harrisburg         addr=(none)
+       https://www.yelp.com/biz/nuwave-car-wash-harrisburg
+  [ 1] Ultimate Car Wash                        Hummelstown        addr=1900 Kaylor Rd
+       https://www.yelp.com/biz/ultimate-car-wash-hummelstown-2
+  [ 1] Capital City Car Wash                    Camp Hill          addr=3525 Hartzdale Dr
+       https://www.yelp.com/biz/capital-city-car-wash-camp-hill
+--- RI (4) ---
+  [ 4] Touchless Automatic                      Providence         addr=18 Belden St
+       https://www.yelp.com/biz/touchless-automatic-providence
+  [ 1] BMC Car Wash                             Johnston           addr=135 Putnam Pike
+       https://www.yelp.com/biz/bmc-car-wash-johnston
+  [ 1] Providence Detailing & Hand Wash         Providence         addr=30 N Davis St
+       https://www.yelp.com/biz/providence-detailing-providence
+  [ 1] Reaper Recon                             Cranston           addr=(none)
+       https://www.yelp.com/biz/reaper-recon-cranston-2
+--- SC (8) ---
+  [ 6] Laserwash                                Charleston         addr=895 Folly Rd
+       https://www.yelp.com/biz/laserwash-charleston
+  [ 2] Circle K                                 Charleston         addr=1811 Sam Rittenberg Blvd
+       https://www.yelp.com/biz/circle-k-charleston-3
+  [ 2] The Wash Zone - Express Car & Pet Wash   Summerville        addr=4390 Ladson Rd
+       https://www.yelp.com/biz/the-wash-zone-express-car-and-pet-wash-summerville
+  [ 2] Mr Suds                                  Columbia           addr=7341 Garners Ferry Rd
+       https://www.yelp.com/biz/mr-suds-columbia-2
+  [ 2] Wash Me Auto Wash                        Mauldin            addr=1133 E Butler Rd
+       https://www.yelp.com/biz/wash-me-auto-wash-mauldin
+  [ 1] Marty’s Car Wash                         Lexington          addr=251 Columbia Ave
+       https://www.yelp.com/biz/marty-s-car-wash-lexington-4
+  [ 1] ModWash                                  Columbia           addr=102 Harban Ct
+       https://www.yelp.com/biz/modwash-columbia
+  [ 1] Rev Express Car Wash                     Greenville         addr=509 S Pleasantburg Dr
+       https://www.yelp.com/biz/rev-express-car-wash-greenville-2
+--- TN (8) ---
+  [ 3] Safari Car Wash                          Franklin           addr=1004 Center Point Pl
+       https://www.yelp.com/biz/safari-car-wash-franklin
+  [ 3] Sportsman's Wash                         Oliver Springs     addr=1049 E Tri County Blvd
+       https://www.yelp.com/biz/sportsmans-wash-oliver-springs
+  [ 2] Ingles Wash Express                      Farragut           addr=11819 Kingston Pike
+       https://www.yelp.com/biz/ingles-wash-express-farragut
+  [ 1] U-Wash Self Serve Car Wash               Nashville          addr=323 Donelson Pike
+       https://www.yelp.com/biz/u-wash-self-serve-car-wash-nashville
+  [ 1] Recharged Wash                           Nashville          addr=6339 Charlotte Pike Unit
+       https://www.yelp.com/biz/recharged-wash-nashville
+  [ 1] Quick Shine Express Wash                 Memphis            addr=1202 Getwell Rd
+       https://www.yelp.com/biz/quick-shine-express-wash-memphis
+  [ 1] The Neighborhood Car Wash                Chattanooga        addr=1410 Joiner Rd
+       https://www.yelp.com/biz/the-neighborhood-car-wash-chattanooga
+  [ 1] Sutherland Ave Car Wash                  Knoxville          addr=3365 Sutherland Ave
+       https://www.yelp.com/biz/sutherland-ave-car-wash-knoxville
+--- TX (15) ---
+  [ 7] USA Laserwash                            Fort Worth         addr=6851 Plz Pkwy
+       https://www.yelp.com/biz/usa-laserwash-fort-worth-2
+  [ 6] Splish Splash Auto Bath                  McKinney           addr=1600 W Eldorado Pkwy
+       https://www.yelp.com/biz/splish-splash-auto-bath-mckinney
+  [ 6] SLG Touchfree Car Wash                   San Antonio        addr=1030 Patricia Dr
+       https://www.yelp.com/biz/slg-touchfree-car-wash-no-title
+  [ 5] Red Carpet Car Wash                      Fort Worth         addr=5829 Curzon Ave
+       https://www.yelp.com/biz/red-carpet-fort-worth-2
+  [ 2] Wash Your Stuff - Grand Prairie          Grand Prairie      addr=718  Davis St
+       https://www.yelp.com/biz/wash-your-stuff-grand-prairie-grand-prairie-9
+  [ 2] Brush and Go                             Garland            addr=3120 S Shiloh Rd
+       https://www.yelp.com/biz/brush-and-go-garland
+  [ 2] Sterling H2o Car Wash                    San Antonio        addr=1030 Patricia Dr
+       https://www.yelp.com/biz/sterling-h2o-car-wash-san-antonio
+  [ 2] Wash Your Stuff - Grand Prairie          Grand Prairie      addr=718  Davis St
+       https://www.yelp.com/biz/wash-your-stuff-grand-prairie-grand-prairie-9
+  [ 1] Clean & Green Car Wash                   Denton             addr=4105 Teasley Ln
+       https://www.yelp.com/biz/clean-and-green-car-wash-denton
+  [ 1] Tommy Terrific's Car Wash                Plano              addr=1101 Coit Rd
+       https://www.yelp.com/biz/tommy-terrifics-car-wash-plano-2
+  [ 1] 505 Solutions                            Arlington          addr=(none)
+       https://www.yelp.com/biz/505-solutions-arlington
+  [ 1] The Bubble Zone Car Wash & Lube          GARLAND            addr=5243 Naaman Forest Blvd
+       https://www.yelp.com/biz/the-bubble-zone-car-wash-and-lube-center-garland
+  [ 1] Otters Express Car Wash                  Cedar Park         addr=1350 E Whitestone Blvd
+       https://www.yelp.com/biz/otters-express-car-wash-cedar-park-2
+  [ 1] Gorilla Car Wash                         San Antonio        addr=12610 Jones Maltsberger Rd
+       https://www.yelp.com/biz/gorilla-car-wash-san-antonio
+  [ 1] 505 Solutions                            Arlington          addr=(none)
+       https://www.yelp.com/biz/505-solutions-arlington
+--- VA (9) ---
+  [ 6] Seven Corners Sunoco                     Falls Church       addr=6301 Leesburg Pike
+       https://www.yelp.com/biz/seven-corners-sunoco-falls-church
+  [ 6] Tlc Touchless Loving Car Wash            Hampton            addr=1824 Todds Ln
+       https://www.yelp.com/biz/tlc-touchless-loving-car-wash-hampton
+  [ 3] MegaWash                                 Ashland            addr=10500 Vermeer Pl
+       https://www.yelp.com/biz/megawash-ashland-2
+  [ 3] Touchless Car Wash                       Virginia Beach     addr=1217 Oceana Blvd
+       https://www.yelp.com/biz/touchless-car-wash-virginia-beach
+  [ 1] Splash-N-Dash Car Wash & Detailing       Henrico            addr=9940 Mayland Dr
+       https://www.yelp.com/biz/splash-n-dash-car-wash-and-detailing-henrico
+  [ 1] Ye Olde Carwash                          Richmond           addr=10010 Midlothian Turnpike
+       https://www.yelp.com/biz/ye-olde-carwash-richmond
+  [ 1] Rio Car Wash                             Virginia Beach     addr=1108 Lynnhaven Pkwy
+       https://www.yelp.com/biz/rio-car-wash-virginia-beach-10
+  [ 1] Sam's Xpress Car Wash                    Suffolk            addr=6460 Hampton Roads Pkwy
+       https://www.yelp.com/biz/sams-xpress-car-wash-suffolk-3
+  [ 1] FW Express Car Wash                      Virginia Beach     addr=2526 Lynnhaven Pkwy
+       https://www.yelp.com/biz/fw-express-car-wash-virginia-beach-2
