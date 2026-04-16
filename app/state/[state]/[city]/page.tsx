@@ -71,7 +71,11 @@ const getCityListings = cache(async (stateCode: string, cityName: string): Promi
   return data as Listing[];
 });
 
-const getCityDescription = cache(async (stateCode: string, cityName: string): Promise<string | null> => {
+// Returns the STATIC TEMPLATE with placeholders like {{TOTAL_LISTINGS}},
+// {{TOP_LISTING}}, {{TOP_RATING}}, {{TOP_REVIEWS}}. The placeholders get
+// substituted at render time via renderCityDescription so counts never
+// go stale as listings are added/removed/reverted.
+const getCityDescriptionTemplate = cache(async (stateCode: string, cityName: string): Promise<string | null> => {
   const { data } = await supabase
     .from('city_descriptions')
     .select('description')
@@ -80,6 +84,28 @@ const getCityDescription = cache(async (stateCode: string, cityName: string): Pr
     .maybeSingle();
   return data?.description ?? null;
 });
+
+interface CityDescriptionStats {
+  total: number;
+  topListing?: { name: string; rating: number | null; review_count: number | null };
+}
+
+/**
+ * Substitute placeholder tokens in a city description template with live
+ * values from current DB reads. Keeps counts and top-listing callouts
+ * always accurate.
+ */
+function renderCityDescription(template: string | null, stats: CityDescriptionStats): string | null {
+  if (!template) return null;
+  const topName = stats.topListing?.name ?? '';
+  const topRating = stats.topListing?.rating != null ? Number(stats.topListing.rating).toFixed(1) : '';
+  const topReviews = stats.topListing?.review_count != null ? String(stats.topListing.review_count) : '';
+  return template
+    .replace(/\{\{TOTAL_LISTINGS\}\}/g, String(stats.total))
+    .replace(/\{\{TOP_LISTING\}\}/g, topName)
+    .replace(/\{\{TOP_RATING\}\}/g, topRating)
+    .replace(/\{\{TOP_REVIEWS\}\}/g, topReviews);
+}
 
 const getFilters = cache(async (): Promise<Filter[]> => {
   const { data } = await supabase
@@ -130,9 +156,9 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
   if (!cityName) return { title: 'Not Found' };
   const stateName = getStateName(stateCode);
 
-  const [listings, cityDesc] = await Promise.all([
+  const [listings, descTemplate] = await Promise.all([
     getCityListings(stateCode, cityName),
-    getCityDescription(stateCode, cityName),
+    getCityDescriptionTemplate(stateCode, cityName),
   ]);
 
   const ratedListings = listings.filter(l => l.rating != null && l.rating > 0);
@@ -140,6 +166,15 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
     ? (ratedListings.reduce((sum, l) => sum + l.rating, 0) / ratedListings.length).toFixed(1)
     : null;
   const totalReviews = listings.reduce((sum, l) => sum + (l.review_count ?? 0), 0);
+
+  // Compute top listing for placeholder substitution (same ranking as script)
+  const topListing = [...ratedListings].sort(
+    (a, b) => (b.rating * Math.log10((b.review_count ?? 0) + 2)) - (a.rating * Math.log10((a.review_count ?? 0) + 2))
+  )[0];
+  const cityDesc = renderCityDescription(descTemplate, {
+    total: listings.length,
+    topListing: topListing ? { name: topListing.name, rating: topListing.rating, review_count: topListing.review_count } : undefined,
+  });
 
   const ratingSnippet = avgRating && totalReviews > 0
     ? ` Avg ${avgRating}★ across ${totalReviews.toLocaleString()} reviews.`
@@ -186,10 +221,10 @@ export default async function CityPage({ params }: CityPageProps) {
   if (!cityName) notFound();
 
   // Fetch all base data in a single parallel stage — no waterfalls
-  const [allListings, nearbyCities, cityDescription, allFilters] = await Promise.all([
+  const [allListings, nearbyCities, descTemplate, allFilters] = await Promise.all([
     getCityListings(stateCode!, cityName),
     getCitiesInState(stateCode!, params.city),
-    getCityDescription(stateCode!, cityName),
+    getCityDescriptionTemplate(stateCode!, cityName),
     getFilters(),
   ]);
 
@@ -197,6 +232,18 @@ export default async function CityPage({ params }: CityPageProps) {
   if (allListings.length === 0) {
     notFound();
   }
+
+  // Substitute template placeholders with live counts + top-listing data
+  const ratedForTop = allListings.filter(l => l.rating != null && l.rating > 0);
+  const topListingForDesc = [...ratedForTop].sort(
+    (a, b) => (b.rating * Math.log10((b.review_count ?? 0) + 2)) - (a.rating * Math.log10((a.review_count ?? 0) + 2))
+  )[0];
+  const cityDescription = renderCityDescription(descTemplate, {
+    total: allListings.length,
+    topListing: topListingForDesc
+      ? { name: topListingForDesc.name, rating: topListingForDesc.rating, review_count: topListingForDesc.review_count }
+      : undefined,
+  });
 
   // Previously redirected cities with fewer than 3 listings — removed.
   // Even a single listing is useful to searchers and can rank for city-specific queries.
