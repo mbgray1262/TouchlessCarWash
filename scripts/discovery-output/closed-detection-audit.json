@@ -1,0 +1,418 @@
+{
+  "timestamp": "2026-04-16T14:56:40.015907",
+  "counts": {
+    "OPERATIONAL": 2832,
+    "CLOSED_TEMPORARILY": 24,
+    "CLOSED_PERMANENTLY": 34,
+    "UNVERIFIED": 30,
+    "ERROR": 10
+  },
+  "changes": [
+    {
+      "id": "9947c76d-70df-4726-a72f-96047426c4f1",
+      "name": "Touchless Car Wash",
+      "city": "Albuquerque",
+      "state": "NM",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "d08c0f84-2b35-4cb8-ba34-bd200d09e177",
+      "name": "Livermore Touchless Car Wash",
+      "city": "Livermore",
+      "state": "CA",
+      "status": "CLOSED_TEMPORARILY"
+    },
+    {
+      "id": "68649aef-13a0-4abf-bdfc-25981f491628",
+      "name": "Russell Touchless CAR wash",
+      "city": "Russell",
+      "state": "KY",
+      "status": "CLOSED_TEMPORARILY"
+    },
+    {
+      "id": "2f805a85-1578-4a69-99dc-6ccb3b270f15",
+      "name": "ODR Touchless Car Wash",
+      "city": "Fort Sam Houston",
+      "state": "TX",
+      "status": "CLOSED_TEMPORARILY"
+    },
+    {
+      "id": "76b1628a-7c75-45f0-beaa-13f254ba4a38",
+      "name": "Arco Touchless Car Wash",
+      "city": "Chatsworth",
+      "state": "CA",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "63d08726-ec9e-4f4f-a07a-2a571538daa6",
+      "name": "Ernie's Touchless Car Wash",
+      "city": "West Boylston",
+      "state": "MA",
+      "status": "CLOSED_TEMPORARILY"
+    },
+    {
+      "id": "adcac937-2fae-4e69-b157-0d827d86749c",
+      "name": "Ernie's Touchless Car Wash",
+      "city": "Worcester",
+      "state": "MA",
+      "status": "CLOSED_TEMPORARILY"
+    },
+    {
+      "id": "68d1c787-9171-430f-be30-a5032d84c35e",
+      "name": "Super Clean",
+      "city": "Orleans",
+      "state": "IN",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "19bc6baa-4f89-4439-94d6-a4c52e4a9dcc",
+      "name": "Asmus Touchless/Self-serve Carwash",
+      "city": "Torrington",
+      "state": "WY",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "6ba6f84b-289c-4f4e-a43d-3217f44b518a",
+      "name": "Holiday",
+      "city": "Rochester",
+      "state": "MN",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "8dcd76a5-bddd-4168-8b3b-1a1846aaa1a7",
+      "name": "Loaf And Jug Touchless Carwash",
+      "city": "Cheyenne",
+      "state": "WY",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "c6943c69-be11-4907-a4ee-647e1651e546",
+      "name": "Royal Laser Wash",
+      "city": "Laredo",
+      "state": "TX",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "b0071b36-0033-4e58-a703-509594fdb2dc",
+      "name": "Sheetz Car Wash",
+      "city": "Hampden Township",
+      "state": "PA",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "0f1e159a-e23f-44ff-b9f8-657c80f64019",
+      "name": "Barboursville Touchless Car Wash",
+      "city": "Barboursville",
+      "state": "WV",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "4883c369-6256-4841-8ada-aad53a0b1c85",
+      "name": "Kwik Shop touchless car wash!",
+      "city": "Bellevue",
+      "state": "NE",
+      "status": "CLOSED_TEMPORARILY"
+    },
+    {
+      "id": "91cb0b6a-1873-4210-ae56-b60cdcf8f139",
+      "name": "Johnny's Car Wash",
+      "city": "Scranton",
+      "state": "PA",
+      "status": "CLOSED_TEMPORARILY"
+    },
+    {
+      "id": "10a53f58-9f88-40ad-9ca6-2eb1c1107978",
+      "name": "Drive & Shine Car Wash",
+      "city": "Merrillville",
+      "state": "IN",
+      "status": "CLOSED_TEMPORARILY"
+    },
+    {
+      "id": "5d519aba-6698-48cc-a1d4-8cfb02a36127",
+      "name": "Royal Laser Wash",
+      "city": "Laredo",
+      "state": "TX",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "8bd6c8ae-74b7-4644-9bb1-cd43b9b90187",
+      "name": "Touchless Car Wash",
+      "city": "San Antonio",
+      "state": "TX",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "eb1ae185-6bfd-4ecd-b8e7-be161a6e83e2",
+      "name": "24Hr Touchless Carwash",
+      "city": "Metairie",
+      "state": "LA",
+      "status": "CLOSED_TEMPORARILY"
+    },
+    {
+      "id": "4648bc4e-eec5-4841-bf3d-83f42bd8c8d5",
+      "name": "Ed & Ma\u2019s Laser Wash",
+      "city": "De Motte",
+      "state": "IN",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "e0627254-cf59-4503-8982-599163935fcf",
+      "name": "Holiday",
+      "city": "Ellsworth",
+      "state": "WI",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "e73ba530-e9e6-4672-88f3-5e2a5478ee08",
+      "name": "Splash & Dash Touchless Car",
+      "city": "Zanesville",
+      "state": "OH",
+      "status": "CLOSED_TEMPORARILY"
+    },
+    {
+      "id": "3f03a56c-fb5d-48fc-9840-c5f22ff1f74a",
+      "name": "Soft Touch Auto Wash",
+      "city": "Chicopee",
+      "state": "MA",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "e61a2713-c435-4901-9076-f7597145343c",
+      "name": "Axis Main Street Laser Wash",
+      "city": "Springfield",
+      "state": "OH",
+      "status": "CLOSED_TEMPORARILY"
+    },
+    {
+      "id": "8c3764f4-558f-475f-928a-affda17b87bf",
+      "name": "ExtraMile",
+      "city": "Lockeford",
+      "state": "CA",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "0663f98d-8fb7-48aa-b1a9-71efdf4cdd82",
+      "name": "Town Tub Touchless Car Wash",
+      "city": "Corunna",
+      "state": "MI",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "be70ada0-35a3-4020-a2b6-293992993c51",
+      "name": "Super Clean",
+      "city": "Bedford",
+      "state": "IN",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "e3fe702b-c9fe-43db-9581-21edb82a8e25",
+      "name": "Philthy Philz Car Wash Coronado",
+      "city": "Coronado",
+      "state": "CA",
+      "status": "CLOSED_TEMPORARILY"
+    },
+    {
+      "id": "06151726-889e-4b3e-b078-355178bc3682",
+      "name": "Sheetz Car Wash",
+      "city": "Somerset",
+      "state": "PA",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "84f578da-0e09-4fa0-b875-f61b97006ee5",
+      "name": "HOLIDAY",
+      "city": "Wausau",
+      "state": "WI",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "5343ddd9-791a-4cda-b871-582554463d32",
+      "name": "Diamond Car Wash Inc",
+      "city": "Pinellas Park",
+      "state": "FL",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "9785ccc6-4df0-4339-b595-564f6ddc3012",
+      "name": "Holiday Stationstores | Car Wash",
+      "city": "Eau Claire",
+      "state": "WI",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "cce94847-fcbd-4f32-b94a-45d576ae43b4",
+      "name": "Touchless car wash",
+      "city": "Dallas",
+      "state": "TX",
+      "status": "CLOSED_TEMPORARILY"
+    },
+    {
+      "id": "c8e21287-4cb3-4a57-a410-073110c1855e",
+      "name": "Elephant Car Wash",
+      "city": "Bellevue",
+      "state": "WA",
+      "status": "CLOSED_TEMPORARILY"
+    },
+    {
+      "id": "d746f7b6-dfb2-4d4b-a4f8-cf4d6d3e88f5",
+      "name": "Laser Wash Touchless Automatoc",
+      "city": "Lakewood",
+      "state": "CO",
+      "status": "CLOSED_TEMPORARILY"
+    },
+    {
+      "id": "9df36956-fecd-463d-bca5-f54ec4bfd77c",
+      "name": "Holiday Stationstores | Car Wash",
+      "city": "Eau Claire",
+      "state": "WI",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "1187ac7c-284e-4f49-9365-fb0864a034a1",
+      "name": "Touch Free Car Wash",
+      "city": "Hattiesburg",
+      "state": "MS",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "921b306b-2521-464d-bac9-592644181f28",
+      "name": "Blue Wave Auto Spa 24 /7 Car Wash",
+      "city": "Pittsburgh",
+      "state": "PA",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "83e07f15-712a-490f-9a29-972e4f50a7de",
+      "name": "Car wash touchless automatic",
+      "city": "Loveland",
+      "state": "OH",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "e496a419-7ac4-4836-b65c-95269db902f4",
+      "name": "BLUWAVE Touchless Automatic Carwash",
+      "city": "Manistee",
+      "state": "MI",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "e926e697-a6bc-4908-9f9d-4dd8cbe140e0",
+      "name": "Xtreme Clean Auto Wash",
+      "city": "Plainwell",
+      "state": "MI",
+      "status": "CLOSED_TEMPORARILY"
+    },
+    {
+      "id": "f74f89bc-26ca-40de-8ab3-eeb46422c952",
+      "name": "Touch-Free Car Wash",
+      "city": "Knoxville",
+      "state": "TN",
+      "status": "CLOSED_TEMPORARILY"
+    },
+    {
+      "id": "300d6116-16fc-42aa-9edd-09399be7f50b",
+      "name": "Brown Bear Car Wash",
+      "city": "Seattle",
+      "state": "WA",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "4bbd1b80-b792-43b8-8016-82f427c16ee6",
+      "name": "Brown Bear Car Wash",
+      "city": "Seattle",
+      "state": "WA",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "f02e895f-e97a-4a9c-9341-1919d247cdcf",
+      "name": "Holiday Stationstores",
+      "city": "Duluth",
+      "state": "MN",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "5046ff72-c2a5-47a4-95c2-603397cbd8b2",
+      "name": "TEGA CAY CAR WASH Fort Mill",
+      "city": "Fort Mill",
+      "state": "SC",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "61626c2f-941e-42bb-bbee-de1b86cc59d5",
+      "name": "Valley Wash & Lube",
+      "city": "Minerva",
+      "state": "OH",
+      "status": "CLOSED_TEMPORARILY"
+    },
+    {
+      "id": "b229df0a-713c-4827-b726-9923ee6cf1e5",
+      "name": "Executive Car Wash - Touchless",
+      "city": "Maryville",
+      "state": "IL",
+      "status": "CLOSED_TEMPORARILY"
+    },
+    {
+      "id": "9dd537a2-d4b6-49ae-8f0e-f4bf37636f6f",
+      "name": "Car Wash Express, Inc.",
+      "city": "Hinesville",
+      "state": "GA",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "6962eda8-4957-43ad-b8c8-d9be3bc8e64c",
+      "name": "Supreme Machine Express Car Wash",
+      "city": "Lockport",
+      "state": "IL",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "8653b6b8-caab-4598-9258-dd781e5b694b",
+      "name": "Sparkles Car Wash",
+      "city": "Lafayette",
+      "state": "LA",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "9196b9c7-1e89-44e0-b598-944d515987c2",
+      "name": "Touchless Car Wash",
+      "city": "Lafayette",
+      "state": "LA",
+      "status": "CLOSED_TEMPORARILY"
+    },
+    {
+      "id": "6db9850d-757b-497f-b831-385ed8a0a0ab",
+      "name": "Bubble Brush Car Wash",
+      "city": "Woodstock",
+      "state": "GA",
+      "status": "CLOSED_PERMANENTLY"
+    },
+    {
+      "id": "ae5200f7-10df-491e-b6ce-a9f556b7fbee",
+      "name": "Ernie's Touchless Car Wash",
+      "city": "Spencer",
+      "state": "MA",
+      "status": "CLOSED_TEMPORARILY"
+    },
+    {
+      "id": "c26a2a36-b904-457f-abe3-5be62186c305",
+      "name": "Spiffy Clean Car Wash",
+      "city": "Newton",
+      "state": "NC",
+      "status": "CLOSED_TEMPORARILY"
+    },
+    {
+      "id": "afe49518-a0c5-4a5f-8bcf-677e8e138122",
+      "name": "Auto Spa Gloucester",
+      "city": "Hayes",
+      "state": "VA",
+      "status": "CLOSED_TEMPORARILY"
+    },
+    {
+      "id": "9b5bccc8-879d-46ca-acc4-54a8445d8d46",
+      "name": "Ernie's Touchless Car Wash",
+      "city": "Worcester",
+      "state": "MA",
+      "status": "CLOSED_TEMPORARILY"
+    }
+  ]
+}

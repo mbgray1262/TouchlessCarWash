@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 """
-Discover new touchless car wash candidates by crawling Google Maps and
-extracting "nearby car washes" that we don't already have in our DB.
+Discover new touchless car wash candidates by crawling Google Maps SEARCH
+pages (not individual place pages, which don't expose nearby place_ids).
 
-For each of our approved touchless listings (seeds), visit their Google
-Maps place page and collect place_ids from embedded "Similar places" /
-"People also viewed" / nearby recommendations. These are cheap candidates
-that can be classified in a future pass.
+Strategy: for each seed listing, run a Google Maps SEARCH query for
+"touchless car wash near {seed address}". The search results page embeds
+all ~10 nearby place_ids in the HTML (ChIJ strings). These are candidates
+not yet in our DB.
 
-Output: scripts/discovery-output/nearby-candidates.json — a list of
-candidate place_ids + any name/address we could extract, deduped against
-the current DB's google_place_id set.
+Output: scripts/discovery-output/nearby-candidates.json — list of
+candidate place_ids + surrounding context, deduped against existing DB.
 
 Run: python3 scripts/crawl4ai-nearby-discovery.py [--limit N] [--skip N]
 """
@@ -97,16 +96,16 @@ async def main():
         offset += 1000
     log(f'  {len(existing_ids)} place_ids in DB (seed + dedupe set)')
 
-    # Load seeds: approved touchless listings with place_ids, prioritize
-    # high-review-count (most likely to have a meaningful "nearby" section)
+    # Load seeds: approved touchless listings with an address, prioritize
+    # high-review-count. We need address (not place_id) for the search query.
     seeds = []
     offset = 0
     while True:
         page = sb_req('GET',
-            '/rest/v1/listings?select=id,name,city,state,google_place_id,review_count'
+            '/rest/v1/listings?select=id,name,city,state,address,review_count'
             '&is_touchless=eq.true'
             '&is_approved=eq.true'
-            '&google_place_id=not.is.null'
+            '&address=not.is.null'
             '&order=review_count.desc.nullslast'
             f'&limit=1000&offset={offset}')
         if not page: break
@@ -114,7 +113,7 @@ async def main():
         if len(page) < 1000: break
         offset += 1000
 
-    log(f'Loaded {len(seeds)} approved touchless seeds')
+    log(f'Loaded {len(seeds)} approved touchless seeds with address')
 
     if SKIP > 0:
         seeds = seeds[SKIP:]
@@ -150,8 +149,12 @@ async def main():
     async with AsyncWebCrawler(config=config) as crawler:
         consecutive_errors = 0
         for i, seed in enumerate(seeds):
-            seed_pid = seed['google_place_id']
-            url = f'https://www.google.com/maps/place/?q=place_id:{seed_pid}'
+            # Use Google Maps SEARCH page (not individual place page) — search
+            # pages embed ~10 nearby place_ids in the HTML.
+            addr_str = f"{seed.get('address','')} {seed.get('city','')} {seed.get('state','')}".strip()
+            import urllib.parse as up
+            q = up.quote(f'touchless car wash near {addr_str}')
+            url = f'https://www.google.com/maps/search/{q}'
             try:
                 result = await crawler.arun(url, config=run_config)
                 blob = (result.markdown or '') + '\n' + (result.html or '')
@@ -165,7 +168,7 @@ async def main():
                         consecutive_errors = 0
                     continue
                 consecutive_errors = 0
-                found = extract_candidates(blob, seed_pid)
+                found = set(PLACE_ID_PATTERN.findall(blob))
                 new_candidates = found - existing_ids
                 for pid in new_candidates:
                     if pid not in candidates:
