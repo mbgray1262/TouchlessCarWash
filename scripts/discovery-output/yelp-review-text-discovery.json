@@ -1,0 +1,97 @@
+{
+  "creditsUsed": 15,
+  "queriesRun": 15,
+  "candidates": 22,
+  "uniqMatches": 25,
+  "toPromote": 11,
+  "promotions": [
+    {
+      "id": "041053b2-8c11-4125-b572-2877fb0a2233",
+      "name": "Auto Car Wash",
+      "city": "",
+      "state": "NC",
+      "snippet": "$20 for the touchless car wash but it still uses the big brushes on the car. I was hoping it was actually touchless but I guess they don't offer that here.",
+      "url": "https://www.yelp.com/biz/drive-well-auto-spa-mt-prospect"
+    },
+    {
+      "id": "093e498f-27c3-4998-aa5f-e92df8debab1",
+      "name": "Carwash",
+      "city": "",
+      "state": "FL",
+      "snippet": "Recommended Reviews - LaserWash TouchFree CarWash. Your trust is our priority, so businesses can't pay to alter or remove their reviews.",
+      "url": "https://www.yelp.com/biz/laserwash-touchfree-carwash-rochester"
+    },
+    {
+      "id": "dfff6c07-9308-4d2e-91e3-b66b99710c90",
+      "name": "Carwash",
+      "city": "",
+      "state": "CO",
+      "snippet": "Recommended Reviews - LaserWash TouchFree CarWash. Your trust is our priority, so businesses can't pay to alter or remove their reviews.",
+      "url": "https://www.yelp.com/biz/laserwash-touchfree-carwash-rochester"
+    },
+    {
+      "id": "8e8a9382-889c-406a-b33c-d5e604b2c4e1",
+      "name": "Laser Car Wash",
+      "city": "",
+      "state": "NY",
+      "snippet": "1 review of LASERWASH \"I recently washed my car at this location for the first time. I soon discovered there was no difference between a high power rinse ...",
+      "url": "https://www.yelp.com/biz/laserwash-san-antonio"
+    },
+    {
+      "id": "aff53f69-715a-4edc-b53c-871973c40a81",
+      "name": "Englewood Car Wash",
+      "city": "Englewood",
+      "state": "NJ",
+      "snippet": "Cascade Car Wash Touchless Automatic - Englewood. Cascade Car Wash Touchless Automatic - Englewood. 4.0 (4 reviews). Car Wash. Open • Open 24 hours. Add Review.",
+      "url": "https://www.yelp.com/biz/cascade-car-wash-touchless-automatic-englewood-englewood"
+    },
+    {
+      "id": "acfeb08e-3a2f-4a95-bd1e-fae99f986fcb",
+      "name": "D&D Car Wash",
+      "city": "",
+      "state": "IN",
+      "snippet": "I got my refund and went to the Arlington Car Wash in Arlington Heights, where it is actually touchless and they know how to treat customers. All far less ...",
+      "url": "https://www.yelp.com/biz/777-premium-car-wash-and-detailing-riverwoods"
+    },
+    {
+      "id": "5c5b9396-7259-468a-91be-507f589c6bab",
+      "name": "Lexington Auto Spa",
+      "city": "Lexington",
+      "state": "KY",
+      "snippet": "... water only ... Yes, Mass Ave Car Wash has free WiFi. Mass Ave Car Wash Reviews in Other Languages. Chinese. 1 Review. Ask the Community - Mass Ave Car Wash.",
+      "url": "https://www.yelp.com/biz/mass-ave-car-wash-lexington"
+    },
+    {
+      "id": "fcdfa15b-dff1-4f6f-9668-c64488cb5404",
+      "name": "USA Car Wash",
+      "city": "",
+      "state": "FL",
+      "snippet": "25 reviews and 14 photos of USA LASERWASH \"Pros: *Central location in the Westside *They run $1 specials from time to time on ALL levels of their washes ...",
+      "url": "https://www.yelp.com/biz/usa-laserwash-fort-worth-2"
+    },
+    {
+      "id": "cda66803-e95f-4af5-86ba-8d2a1546e201",
+      "name": "Super Car Wash",
+      "city": "",
+      "state": "GA",
+      "snippet": "This place is always clean and well maintained. There are two automatic stalls, each with a PDQ LaserWash Touchless system. No self serve stalls. Vacuums ...",
+      "url": "https://www.yelp.com/biz/superior-touchless-car-wash-menominee"
+    },
+    {
+      "id": "62559670-69d3-4474-9345-2a429ff6f7eb",
+      "name": "Superior Car Wash",
+      "city": "",
+      "state": "NM",
+      "snippet": "This place is always clean and well maintained. There are two automatic stalls, each with a PDQ LaserWash Touchless system. No self serve stalls. Vacuums ...",
+      "url": "https://www.yelp.com/biz/superior-touchless-car-wash-menominee"
+    },
+    {
+      "id": "c5a0e8c6-2253-49c3-86d3-3fb03849fe2c",
+      "name": "Super Car Wash",
+      "city": "",
+      "state": "NM",
+      "snippet": "This place is always clean and well maintained. There are two automatic stalls, each with a PDQ LaserWash Touchless system. No self serve stalls. Vacuums ...",
+      "url": "https://www.yelp.com/biz/superior-touchless-car-wash-menominee"
+    }
+  ]
+}

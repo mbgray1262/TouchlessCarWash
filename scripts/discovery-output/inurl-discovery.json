@@ -1,0 +1,5937 @@
+{
+  "queries": [
+    "inurl:/touchless-car-wash",
+    "inurl:/touch-free-car-wash",
+    "inurl:/touch-free-wash",
+    "inurl:/touchless-wash",
+    "inurl:/touchless-bay",
+    "inurl:/touch-free",
+    "inurl:/touchless \"car wash\"",
+    "inurl:/touchfree \"car wash\"",
+    "inurl:/brushless \"car wash\"",
+    "inurl:/laserwash",
+    "inurl:/laser-wash",
+    "inurl:/our-wash touchless",
+    "inurl:/our-washes touchless",
+    "inurl:/services touchless \"car wash\"",
+    "inurl:/wash-options touchless",
+    "inurl:laserwash \"car wash\" -pdq.com",
+    "inurl:washworld \"car wash\"",
+    "inurl:pdq-laserwash",
+    "inurl:touchless-automatic",
+    "inurl:automatic-touchless"
+  ],
+  "domainsFound": [
+    {
+      "domain": "cobblestone.com",
+      "count": 1,
+      "urls": [
+        "https://cobblestone.com/tunnel-vs-touchless-car-wash/"
+      ],
+      "queries": [
+        "inurl:/touchless-car-wash"
+      ]
+    },
+    {
+      "domain": "spotfreecar.com",
+      "count": 3,
+      "urls": [
+        "https://www.spotfreecar.com/the-best-touchless-car-wash-in-los-angeles-is-here/",
+        "https://www.spotfreecar.com/touchfree-car-wash-nearby-me/",
+        "https://www.spotfreecar.com/brushless-touchless-car-washes-nearby-me/"
+      ],
+      "queries": [
+        "inurl:/touchless-car-wash",
+        "inurl:/touchfree \"car wash\"",
+        "inurl:/brushless \"car wash\""
+      ]
+    },
+    {
+      "domain": "oilchangers.com",
+      "count": 2,
+      "urls": [
+        "https://oilchangers.com/touchless-car-wash-vs-regular/",
+        "https://oilchangers.com/touchless-car-wash-vs-regular/"
+      ],
+      "queries": [
+        "inurl:/touchless-car-wash",
+        "inurl:/touchless \"car wash\""
+      ]
+    },
+    {
+      "domain": "hogwashcarwash.com",
+      "count": 2,
+      "urls": [
+        "https://www.hogwashcarwash.com/post/touchless-car-wash-in-mount-arlington-the-best-way-to-keep-your-car-sparkling-clean",
+        "https://www.hogwashcarwash.com/post/touchless-car-wash-in-mount-arlington-the-best-way-to-keep-your-car-sparkling-clean"
+      ],
+      "queries": [
+        "inurl:/touchless-car-wash",
+        "inurl:/touchless \"car wash\""
+      ]
+    },
+    {
+      "domain": "broadwayequipment.com",
+      "count": 2,
+      "urls": [
+        "https://www.broadwayequipment.com/touch-free-car-wash/",
+        "https://www.broadwayequipment.com/touch-free-car-wash/"
+      ],
+      "queries": [
+        "inurl:/touch-free-car-wash",
+        "inurl:/touch-free"
+      ]
+    },
+    {
+      "domain": "columbiatireauto.com",
+      "count": 1,
+      "urls": [
+        "https://columbiatireauto.com/pros-and-cons-soft-touch-car-wash-vs-touch-free-car-wash/"
+      ],
+      "queries": [
+        "inurl:/touch-free-car-wash"
+      ]
+    },
+    {
+      "domain": "corvetteforum.com",
+      "count": 1,
+      "urls": [
+        "https://www.corvetteforum.com/forums/c8-general-discussion/4482167-touch-free-car-wash.html"
+      ],
+      "queries": [
+        "inurl:/touch-free-car-wash"
+      ]
+    },
+    {
+      "domain": "kscarwashes.com",
+      "count": 1,
+      "urls": [
+        "https://www.kscarwashes.com/car-wash-services/touch-free-wash/"
+      ],
+      "queries": [
+        "inurl:/touch-free-wash"
+      ]
+    },
+    {
+      "domain": "wcbwashsystems.com",
+      "count": 1,
+      "urls": [
+        "https://www.wcbwashsystems.com/product-offerings__trashed-2/touch-free-wash-systems-overview/"
+      ],
+      "queries": [
+        "inurl:/touch-free-wash"
+      ]
+    },
+    {
+      "domain": "jlwranglerforums.com",
+      "count": 1,
+      "urls": [
+        "https://www.jlwranglerforums.com/forum/threads/touch-free-wash-with-soft-top.36107/"
+      ],
+      "queries": [
+        "inurl:/touch-free-wash"
+      ]
+    },
+    {
+      "domain": "cybertruckownersclub.com",
+      "count": 1,
+      "urls": [
+        "https://www.cybertruckownersclub.com/forum/threads/touch-free-wash-for-wrapped-ct.33670/"
+      ],
+      "queries": [
+        "inurl:/touch-free-wash"
+      ]
+    },
+    {
+      "domain": "dollyscolumbiacarwash.com",
+      "count": 1,
+      "urls": [
+        "https://dollyscolumbiacarwash.com/how-does-it-work/touchless-wash"
+      ],
+      "queries": [
+        "inurl:/touchless-wash"
+      ]
+    },
+    {
+      "domain": "jimbosdetailing.com",
+      "count": 1,
+      "urls": [
+        "https://jimbosdetailing.com/blogs/diy-detailing/touchless-wash-at-home?srsltid=AfmBOop2MbBw7PH4fTVAc4cwgGVFppqV7ImqhkxgxX5WFDz1QtqVjxCz"
+      ],
+      "queries": [
+        "inurl:/touchless-wash"
+      ]
+    },
+    {
+      "domain": "350z-uk.com",
+      "count": 1,
+      "urls": [
+        "https://www.350z-uk.com/topic/130567-touchless-wash-advice-and-products-please/"
+      ],
+      "queries": [
+        "inurl:/touchless-wash"
+      ]
+    },
+    {
+      "domain": "washproduct.com",
+      "count": 1,
+      "urls": [
+        "https://washproduct.com/blogs/news/how-to-use-touchless-wash-soaps-2-step-fleet-washing?srsltid=AfmBOorpvcx3QtDpEr5Q0GlTc462sJrPqhxbXbMP7bvqWpEjGoXJWw2O"
+      ],
+      "queries": [
+        "inurl:/touchless-wash"
+      ]
+    },
+    {
+      "domain": "autogeekonline.net",
+      "count": 1,
+      "urls": [
+        "https://autogeekonline.net/threads/touchless-wash-routines-no-contact-wash.126121/"
+      ],
+      "queries": [
+        "inurl:/touchless-wash"
+      ]
+    },
+    {
+      "domain": "dkdvehiclewash.com",
+      "count": 2,
+      "urls": [
+        "https://dkdvehiclewash.com/why-proactive-maintenance-saves-you-money-on-your-touchless-wash/",
+        "https://dkdvehiclewash.com/what-to-expect-from-an-automated-touchless-car-wash-installation/"
+      ],
+      "queries": [
+        "inurl:/touchless-wash",
+        "inurl:/touchless \"car wash\""
+      ]
+    },
+    {
+      "domain": "us.amazon.com",
+      "count": 1,
+      "urls": [
+        "https://us.amazon.com/touchless-wash/s?k=touchless+wash&page=2"
+      ],
+      "queries": [
+        "inurl:/touchless-wash"
+      ]
+    },
+    {
+      "domain": "bobistheoilguy.com",
+      "count": 1,
+      "urls": [
+        "https://bobistheoilguy.com/forums/threads/homemade-touchless-wash-results.217671/"
+      ],
+      "queries": [
+        "inurl:/touchless-wash"
+      ]
+    },
+    {
+      "domain": "m.made-in-china.com",
+      "count": 2,
+      "urls": [
+        "https://m.made-in-china.com/product/Fully-Automatic-Car-Wash-for-Sale-Self-Service-Robot-Washing-Touchless-Bay-360-Automatic-Touchless-Car-Washing-Machinery-System-2129007552.html",
+        "https://m.made-in-china.com/product/5-5kw-Dryer-Motor-Touchfree-Car-Wash-Machine-Fully-Automatic-with-Cheap-Price-2248914875.html"
+      ],
+      "queries": [
+        "inurl:/touchless-bay",
+        "inurl:/touchfree \"car wash\""
+      ]
+    },
+    {
+      "domain": "made-in-china.com",
+      "count": 3,
+      "urls": [
+        "https://www.made-in-china.com/video-channel/zzwellknown_KJhRMgLCgSpn_Fully-Automatic-Car-Wash-for-Sale-Self-Service-Robot-Washing-Touchless-Bay-360-Automatic-Touchless-Car-Washing-Machinery-System.html",
+        "https://www.made-in-china.com/video-channel/novahitech_cfFRJkmyarUX_Fully-Automatic-Car-Wash-for-Sale-Self-Service-Robot-Washing-Touchless-Bay-360-Automatic-Touchless-Car-Washing-Machinery-System.html",
+        "https://www.made-in-china.com/video-channel/amp/xccarwasher_gZNfAkFdrsGJ_Fully-Automatic-Car-Wash-for-Sale-Self-Service-Robot-Washing-Touchless-Bay-Xc-Automatic-Touchless-Car-Washing-Machine.html"
+      ],
+      "queries": [
+        "inurl:/touchless-bay",
+        "inurl:/touchless-bay",
+        "inurl:/touchless-bay"
+      ]
+    },
+    {
+      "domain": "lynn-haven-fl.auto-usa.org",
+      "count": 1,
+      "urls": [
+        "https://lynn-haven-fl.auto-usa.org/grease-pro-touchless-bay-automatic-carwash-510/"
+      ],
+      "queries": [
+        "inurl:/touchless-bay"
+      ]
+    },
+    {
+      "domain": "hurricanecarwash.net",
+      "count": 1,
+      "urls": [
+        "https://www.hurricanecarwash.net/posts/touch-free-vs-soft-touch-vs-self-serve-car-wash/"
+      ],
+      "queries": [
+        "inurl:/touch-free"
+      ]
+    },
+    {
+      "domain": "sloan.com",
+      "count": 1,
+      "urls": [
+        "https://www.sloan.com/products/solutions/touch-free-products"
+      ],
+      "queries": [
+        "inurl:/touch-free"
+      ]
+    },
+    {
+      "domain": "haffners.com",
+      "count": 1,
+      "urls": [
+        "https://www.haffners.com/car-washes/Touchless-Car-Washes"
+      ],
+      "queries": [
+        "inurl:/touchless \"car wash\""
+      ]
+    },
+    {
+      "domain": "scrubadub.com",
+      "count": 1,
+      "urls": [
+        "https://www.scrubadub.com/touchless/"
+      ],
+      "queries": [
+        "inurl:/touchless \"car wash\""
+      ]
+    },
+    {
+      "domain": "clancyscarwash.com",
+      "count": 3,
+      "urls": [
+        "https://www.clancyscarwash.com/packages-services/touchless-automatic/",
+        "https://www.clancyscarwash.com/packages-services/touchless-automatic/",
+        "https://www.clancyscarwash.com/packages-services/touchless-automatic/"
+      ],
+      "queries": [
+        "inurl:/touchless \"car wash\"",
+        "inurl:/services touchless \"car wash\"",
+        "inurl:touchless-automatic"
+      ]
+    },
+    {
+      "domain": "bluetidecarwash.com",
+      "count": 1,
+      "urls": [
+        "https://bluetidecarwash.com/touchless-locations"
+      ],
+      "queries": [
+        "inurl:/touchless \"car wash\""
+      ]
+    },
+    {
+      "domain": "wavescarwashes.com",
+      "count": 1,
+      "urls": [
+        "https://www.wavescarwashes.com/touchfree-car-wash"
+      ],
+      "queries": [
+        "inurl:/touchfree \"car wash\""
+      ]
+    },
+    {
+      "domain": "stingrayforums.com",
+      "count": 1,
+      "urls": [
+        "https://www.stingrayforums.com/threads/does-anyone-here-uses-automatic-brushless-car-wash-service.56050/"
+      ],
+      "queries": [
+        "inurl:/brushless \"car wash\""
+      ]
+    },
+    {
+      "domain": "uniteautomotive.com",
+      "count": 1,
+      "urls": [
+        "https://www.uniteautomotive.com/articles/revolutionizing-clean-the-power-of-brushless-car-wash-technology/"
+      ],
+      "queries": [
+        "inurl:/brushless \"car wash\""
+      ]
+    },
+    {
+      "domain": "ramforum.com",
+      "count": 1,
+      "urls": [
+        "https://www.ramforum.com/threads/brushless-car-wash.196171/"
+      ],
+      "queries": [
+        "inurl:/brushless \"car wash\""
+      ]
+    },
+    {
+      "domain": "superkleancarwash.com",
+      "count": 1,
+      "urls": [
+        "https://superkleancarwash.com/f/the-different-brushless-car-wash-systems-we-offer-at-super-klean"
+      ],
+      "queries": [
+        "inurl:/brushless \"car wash\""
+      ]
+    },
+    {
+      "domain": "businessresearchinsights.com",
+      "count": 1,
+      "urls": [
+        "https://www.businessresearchinsights.com/market-reports/brushless-car-wash-machine-market-126738"
+      ],
+      "queries": [
+        "inurl:/brushless \"car wash\""
+      ]
+    },
+    {
+      "domain": "waze.com",
+      "count": 1,
+      "urls": [
+        "https://www.waze.com/live-map/directions/us/tx/san-marcos/laserwash-car-wash?to=place.ChIJYwmS-YqoXIYR_RI3ebsh_B0"
+      ],
+      "queries": [
+        "inurl:/laserwash"
+      ]
+    },
+    {
+      "domain": "serpentinimedina.com",
+      "count": 1,
+      "urls": [
+        "https://www.serpentinimedina.com/Serpentini-Laser-Wash"
+      ],
+      "queries": [
+        "inurl:/laser-wash"
+      ]
+    },
+    {
+      "domain": "business.spichamber.com",
+      "count": 1,
+      "urls": [
+        "https://business.spichamber.com/list/member/harbor-street-laser-wash-2342"
+      ],
+      "queries": [
+        "inurl:/laser-wash"
+      ]
+    },
+    {
+      "domain": "conleyautoshop.com",
+      "count": 1,
+      "urls": [
+        "https://www.conleyautoshop.com/kyle-laser-wash.html"
+      ],
+      "queries": [
+        "inurl:/laser-wash"
+      ]
+    },
+    {
+      "domain": "visitsoldotna.com",
+      "count": 1,
+      "urls": [
+        "https://visitsoldotna.com/listing/kb-laser-wash/"
+      ],
+      "queries": [
+        "inurl:/laser-wash"
+      ]
+    },
+    {
+      "domain": "hexis-graphics.com",
+      "count": 1,
+      "urls": [
+        "https://www.hexis-graphics.com/us/produit/laser-wash/"
+      ],
+      "queries": [
+        "inurl:/laser-wash"
+      ]
+    },
+    {
+      "domain": "expresswash.vip",
+      "count": 1,
+      "urls": [
+        "https://expresswash.vip/about-our-wash/"
+      ],
+      "queries": [
+        "inurl:/our-wash touchless"
+      ]
+    },
+    {
+      "domain": "grandwashaz.com",
+      "count": 1,
+      "urls": [
+        "https://grandwashaz.com/our-wash-packages/"
+      ],
+      "queries": [
+        "inurl:/our-wash touchless"
+      ]
+    },
+    {
+      "domain": "starwashmassillon.com",
+      "count": 1,
+      "urls": [
+        "https://www.starwashmassillon.com/wba/content/only-the-best/why-our-wash-is-better/"
+      ],
+      "queries": [
+        "inurl:/our-wash touchless"
+      ]
+    },
+    {
+      "domain": "driveandshine.com",
+      "count": 1,
+      "urls": [
+        "https://driveandshine.com/our-wash/valparaiso-cw/"
+      ],
+      "queries": [
+        "inurl:/our-wash touchless"
+      ]
+    },
+    {
+      "domain": "brownbear.com",
+      "count": 2,
+      "urls": [
+        "https://brownbear.com/about-our-washes/touchless-car-wash/",
+        "https://brownbear.com/about-our-washes/self-serve-car-wash/"
+      ],
+      "queries": [
+        "inurl:/our-washes touchless",
+        "inurl:/our-washes touchless"
+      ]
+    },
+    {
+      "domain": "washboxva.com",
+      "count": 1,
+      "urls": [
+        "https://washboxva.com/our-washes/"
+      ],
+      "queries": [
+        "inurl:/our-washes touchless"
+      ]
+    },
+    {
+      "domain": "corsacleancarwash.com",
+      "count": 1,
+      "urls": [
+        "https://corsacleancarwash.com/our-washes/"
+      ],
+      "queries": [
+        "inurl:/our-washes touchless"
+      ]
+    },
+    {
+      "domain": "splashcarwashes.com",
+      "count": 1,
+      "urls": [
+        "https://splashcarwashes.com/services/"
+      ],
+      "queries": [
+        "inurl:/services touchless \"car wash\""
+      ]
+    },
+    {
+      "domain": "touchlesscarwashmd.com",
+      "count": 1,
+      "urls": [
+        "https://touchlesscarwashmd.com/wash-services/"
+      ],
+      "queries": [
+        "inurl:/services touchless \"car wash\""
+      ]
+    },
+    {
+      "domain": "greasemonkey.com",
+      "count": 1,
+      "urls": [
+        "https://www.greasemonkey.com/services/car-wash/"
+      ],
+      "queries": [
+        "inurl:/services touchless \"car wash\""
+      ]
+    },
+    {
+      "domain": "community.cartalk.com",
+      "count": 1,
+      "urls": [
+        "https://community.cartalk.com/t/car-wash-are-extra-services-a-scam/77395"
+      ],
+      "queries": [
+        "inurl:/services touchless \"car wash\""
+      ]
+    },
+    {
+      "domain": "billlukesantan.com",
+      "count": 1,
+      "urls": [
+        "https://www.billlukesantan.com/services-3/service-and-parts-tips/hand-car-wash-vs-touchless-car-wash/"
+      ],
+      "queries": [
+        "inurl:/services touchless \"car wash\""
+      ]
+    },
+    {
+      "domain": "fantimach.com",
+      "count": 1,
+      "urls": [
+        "https://www.fantimach.com/news/News/Why-More-Car-Owners-Are-Choosing-Touchless-Car-Wash-Services-Over-Traditional-Methods.html"
+      ],
+      "queries": [
+        "inurl:/services touchless \"car wash\""
+      ]
+    },
+    {
+      "domain": "purecarwash.com",
+      "count": 1,
+      "urls": [
+        "https://purecarwash.com/wash-services/"
+      ],
+      "queries": [
+        "inurl:/services touchless \"car wash\""
+      ]
+    },
+    {
+      "domain": "adirondackcarwash.com",
+      "count": 1,
+      "urls": [
+        "https://adirondackcarwash.com/services/touchless-carwash/"
+      ],
+      "queries": [
+        "inurl:/services touchless \"car wash\""
+      ]
+    },
+    {
+      "domain": "gateexpresscarwash.com",
+      "count": 1,
+      "urls": [
+        "https://gateexpresscarwash.com/wash-options/"
+      ],
+      "queries": [
+        "inurl:/wash-options touchless"
+      ]
+    },
+    {
+      "domain": "4seasonscarwash.com",
+      "count": 1,
+      "urls": [
+        "https://4seasonscarwash.com/wash-options/"
+      ],
+      "queries": [
+        "inurl:/wash-options touchless"
+      ]
+    },
+    {
+      "domain": "rivianforums.com",
+      "count": 1,
+      "urls": [
+        "https://www.rivianforums.com/forum/threads/recommended-car-wash-options.10414/"
+      ],
+      "queries": [
+        "inurl:/wash-options touchless"
+      ]
+    },
+    {
+      "domain": "teslamotorsclub.com",
+      "count": 1,
+      "urls": [
+        "https://teslamotorsclub.com/tmc/threads/north-america-touches-car-wash-options.288499/"
+      ],
+      "queries": [
+        "inurl:/wash-options touchless"
+      ]
+    },
+    {
+      "domain": "driveaccord.net",
+      "count": 1,
+      "urls": [
+        "https://www.driveaccord.net/threads/touchless-car-wash-options-to-choose.242922/"
+      ],
+      "queries": [
+        "inurl:/wash-options touchless"
+      ]
+    },
+    {
+      "domain": "zhongyuecarwash.com",
+      "count": 1,
+      "urls": [
+        "https://www.zhongyuecarwash.com/blog/2026-best-automated-car-wash-options-for-vehicle-cleaning/"
+      ],
+      "queries": [
+        "inurl:/wash-options touchless"
+      ]
+    },
+    {
+      "domain": "leisuwashtech.com",
+      "count": 1,
+      "urls": [
+        "https://www.leisuwashtech.com/blog-News-13123/What-to-Expect-From-a-Laserwash-Car-Wash-11946967.html"
+      ],
+      "queries": [
+        "inurl:laserwash \"car wash\" -pdq.com"
+      ]
+    },
+    {
+      "domain": "wet-inc.com",
+      "count": 1,
+      "urls": [
+        "https://www.wet-inc.com/car-wash-systems/washworld-car-washes/"
+      ],
+      "queries": [
+        "inurl:washworld \"car wash\""
+      ]
+    },
+    {
+      "domain": "washworldinc.com",
+      "count": 1,
+      "urls": [
+        "https://www.washworldinc.com/about-washworld"
+      ],
+      "queries": [
+        "inurl:washworld \"car wash\""
+      ]
+    },
+    {
+      "domain": "play.google.com",
+      "count": 1,
+      "urls": [
+        "https://play.google.com/store/apps/details?id=com.washworld.carwash"
+      ],
+      "queries": [
+        "inurl:washworld \"car wash\""
+      ]
+    },
+    {
+      "domain": "carwashconsignment.com",
+      "count": 2,
+      "urls": [
+        "https://www.carwashconsignment.com/equipment/automatics-washworld",
+        "https://www.carwashconsignment.com/equipment/automatics-pdq-laser/5994-pdq-laserwash-4000-2000"
+      ],
+      "queries": [
+        "inurl:washworld \"car wash\"",
+        "inurl:pdq-laserwash"
+      ]
+    },
+    {
+      "domain": "bluedolphinsoap.com",
+      "count": 1,
+      "urls": [
+        "https://bluedolphinsoap.com/washworld/"
+      ],
+      "queries": [
+        "inurl:washworld \"car wash\""
+      ]
+    },
+    {
+      "domain": "carwashbizcenter.com",
+      "count": 1,
+      "urls": [
+        "https://carwashbizcenter.com/news/about-washworld-inc/"
+      ],
+      "queries": [
+        "inurl:washworld \"car wash\""
+      ]
+    },
+    {
+      "domain": "coastalcarwashservices.com",
+      "count": 1,
+      "urls": [
+        "https://www.coastalcarwashservices.com/pdfs/brochure-pdq-laserwash-360-touchless-system.pdf"
+      ],
+      "queries": [
+        "inurl:pdq-laserwash"
+      ]
+    },
+    {
+      "domain": "prowash.com.au",
+      "count": 1,
+      "urls": [
+        "https://www.prowash.com.au/section/16/pdq-laserwash"
+      ],
+      "queries": [
+        "inurl:pdq-laserwash"
+      ]
+    },
+    {
+      "domain": "shinewashtec.com",
+      "count": 1,
+      "urls": [
+        "https://www.shinewashtec.com/Touchless-Automatic-Car-Wash-The-Ultimate-2025-Guide.html"
+      ],
+      "queries": [
+        "inurl:touchless-automatic"
+      ]
+    },
+    {
+      "domain": "kkewash.com",
+      "count": 2,
+      "urls": [
+        "https://kkewash.com/en-int/30201-touchless-automatic-car-wash-tech-undaunded-advantage/",
+        "https://kkewash.com/en-us/30132-automatic-touchless-car-wash-futureproof-business-usa/"
+      ],
+      "queries": [
+        "inurl:touchless-automatic",
+        "inurl:automatic-touchless"
+      ]
+    },
+    {
+      "domain": "instructables.com",
+      "count": 1,
+      "urls": [
+        "https://www.instructables.com/How-to-Drive-Through-a-Touchless-Automatic-the-Cor/"
+      ],
+      "queries": [
+        "inurl:touchless-automatic"
+      ]
+    },
+    {
+      "domain": "shinewashtech.com",
+      "count": 1,
+      "urls": [
+        "https://www.shinewashtech.com/blog/top-10-touchless-automatic-car-wash-manufacturers-213145.html"
+      ],
+      "queries": [
+        "inurl:touchless-automatic"
+      ]
+    },
+    {
+      "domain": "f150forum.com",
+      "count": 1,
+      "urls": [
+        "https://www.f150forum.com/f118/1st-touchless-automatic-car-wash-aluminum-truck-452276/"
+      ],
+      "queries": [
+        "inurl:touchless-automatic"
+      ]
+    },
+    {
+      "domain": "mattiascarwash.com",
+      "count": 1,
+      "urls": [
+        "https://www.mattiascarwash.com/automatic-touchless-car-wash-system/"
+      ],
+      "queries": [
+        "inurl:automatic-touchless"
+      ]
+    },
+    {
+      "domain": "leisuwash.com",
+      "count": 1,
+      "urls": [
+        "https://www.leisuwash.com/benefits-of-using-an-automatic-touchless-car-wash/"
+      ],
+      "queries": [
+        "inurl:automatic-touchless"
+      ]
+    },
+    {
+      "domain": "blog.napacanada.com",
+      "count": 1,
+      "urls": [
+        "https://blog.napacanada.com/en/automatic-touchless-or-hand-car-wash/"
+      ],
+      "queries": [
+        "inurl:automatic-touchless"
+      ]
+    },
+    {
+      "domain": "novahitech.en.made-in-china.com",
+      "count": 1,
+      "urls": [
+        "https://novahitech.en.made-in-china.com/product/HxhYpBXEvRrq/China-Factory-Price-Automatic-Touchless-Brushless-Car-Wash-Machine-Equipment-System.html"
+      ],
+      "queries": [
+        "inurl:automatic-touchless"
+      ]
+    }
+  ],
+  "matches": [
+    {
+      "id": "b9dd3c5e-fa31-4a7c-bc31-6f9187c7e6d9",
+      "name": "Brown Bear Car Wash",
+      "city": "Silverdale",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/3082-nw-bucklin-hill-rd-silverdale-wa-98383-44",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "c20288c2-b3bc-4b97-af72-d08c193b4ee8",
+      "name": "Drive & Shine Car Wash",
+      "city": "Portage",
+      "state": "MI",
+      "website": "https://driveandshine.com/our-wash/portage-cw",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "4c92dde3-12f3-4a25-a40c-8285244dc5b4",
+      "name": "Haffner's Car Wash",
+      "city": "Lawrence",
+      "state": "MA",
+      "website": "https://haffners.com/car-washes/",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "c6e8e4dc-5553-42ec-adef-6d61f0dd6f24",
+      "name": "Brown Bear Car Wash",
+      "city": "Redmond",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/17809-redmond-way-redmond-wa-98052-13",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "621b7294-5c98-4283-b1a8-d83bd89614c7",
+      "name": "Drive & Shine Car Wash",
+      "city": "Lima",
+      "state": "OH",
+      "website": "https://driveandshine.com/our-wash/lima-cw",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "80b96618-ff1e-45cf-85a3-af7df1956ca0",
+      "name": "Cobblestone Car Wash",
+      "city": "Commerce City",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-commerce-city-belle-creek-boulevard-105th-avenue/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "5db0361b-d942-4f06-92f2-77cf80d99575",
+      "name": "Cobblestone Auto Spa",
+      "city": "Gilbert",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/higley-williams-field/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "ab2d3a29-9e35-4639-b515-88abfda98ccf",
+      "name": "Blue Tide Car Wash - Touchless",
+      "city": "Sioux Falls",
+      "state": "SD",
+      "website": "https://www.bluetidecarwash.com/",
+      "matched": "bluetidecarwash.com"
+    },
+    {
+      "id": "b907df5d-59dd-40c0-bb81-2f101a99bca8",
+      "name": "Oil Changers & Car Wash",
+      "city": "Cameron",
+      "state": "MO",
+      "website": "https://oilchangers.com/locations/mo/cameron-camerona/",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "78620a2c-33f3-4c07-bc32-c092516078db",
+      "name": "Spot Free Car Wash",
+      "city": "Culver City",
+      "state": "CA",
+      "website": "http://www.spotfreecar.com/",
+      "matched": "spotfreecar.com"
+    },
+    {
+      "id": "a9ffd9fc-cd71-4b2a-a747-21efee8d0c28",
+      "name": "Cobblestone Car Wash",
+      "city": "Caldwell",
+      "state": "ID",
+      "website": "https://cobblestone.com/location/caldwell-franklin-rd-commercial-way/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "fc7d3fd4-50d4-4cbb-ab3e-c42ee9b708f3",
+      "name": "Cobblestone Auto Spa",
+      "city": "Scottsdale",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/car-wash-in-scottsdale-indian-school-75th-st/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "6866878e-1b51-4e3a-9fd4-2b8a784fcfa6",
+      "name": "Splash Car Wash Express",
+      "city": "Shelburne",
+      "state": "VT",
+      "website": "https://splashcarwashes.com/locations/shelburne/",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "8a93bf71-eb23-4b7e-88d9-2d2d0ddba399",
+      "name": "Haffner's Gas Station and Car Wash",
+      "city": "Lawrence",
+      "state": "MA",
+      "website": "https://haffners.com/%3Futm_source%3DGMB_HaffnersLawrenceParker%26utm_medium%3Dorganic%26y_source%3D1_NzE5MzQzMDQtNzE1LWxvY2F0aW9uLndlYnNpdGU%253D",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "85f1f019-5954-4536-97af-a43e89caa745",
+      "name": "Grease Monkey Manvel",
+      "city": "Manvel",
+      "state": "TX",
+      "website": "https://www.greasemonkey.com/locations/tx/manvel/20815-morris-road",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "4ea8f74b-fec0-4cb7-9174-7c0ccf1b1283",
+      "name": "Grease Monkey",
+      "city": "Winter Haven",
+      "state": "FL",
+      "website": "https://www.greasemonkey.com/locations/fl/winter-haven/1950-dundee-road",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "1b346e1b-15b6-4d21-bd5e-40490c5ad85a",
+      "name": "Oil Changers & Car Wash",
+      "city": "Oakland",
+      "state": "CA",
+      "website": "https://oilchangers.com/locations/ca/oakland-park-blvd/",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "8ba53789-94f0-4176-a228-7785b9749911",
+      "name": "Cobblestone Auto Spa",
+      "city": "Chandler",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/south-arizona/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "8f8c9d55-6782-4b41-8e05-034aeb8b6882",
+      "name": "ScrubaDub Car Wash (Marlborough)",
+      "city": "Marlborough",
+      "state": "MA",
+      "website": "https://www.scrubadub.com/marlboro-car-wash/",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "46c167b1-b325-4087-aa50-07f5592d163b",
+      "name": "GATE Express Carwash",
+      "city": "Jacksonville",
+      "state": "FL",
+      "website": "http://gateexpresscarwash.com/",
+      "matched": "gateexpresscarwash.com"
+    },
+    {
+      "id": "ffc935fa-1cc7-437a-abfe-75503581ddb9",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/car-wash-in-phoenix-67th-ave-lower-buckeye/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "582663ac-6d7b-4ea1-a90f-2bac4b8d149c",
+      "name": "Spot Free Car Wash - Pasadena",
+      "city": "Pasadena",
+      "state": "CA",
+      "website": "https://www.spotfreecar.com/",
+      "matched": "spotfreecar.com"
+    },
+    {
+      "id": "b1a469dc-cd2e-43b1-aab8-c58c1fb23531",
+      "name": "ScrubaDub Car Wash & Auto Detailing Center (Boston)",
+      "city": "Dorchester",
+      "state": "MA",
+      "website": "https://www.scrubadub.com/dorchester-car-wash/",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "daa0b72e-6283-4a59-9969-86f23554a56e",
+      "name": "Cobblestone Auto Spa Corporate Office",
+      "city": "Scottsdale",
+      "state": "AZ",
+      "website": "http://cobblestone.com/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "c1aef093-0782-40af-992e-7a9658cfc322",
+      "name": "Oil Changers & Car Wash",
+      "city": "San Jose",
+      "state": "CA",
+      "website": "https://oilchangers.com/locations/ca/san-jose-monterey-rd/",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "2bb3a927-fdf1-4d49-8ae2-cc8032d00286",
+      "name": "GATE Express Carwash",
+      "city": "Middleburg",
+      "state": "FL",
+      "website": "http://gateexpresscarwash.com/",
+      "matched": "gateexpresscarwash.com"
+    },
+    {
+      "id": "02e058d5-70e0-4ffb-94af-01d405ba4711",
+      "name": "Oil Changers + Repair",
+      "city": "Pflugerville",
+      "state": "TX",
+      "website": "https://oilchangers.com/locations/tx/pflugerville-pecan-st/",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "7e6df36e-ac0e-4cf6-9fff-52e5ebc6c8d1",
+      "name": "Brown Bear Car Wash",
+      "city": "Seattle",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/3977-leary-way-nw-seattle-wa-98107-48",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "3e2c3ef0-6531-4dbc-b355-afc3aa66ae7c",
+      "name": "Star Wash Massillon",
+      "city": "Massillon",
+      "state": "OH",
+      "website": "http://www.starwashmassillon.com/",
+      "matched": "starwashmassillon.com"
+    },
+    {
+      "id": "7524e0ab-6cae-45ed-8e30-76df703afe63",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/51st-van-buren/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "05a681cc-164f-4e92-833f-5aafb22ee9dd",
+      "name": "Drive & Shine Car Wash and Oil Change",
+      "city": "Crown Point",
+      "state": "IN",
+      "website": "https://driveandshine.com/our-wash/crown-point-cw",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "398a932a-1117-4dad-b8eb-d25a355cef1d",
+      "name": "ScrubaDub Car Wash & Auto Detailing Center (Natick)",
+      "city": "Natick",
+      "state": "MA",
+      "website": "https://www.scrubadub.com/natick-car-wash/",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "2e9cb4f6-b6e7-43c5-a681-bb46aeb02a13",
+      "name": "Splash Car Wash Express",
+      "city": "Newburgh",
+      "state": "NY",
+      "website": "https://www.splashcarwashes.com/",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "e79ce2ad-bc4a-4390-bdbe-2aec9d82d1a6",
+      "name": "Cobblestone Auto Spa",
+      "city": "Queen Creek",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/hunt-hwy-empire-blvd/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "4bb0b856-fb86-4909-97bc-c76d3b45be46",
+      "name": "Cobblestone Auto Spa",
+      "city": "Surprise",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/waddell-loop-303/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "cbe6993f-7ce9-4b32-8b97-425f76533a73",
+      "name": "Cobblestone Car Wash",
+      "city": "Castle Pines",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-castle-pines-parkway-i-25-highway/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "35498367-44a4-43f8-86b6-d08479d0c9c2",
+      "name": "Cobblestone Car Wash",
+      "city": "Lakewood",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-lakewood-alameda-parkway-beech-drive-2/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "52b1966e-ee5c-4d48-a10f-8bb593ded137",
+      "name": "Cobblestone Car Wash",
+      "city": "Lakewood",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-denver-colfax-ave-fenton-st/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "928e7c83-b719-44aa-9ba5-19e39c1ed63b",
+      "name": "Cobblestone Car Wash",
+      "city": "Westminster",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/wadsworth-92-ave/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "ea3d74a4-f11e-4017-82e5-bc477d42ce45",
+      "name": "Drive & Shine Car Wash",
+      "city": "Elkhart",
+      "state": "IN",
+      "website": "https://driveandshine.com/our-wash/elkhart-cw",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "556c4b85-9adc-422c-afb1-b2702f450e3d",
+      "name": "GATE Express Carwash",
+      "city": "Ponte Vedra Beach",
+      "state": "FL",
+      "website": "http://www.gateexpresscarwash.com/%23locations",
+      "matched": "gateexpresscarwash.com"
+    },
+    {
+      "id": "6138819c-f840-4653-9825-3869394235f0",
+      "name": "Cobblestone Car Wash",
+      "city": "Thornton",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/120-ave-holly-st/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f378b19f-4744-4839-b52e-aee8dc931ab4",
+      "name": "Cobblestone Car Wash",
+      "city": "Lakewood",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/wadsworth-blvd-9th-ave/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "67c47a86-c4e7-4cee-9ccb-87bd71d9647c",
+      "name": "Warrensburg Car Wash",
+      "city": "Warrensburg",
+      "state": "NY",
+      "website": "http://www.adirondackcarwash.com/",
+      "matched": "adirondackcarwash.com"
+    },
+    {
+      "id": "1725b810-5e3e-4786-8202-c6f50c418276",
+      "name": "Splash Car Wash",
+      "city": "Southbury",
+      "state": "CT",
+      "website": "https://splashcarwashes.com/locations/southbury/",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "9a5b63cf-5900-4c16-901e-b2cc50537882",
+      "name": "Splash Car Wash",
+      "city": "Cheshire",
+      "state": "CT",
+      "website": "https://splashcarwashes.com/locations/cheshire/",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "4e3fde7b-132b-4cc8-9808-be02256f7d94",
+      "name": "Blue Tide Car Wash - Touchless",
+      "city": "Sioux Falls",
+      "state": "SD",
+      "website": "https://www.bluetidecarwash.com/",
+      "matched": "bluetidecarwash.com"
+    },
+    {
+      "id": "f2ad5e5f-5039-4af6-af47-eb11b9f6ca3d",
+      "name": "K & S Car Wash",
+      "city": "Auburn",
+      "state": "NY",
+      "website": "http://www.kscarwashes.com/",
+      "matched": "kscarwashes.com"
+    },
+    {
+      "id": "a7ea0547-fcc0-43f5-a2c1-dccdf0f5c95a",
+      "name": "Cobblestone Car Wash",
+      "city": "Centennial",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/centennial-arapahoe-road-syracuse-way/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f2bd95ef-7d60-4201-a10a-c1c78b2d3f25",
+      "name": "Haffner's Gas Station and Car Wash",
+      "city": "Hudson",
+      "state": "NH",
+      "website": "https://haffners.com/",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "c1d56160-0fa1-4662-aa37-9d111ea8eec2",
+      "name": "Super Klean Car Wash",
+      "city": "Broken Arrow",
+      "state": "OK",
+      "website": "https://superkleancarwash.com/locations",
+      "matched": "superkleancarwash.com"
+    },
+    {
+      "id": "711fc8ea-c23f-4ea4-8c14-2bec0bfd1792",
+      "name": "Cobblestone Auto Spa",
+      "city": "Scottsdale",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/indian-bend-pima-road/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "27512223-fdb7-4022-95fd-addd297bf6e4",
+      "name": "Touch Less Car Wash",
+      "city": "Gaithersburg",
+      "state": "MD",
+      "website": "https://touchlesscarwashmd.com/locations/",
+      "matched": "touchlesscarwashmd.com"
+    },
+    {
+      "id": "09fde4e9-54d0-4529-97fe-14144623267b",
+      "name": "Haffner's Gas Station",
+      "city": "Groton",
+      "state": "MA",
+      "website": "https://haffners.com/%3Futm_source%3DGMB_HaffnersGroton%26utm_medium%3Dorganic%26y_source%3D1_NzE5MzQwMjEtNzE1LWxvY2F0aW9uLndlYnNpdGU%253D",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "20e2f729-54ff-4827-89ff-969df09f289f",
+      "name": "Cobblestone Car Wash; Longmont - Hwy 119 & Turner Blvd",
+      "city": "Longmont",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/hwy-119-turner-blvd/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "0bc0e273-bb5f-413c-89e1-558155fe19ff",
+      "name": "Brown Bear Car Wash",
+      "city": "Spokane Valley",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/1226-s-pines-rd-spokane-valley-wa-99206-4",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "15e6ef4b-7129-43f0-bcfa-6c58252bf961",
+      "name": "Clancy's Car Wash",
+      "city": "Daleville",
+      "state": "IN",
+      "website": "https://www.clancyscarwash.com/location/15901-w-commerce-rd/",
+      "matched": "clancyscarwash.com"
+    },
+    {
+      "id": "86e06aae-6ab0-417a-8407-80f6560d9e56",
+      "name": "Cobblestone Car Wash",
+      "city": "Aurora",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-aurora-smoky-hill-yellowstone-way/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "5e412f2f-8ccf-43ce-aa30-609c9678b77a",
+      "name": "Super Klean Car Wash Bixby",
+      "city": "Bixby",
+      "state": "OK",
+      "website": "http://www.superkleancarwash.com/",
+      "matched": "superkleancarwash.com"
+    },
+    {
+      "id": "73d785d0-2604-42c3-a585-7844067625c9",
+      "name": "Brown Bear Car Wash",
+      "city": "Puyallup",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/18704-meridian-ave-e-puyallup-wa-98375-49",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "83a0982f-6236-427c-9c0e-e573024009b6",
+      "name": "Oil Changers",
+      "city": "Simi Valley",
+      "state": "CA",
+      "website": "https://oilchangers.com/locations/ca/simi-valley-1st-st/",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "3c7fecc8-0fa2-441f-a0ce-706f27e315e1",
+      "name": "Cobblestone Auto Spa",
+      "city": "Chandler",
+      "state": "AZ",
+      "website": "https://cobblestone.com/locations/chandler/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "993041ec-b117-416e-b581-903fd526ef28",
+      "name": "ScrubaDub Car Wash (Brighton)",
+      "city": "Brighton",
+      "state": "MA",
+      "website": "http://www.scrubadub.com/brighton-car-wash/",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "335a4310-f730-4c7b-9fe6-03f545207ab9",
+      "name": "Hogwash Car Wash, Detailing, Oil Change & Lube Center",
+      "city": "Parsippany",
+      "state": "NJ",
+      "website": "https://www.hogwashcarwash.com/",
+      "matched": "hogwashcarwash.com"
+    },
+    {
+      "id": "fcd57652-9b35-4427-860e-5e14d959c904",
+      "name": "Tradewinds",
+      "city": "Bangor",
+      "state": "ME",
+      "website": "http://www.haffners.com/",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "89041596-71c4-4b1e-ad88-ad011cd0c41e",
+      "name": "Cobblestone Car Wash",
+      "city": "Aurora",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/quincy-ave-parker-rd/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "8595ed2b-079c-4984-b42c-519847753336",
+      "name": "Splash Car Wash",
+      "city": "Shelton",
+      "state": "CT",
+      "website": "https://splashcarwashes.com/locations/shelton/",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "481dc750-41b4-41b7-b66f-4aaa69138e79",
+      "name": "Brown Bear Car Wash",
+      "city": "Enumclaw",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/1145-roosevelt-ave-e-enumclaw-wa-98022-37",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "b3f000d6-bf35-4008-959e-5cb4e03bbcf4",
+      "name": "Brown Bear Car Wash",
+      "city": "Parkland",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/13204-pacific-ave-s-tacoma-wa-98444-15",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "bd7668de-5e4e-41ea-a739-4d65cdcaa64d",
+      "name": "Brown Bear Car Wash",
+      "city": "Lakewood",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/10913-bridgeport-way-sw-lakewood-wa-98499-16",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "96f54eac-f9a0-47f0-ae44-d2acea80f9ac",
+      "name": "Brown Bear Car Wash",
+      "city": "Everett",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/3511-broadway-everett-wa-98201-20",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "f77533bb-b31d-46df-a61f-55b103d5f441",
+      "name": "Brown Bear Car Wash",
+      "city": "Buckley",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/28010-wa-410-e-buckley-wa-98321-38",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "5719711a-644c-4af7-828a-f846d31ce187",
+      "name": "ScrubaDub Car Wash (Shrewsbury)",
+      "city": "Shrewsbury",
+      "state": "MA",
+      "website": "https://www.scrubadub.com/shrewsbury-car-wash/",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "ed3f8172-4be2-4dd3-95a1-200d6b458d02",
+      "name": "Splash Car Wash Express",
+      "city": "Rutland",
+      "state": "VT",
+      "website": "https://splashcarwashes.com/locations/rutland/",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "567b8fc1-e139-4434-b1ad-d275e94cf79d",
+      "name": "Splash Car Wash Express",
+      "city": "Newark",
+      "state": "NY",
+      "website": "https://splashcarwashes.com/locations/newark/",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "35385d15-274d-4cce-86de-1ab673bec4b8",
+      "name": "Splash Car Wash Express",
+      "city": "Rochester",
+      "state": "NY",
+      "website": "https://splashcarwashes.com/locations/henrietta/",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "1f9d4dee-c892-4f18-b69f-1fdd7d287eda",
+      "name": "Brown Bear Car Wash",
+      "city": "Puyallup",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/18708-meridian-ave-e-puyallup-wa-98375-50",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "fc21a1ef-d419-49f1-a910-9219bb0a25a1",
+      "name": "ScrubaDub Car Wash (Worcester)",
+      "city": "Worcester",
+      "state": "MA",
+      "website": "http://www.scrubadub.com/worcester-park-car-wash/",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "11491053-9ce2-4a70-8cb7-7be89ae6a6ee",
+      "name": "Haffner's Car Wash",
+      "city": "Haverhill",
+      "state": "MA",
+      "website": "https://haffners.com/car-washes/",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "33bd70c7-0c38-4761-a682-35e4e6065d2a",
+      "name": "Hurricane Carwash North",
+      "city": "Carthage",
+      "state": "MO",
+      "website": "https://hurricanecarwash.net/home",
+      "matched": "hurricanecarwash.net"
+    },
+    {
+      "id": "cb4e604e-f66b-444d-bec0-d02a70f776da",
+      "name": "K & S Car Wash",
+      "city": "Auburn",
+      "state": "NY",
+      "website": "http://www.kscarwashes.com/",
+      "matched": "kscarwashes.com"
+    },
+    {
+      "id": "a5acf755-0112-47a0-bf77-f6dc98ac8613",
+      "name": "Blue Tide Car Wash",
+      "city": "Sioux Falls",
+      "state": "SD",
+      "website": "https://www.bluetidecarwash.com/",
+      "matched": "bluetidecarwash.com"
+    },
+    {
+      "id": "84d2a5f1-cf38-4dea-8e47-88b827000f62",
+      "name": "Clancy's Car Wash",
+      "city": "Muncie",
+      "state": "IN",
+      "website": "http://www.clancyscarwash.com/",
+      "matched": "clancyscarwash.com"
+    },
+    {
+      "id": "39bb5fc6-6097-4ace-9fde-6faaf6453839",
+      "name": "Clancy's Car Wash",
+      "city": "Muncie",
+      "state": "IN",
+      "website": "http://www.clancyscarwash.com/",
+      "matched": "clancyscarwash.com"
+    },
+    {
+      "id": "c440ea0d-8bda-4553-a418-572687bfb5b4",
+      "name": "ScrubaDub Car Wash (Portland)",
+      "city": "Portland",
+      "state": "ME",
+      "website": "http://www.scrubadub.com/portland-car-wash/",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "69256bda-94fd-4f2a-beaf-902b0c01d5a0",
+      "name": "Pure Car Wash - Plymouth",
+      "city": "Plymouth",
+      "state": "MI",
+      "website": "http://purecarwash.com/",
+      "matched": "purecarwash.com"
+    },
+    {
+      "id": "c0b11e28-b5e2-4035-96c6-7c2ccc66eab5",
+      "name": "Brown Bear Car Wash",
+      "city": "Marysville",
+      "state": "WA",
+      "website": "https://brownbear.com/wash/soper-hill/",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "abae0261-2d2f-4b32-bc28-804cc7abd24b",
+      "name": "Brown Bear Car Wash",
+      "city": "Spokane",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/5625-n-market-st-spokane-wa-99208-2",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "c7c41315-6dca-4671-a211-efa20da7a67a",
+      "name": "Brown Bear Car Wash",
+      "city": "Redmond",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/8296-avondale-way-ne-redmond-wa-98052-47",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "2b357cde-1f1d-4c3c-9f14-c937eb06c9e2",
+      "name": "ScrubaDub Car Wash (Worcester)",
+      "city": "Worcester",
+      "state": "MA",
+      "website": "http://www.scrubadub.com/worcester-grafton-car-wash/",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "09783b01-e6d7-4e05-a317-bfe9151b1f0e",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/car-wash-in-phoenix-indian-school-12th-street/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "740b6a9f-2a97-4c40-b9da-ab8e00fe8ec2",
+      "name": "Brown Bear Car Wash",
+      "city": "Des Moines",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/22706-marine-view-dr-s-des-moines-wa-98198-11",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "6f14bdf6-782e-4126-bf98-2b61d8e264ed",
+      "name": "Splash Car Wash 24",
+      "city": "Brockport",
+      "state": "NY",
+      "website": "https://splashcarwashes.com/locations/brockport-lake-road/",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "58f2a494-fdd6-42a0-a645-64336c8dfcc4",
+      "name": "Cobblestone Car Wash",
+      "city": "Lakewood",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-lakewood-wadsworth-boulevard-bayaud-ave/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "a9735929-279c-4c00-be23-05e2507ebc68",
+      "name": "Cobblestone Auto Spa",
+      "city": "Litchfield Park",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/car-wash-in-litchfield-park-dysart-camelback/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "65f7a9ce-ccf3-466d-8eb5-24f74ca072d2",
+      "name": "Brown Bear Car Wash",
+      "city": "Bellevue",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/14801-ne-8th-st-bellevue-wa-98007-19",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "fbd8038b-0e98-4fc0-a625-505d5bd26b75",
+      "name": "Blue Tide Car Wash - Touchless",
+      "city": "Sioux Falls",
+      "state": "SD",
+      "website": "https://www.bluetidecarwash.com/",
+      "matched": "bluetidecarwash.com"
+    },
+    {
+      "id": "85e4ed84-fb89-4bfc-83a4-afdc8be5e762",
+      "name": "Super Klean Car Wash",
+      "city": "Tulsa",
+      "state": "OK",
+      "website": "https://superkleancarwash.com/",
+      "matched": "superkleancarwash.com"
+    },
+    {
+      "id": "1b346e1b-15b6-4d21-bd5e-40490c5ad85a",
+      "name": "Oil Changers & Car Wash",
+      "city": "Oakland",
+      "state": "CA",
+      "website": "https://oilchangers.com/locations/ca/oakland-park-blvd/",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "39f6a5f2-55fb-4084-89c3-e012da93d6b3",
+      "name": "Oil Changers & Car Wash",
+      "city": "Coos Bay",
+      "state": "OR",
+      "website": "https://oilchangers.com/locations/or/coos-bay-s-broadway/",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "75e0525d-788f-4299-bddf-fd2333d1056d",
+      "name": "Brown Bear Car Wash",
+      "city": "Bremerton",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/6301-wa-303-ne-bremerton-wa-98311-45",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "034a2813-5115-4550-a51a-62f1cd9f7a95",
+      "name": "Brown Bear Car Wash",
+      "city": "Cheney",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/2400-1st-st-cheney-wa-99004-43",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "928d1774-d131-4d8f-89de-f19b1a0fdaf6",
+      "name": "Brown Bear Car Wash",
+      "city": "Tacoma",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/3002-s-38th-st-tacoma-wa-98409-1",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "43770e14-7fbe-4764-ae05-ea333fa511d6",
+      "name": "Brown Bear Car Wash",
+      "city": "Lynnwood",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/202-164th-st-sw-lynnwood-wa-98087-18",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "a3975fd7-10ee-46b6-ada6-9209ede8b18d",
+      "name": "Washworld, Inc.",
+      "city": "De Pere",
+      "state": "WI",
+      "website": "http://www.washworldinc.com/",
+      "matched": "washworldinc.com"
+    },
+    {
+      "id": "3b0c2f00-ccf6-46bd-b22d-253a84f7bec7",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/car-wash-in-phoenix-maryvale-parkway-and-indian-school/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "113dc5c3-ae17-418f-bf10-a78bbb2be18d",
+      "name": "GATE Express Carwash",
+      "city": "St. Augustine",
+      "state": "FL",
+      "website": "https://gateexpresscarwash.com/",
+      "matched": "gateexpresscarwash.com"
+    },
+    {
+      "id": "45d51117-c424-49a4-b60f-068061346f7d",
+      "name": "Cobblestone Auto Spa",
+      "city": "Tolleson",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/107th-ave-buckeye/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "ff1548cc-b365-4185-befe-2c6f829efe19",
+      "name": "Cobblestone Auto Spa",
+      "city": "Surprise",
+      "state": "AZ",
+      "website": "https://cobblestone.com/locations/surprise/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "28b84360-b986-4ac5-97e4-2f9b1026b7bd",
+      "name": "Cobblestone Auto Spa",
+      "city": "Scottsdale",
+      "state": "AZ",
+      "website": "https://cobblestone.com/locations/north-pima/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "068a0c92-2363-44a6-9a88-16c662a5a34d",
+      "name": "Drive & Shine Car Wash",
+      "city": "South Bend",
+      "state": "IN",
+      "website": "https://driveandshine.com",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "300d6116-16fc-42aa-9edd-09399be7f50b",
+      "name": "Brown Bear Car Wash",
+      "city": "Seattle",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/1513-ne-145th-st-seattle-wa-98155-35",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "40ea77a4-383b-44ca-8db6-656f67b107ae",
+      "name": "Drive & Shine Car Wash",
+      "city": "Mishawaka",
+      "state": "IN",
+      "website": "https://driveandshine.com",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "f0688b1e-f81c-47cf-a929-cff45447ca57",
+      "name": "Brown Bear Car Wash",
+      "city": "Seattle",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/12506-15th-ave-ne-seattle-wa-98125-24",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "4bbd1b80-b792-43b8-8016-82f427c16ee6",
+      "name": "Brown Bear Car Wash",
+      "city": "Seattle",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/1513-ne-145th-st-seattle-wa-98155-35",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "7ff975ca-f81e-4dd6-81ed-8ec59c703de7",
+      "name": "Drive & Shine Car Wash",
+      "city": "Kalamazoo",
+      "state": "MI",
+      "website": "https://driveandshine.com",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "77d2d9a3-b1e5-4b3b-9301-06351ebe83f6",
+      "name": "GATE Express Carwash",
+      "city": "Jacksonville",
+      "state": "FL",
+      "website": "https://gateexpresscarwash.com/",
+      "matched": "gateexpresscarwash.com"
+    },
+    {
+      "id": "995f9ef5-9dfa-4c07-be4d-53b63b80f481",
+      "name": "Drive & Shine Car Wash",
+      "city": "Elkhart",
+      "state": "IN",
+      "website": "https://driveandshine.com",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "c106128f-3fb9-4287-b2c2-0972b6d5572d",
+      "name": "Brown Bear Car Wash",
+      "city": "Tacoma",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/5950-6th-ave-tacoma-wa-98406-17",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "ea5914dc-90ba-4ee0-9953-4a4fb11f9a1b",
+      "name": "Brown Bear Car Wash",
+      "city": "Poulsbo",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/18764-wa-305-ne-poulsbo-wa-98370-28",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "f4a7eaa6-028c-4240-a205-f284f99bea56",
+      "name": "Drive & Shine Car Wash",
+      "city": "Elkhart",
+      "state": "IN",
+      "website": "https://driveandshine.com",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "42ea9f30-1aa5-4d2e-9c72-832c3f35c4f3",
+      "name": "Touch Less Car Wash",
+      "city": "Gaithersburg",
+      "state": "MD",
+      "website": "https://touchlesscarwashmd.com/locations/",
+      "matched": "touchlesscarwashmd.com"
+    },
+    {
+      "id": "82fdf35d-4c42-45b9-a2a8-f76b340dc3a2",
+      "name": "Drive & Shine Car Wash and Oil Change",
+      "city": "Mishawaka",
+      "state": "IN",
+      "website": "https://driveandshine.com/our-wash/south-bend-mishawaka-cw",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "6fe9bc31-8aa3-42f4-8c9b-534396ae8cbf",
+      "name": "Oil Changers",
+      "city": "Modesto",
+      "state": "CA",
+      "website": "https://oilchangers.com/locations/ca/modesto-sisk-rd/",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "b20d8eaa-bea1-4e8a-a6e9-51863a3ea5b1",
+      "name": "Drive & Shine Car Wash and Oil Change",
+      "city": "Schererville",
+      "state": "IN",
+      "website": "https://driveandshine.com/our-wash/schererville-cw",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "aa23861e-1dde-442b-ba23-8eb23ac98e9b",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/35-ave-thunderbird",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "3a001f41-f5d5-4cf5-90d4-1c259eed25e1",
+      "name": "GATE Express Carwash",
+      "city": "Jacksonville",
+      "state": "FL",
+      "website": "https://gateexpresscarwash.com/",
+      "matched": "gateexpresscarwash.com"
+    },
+    {
+      "id": "73fca3ad-8696-4c32-9d08-d5856480bbe9",
+      "name": "Splash Car Wash Express",
+      "city": "Springfield",
+      "state": "MA",
+      "website": "https://splashcarwashes.com/locations/springfield/%3Futm_source%3Dgoogle%26utm_medium%3Dorganic%26utm_campaign%3Dgbp-springfield",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "67c47a86-c4e7-4cee-9ccb-87bd71d9647c",
+      "name": "Warrensburg Car Wash",
+      "city": "Warrensburg",
+      "state": "NY",
+      "website": "http://www.adirondackcarwash.com/",
+      "matched": "adirondackcarwash.com"
+    },
+    {
+      "id": "83a0982f-6236-427c-9c0e-e573024009b6",
+      "name": "Oil Changers",
+      "city": "Simi Valley",
+      "state": "CA",
+      "website": "https://oilchangers.com/locations/ca/simi-valley-1st-st/",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "3c7fecc8-0fa2-441f-a0ce-706f27e315e1",
+      "name": "Cobblestone Auto Spa",
+      "city": "Chandler",
+      "state": "AZ",
+      "website": "https://cobblestone.com/locations/chandler/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "fa941197-5c0e-47ac-95fe-c6a763a4e4ed",
+      "name": "Oil Changers & Car Wash",
+      "city": "Lemoore",
+      "state": "CA",
+      "website": "https://oilchangers.com/locations/ca/lemoore-lemoore-ave/",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "8f225650-61e6-467e-9a48-36aca272f8ce",
+      "name": "Cobblestone Auto Spa",
+      "city": "Tempe",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/west-baseline/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "3424fb2f-320d-4dfd-b7bc-8e1a6e7c6711",
+      "name": "Cobblestone Auto Spa",
+      "city": "San Tan Valley",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/car-wash-in-san-tan-valley-gantzel-pecan-creek-drive/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "eb77c1ff-f657-4ee8-bd3b-12b1c9c77e72",
+      "name": "Cobblestone Car Wash",
+      "city": "Boise",
+      "state": "ID",
+      "website": "https://cobblestone.com/location/boise-w-state-st-n-33rd-st/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "a28767df-dc01-4fea-a705-f99b0b3472dd",
+      "name": "Cobblestone Auto Spa",
+      "city": "Goodyear",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/car-wash-in-goodyear-yuma-road-cotton-lane/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "77e90a2b-855c-43a6-929d-637d11c0937e",
+      "name": "Cobblestone Auto Spa",
+      "city": "Laveen Village",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/laveen-village/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "3f299368-7d99-45e4-9b6f-6a3dc49612bd",
+      "name": "Cobblestone Car Wash",
+      "city": "Ontario",
+      "state": "OR",
+      "website": "https://cobblestone.com/location/ontario-se-goodfellow-st-se-1st-ave/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "91ca6b58-0a07-49ed-8d87-34355f8bf430",
+      "name": "Cobblestone Car Wash",
+      "city": "Aurora",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/tower-road-38th-avenue/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "7351c220-b834-480f-b164-1b5c47c4543a",
+      "name": "Cobblestone Car Wash",
+      "city": "Fort Collins",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-fortcollins-timberline-road-horsetooth-road/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f5e02d8b-ab32-4564-874f-de4d165e301f",
+      "name": "Grease Monkey",
+      "city": "Lubbock",
+      "state": "TX",
+      "website": "https://www.greasemonkey.com/locations/tx/lubbock/10405-slide-rd",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "d57cc2e8-1bab-4ccf-ba62-25bd585a1197",
+      "name": "GATE Express Carwash",
+      "city": "Jacksonville",
+      "state": "FL",
+      "website": "http://www.gateexpresscarwash.com/",
+      "matched": "gateexpresscarwash.com"
+    },
+    {
+      "id": "15f2ed97-1a41-4df7-9e54-92eab9615fb2",
+      "name": "Blue Tide Car Wash - Touchless",
+      "city": "Sioux Falls",
+      "state": "SD",
+      "website": "https://www.bluetidecarwash.com/",
+      "matched": "bluetidecarwash.com"
+    },
+    {
+      "id": "57abfcce-fe0c-46e6-917f-a698b24488ce",
+      "name": "Bill Luke Santan",
+      "city": "Gilbert",
+      "state": "AZ",
+      "website": "https://www.billlukesantan.com/",
+      "matched": "billlukesantan.com"
+    },
+    {
+      "id": "3c7fecc8-0fa2-441f-a0ce-706f27e315e1",
+      "name": "Cobblestone Auto Spa",
+      "city": "Chandler",
+      "state": "AZ",
+      "website": "https://cobblestone.com/locations/chandler/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "993041ec-b117-416e-b581-903fd526ef28",
+      "name": "ScrubaDub Car Wash (Brighton)",
+      "city": "Brighton",
+      "state": "MA",
+      "website": "http://www.scrubadub.com/brighton-car-wash/",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "335a4310-f730-4c7b-9fe6-03f545207ab9",
+      "name": "Hogwash Car Wash, Detailing, Oil Change & Lube Center",
+      "city": "Parsippany",
+      "state": "NJ",
+      "website": "https://www.hogwashcarwash.com/",
+      "matched": "hogwashcarwash.com"
+    },
+    {
+      "id": "fcd57652-9b35-4427-860e-5e14d959c904",
+      "name": "Tradewinds",
+      "city": "Bangor",
+      "state": "ME",
+      "website": "http://www.haffners.com/",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "6dda2b4c-dd85-436a-aa27-fed65e38a4b5",
+      "name": "Oil Changers & Car Wash",
+      "city": "Santa Clara",
+      "state": "CA",
+      "website": "https://oilchangers.com/locations/ca/santa-clara-el-camino-real/",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "b80844d4-d1a5-4615-b533-317e2623619c",
+      "name": "Brown Bear Car Wash",
+      "city": "Seattle",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/5111-15th-ave-nw-seattle-wa-98107-6",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "8aada424-b9ae-47c1-b9d5-20f2b50e755c",
+      "name": "Cobblestone Car Wash",
+      "city": "Castle Rock",
+      "state": "CO",
+      "website": "https://www.cobblestone.com/castle-rock-meadows-pkwy",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "10a53f58-9f88-40ad-9ca6-2eb1c1107978",
+      "name": "Drive & Shine Car Wash",
+      "city": "Merrillville",
+      "state": "IN",
+      "website": "https://driveandshine.com/",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "7740aabe-01ed-40fb-996e-31ff9f23fbdc",
+      "name": "Adirondack Car Wash",
+      "city": "Glens Falls",
+      "state": "NY",
+      "website": "http://www.adirondackcarwash.com/",
+      "matched": "adirondackcarwash.com"
+    },
+    {
+      "id": "7dbc4f01-19b4-4fe0-96b9-60a2edfa7f4d",
+      "name": "Hurricane Carwash South",
+      "city": "Carthage",
+      "state": "MO",
+      "website": "https://www.hurricanecarwash.net/posts/carthage-mo-touch-free-carwash",
+      "matched": "hurricanecarwash.net"
+    },
+    {
+      "id": "dca26c1e-dec5-4230-aa8f-873202d14661",
+      "name": "Blue Tide Car Wash - Touchless",
+      "city": "Sioux Falls",
+      "state": "SD",
+      "website": "https://www.bluetidecarwash.com/",
+      "matched": "bluetidecarwash.com"
+    },
+    {
+      "id": "f6890373-06de-4133-8a3a-2b17212b7b5f",
+      "name": "Grand Express Wash",
+      "city": "Peoria",
+      "state": "AZ",
+      "website": "https://grandwashaz.com/",
+      "matched": "grandwashaz.com"
+    },
+    {
+      "id": "80844e07-5e2a-4e28-aeb7-05079bdbeef6",
+      "name": "Blue Tide Car Wash - Touchless",
+      "city": "Sioux Falls",
+      "state": "SD",
+      "website": "https://www.bluetidecarwash.com/",
+      "matched": "bluetidecarwash.com"
+    },
+    {
+      "id": "a25dbd6c-ccb3-46d2-921f-a52407a0585e",
+      "name": "Brown Bear Car Wash",
+      "city": "Issaquah",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/22121-se-56th-st-issaquah-wa-98027-25",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "aab49ecc-1e8b-4478-ad54-d889af2ae9ba",
+      "name": "Brown Bear Car Wash",
+      "city": "Everett",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/310-wood-pl-everett-wa-98203-41",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "d80da7ad-9c53-4a53-b96c-5d06fc4748b5",
+      "name": "Brown Bear Car Wash",
+      "city": "Seattle",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/3977-leary-way-nw-seattle-wa-98107-48",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "481dc750-41b4-41b7-b66f-4aaa69138e79",
+      "name": "Brown Bear Car Wash",
+      "city": "Enumclaw",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/1145-roosevelt-ave-e-enumclaw-wa-98022-37",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "b3f000d6-bf35-4008-959e-5cb4e03bbcf4",
+      "name": "Brown Bear Car Wash",
+      "city": "Parkland",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/13204-pacific-ave-s-tacoma-wa-98444-15",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "bd7668de-5e4e-41ea-a739-4d65cdcaa64d",
+      "name": "Brown Bear Car Wash",
+      "city": "Lakewood",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/10913-bridgeport-way-sw-lakewood-wa-98499-16",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "96f54eac-f9a0-47f0-ae44-d2acea80f9ac",
+      "name": "Brown Bear Car Wash",
+      "city": "Everett",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/3511-broadway-everett-wa-98201-20",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "f77533bb-b31d-46df-a61f-55b103d5f441",
+      "name": "Brown Bear Car Wash",
+      "city": "Buckley",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/28010-wa-410-e-buckley-wa-98321-38",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "5719711a-644c-4af7-828a-f846d31ce187",
+      "name": "ScrubaDub Car Wash (Shrewsbury)",
+      "city": "Shrewsbury",
+      "state": "MA",
+      "website": "https://www.scrubadub.com/shrewsbury-car-wash/",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "ed3f8172-4be2-4dd3-95a1-200d6b458d02",
+      "name": "Splash Car Wash Express",
+      "city": "Rutland",
+      "state": "VT",
+      "website": "https://splashcarwashes.com/locations/rutland/",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "567b8fc1-e139-4434-b1ad-d275e94cf79d",
+      "name": "Splash Car Wash Express",
+      "city": "Newark",
+      "state": "NY",
+      "website": "https://splashcarwashes.com/locations/newark/",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "35385d15-274d-4cce-86de-1ab673bec4b8",
+      "name": "Splash Car Wash Express",
+      "city": "Rochester",
+      "state": "NY",
+      "website": "https://splashcarwashes.com/locations/henrietta/",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "1f9d4dee-c892-4f18-b69f-1fdd7d287eda",
+      "name": "Brown Bear Car Wash",
+      "city": "Puyallup",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/18708-meridian-ave-e-puyallup-wa-98375-50",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "fc21a1ef-d419-49f1-a910-9219bb0a25a1",
+      "name": "ScrubaDub Car Wash (Worcester)",
+      "city": "Worcester",
+      "state": "MA",
+      "website": "http://www.scrubadub.com/worcester-park-car-wash/",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "11491053-9ce2-4a70-8cb7-7be89ae6a6ee",
+      "name": "Haffner's Car Wash",
+      "city": "Haverhill",
+      "state": "MA",
+      "website": "https://haffners.com/car-washes/",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "33bd70c7-0c38-4761-a682-35e4e6065d2a",
+      "name": "Hurricane Carwash North",
+      "city": "Carthage",
+      "state": "MO",
+      "website": "https://hurricanecarwash.net/home",
+      "matched": "hurricanecarwash.net"
+    },
+    {
+      "id": "61d79928-57a8-496f-b445-cb756ff7f6d4",
+      "name": "Oil Changers",
+      "city": "Austin",
+      "state": "TX",
+      "website": "https://oilchangers.com/locations/tx/austin-n-university-center/",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "65c6af69-ab6f-4fcc-bdf3-12116f19c2b9",
+      "name": "Grease Monkey",
+      "city": "Tyler",
+      "state": "TX",
+      "website": "https://www.greasemonkey.com/locations/tx/tyler/6457-old-jacksonville-hwy",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "d19e065a-3855-48d9-a7a4-3586ca00405b",
+      "name": "Grease Monkey",
+      "city": "Kingston",
+      "state": "NY",
+      "website": "https://www.greasemonkey.com/locations/ny/kingston/404-old-neighborhood-rd",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "b906de87-ee54-4d1a-a293-e68044b72072",
+      "name": "GATE Express Carwash",
+      "city": "Jacksonville",
+      "state": "FL",
+      "website": "https://gateexpresscarwash.com/",
+      "matched": "gateexpresscarwash.com"
+    },
+    {
+      "id": "2da2b2c9-fb22-445e-9894-77a291df5a5f",
+      "name": "Brown Bear Car Wash",
+      "city": "Sammamish",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/3050-228th-ave-se-sammamish-wa-98075-30",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "6b2dd676-59f0-42cd-bcb0-599e4660e7bd",
+      "name": "Washbox, LLC",
+      "city": "Powhatan",
+      "state": "VA",
+      "website": "https://www.washboxva.com/the-washbox-powhatan/",
+      "matched": "washboxva.com"
+    },
+    {
+      "id": "a1d43d75-5533-44ff-9dc0-909fe65dd3c5",
+      "name": "Brown Bear Car Wash",
+      "city": "Federal Way",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/34007-hoyt-rd-sw-federal-way-wa-98023-34",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "f2ad5e5f-5039-4af6-af47-eb11b9f6ca3d",
+      "name": "K & S Car Wash",
+      "city": "Auburn",
+      "state": "NY",
+      "website": "http://www.kscarwashes.com/",
+      "matched": "kscarwashes.com"
+    },
+    {
+      "id": "a7ea0547-fcc0-43f5-a2c1-dccdf0f5c95a",
+      "name": "Cobblestone Car Wash",
+      "city": "Centennial",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/centennial-arapahoe-road-syracuse-way/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f2bd95ef-7d60-4201-a10a-c1c78b2d3f25",
+      "name": "Haffner's Gas Station and Car Wash",
+      "city": "Hudson",
+      "state": "NH",
+      "website": "https://haffners.com/",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "c1d56160-0fa1-4662-aa37-9d111ea8eec2",
+      "name": "Super Klean Car Wash",
+      "city": "Broken Arrow",
+      "state": "OK",
+      "website": "https://superkleancarwash.com/locations",
+      "matched": "superkleancarwash.com"
+    },
+    {
+      "id": "711fc8ea-c23f-4ea4-8c14-2bec0bfd1792",
+      "name": "Cobblestone Auto Spa",
+      "city": "Scottsdale",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/indian-bend-pima-road/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "27512223-fdb7-4022-95fd-addd297bf6e4",
+      "name": "Touch Less Car Wash",
+      "city": "Gaithersburg",
+      "state": "MD",
+      "website": "https://touchlesscarwashmd.com/locations/",
+      "matched": "touchlesscarwashmd.com"
+    },
+    {
+      "id": "09fde4e9-54d0-4529-97fe-14144623267b",
+      "name": "Haffner's Gas Station",
+      "city": "Groton",
+      "state": "MA",
+      "website": "https://haffners.com/%3Futm_source%3DGMB_HaffnersGroton%26utm_medium%3Dorganic%26y_source%3D1_NzE5MzQwMjEtNzE1LWxvY2F0aW9uLndlYnNpdGU%253D",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "20e2f729-54ff-4827-89ff-969df09f289f",
+      "name": "Cobblestone Car Wash; Longmont - Hwy 119 & Turner Blvd",
+      "city": "Longmont",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/hwy-119-turner-blvd/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "0bc0e273-bb5f-413c-89e1-558155fe19ff",
+      "name": "Brown Bear Car Wash",
+      "city": "Spokane Valley",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/1226-s-pines-rd-spokane-valley-wa-99206-4",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "15e6ef4b-7129-43f0-bcfa-6c58252bf961",
+      "name": "Clancy's Car Wash",
+      "city": "Daleville",
+      "state": "IN",
+      "website": "https://www.clancyscarwash.com/location/15901-w-commerce-rd/",
+      "matched": "clancyscarwash.com"
+    },
+    {
+      "id": "86e06aae-6ab0-417a-8407-80f6560d9e56",
+      "name": "Cobblestone Car Wash",
+      "city": "Aurora",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-aurora-smoky-hill-yellowstone-way/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "07818834-2a2c-440f-8ff3-ced0938b5860",
+      "name": "Cobblestone Car Wash",
+      "city": "Thornton",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-thornton-grant-street-120th-avenue-2/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "fa6406f3-1d35-4373-b260-79a2a8930a1d",
+      "name": "GATE Express Carwash",
+      "city": "St. Augustine",
+      "state": "FL",
+      "website": "https://gateexpresscarwash.com/",
+      "matched": "gateexpresscarwash.com"
+    },
+    {
+      "id": "4e8808a0-f5a8-4d74-9de6-361ac6a8e9be",
+      "name": "Oil Changers & Car Wash",
+      "city": "Pacifica",
+      "state": "CA",
+      "website": "https://oilchangers.com/locations/ca/pacifica-skyline-dr/",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "d846a28a-3f37-473f-a8ec-07f3d6f13dd4",
+      "name": "Cobblestone Auto Spa",
+      "city": "Avondale",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/avondale-van-buren",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "2e293707-350a-4313-95f4-5ce64d0e95c1",
+      "name": "Cobblestone Car Wash",
+      "city": "Thornton",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-thornton-144th-avenue-washington-street/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "582663ac-6d7b-4ea1-a90f-2bac4b8d149c",
+      "name": "Spot Free Car Wash - Pasadena",
+      "city": "Pasadena",
+      "state": "CA",
+      "website": "https://www.spotfreecar.com/",
+      "matched": "spotfreecar.com"
+    },
+    {
+      "id": "b1a469dc-cd2e-43b1-aab8-c58c1fb23531",
+      "name": "ScrubaDub Car Wash & Auto Detailing Center (Boston)",
+      "city": "Dorchester",
+      "state": "MA",
+      "website": "https://www.scrubadub.com/dorchester-car-wash/",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "daa0b72e-6283-4a59-9969-86f23554a56e",
+      "name": "Cobblestone Auto Spa Corporate Office",
+      "city": "Scottsdale",
+      "state": "AZ",
+      "website": "http://cobblestone.com/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "c05bcf8d-cc73-419a-853d-321d528d1a5b",
+      "name": "Cobblestone Car Wash",
+      "city": "Lakewood",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/wadsworth-boulevard-jewell-avenue/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "3eea74db-04f9-469e-b973-c182835386f3",
+      "name": "Splash Car Wash Express",
+      "city": "Oswego",
+      "state": "NY",
+      "website": "https://splashcarwashes.com/locations/oswego/",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "12cd50ac-fff1-4f9e-90ca-ff8ea8c402c0",
+      "name": "Oil Changers & Car Wash",
+      "city": "Dublin",
+      "state": "CA",
+      "website": "https://oilchangers.com/locations/ca/dublin-village-pkwy/",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "b12e9f52-133b-462f-8ea3-edf114e14f7b",
+      "name": "Splash 24",
+      "city": "Canandaigua",
+      "state": "NY",
+      "website": "http://splashcarwashes.com/",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "2eabe4d6-39ed-4376-84a3-052def18943b",
+      "name": "Splash Car Wash Express",
+      "city": "East Northport",
+      "state": "NY",
+      "website": "https://splashcarwashes.com/locations/northport/",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "3620f323-d269-464e-97b1-d56defd07e39",
+      "name": "Splash Car Wash Express",
+      "city": "Seneca Falls",
+      "state": "NY",
+      "website": "https://splashcarwashes.com/locations/seneca-falls/",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "a791549d-b928-49f8-8b76-bccaafd69012",
+      "name": "ScrubaDub Car Wash & Auto Detailing Center (Warwick)",
+      "city": "Warwick",
+      "state": "RI",
+      "website": "http://www.scrubadub.com/warwick-car-wash/",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "e8307843-d0c3-40c2-b6de-6c32d0f5cc64",
+      "name": "Brown Bear Car Wash",
+      "city": "Kirkland",
+      "state": "WA",
+      "website": "https://brownbear.com/wash/kirkland-ss/",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "fb4afd5f-8b0c-494e-9860-fe61ef8c53f6",
+      "name": "ScrubaDub Car Wash (Salem)",
+      "city": "Salem",
+      "state": "NH",
+      "website": "http://www.scrubadub.com/salem-car-wash/",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "0729898e-990d-4319-b010-860a3bab6389",
+      "name": "Commerce Way Car Wash",
+      "city": "Plymouth",
+      "state": "MA",
+      "website": "https://haffners.com/car-washes/",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "60939ddd-1ca0-47f0-9cf5-293500e2e7b9",
+      "name": "Clancy's Car Wash Inc",
+      "city": "Muncie",
+      "state": "IN",
+      "website": "https://www.clancyscarwash.com/location/400-s-tillotson-ave/",
+      "matched": "clancyscarwash.com"
+    },
+    {
+      "id": "eb54f147-dc3c-45b0-8b58-2f89004ac6af",
+      "name": "Splash Car Wash",
+      "city": "Wilton",
+      "state": "CT",
+      "website": "https://splashcarwashes.com/locations/wilton/",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "05e63ac5-6cd1-438a-98cd-79aba6cb1247",
+      "name": "Clancy's Car Wash",
+      "city": "New Castle",
+      "state": "IN",
+      "website": "https://www.clancyscarwash.com/location/1468-s-memorial-dr/",
+      "matched": "clancyscarwash.com"
+    },
+    {
+      "id": "1b618fbf-50a9-4f24-879d-258306188e7e",
+      "name": "Splash Car Wash",
+      "city": "Norwalk",
+      "state": "CT",
+      "website": "https://splashcarwashes.com/locations/norwalk/",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "3b280568-1441-4fcd-84ee-b53ac0572ed4",
+      "name": "Splash Car Wash",
+      "city": "Hamden",
+      "state": "CT",
+      "website": "https://splashcarwashes.com/locations/hamden/",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "57eb8914-df38-4ff9-a035-19b17c0d449b",
+      "name": "Splash Car Wash",
+      "city": "Stamford",
+      "state": "CT",
+      "website": "https://splashcarwashes.com/locations/stamford/",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "5b9f9987-85e0-4d4f-9e4f-432eaa8631bb",
+      "name": "Splash Car Wash 24",
+      "city": "Batavia",
+      "state": "NY",
+      "website": "https://splashcarwashes.com/locations/batavia-liberty/",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "77ab65a4-2dd3-4118-a2cb-cb853399903c",
+      "name": "Dolly's Columbia Carwash",
+      "city": "Columbia",
+      "state": "MD",
+      "website": "http://dollyscolumbiacarwash.com/",
+      "matched": "dollyscolumbiacarwash.com"
+    },
+    {
+      "id": "ac5e2567-3b52-43e5-ac61-0b3b9bc6e097",
+      "name": "Splash Car Wash",
+      "city": "Greenwich",
+      "state": "CT",
+      "website": "https://splashcarwashes.com/locations/greenwich/",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "c470a6cf-a5e5-40cb-8f37-cf7e6ad08eba",
+      "name": "The Washbox Touch Free Carwash",
+      "city": "Dillwyn",
+      "state": "VA",
+      "website": "https://www.washboxva.com/the-washbox-powhatan/",
+      "matched": "washboxva.com"
+    },
+    {
+      "id": "e667d429-8c0f-48a2-ad68-085c88df477b",
+      "name": "Haffner's Touchfree Car Wash",
+      "city": "Amherst",
+      "state": "NH",
+      "website": "https://haffners.com/car-washes/",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "ea44fc4c-1f82-4eec-a409-edad1ba3da65",
+      "name": "Corsa Clean Touchless Car Wash",
+      "city": "Algonquin",
+      "state": "IL",
+      "website": "https://www.corsacleancarwash.com/",
+      "matched": "corsacleancarwash.com"
+    },
+    {
+      "id": "2da2b2c9-fb22-445e-9894-77a291df5a5f",
+      "name": "Brown Bear Car Wash",
+      "city": "Sammamish",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/3050-228th-ave-se-sammamish-wa-98075-30",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "6b2dd676-59f0-42cd-bcb0-599e4660e7bd",
+      "name": "Washbox, LLC",
+      "city": "Powhatan",
+      "state": "VA",
+      "website": "https://www.washboxva.com/the-washbox-powhatan/",
+      "matched": "washboxva.com"
+    },
+    {
+      "id": "a1d43d75-5533-44ff-9dc0-909fe65dd3c5",
+      "name": "Brown Bear Car Wash",
+      "city": "Federal Way",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/34007-hoyt-rd-sw-federal-way-wa-98023-34",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "f2ad5e5f-5039-4af6-af47-eb11b9f6ca3d",
+      "name": "K & S Car Wash",
+      "city": "Auburn",
+      "state": "NY",
+      "website": "http://www.kscarwashes.com/",
+      "matched": "kscarwashes.com"
+    },
+    {
+      "id": "a7ea0547-fcc0-43f5-a2c1-dccdf0f5c95a",
+      "name": "Cobblestone Car Wash",
+      "city": "Centennial",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/centennial-arapahoe-road-syracuse-way/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f2bd95ef-7d60-4201-a10a-c1c78b2d3f25",
+      "name": "Haffner's Gas Station and Car Wash",
+      "city": "Hudson",
+      "state": "NH",
+      "website": "https://haffners.com/",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "c1d56160-0fa1-4662-aa37-9d111ea8eec2",
+      "name": "Super Klean Car Wash",
+      "city": "Broken Arrow",
+      "state": "OK",
+      "website": "https://superkleancarwash.com/locations",
+      "matched": "superkleancarwash.com"
+    },
+    {
+      "id": "711fc8ea-c23f-4ea4-8c14-2bec0bfd1792",
+      "name": "Cobblestone Auto Spa",
+      "city": "Scottsdale",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/indian-bend-pima-road/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "27512223-fdb7-4022-95fd-addd297bf6e4",
+      "name": "Touch Less Car Wash",
+      "city": "Gaithersburg",
+      "state": "MD",
+      "website": "https://touchlesscarwashmd.com/locations/",
+      "matched": "touchlesscarwashmd.com"
+    },
+    {
+      "id": "09fde4e9-54d0-4529-97fe-14144623267b",
+      "name": "Haffner's Gas Station",
+      "city": "Groton",
+      "state": "MA",
+      "website": "https://haffners.com/%3Futm_source%3DGMB_HaffnersGroton%26utm_medium%3Dorganic%26y_source%3D1_NzE5MzQwMjEtNzE1LWxvY2F0aW9uLndlYnNpdGU%253D",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "1dcd80b3-995a-48f2-8ce2-2baf6605ad8a",
+      "name": "Cobblestone Auto Spa",
+      "city": "Glendale",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/glendale-west-bell-road/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "7e25fa8c-f889-4511-807f-6f66d2604329",
+      "name": "Haffner's Car Wash",
+      "city": "Salem",
+      "state": "NH",
+      "website": "https://haffners.com/",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "a97f3b78-800b-4dd3-951d-7c411801f4db",
+      "name": "Cobblestone Car Wash",
+      "city": "Meridian",
+      "state": "ID",
+      "website": "https://cobblestone.com/location/meridian-s-ten-mile-rd-w-frontline-ln/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "219daf77-b706-489b-a25f-95b977df040a",
+      "name": "Oil Changers & Car Wash",
+      "city": "North Bend",
+      "state": "OR",
+      "website": "https://oilchangers.com/locations/or/north-bend-virgina-ave/",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "771d0093-276c-4750-b46f-1712cd99d183",
+      "name": "Cobblestone Car Wash",
+      "city": "Twin Falls",
+      "state": "ID",
+      "website": "https://cobblestone.com/location/twin-falls-pole-line-rd-monroe-st/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "d88434c4-e44c-47ae-ac74-4c4e147782e9",
+      "name": "Splash Car Wash",
+      "city": "Fairfield",
+      "state": "CT",
+      "website": "https://splashcarwashes.com/locations/fairfield/",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "fa941197-5c0e-47ac-95fe-c6a763a4e4ed",
+      "name": "Oil Changers & Car Wash",
+      "city": "Lemoore",
+      "state": "CA",
+      "website": "https://oilchangers.com/locations/ca/lemoore-lemoore-ave/",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "4bb02887-7ba4-4de5-b8dd-03d331bdb635",
+      "name": "Cobblestone Car Wash",
+      "city": "Littleton",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-littleton-broadway-ridge-road/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "924a2bf5-7f54-4799-ba16-94a2629ce37f",
+      "name": "Cobblestone Auto Spa",
+      "city": "Mesa",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/south-signal-butte/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "8b35233c-88fa-4a16-9302-d3161b3f3adc",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/67th-ave-mcdowell/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "1cac999f-8b2b-41c5-ab31-b247a75c01ff",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/phoenix-baseline-16th-street/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "3b8603ef-9a80-4f82-a6d1-7a7f9f47e40e",
+      "name": "Cobblestone Auto Spa",
+      "city": "Tolleson",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/tolleson-91st-avenue-mcdowell/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "7aa64a38-627c-42d1-af6f-79bad17a274d",
+      "name": "Cobblestone Auto Spa",
+      "city": "Gilbert",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/south-val-vista/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "43a4f8b3-ee69-430b-b05f-2efcfdbaa310",
+      "name": "Blue Tide Car Wash",
+      "city": "Mitchell",
+      "state": "SD",
+      "website": "https://bluetidecarwash.com/tunnel-locations%23mitchell",
+      "matched": "bluetidecarwash.com"
+    },
+    {
+      "id": "4ee97e6b-3969-43bd-8c7b-dc6d96fbe195",
+      "name": "Cobblestone Auto Spa",
+      "city": "Tempe",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/south-autoplex/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "db1a6798-320f-45db-be2c-f0b09b27bdf2",
+      "name": "Cobblestone Auto Spa",
+      "city": "San Tan Valley",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/car-wash-in-san-tan-valley-ironwood-pima-road/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "ebf75294-ab39-4230-ab08-e17fea9f264c",
+      "name": "Grease Monkey 1135",
+      "city": "Cibolo",
+      "state": "TX",
+      "website": "https://www.greasemonkey.com/locations/tx/cibolo/2513-fm-1103",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "620fb8bd-b167-4ee8-8aa4-80032d526f40",
+      "name": "Grease Monkey",
+      "city": "Littleton",
+      "state": "CO",
+      "website": "https://www.greasemonkey.com/locations/co/littleton/3693-west-bowles-ave",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "2a0ded60-1b2d-46d8-b152-ea6178ccc482",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/75th-ave-encanto/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "12f8c6f1-9fcb-40d1-bf4e-59c644e0c0f8",
+      "name": "Cobblestone Auto Spa",
+      "city": "Goodyear",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/goodyear/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f5894c6f-1ec6-4aec-a128-e4751a5165f9",
+      "name": "Cobblestone Car Wash",
+      "city": "Littleton",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-littleton-wadsworth-boulevard-coal-mine-avenue/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "49d218a5-dc4f-4c0e-833f-6c4ae8b1309c",
+      "name": "Cobblestone Auto Spa",
+      "city": "Scottsdale",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/north-scottsdale/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f7bb8003-43ae-4144-a560-6703df79026c",
+      "name": "Cobblestone Auto Spa",
+      "city": "Tempe",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/south-priest/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "618a7ccf-3c3a-447a-9c3d-b4ae724422ef",
+      "name": "Cobblestone Car Wash",
+      "city": "Meridian",
+      "state": "ID",
+      "website": "https://cobblestone.com/location/meridian-n-linder-rd-chinden-blvd/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "4c924488-eef8-41cc-a0ce-96754998b00e",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/happy-valley-19th-avenue/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "0f6fd1e0-8157-4c81-b644-73c17d3e6472",
+      "name": "Cobblestone Car Wash",
+      "city": "Erie",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-erie-baseline-road-mountain-view-boulevard-2/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "c3eaf7be-a918-4edf-846c-1e059f0757cf",
+      "name": "Cobblestone Auto Spa",
+      "city": "Cave Creek",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/cave-creek/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "5384b91b-0e20-4bc1-a0a7-4889b3d2446c",
+      "name": "Cobblestone Car Wash",
+      "city": "Aurora",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-aurora-mississippi-avenue-troy-street-2/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f50099d1-646a-41ae-ac37-0f1dc1d9f3ed",
+      "name": "Cobblestone Auto Spa",
+      "city": "Tempe",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/tempe-kyrene-elliot/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "0de55b3c-e23b-41c5-9dd9-b5fd1c0bc6f2",
+      "name": "Cobblestone Car Wash",
+      "city": "Northglenn",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-northglenn-washington-street-115th-ave/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "6ec8ea1f-a5cb-4473-9378-9167e4983253",
+      "name": "Cobblestone Car Wash",
+      "city": "Fort Collins",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-fort-collins-college-avenue-willox-lane/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "da7ce965-26a1-43f3-a06f-479ba0f137a4",
+      "name": "Splash Car Wash Express",
+      "city": "Randolph",
+      "state": "MA",
+      "website": "https://splashcarwashes.com/locations/randolph/%3Futm_source%3Dgoogle%26utm_medium%3Dorganic%26utm_campaign%3Dgbp-randolph",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "04de76c7-0965-4c21-9f4c-b14639012426",
+      "name": "Cobblestone Car Wash",
+      "city": "Aurora",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-aurora-chambers-road-wesley-avenue/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "179c1741-7e92-43c5-ae1d-cfb731d244ad",
+      "name": "Cobblestone Car Wash",
+      "city": "Denver",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/denver-federal-boulevard-6th-avenue-freeway/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "25baec8b-bac5-4ed3-9963-04ed6cbc3c74",
+      "name": "Cobblestone Car Wash",
+      "city": "Denver",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/colorado-blvd-harrison-st/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f3dc48c7-f8f2-4dec-99f3-70f15438b129",
+      "name": "Cobblestone Auto Spa",
+      "city": "Mesa",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/alma-school-baseline/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "ffd24066-2692-4523-a2b0-d57fa7d0d8e1",
+      "name": "Cobblestone Car Wash",
+      "city": "Highlands Ranch",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-highlands-ranch-county-line-road-holly-street/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "17e791e2-c3bb-44ec-bfa8-cf13286c0c47",
+      "name": "Cobblestone Car Wash",
+      "city": "Denver",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-denver-tower-road-46th-avenue/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "e68786a3-01d7-4c2c-8301-cb42a5a36256",
+      "name": "Cobblestone Car Wash",
+      "city": "Northglenn",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/huron-st-community-center-dr/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "053b4e24-c400-448f-809c-9c7f0fe7f955",
+      "name": "Cobblestone Auto Spa",
+      "city": "Gilbert",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/germann-lindsay/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "83a0982f-6236-427c-9c0e-e573024009b6",
+      "name": "Oil Changers",
+      "city": "Simi Valley",
+      "state": "CA",
+      "website": "https://oilchangers.com/locations/ca/simi-valley-1st-st/",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "9cce7521-3d02-483b-98a5-ffe8acb1ad3b",
+      "name": "Haffner's Gentle Touch Car Wash",
+      "city": "Lawrence",
+      "state": "MA",
+      "website": "https://www.haffners.com/car-washes",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "ad4ff195-def2-4bc8-a4da-aedd3d353b82",
+      "name": "Super Klean Car Wash",
+      "city": "Broken Arrow",
+      "state": "OK",
+      "website": "https://superkleancarwash.com/",
+      "matched": "superkleancarwash.com"
+    },
+    {
+      "id": "8c794928-f9ea-486e-8a71-3d34d8a08833",
+      "name": "Cobblestone Car Wash",
+      "city": "Boise",
+      "state": "ID",
+      "website": "https://cobblestone.com/location/boise-w-overland-e-bird/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "b3e4f6fc-467e-4415-a40f-80d388f90713",
+      "name": "Spot Free Car Wash - Monrovia",
+      "city": "Monrovia",
+      "state": "CA",
+      "website": "https://www.spotfreecar.com/",
+      "matched": "spotfreecar.com"
+    },
+    {
+      "id": "b9dd3c5e-fa31-4a7c-bc31-6f9187c7e6d9",
+      "name": "Brown Bear Car Wash",
+      "city": "Silverdale",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/3082-nw-bucklin-hill-rd-silverdale-wa-98383-44",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "c20288c2-b3bc-4b97-af72-d08c193b4ee8",
+      "name": "Drive & Shine Car Wash",
+      "city": "Portage",
+      "state": "MI",
+      "website": "https://driveandshine.com/our-wash/portage-cw",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "4c92dde3-12f3-4a25-a40c-8285244dc5b4",
+      "name": "Haffner's Car Wash",
+      "city": "Lawrence",
+      "state": "MA",
+      "website": "https://haffners.com/car-washes/",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "c6e8e4dc-5553-42ec-adef-6d61f0dd6f24",
+      "name": "Brown Bear Car Wash",
+      "city": "Redmond",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/17809-redmond-way-redmond-wa-98052-13",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "621b7294-5c98-4283-b1a8-d83bd89614c7",
+      "name": "Drive & Shine Car Wash",
+      "city": "Lima",
+      "state": "OH",
+      "website": "https://driveandshine.com/our-wash/lima-cw",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "80b96618-ff1e-45cf-85a3-af7df1956ca0",
+      "name": "Cobblestone Car Wash",
+      "city": "Commerce City",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-commerce-city-belle-creek-boulevard-105th-avenue/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "5db0361b-d942-4f06-92f2-77cf80d99575",
+      "name": "Cobblestone Auto Spa",
+      "city": "Gilbert",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/higley-williams-field/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "ab2d3a29-9e35-4639-b515-88abfda98ccf",
+      "name": "Blue Tide Car Wash - Touchless",
+      "city": "Sioux Falls",
+      "state": "SD",
+      "website": "https://www.bluetidecarwash.com/",
+      "matched": "bluetidecarwash.com"
+    },
+    {
+      "id": "b907df5d-59dd-40c0-bb81-2f101a99bca8",
+      "name": "Oil Changers & Car Wash",
+      "city": "Cameron",
+      "state": "MO",
+      "website": "https://oilchangers.com/locations/mo/cameron-camerona/",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "78620a2c-33f3-4c07-bc32-c092516078db",
+      "name": "Spot Free Car Wash",
+      "city": "Culver City",
+      "state": "CA",
+      "website": "http://www.spotfreecar.com/",
+      "matched": "spotfreecar.com"
+    },
+    {
+      "id": "a9ffd9fc-cd71-4b2a-a747-21efee8d0c28",
+      "name": "Cobblestone Car Wash",
+      "city": "Caldwell",
+      "state": "ID",
+      "website": "https://cobblestone.com/location/caldwell-franklin-rd-commercial-way/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "fc7d3fd4-50d4-4cbb-ab3e-c42ee9b708f3",
+      "name": "Cobblestone Auto Spa",
+      "city": "Scottsdale",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/car-wash-in-scottsdale-indian-school-75th-st/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "6866878e-1b51-4e3a-9fd4-2b8a784fcfa6",
+      "name": "Splash Car Wash Express",
+      "city": "Shelburne",
+      "state": "VT",
+      "website": "https://splashcarwashes.com/locations/shelburne/",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "8a93bf71-eb23-4b7e-88d9-2d2d0ddba399",
+      "name": "Haffner's Gas Station and Car Wash",
+      "city": "Lawrence",
+      "state": "MA",
+      "website": "https://haffners.com/%3Futm_source%3DGMB_HaffnersLawrenceParker%26utm_medium%3Dorganic%26y_source%3D1_NzE5MzQzMDQtNzE1LWxvY2F0aW9uLndlYnNpdGU%253D",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "cbc7fe9c-a918-411d-82a2-18b78a3cbe06",
+      "name": "Blue Tide Car Wash - Touchless",
+      "city": "Sioux Falls",
+      "state": "SD",
+      "website": "https://www.bluetidecarwash.com/",
+      "matched": "bluetidecarwash.com"
+    },
+    {
+      "id": "9bf0ae21-09a3-4547-bd9a-1325678ff890",
+      "name": "K & S Car Wash",
+      "city": "Weedsport",
+      "state": "NY",
+      "website": "http://www.kscarwashes.com/",
+      "matched": "kscarwashes.com"
+    },
+    {
+      "id": "11603533-93e1-4756-bbd8-c1c4b0873319",
+      "name": "Super Klean Car Wash",
+      "city": "Broken Arrow",
+      "state": "OK",
+      "website": "https://superkleancarwash.com/locations",
+      "matched": "superkleancarwash.com"
+    },
+    {
+      "id": "a403e2e5-6a37-4826-af93-670786107208",
+      "name": "Clancy's Car Wash",
+      "city": "Muncie",
+      "state": "IN",
+      "website": "https://www.clancyscarwash.com/location/1209-w-mcgalliard-rd/",
+      "matched": "clancyscarwash.com"
+    },
+    {
+      "id": "7a4cecdf-9206-4ddf-918e-e09009c3dbe7",
+      "name": "The Washbox",
+      "city": "Farmville",
+      "state": "VA",
+      "website": "https://www.washboxva.com/the-washbox-main-st/",
+      "matched": "washboxva.com"
+    },
+    {
+      "id": "9ba4e71b-a34d-4c0e-8171-c2e4b55d1656",
+      "name": "Drive & Shine Car Wash and Oil Change",
+      "city": "Fort Wayne",
+      "state": "IN",
+      "website": "https://driveandshine.com/our-wash/fort-wayne-cw",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "f8ba7c99-fbd7-42c3-92e7-9333abea3bd2",
+      "name": "GATE Express Carwash",
+      "city": "Ponte Vedra Beach",
+      "state": "FL",
+      "website": "http://gateexpresscarwash.com/",
+      "matched": "gateexpresscarwash.com"
+    },
+    {
+      "id": "46f6fa20-9a1e-4977-b086-7574cabb8030",
+      "name": "Cobblestone Car Wash",
+      "city": "Parker",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/parker-hess-parker-road/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "45fb37fc-2fa5-47ad-af10-e7b7362fc90b",
+      "name": "Pure Car Wash - Novi",
+      "city": "Novi",
+      "state": "MI",
+      "website": "https://purecarwash.com/",
+      "matched": "purecarwash.com"
+    },
+    {
+      "id": "1cdd9e33-401b-4a05-9a78-6a24a9070649",
+      "name": "Cobblestone Auto Spa",
+      "city": "Glendale",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/northern-99th-ave/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "00cc36c7-ee6d-4d60-9c33-85c2afbb8deb",
+      "name": "Brown Bear Car Wash",
+      "city": "Seattle",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/1800-15th-ave-w-seattle-wa-98119-5",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "56714422-2fd2-448a-976e-7649727f42aa",
+      "name": "Grease Monkey",
+      "city": "Frisco",
+      "state": "TX",
+      "website": "https://www.greasemonkey.com",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "97397137-3c3a-47f2-aa12-9342a2e43717",
+      "name": "Serpentini Laser Wash",
+      "city": "Medina",
+      "state": "OH",
+      "website": "https://www.serpentinimedina.com/Serpentini-Laser-Wash",
+      "matched": "serpentinimedina.com"
+    },
+    {
+      "id": "69752514-e967-4ff9-813a-1cbed482a9ac",
+      "name": "Grease Monkey",
+      "city": "Dallas",
+      "state": "TX",
+      "website": "https://www.greasemonkey.com",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "6f40581c-3107-43ff-819f-c8a6e89815f6",
+      "name": "Drive & Shine Car Wash and Oil Change",
+      "city": "Kalamazoo",
+      "state": "MI",
+      "website": "https://driveandshine.com/our-wash/kalamazoo-cw",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "232a6336-ceed-4672-a3ea-839e62c8bc5b",
+      "name": "Drive & Shine Car Wash",
+      "city": "Valparaiso",
+      "state": "IN",
+      "website": "https://driveandshine.com",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "7422b0e8-ac75-4cdd-b423-dbac7c1b59cc",
+      "name": "Drive & Shine Car Wash",
+      "city": "Valparaiso",
+      "state": "IN",
+      "website": "https://driveandshine.com",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "23ade2be-0d86-45fe-92df-2ecc0b00bc45",
+      "name": "Drive & Shine Car Wash",
+      "city": "Kalamazoo",
+      "state": "MI",
+      "website": "https://driveandshine.com",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "cf734d16-7e17-4e8a-9128-7e243e0bc497",
+      "name": "Drive & Shine Car Wash",
+      "city": "Crown Point",
+      "state": "IN",
+      "website": "https://driveandshine.com",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "25083985-7c52-43a1-b4f2-c98f12e7223d",
+      "name": "Drive & Shine Car Wash",
+      "city": "Mishawaka",
+      "state": "IN",
+      "website": "https://driveandshine.com",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "4d5f1474-b0aa-4907-83e7-c9a8cd75cec6",
+      "name": "Drive & Shine Car Wash",
+      "city": "South Bend",
+      "state": "IN",
+      "website": "https://driveandshine.com",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "9cd0c554-0cc3-45ab-81d4-d877813f7238",
+      "name": "Drive & Shine Car Wash",
+      "city": "Fort Wayne",
+      "state": "IN",
+      "website": "https://driveandshine.com",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "a97f3b78-800b-4dd3-951d-7c411801f4db",
+      "name": "Cobblestone Car Wash",
+      "city": "Meridian",
+      "state": "ID",
+      "website": "https://cobblestone.com/location/meridian-s-ten-mile-rd-w-frontline-ln/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "219daf77-b706-489b-a25f-95b977df040a",
+      "name": "Oil Changers & Car Wash",
+      "city": "North Bend",
+      "state": "OR",
+      "website": "https://oilchangers.com/locations/or/north-bend-virgina-ave/",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "771d0093-276c-4750-b46f-1712cd99d183",
+      "name": "Cobblestone Car Wash",
+      "city": "Twin Falls",
+      "state": "ID",
+      "website": "https://cobblestone.com/location/twin-falls-pole-line-rd-monroe-st/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "d88434c4-e44c-47ae-ac74-4c4e147782e9",
+      "name": "Splash Car Wash",
+      "city": "Fairfield",
+      "state": "CT",
+      "website": "https://splashcarwashes.com/locations/fairfield/",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "fa941197-5c0e-47ac-95fe-c6a763a4e4ed",
+      "name": "Oil Changers & Car Wash",
+      "city": "Lemoore",
+      "state": "CA",
+      "website": "https://oilchangers.com/locations/ca/lemoore-lemoore-ave/",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "8f225650-61e6-467e-9a48-36aca272f8ce",
+      "name": "Cobblestone Auto Spa",
+      "city": "Tempe",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/west-baseline/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "3424fb2f-320d-4dfd-b7bc-8e1a6e7c6711",
+      "name": "Cobblestone Auto Spa",
+      "city": "San Tan Valley",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/car-wash-in-san-tan-valley-gantzel-pecan-creek-drive/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "eb77c1ff-f657-4ee8-bd3b-12b1c9c77e72",
+      "name": "Cobblestone Car Wash",
+      "city": "Boise",
+      "state": "ID",
+      "website": "https://cobblestone.com/location/boise-w-state-st-n-33rd-st/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "a28767df-dc01-4fea-a705-f99b0b3472dd",
+      "name": "Cobblestone Auto Spa",
+      "city": "Goodyear",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/car-wash-in-goodyear-yuma-road-cotton-lane/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "77e90a2b-855c-43a6-929d-637d11c0937e",
+      "name": "Cobblestone Auto Spa",
+      "city": "Laveen Village",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/laveen-village/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "3f299368-7d99-45e4-9b6f-6a3dc49612bd",
+      "name": "Cobblestone Car Wash",
+      "city": "Ontario",
+      "state": "OR",
+      "website": "https://cobblestone.com/location/ontario-se-goodfellow-st-se-1st-ave/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "91ca6b58-0a07-49ed-8d87-34355f8bf430",
+      "name": "Cobblestone Car Wash",
+      "city": "Aurora",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/tower-road-38th-avenue/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "7351c220-b834-480f-b164-1b5c47c4543a",
+      "name": "Cobblestone Car Wash",
+      "city": "Fort Collins",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-fortcollins-timberline-road-horsetooth-road/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "6138819c-f840-4653-9825-3869394235f0",
+      "name": "Cobblestone Car Wash",
+      "city": "Thornton",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/120-ave-holly-st/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f378b19f-4744-4839-b52e-aee8dc931ab4",
+      "name": "Cobblestone Car Wash",
+      "city": "Lakewood",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/wadsworth-blvd-9th-ave/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "9723e219-0fe2-4b7c-8284-91cb4eda31d3",
+      "name": "Cobblestone Car Wash",
+      "city": "Boise",
+      "state": "ID",
+      "website": "https://cobblestone.com/location/boise-fairview-n-cole/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "982f23d5-21af-4fda-8f2c-2643944aed59",
+      "name": "GATE Express Carwash",
+      "city": "Jacksonville",
+      "state": "FL",
+      "website": "http://gateexpresscarwash.com/",
+      "matched": "gateexpresscarwash.com"
+    },
+    {
+      "id": "0ceb339c-7824-4c6f-8d25-6b6c3abd44c6",
+      "name": "Grease Monkey",
+      "city": "Dundee",
+      "state": "FL",
+      "website": "https://www.greasemonkey.com/locations/fl/dundee/629-dundee-rd.",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "319489cf-c420-4f0e-a85b-eb2843b266a3",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/north-cave-creek/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "6a55a30b-b022-4d2a-9555-f6eb13bf5c5e",
+      "name": "Grease Monkey",
+      "city": "Rapid City",
+      "state": "SD",
+      "website": "https://www.greasemonkey.com/locations/sd/rapid-city/215-omaha-st",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "8bf96b04-da45-4df3-ac16-7cf36e0faa17",
+      "name": "Grease Monkey",
+      "city": "Denver",
+      "state": "CO",
+      "website": "https://www.greasemonkey.com/locations/co/denver/2495-south-university-blvd",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "f6f5a908-4b60-412d-8230-967e490fc1c1",
+      "name": "Grease Monkey",
+      "city": "Denver",
+      "state": "CO",
+      "website": "https://www.greasemonkey.com/locations/co/denver/2890-n.-colorado-blvd",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "dee5983d-f90f-4468-8816-1df7076688f8",
+      "name": "Grease Monkey",
+      "city": "Brighton",
+      "state": "CO",
+      "website": "https://www.greasemonkey.com/locations/co/brighton/404-west-bromley-ln",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "39f6a5f2-55fb-4084-89c3-e012da93d6b3",
+      "name": "Oil Changers & Car Wash",
+      "city": "Coos Bay",
+      "state": "OR",
+      "website": "https://oilchangers.com/locations/or/coos-bay-s-broadway/",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "4bb02887-7ba4-4de5-b8dd-03d331bdb635",
+      "name": "Cobblestone Car Wash",
+      "city": "Littleton",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-littleton-broadway-ridge-road/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "924a2bf5-7f54-4799-ba16-94a2629ce37f",
+      "name": "Cobblestone Auto Spa",
+      "city": "Mesa",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/south-signal-butte/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "8b35233c-88fa-4a16-9302-d3161b3f3adc",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/67th-ave-mcdowell/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "1cac999f-8b2b-41c5-ab31-b247a75c01ff",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/phoenix-baseline-16th-street/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "3b8603ef-9a80-4f82-a6d1-7a7f9f47e40e",
+      "name": "Cobblestone Auto Spa",
+      "city": "Tolleson",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/tolleson-91st-avenue-mcdowell/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "7aa64a38-627c-42d1-af6f-79bad17a274d",
+      "name": "Cobblestone Auto Spa",
+      "city": "Gilbert",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/south-val-vista/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "43a4f8b3-ee69-430b-b05f-2efcfdbaa310",
+      "name": "Blue Tide Car Wash",
+      "city": "Mitchell",
+      "state": "SD",
+      "website": "https://bluetidecarwash.com/tunnel-locations%23mitchell",
+      "matched": "bluetidecarwash.com"
+    },
+    {
+      "id": "4ee97e6b-3969-43bd-8c7b-dc6d96fbe195",
+      "name": "Cobblestone Auto Spa",
+      "city": "Tempe",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/south-autoplex/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "db1a6798-320f-45db-be2c-f0b09b27bdf2",
+      "name": "Cobblestone Auto Spa",
+      "city": "San Tan Valley",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/car-wash-in-san-tan-valley-ironwood-pima-road/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "ebf75294-ab39-4230-ab08-e17fea9f264c",
+      "name": "Grease Monkey 1135",
+      "city": "Cibolo",
+      "state": "TX",
+      "website": "https://www.greasemonkey.com/locations/tx/cibolo/2513-fm-1103",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "620fb8bd-b167-4ee8-8aa4-80032d526f40",
+      "name": "Grease Monkey",
+      "city": "Littleton",
+      "state": "CO",
+      "website": "https://www.greasemonkey.com/locations/co/littleton/3693-west-bowles-ave",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "2a0ded60-1b2d-46d8-b152-ea6178ccc482",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/75th-ave-encanto/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "12f8c6f1-9fcb-40d1-bf4e-59c644e0c0f8",
+      "name": "Cobblestone Auto Spa",
+      "city": "Goodyear",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/goodyear/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f5894c6f-1ec6-4aec-a128-e4751a5165f9",
+      "name": "Cobblestone Car Wash",
+      "city": "Littleton",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-littleton-wadsworth-boulevard-coal-mine-avenue/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "49d218a5-dc4f-4c0e-833f-6c4ae8b1309c",
+      "name": "Cobblestone Auto Spa",
+      "city": "Scottsdale",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/north-scottsdale/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f7bb8003-43ae-4144-a560-6703df79026c",
+      "name": "Cobblestone Auto Spa",
+      "city": "Tempe",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/south-priest/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "618a7ccf-3c3a-447a-9c3d-b4ae724422ef",
+      "name": "Cobblestone Car Wash",
+      "city": "Meridian",
+      "state": "ID",
+      "website": "https://cobblestone.com/location/meridian-n-linder-rd-chinden-blvd/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "4c924488-eef8-41cc-a0ce-96754998b00e",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/happy-valley-19th-avenue/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "0f6fd1e0-8157-4c81-b644-73c17d3e6472",
+      "name": "Cobblestone Car Wash",
+      "city": "Erie",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-erie-baseline-road-mountain-view-boulevard-2/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "c3eaf7be-a918-4edf-846c-1e059f0757cf",
+      "name": "Cobblestone Auto Spa",
+      "city": "Cave Creek",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/cave-creek/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "5384b91b-0e20-4bc1-a0a7-4889b3d2446c",
+      "name": "Cobblestone Car Wash",
+      "city": "Aurora",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-aurora-mississippi-avenue-troy-street-2/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f50099d1-646a-41ae-ac37-0f1dc1d9f3ed",
+      "name": "Cobblestone Auto Spa",
+      "city": "Tempe",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/tempe-kyrene-elliot/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "0de55b3c-e23b-41c5-9dd9-b5fd1c0bc6f2",
+      "name": "Cobblestone Car Wash",
+      "city": "Northglenn",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-northglenn-washington-street-115th-ave/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "6ec8ea1f-a5cb-4473-9378-9167e4983253",
+      "name": "Cobblestone Car Wash",
+      "city": "Fort Collins",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-fort-collins-college-avenue-willox-lane/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "da7ce965-26a1-43f3-a06f-479ba0f137a4",
+      "name": "Splash Car Wash Express",
+      "city": "Randolph",
+      "state": "MA",
+      "website": "https://splashcarwashes.com/locations/randolph/%3Futm_source%3Dgoogle%26utm_medium%3Dorganic%26utm_campaign%3Dgbp-randolph",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "04de76c7-0965-4c21-9f4c-b14639012426",
+      "name": "Cobblestone Car Wash",
+      "city": "Aurora",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-aurora-chambers-road-wesley-avenue/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "179c1741-7e92-43c5-ae1d-cfb731d244ad",
+      "name": "Cobblestone Car Wash",
+      "city": "Denver",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/denver-federal-boulevard-6th-avenue-freeway/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "25baec8b-bac5-4ed3-9963-04ed6cbc3c74",
+      "name": "Cobblestone Car Wash",
+      "city": "Denver",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/colorado-blvd-harrison-st/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f3dc48c7-f8f2-4dec-99f3-70f15438b129",
+      "name": "Cobblestone Auto Spa",
+      "city": "Mesa",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/alma-school-baseline/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "ffd24066-2692-4523-a2b0-d57fa7d0d8e1",
+      "name": "Cobblestone Car Wash",
+      "city": "Highlands Ranch",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-highlands-ranch-county-line-road-holly-street/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "17e791e2-c3bb-44ec-bfa8-cf13286c0c47",
+      "name": "Cobblestone Car Wash",
+      "city": "Denver",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/car-wash-in-denver-tower-road-46th-avenue/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "e68786a3-01d7-4c2c-8301-cb42a5a36256",
+      "name": "Cobblestone Car Wash",
+      "city": "Northglenn",
+      "state": "CO",
+      "website": "https://cobblestone.com/location/huron-st-community-center-dr/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "053b4e24-c400-448f-809c-9c7f0fe7f955",
+      "name": "Cobblestone Auto Spa",
+      "city": "Gilbert",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/germann-lindsay/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "e8207308-a66b-491e-bfe7-49c0b2ed39c5",
+      "name": "Splash Car Wash",
+      "city": "Cos Cob",
+      "state": "CT",
+      "website": "https://splashcarwashes.com/locations/cos-cob/",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "c1aef093-0782-40af-992e-7a9658cfc322",
+      "name": "Oil Changers & Car Wash",
+      "city": "San Jose",
+      "state": "CA",
+      "website": "https://oilchangers.com/locations/ca/san-jose-monterey-rd/",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "2bb3a927-fdf1-4d49-8ae2-cc8032d00286",
+      "name": "GATE Express Carwash",
+      "city": "Middleburg",
+      "state": "FL",
+      "website": "http://gateexpresscarwash.com/",
+      "matched": "gateexpresscarwash.com"
+    },
+    {
+      "id": "02e058d5-70e0-4ffb-94af-01d405ba4711",
+      "name": "Oil Changers + Repair",
+      "city": "Pflugerville",
+      "state": "TX",
+      "website": "https://oilchangers.com/locations/tx/pflugerville-pecan-st/",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "7e6df36e-ac0e-4cf6-9fff-52e5ebc6c8d1",
+      "name": "Brown Bear Car Wash",
+      "city": "Seattle",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/3977-leary-way-nw-seattle-wa-98107-48",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "3e2c3ef0-6531-4dbc-b355-afc3aa66ae7c",
+      "name": "Star Wash Massillon",
+      "city": "Massillon",
+      "state": "OH",
+      "website": "http://www.starwashmassillon.com/",
+      "matched": "starwashmassillon.com"
+    },
+    {
+      "id": "7524e0ab-6cae-45ed-8e30-76df703afe63",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/51st-van-buren/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "05a681cc-164f-4e92-833f-5aafb22ee9dd",
+      "name": "Drive & Shine Car Wash and Oil Change",
+      "city": "Crown Point",
+      "state": "IN",
+      "website": "https://driveandshine.com/our-wash/crown-point-cw",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "c1aef093-0782-40af-992e-7a9658cfc322",
+      "name": "Oil Changers & Car Wash",
+      "city": "San Jose",
+      "state": "CA",
+      "website": "https://oilchangers.com/locations/ca/san-jose-monterey-rd/",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "2bb3a927-fdf1-4d49-8ae2-cc8032d00286",
+      "name": "GATE Express Carwash",
+      "city": "Middleburg",
+      "state": "FL",
+      "website": "http://gateexpresscarwash.com/",
+      "matched": "gateexpresscarwash.com"
+    },
+    {
+      "id": "02e058d5-70e0-4ffb-94af-01d405ba4711",
+      "name": "Oil Changers + Repair",
+      "city": "Pflugerville",
+      "state": "TX",
+      "website": "https://oilchangers.com/locations/tx/pflugerville-pecan-st/",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "7e6df36e-ac0e-4cf6-9fff-52e5ebc6c8d1",
+      "name": "Brown Bear Car Wash",
+      "city": "Seattle",
+      "state": "WA",
+      "website": "https://www.brownbear.com/locations/3977-leary-way-nw-seattle-wa-98107-48",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "3e2c3ef0-6531-4dbc-b355-afc3aa66ae7c",
+      "name": "Star Wash Massillon",
+      "city": "Massillon",
+      "state": "OH",
+      "website": "http://www.starwashmassillon.com/",
+      "matched": "starwashmassillon.com"
+    },
+    {
+      "id": "7524e0ab-6cae-45ed-8e30-76df703afe63",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/51st-van-buren/",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "05a681cc-164f-4e92-833f-5aafb22ee9dd",
+      "name": "Drive & Shine Car Wash and Oil Change",
+      "city": "Crown Point",
+      "state": "IN",
+      "website": "https://driveandshine.com/our-wash/crown-point-cw",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "7524e0ab-6cae-45ed-8e30-76df703afe63",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "website": "https://cobblestone.com/location/51st-van-buren/",
+      "matched": "cobblestone.com"
+    }
+  ],
+  "toPromote": [
+    {
+      "id": "4c92dde3-12f3-4a25-a40c-8285244dc5b4",
+      "name": "Haffner's Car Wash",
+      "city": "Lawrence",
+      "state": "MA",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "c6e8e4dc-5553-42ec-adef-6d61f0dd6f24",
+      "name": "Brown Bear Car Wash",
+      "city": "Redmond",
+      "state": "WA",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "621b7294-5c98-4283-b1a8-d83bd89614c7",
+      "name": "Drive & Shine Car Wash",
+      "city": "Lima",
+      "state": "OH",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "80b96618-ff1e-45cf-85a3-af7df1956ca0",
+      "name": "Cobblestone Car Wash",
+      "city": "Commerce City",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "5db0361b-d942-4f06-92f2-77cf80d99575",
+      "name": "Cobblestone Auto Spa",
+      "city": "Gilbert",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "b907df5d-59dd-40c0-bb81-2f101a99bca8",
+      "name": "Oil Changers & Car Wash",
+      "city": "Cameron",
+      "state": "MO",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "a9ffd9fc-cd71-4b2a-a747-21efee8d0c28",
+      "name": "Cobblestone Car Wash",
+      "city": "Caldwell",
+      "state": "ID",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "fc7d3fd4-50d4-4cbb-ab3e-c42ee9b708f3",
+      "name": "Cobblestone Auto Spa",
+      "city": "Scottsdale",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "6866878e-1b51-4e3a-9fd4-2b8a784fcfa6",
+      "name": "Splash Car Wash Express",
+      "city": "Shelburne",
+      "state": "VT",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "8a93bf71-eb23-4b7e-88d9-2d2d0ddba399",
+      "name": "Haffner's Gas Station and Car Wash",
+      "city": "Lawrence",
+      "state": "MA",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "85f1f019-5954-4536-97af-a43e89caa745",
+      "name": "Grease Monkey Manvel",
+      "city": "Manvel",
+      "state": "TX",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "4ea8f74b-fec0-4cb7-9174-7c0ccf1b1283",
+      "name": "Grease Monkey",
+      "city": "Winter Haven",
+      "state": "FL",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "1b346e1b-15b6-4d21-bd5e-40490c5ad85a",
+      "name": "Oil Changers & Car Wash",
+      "city": "Oakland",
+      "state": "CA",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "8ba53789-94f0-4176-a228-7785b9749911",
+      "name": "Cobblestone Auto Spa",
+      "city": "Chandler",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "8f8c9d55-6782-4b41-8e05-034aeb8b6882",
+      "name": "ScrubaDub Car Wash (Marlborough)",
+      "city": "Marlborough",
+      "state": "MA",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "46c167b1-b325-4087-aa50-07f5592d163b",
+      "name": "GATE Express Carwash",
+      "city": "Jacksonville",
+      "state": "FL",
+      "matched": "gateexpresscarwash.com"
+    },
+    {
+      "id": "ffc935fa-1cc7-437a-abfe-75503581ddb9",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "b1a469dc-cd2e-43b1-aab8-c58c1fb23531",
+      "name": "ScrubaDub Car Wash & Auto Detailing Center (Boston)",
+      "city": "Dorchester",
+      "state": "MA",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "daa0b72e-6283-4a59-9969-86f23554a56e",
+      "name": "Cobblestone Auto Spa Corporate Office",
+      "city": "Scottsdale",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "c1aef093-0782-40af-992e-7a9658cfc322",
+      "name": "Oil Changers & Car Wash",
+      "city": "San Jose",
+      "state": "CA",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "2bb3a927-fdf1-4d49-8ae2-cc8032d00286",
+      "name": "GATE Express Carwash",
+      "city": "Middleburg",
+      "state": "FL",
+      "matched": "gateexpresscarwash.com"
+    },
+    {
+      "id": "02e058d5-70e0-4ffb-94af-01d405ba4711",
+      "name": "Oil Changers + Repair",
+      "city": "Pflugerville",
+      "state": "TX",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "7e6df36e-ac0e-4cf6-9fff-52e5ebc6c8d1",
+      "name": "Brown Bear Car Wash",
+      "city": "Seattle",
+      "state": "WA",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "3e2c3ef0-6531-4dbc-b355-afc3aa66ae7c",
+      "name": "Star Wash Massillon",
+      "city": "Massillon",
+      "state": "OH",
+      "matched": "starwashmassillon.com"
+    },
+    {
+      "id": "7524e0ab-6cae-45ed-8e30-76df703afe63",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "05a681cc-164f-4e92-833f-5aafb22ee9dd",
+      "name": "Drive & Shine Car Wash and Oil Change",
+      "city": "Crown Point",
+      "state": "IN",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "398a932a-1117-4dad-b8eb-d25a355cef1d",
+      "name": "ScrubaDub Car Wash & Auto Detailing Center (Natick)",
+      "city": "Natick",
+      "state": "MA",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "e79ce2ad-bc4a-4390-bdbe-2aec9d82d1a6",
+      "name": "Cobblestone Auto Spa",
+      "city": "Queen Creek",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "4bb0b856-fb86-4909-97bc-c76d3b45be46",
+      "name": "Cobblestone Auto Spa",
+      "city": "Surprise",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "cbe6993f-7ce9-4b32-8b97-425f76533a73",
+      "name": "Cobblestone Car Wash",
+      "city": "Castle Pines",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "35498367-44a4-43f8-86b6-d08479d0c9c2",
+      "name": "Cobblestone Car Wash",
+      "city": "Lakewood",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "52b1966e-ee5c-4d48-a10f-8bb593ded137",
+      "name": "Cobblestone Car Wash",
+      "city": "Lakewood",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "928e7c83-b719-44aa-9ba5-19e39c1ed63b",
+      "name": "Cobblestone Car Wash",
+      "city": "Westminster",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "ea3d74a4-f11e-4017-82e5-bc477d42ce45",
+      "name": "Drive & Shine Car Wash",
+      "city": "Elkhart",
+      "state": "IN",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "556c4b85-9adc-422c-afb1-b2702f450e3d",
+      "name": "GATE Express Carwash",
+      "city": "Ponte Vedra Beach",
+      "state": "FL",
+      "matched": "gateexpresscarwash.com"
+    },
+    {
+      "id": "6138819c-f840-4653-9825-3869394235f0",
+      "name": "Cobblestone Car Wash",
+      "city": "Thornton",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f378b19f-4744-4839-b52e-aee8dc931ab4",
+      "name": "Cobblestone Car Wash",
+      "city": "Lakewood",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "67c47a86-c4e7-4cee-9ccb-87bd71d9647c",
+      "name": "Warrensburg Car Wash",
+      "city": "Warrensburg",
+      "state": "NY",
+      "matched": "adirondackcarwash.com"
+    },
+    {
+      "id": "a7ea0547-fcc0-43f5-a2c1-dccdf0f5c95a",
+      "name": "Cobblestone Car Wash",
+      "city": "Centennial",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f2bd95ef-7d60-4201-a10a-c1c78b2d3f25",
+      "name": "Haffner's Gas Station and Car Wash",
+      "city": "Hudson",
+      "state": "NH",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "711fc8ea-c23f-4ea4-8c14-2bec0bfd1792",
+      "name": "Cobblestone Auto Spa",
+      "city": "Scottsdale",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "27512223-fdb7-4022-95fd-addd297bf6e4",
+      "name": "Touch Less Car Wash",
+      "city": "Gaithersburg",
+      "state": "MD",
+      "matched": "touchlesscarwashmd.com"
+    },
+    {
+      "id": "09fde4e9-54d0-4529-97fe-14144623267b",
+      "name": "Haffner's Gas Station",
+      "city": "Groton",
+      "state": "MA",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "20e2f729-54ff-4827-89ff-969df09f289f",
+      "name": "Cobblestone Car Wash; Longmont - Hwy 119 & Turner Blvd",
+      "city": "Longmont",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "15e6ef4b-7129-43f0-bcfa-6c58252bf961",
+      "name": "Clancy's Car Wash",
+      "city": "Daleville",
+      "state": "IN",
+      "matched": "clancyscarwash.com"
+    },
+    {
+      "id": "86e06aae-6ab0-417a-8407-80f6560d9e56",
+      "name": "Cobblestone Car Wash",
+      "city": "Aurora",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "5e412f2f-8ccf-43ce-aa30-609c9678b77a",
+      "name": "Super Klean Car Wash Bixby",
+      "city": "Bixby",
+      "state": "OK",
+      "matched": "superkleancarwash.com"
+    },
+    {
+      "id": "83a0982f-6236-427c-9c0e-e573024009b6",
+      "name": "Oil Changers",
+      "city": "Simi Valley",
+      "state": "CA",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "3c7fecc8-0fa2-441f-a0ce-706f27e315e1",
+      "name": "Cobblestone Auto Spa",
+      "city": "Chandler",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "993041ec-b117-416e-b581-903fd526ef28",
+      "name": "ScrubaDub Car Wash (Brighton)",
+      "city": "Brighton",
+      "state": "MA",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "335a4310-f730-4c7b-9fe6-03f545207ab9",
+      "name": "Hogwash Car Wash, Detailing, Oil Change & Lube Center",
+      "city": "Parsippany",
+      "state": "NJ",
+      "matched": "hogwashcarwash.com"
+    },
+    {
+      "id": "fcd57652-9b35-4427-860e-5e14d959c904",
+      "name": "Tradewinds",
+      "city": "Bangor",
+      "state": "ME",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "89041596-71c4-4b1e-ad88-ad011cd0c41e",
+      "name": "Cobblestone Car Wash",
+      "city": "Aurora",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "b3f000d6-bf35-4008-959e-5cb4e03bbcf4",
+      "name": "Brown Bear Car Wash",
+      "city": "Parkland",
+      "state": "WA",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "5719711a-644c-4af7-828a-f846d31ce187",
+      "name": "ScrubaDub Car Wash (Shrewsbury)",
+      "city": "Shrewsbury",
+      "state": "MA",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "35385d15-274d-4cce-86de-1ab673bec4b8",
+      "name": "Splash Car Wash Express",
+      "city": "Rochester",
+      "state": "NY",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "1f9d4dee-c892-4f18-b69f-1fdd7d287eda",
+      "name": "Brown Bear Car Wash",
+      "city": "Puyallup",
+      "state": "WA",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "fc21a1ef-d419-49f1-a910-9219bb0a25a1",
+      "name": "ScrubaDub Car Wash (Worcester)",
+      "city": "Worcester",
+      "state": "MA",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "11491053-9ce2-4a70-8cb7-7be89ae6a6ee",
+      "name": "Haffner's Car Wash",
+      "city": "Haverhill",
+      "state": "MA",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "33bd70c7-0c38-4761-a682-35e4e6065d2a",
+      "name": "Hurricane Carwash North",
+      "city": "Carthage",
+      "state": "MO",
+      "matched": "hurricanecarwash.net"
+    },
+    {
+      "id": "cb4e604e-f66b-444d-bec0-d02a70f776da",
+      "name": "K & S Car Wash",
+      "city": "Auburn",
+      "state": "NY",
+      "matched": "kscarwashes.com"
+    },
+    {
+      "id": "39bb5fc6-6097-4ace-9fde-6faaf6453839",
+      "name": "Clancy's Car Wash",
+      "city": "Muncie",
+      "state": "IN",
+      "matched": "clancyscarwash.com"
+    },
+    {
+      "id": "c440ea0d-8bda-4553-a418-572687bfb5b4",
+      "name": "ScrubaDub Car Wash (Portland)",
+      "city": "Portland",
+      "state": "ME",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "c0b11e28-b5e2-4035-96c6-7c2ccc66eab5",
+      "name": "Brown Bear Car Wash",
+      "city": "Marysville",
+      "state": "WA",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "c7c41315-6dca-4671-a211-efa20da7a67a",
+      "name": "Brown Bear Car Wash",
+      "city": "Redmond",
+      "state": "WA",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "2b357cde-1f1d-4c3c-9f14-c937eb06c9e2",
+      "name": "ScrubaDub Car Wash (Worcester)",
+      "city": "Worcester",
+      "state": "MA",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "09783b01-e6d7-4e05-a317-bfe9151b1f0e",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "740b6a9f-2a97-4c40-b9da-ab8e00fe8ec2",
+      "name": "Brown Bear Car Wash",
+      "city": "Des Moines",
+      "state": "WA",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "58f2a494-fdd6-42a0-a645-64336c8dfcc4",
+      "name": "Cobblestone Car Wash",
+      "city": "Lakewood",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "a9735929-279c-4c00-be23-05e2507ebc68",
+      "name": "Cobblestone Auto Spa",
+      "city": "Litchfield Park",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "65f7a9ce-ccf3-466d-8eb5-24f74ca072d2",
+      "name": "Brown Bear Car Wash",
+      "city": "Bellevue",
+      "state": "WA",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "85e4ed84-fb89-4bfc-83a4-afdc8be5e762",
+      "name": "Super Klean Car Wash",
+      "city": "Tulsa",
+      "state": "OK",
+      "matched": "superkleancarwash.com"
+    },
+    {
+      "id": "1b346e1b-15b6-4d21-bd5e-40490c5ad85a",
+      "name": "Oil Changers & Car Wash",
+      "city": "Oakland",
+      "state": "CA",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "39f6a5f2-55fb-4084-89c3-e012da93d6b3",
+      "name": "Oil Changers & Car Wash",
+      "city": "Coos Bay",
+      "state": "OR",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "75e0525d-788f-4299-bddf-fd2333d1056d",
+      "name": "Brown Bear Car Wash",
+      "city": "Bremerton",
+      "state": "WA",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "034a2813-5115-4550-a51a-62f1cd9f7a95",
+      "name": "Brown Bear Car Wash",
+      "city": "Cheney",
+      "state": "WA",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "a3975fd7-10ee-46b6-ada6-9209ede8b18d",
+      "name": "Washworld, Inc.",
+      "city": "De Pere",
+      "state": "WI",
+      "matched": "washworldinc.com"
+    },
+    {
+      "id": "3b0c2f00-ccf6-46bd-b22d-253a84f7bec7",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "113dc5c3-ae17-418f-bf10-a78bbb2be18d",
+      "name": "GATE Express Carwash",
+      "city": "St. Augustine",
+      "state": "FL",
+      "matched": "gateexpresscarwash.com"
+    },
+    {
+      "id": "45d51117-c424-49a4-b60f-068061346f7d",
+      "name": "Cobblestone Auto Spa",
+      "city": "Tolleson",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "ff1548cc-b365-4185-befe-2c6f829efe19",
+      "name": "Cobblestone Auto Spa",
+      "city": "Surprise",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "28b84360-b986-4ac5-97e4-2f9b1026b7bd",
+      "name": "Cobblestone Auto Spa",
+      "city": "Scottsdale",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "7ff975ca-f81e-4dd6-81ed-8ec59c703de7",
+      "name": "Drive & Shine Car Wash",
+      "city": "Kalamazoo",
+      "state": "MI",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "77d2d9a3-b1e5-4b3b-9301-06351ebe83f6",
+      "name": "GATE Express Carwash",
+      "city": "Jacksonville",
+      "state": "FL",
+      "matched": "gateexpresscarwash.com"
+    },
+    {
+      "id": "42ea9f30-1aa5-4d2e-9c72-832c3f35c4f3",
+      "name": "Touch Less Car Wash",
+      "city": "Gaithersburg",
+      "state": "MD",
+      "matched": "touchlesscarwashmd.com"
+    },
+    {
+      "id": "6fe9bc31-8aa3-42f4-8c9b-534396ae8cbf",
+      "name": "Oil Changers",
+      "city": "Modesto",
+      "state": "CA",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "b20d8eaa-bea1-4e8a-a6e9-51863a3ea5b1",
+      "name": "Drive & Shine Car Wash and Oil Change",
+      "city": "Schererville",
+      "state": "IN",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "aa23861e-1dde-442b-ba23-8eb23ac98e9b",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "3a001f41-f5d5-4cf5-90d4-1c259eed25e1",
+      "name": "GATE Express Carwash",
+      "city": "Jacksonville",
+      "state": "FL",
+      "matched": "gateexpresscarwash.com"
+    },
+    {
+      "id": "73fca3ad-8696-4c32-9d08-d5856480bbe9",
+      "name": "Splash Car Wash Express",
+      "city": "Springfield",
+      "state": "MA",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "67c47a86-c4e7-4cee-9ccb-87bd71d9647c",
+      "name": "Warrensburg Car Wash",
+      "city": "Warrensburg",
+      "state": "NY",
+      "matched": "adirondackcarwash.com"
+    },
+    {
+      "id": "83a0982f-6236-427c-9c0e-e573024009b6",
+      "name": "Oil Changers",
+      "city": "Simi Valley",
+      "state": "CA",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "3c7fecc8-0fa2-441f-a0ce-706f27e315e1",
+      "name": "Cobblestone Auto Spa",
+      "city": "Chandler",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "fa941197-5c0e-47ac-95fe-c6a763a4e4ed",
+      "name": "Oil Changers & Car Wash",
+      "city": "Lemoore",
+      "state": "CA",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "8f225650-61e6-467e-9a48-36aca272f8ce",
+      "name": "Cobblestone Auto Spa",
+      "city": "Tempe",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "3424fb2f-320d-4dfd-b7bc-8e1a6e7c6711",
+      "name": "Cobblestone Auto Spa",
+      "city": "San Tan Valley",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "eb77c1ff-f657-4ee8-bd3b-12b1c9c77e72",
+      "name": "Cobblestone Car Wash",
+      "city": "Boise",
+      "state": "ID",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "a28767df-dc01-4fea-a705-f99b0b3472dd",
+      "name": "Cobblestone Auto Spa",
+      "city": "Goodyear",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "77e90a2b-855c-43a6-929d-637d11c0937e",
+      "name": "Cobblestone Auto Spa",
+      "city": "Laveen Village",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "3f299368-7d99-45e4-9b6f-6a3dc49612bd",
+      "name": "Cobblestone Car Wash",
+      "city": "Ontario",
+      "state": "OR",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "91ca6b58-0a07-49ed-8d87-34355f8bf430",
+      "name": "Cobblestone Car Wash",
+      "city": "Aurora",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "7351c220-b834-480f-b164-1b5c47c4543a",
+      "name": "Cobblestone Car Wash",
+      "city": "Fort Collins",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f5e02d8b-ab32-4564-874f-de4d165e301f",
+      "name": "Grease Monkey",
+      "city": "Lubbock",
+      "state": "TX",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "d57cc2e8-1bab-4ccf-ba62-25bd585a1197",
+      "name": "GATE Express Carwash",
+      "city": "Jacksonville",
+      "state": "FL",
+      "matched": "gateexpresscarwash.com"
+    },
+    {
+      "id": "57abfcce-fe0c-46e6-917f-a698b24488ce",
+      "name": "Bill Luke Santan",
+      "city": "Gilbert",
+      "state": "AZ",
+      "matched": "billlukesantan.com"
+    },
+    {
+      "id": "3c7fecc8-0fa2-441f-a0ce-706f27e315e1",
+      "name": "Cobblestone Auto Spa",
+      "city": "Chandler",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "993041ec-b117-416e-b581-903fd526ef28",
+      "name": "ScrubaDub Car Wash (Brighton)",
+      "city": "Brighton",
+      "state": "MA",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "335a4310-f730-4c7b-9fe6-03f545207ab9",
+      "name": "Hogwash Car Wash, Detailing, Oil Change & Lube Center",
+      "city": "Parsippany",
+      "state": "NJ",
+      "matched": "hogwashcarwash.com"
+    },
+    {
+      "id": "fcd57652-9b35-4427-860e-5e14d959c904",
+      "name": "Tradewinds",
+      "city": "Bangor",
+      "state": "ME",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "6dda2b4c-dd85-436a-aa27-fed65e38a4b5",
+      "name": "Oil Changers & Car Wash",
+      "city": "Santa Clara",
+      "state": "CA",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "b80844d4-d1a5-4615-b533-317e2623619c",
+      "name": "Brown Bear Car Wash",
+      "city": "Seattle",
+      "state": "WA",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "8aada424-b9ae-47c1-b9d5-20f2b50e755c",
+      "name": "Cobblestone Car Wash",
+      "city": "Castle Rock",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "10a53f58-9f88-40ad-9ca6-2eb1c1107978",
+      "name": "Drive & Shine Car Wash",
+      "city": "Merrillville",
+      "state": "IN",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "7740aabe-01ed-40fb-996e-31ff9f23fbdc",
+      "name": "Adirondack Car Wash",
+      "city": "Glens Falls",
+      "state": "NY",
+      "matched": "adirondackcarwash.com"
+    },
+    {
+      "id": "f6890373-06de-4133-8a3a-2b17212b7b5f",
+      "name": "Grand Express Wash",
+      "city": "Peoria",
+      "state": "AZ",
+      "matched": "grandwashaz.com"
+    },
+    {
+      "id": "a25dbd6c-ccb3-46d2-921f-a52407a0585e",
+      "name": "Brown Bear Car Wash",
+      "city": "Issaquah",
+      "state": "WA",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "aab49ecc-1e8b-4478-ad54-d889af2ae9ba",
+      "name": "Brown Bear Car Wash",
+      "city": "Everett",
+      "state": "WA",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "d80da7ad-9c53-4a53-b96c-5d06fc4748b5",
+      "name": "Brown Bear Car Wash",
+      "city": "Seattle",
+      "state": "WA",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "b3f000d6-bf35-4008-959e-5cb4e03bbcf4",
+      "name": "Brown Bear Car Wash",
+      "city": "Parkland",
+      "state": "WA",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "5719711a-644c-4af7-828a-f846d31ce187",
+      "name": "ScrubaDub Car Wash (Shrewsbury)",
+      "city": "Shrewsbury",
+      "state": "MA",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "35385d15-274d-4cce-86de-1ab673bec4b8",
+      "name": "Splash Car Wash Express",
+      "city": "Rochester",
+      "state": "NY",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "1f9d4dee-c892-4f18-b69f-1fdd7d287eda",
+      "name": "Brown Bear Car Wash",
+      "city": "Puyallup",
+      "state": "WA",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "fc21a1ef-d419-49f1-a910-9219bb0a25a1",
+      "name": "ScrubaDub Car Wash (Worcester)",
+      "city": "Worcester",
+      "state": "MA",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "11491053-9ce2-4a70-8cb7-7be89ae6a6ee",
+      "name": "Haffner's Car Wash",
+      "city": "Haverhill",
+      "state": "MA",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "33bd70c7-0c38-4761-a682-35e4e6065d2a",
+      "name": "Hurricane Carwash North",
+      "city": "Carthage",
+      "state": "MO",
+      "matched": "hurricanecarwash.net"
+    },
+    {
+      "id": "61d79928-57a8-496f-b445-cb756ff7f6d4",
+      "name": "Oil Changers",
+      "city": "Austin",
+      "state": "TX",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "65c6af69-ab6f-4fcc-bdf3-12116f19c2b9",
+      "name": "Grease Monkey",
+      "city": "Tyler",
+      "state": "TX",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "d19e065a-3855-48d9-a7a4-3586ca00405b",
+      "name": "Grease Monkey",
+      "city": "Kingston",
+      "state": "NY",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "b906de87-ee54-4d1a-a293-e68044b72072",
+      "name": "GATE Express Carwash",
+      "city": "Jacksonville",
+      "state": "FL",
+      "matched": "gateexpresscarwash.com"
+    },
+    {
+      "id": "a7ea0547-fcc0-43f5-a2c1-dccdf0f5c95a",
+      "name": "Cobblestone Car Wash",
+      "city": "Centennial",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f2bd95ef-7d60-4201-a10a-c1c78b2d3f25",
+      "name": "Haffner's Gas Station and Car Wash",
+      "city": "Hudson",
+      "state": "NH",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "711fc8ea-c23f-4ea4-8c14-2bec0bfd1792",
+      "name": "Cobblestone Auto Spa",
+      "city": "Scottsdale",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "27512223-fdb7-4022-95fd-addd297bf6e4",
+      "name": "Touch Less Car Wash",
+      "city": "Gaithersburg",
+      "state": "MD",
+      "matched": "touchlesscarwashmd.com"
+    },
+    {
+      "id": "09fde4e9-54d0-4529-97fe-14144623267b",
+      "name": "Haffner's Gas Station",
+      "city": "Groton",
+      "state": "MA",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "20e2f729-54ff-4827-89ff-969df09f289f",
+      "name": "Cobblestone Car Wash; Longmont - Hwy 119 & Turner Blvd",
+      "city": "Longmont",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "15e6ef4b-7129-43f0-bcfa-6c58252bf961",
+      "name": "Clancy's Car Wash",
+      "city": "Daleville",
+      "state": "IN",
+      "matched": "clancyscarwash.com"
+    },
+    {
+      "id": "86e06aae-6ab0-417a-8407-80f6560d9e56",
+      "name": "Cobblestone Car Wash",
+      "city": "Aurora",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "07818834-2a2c-440f-8ff3-ced0938b5860",
+      "name": "Cobblestone Car Wash",
+      "city": "Thornton",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "fa6406f3-1d35-4373-b260-79a2a8930a1d",
+      "name": "GATE Express Carwash",
+      "city": "St. Augustine",
+      "state": "FL",
+      "matched": "gateexpresscarwash.com"
+    },
+    {
+      "id": "4e8808a0-f5a8-4d74-9de6-361ac6a8e9be",
+      "name": "Oil Changers & Car Wash",
+      "city": "Pacifica",
+      "state": "CA",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "d846a28a-3f37-473f-a8ec-07f3d6f13dd4",
+      "name": "Cobblestone Auto Spa",
+      "city": "Avondale",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "2e293707-350a-4313-95f4-5ce64d0e95c1",
+      "name": "Cobblestone Car Wash",
+      "city": "Thornton",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "b1a469dc-cd2e-43b1-aab8-c58c1fb23531",
+      "name": "ScrubaDub Car Wash & Auto Detailing Center (Boston)",
+      "city": "Dorchester",
+      "state": "MA",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "daa0b72e-6283-4a59-9969-86f23554a56e",
+      "name": "Cobblestone Auto Spa Corporate Office",
+      "city": "Scottsdale",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "c05bcf8d-cc73-419a-853d-321d528d1a5b",
+      "name": "Cobblestone Car Wash",
+      "city": "Lakewood",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "3eea74db-04f9-469e-b973-c182835386f3",
+      "name": "Splash Car Wash Express",
+      "city": "Oswego",
+      "state": "NY",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "12cd50ac-fff1-4f9e-90ca-ff8ea8c402c0",
+      "name": "Oil Changers & Car Wash",
+      "city": "Dublin",
+      "state": "CA",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "b12e9f52-133b-462f-8ea3-edf114e14f7b",
+      "name": "Splash 24",
+      "city": "Canandaigua",
+      "state": "NY",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "2eabe4d6-39ed-4376-84a3-052def18943b",
+      "name": "Splash Car Wash Express",
+      "city": "East Northport",
+      "state": "NY",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "3620f323-d269-464e-97b1-d56defd07e39",
+      "name": "Splash Car Wash Express",
+      "city": "Seneca Falls",
+      "state": "NY",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "a791549d-b928-49f8-8b76-bccaafd69012",
+      "name": "ScrubaDub Car Wash & Auto Detailing Center (Warwick)",
+      "city": "Warwick",
+      "state": "RI",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "e8307843-d0c3-40c2-b6de-6c32d0f5cc64",
+      "name": "Brown Bear Car Wash",
+      "city": "Kirkland",
+      "state": "WA",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "fb4afd5f-8b0c-494e-9860-fe61ef8c53f6",
+      "name": "ScrubaDub Car Wash (Salem)",
+      "city": "Salem",
+      "state": "NH",
+      "matched": "scrubadub.com"
+    },
+    {
+      "id": "a7ea0547-fcc0-43f5-a2c1-dccdf0f5c95a",
+      "name": "Cobblestone Car Wash",
+      "city": "Centennial",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f2bd95ef-7d60-4201-a10a-c1c78b2d3f25",
+      "name": "Haffner's Gas Station and Car Wash",
+      "city": "Hudson",
+      "state": "NH",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "711fc8ea-c23f-4ea4-8c14-2bec0bfd1792",
+      "name": "Cobblestone Auto Spa",
+      "city": "Scottsdale",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "27512223-fdb7-4022-95fd-addd297bf6e4",
+      "name": "Touch Less Car Wash",
+      "city": "Gaithersburg",
+      "state": "MD",
+      "matched": "touchlesscarwashmd.com"
+    },
+    {
+      "id": "09fde4e9-54d0-4529-97fe-14144623267b",
+      "name": "Haffner's Gas Station",
+      "city": "Groton",
+      "state": "MA",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "1dcd80b3-995a-48f2-8ce2-2baf6605ad8a",
+      "name": "Cobblestone Auto Spa",
+      "city": "Glendale",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "7e25fa8c-f889-4511-807f-6f66d2604329",
+      "name": "Haffner's Car Wash",
+      "city": "Salem",
+      "state": "NH",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "a97f3b78-800b-4dd3-951d-7c411801f4db",
+      "name": "Cobblestone Car Wash",
+      "city": "Meridian",
+      "state": "ID",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "219daf77-b706-489b-a25f-95b977df040a",
+      "name": "Oil Changers & Car Wash",
+      "city": "North Bend",
+      "state": "OR",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "771d0093-276c-4750-b46f-1712cd99d183",
+      "name": "Cobblestone Car Wash",
+      "city": "Twin Falls",
+      "state": "ID",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "fa941197-5c0e-47ac-95fe-c6a763a4e4ed",
+      "name": "Oil Changers & Car Wash",
+      "city": "Lemoore",
+      "state": "CA",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "4bb02887-7ba4-4de5-b8dd-03d331bdb635",
+      "name": "Cobblestone Car Wash",
+      "city": "Littleton",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "924a2bf5-7f54-4799-ba16-94a2629ce37f",
+      "name": "Cobblestone Auto Spa",
+      "city": "Mesa",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "8b35233c-88fa-4a16-9302-d3161b3f3adc",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "1cac999f-8b2b-41c5-ab31-b247a75c01ff",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "3b8603ef-9a80-4f82-a6d1-7a7f9f47e40e",
+      "name": "Cobblestone Auto Spa",
+      "city": "Tolleson",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "7aa64a38-627c-42d1-af6f-79bad17a274d",
+      "name": "Cobblestone Auto Spa",
+      "city": "Gilbert",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "43a4f8b3-ee69-430b-b05f-2efcfdbaa310",
+      "name": "Blue Tide Car Wash",
+      "city": "Mitchell",
+      "state": "SD",
+      "matched": "bluetidecarwash.com"
+    },
+    {
+      "id": "4ee97e6b-3969-43bd-8c7b-dc6d96fbe195",
+      "name": "Cobblestone Auto Spa",
+      "city": "Tempe",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "db1a6798-320f-45db-be2c-f0b09b27bdf2",
+      "name": "Cobblestone Auto Spa",
+      "city": "San Tan Valley",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "ebf75294-ab39-4230-ab08-e17fea9f264c",
+      "name": "Grease Monkey 1135",
+      "city": "Cibolo",
+      "state": "TX",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "620fb8bd-b167-4ee8-8aa4-80032d526f40",
+      "name": "Grease Monkey",
+      "city": "Littleton",
+      "state": "CO",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "2a0ded60-1b2d-46d8-b152-ea6178ccc482",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "12f8c6f1-9fcb-40d1-bf4e-59c644e0c0f8",
+      "name": "Cobblestone Auto Spa",
+      "city": "Goodyear",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f5894c6f-1ec6-4aec-a128-e4751a5165f9",
+      "name": "Cobblestone Car Wash",
+      "city": "Littleton",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "49d218a5-dc4f-4c0e-833f-6c4ae8b1309c",
+      "name": "Cobblestone Auto Spa",
+      "city": "Scottsdale",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f7bb8003-43ae-4144-a560-6703df79026c",
+      "name": "Cobblestone Auto Spa",
+      "city": "Tempe",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "618a7ccf-3c3a-447a-9c3d-b4ae724422ef",
+      "name": "Cobblestone Car Wash",
+      "city": "Meridian",
+      "state": "ID",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "4c924488-eef8-41cc-a0ce-96754998b00e",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "0f6fd1e0-8157-4c81-b644-73c17d3e6472",
+      "name": "Cobblestone Car Wash",
+      "city": "Erie",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "c3eaf7be-a918-4edf-846c-1e059f0757cf",
+      "name": "Cobblestone Auto Spa",
+      "city": "Cave Creek",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "5384b91b-0e20-4bc1-a0a7-4889b3d2446c",
+      "name": "Cobblestone Car Wash",
+      "city": "Aurora",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f50099d1-646a-41ae-ac37-0f1dc1d9f3ed",
+      "name": "Cobblestone Auto Spa",
+      "city": "Tempe",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "0de55b3c-e23b-41c5-9dd9-b5fd1c0bc6f2",
+      "name": "Cobblestone Car Wash",
+      "city": "Northglenn",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "6ec8ea1f-a5cb-4473-9378-9167e4983253",
+      "name": "Cobblestone Car Wash",
+      "city": "Fort Collins",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "da7ce965-26a1-43f3-a06f-479ba0f137a4",
+      "name": "Splash Car Wash Express",
+      "city": "Randolph",
+      "state": "MA",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "04de76c7-0965-4c21-9f4c-b14639012426",
+      "name": "Cobblestone Car Wash",
+      "city": "Aurora",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "179c1741-7e92-43c5-ae1d-cfb731d244ad",
+      "name": "Cobblestone Car Wash",
+      "city": "Denver",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "25baec8b-bac5-4ed3-9963-04ed6cbc3c74",
+      "name": "Cobblestone Car Wash",
+      "city": "Denver",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f3dc48c7-f8f2-4dec-99f3-70f15438b129",
+      "name": "Cobblestone Auto Spa",
+      "city": "Mesa",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "ffd24066-2692-4523-a2b0-d57fa7d0d8e1",
+      "name": "Cobblestone Car Wash",
+      "city": "Highlands Ranch",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "17e791e2-c3bb-44ec-bfa8-cf13286c0c47",
+      "name": "Cobblestone Car Wash",
+      "city": "Denver",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "e68786a3-01d7-4c2c-8301-cb42a5a36256",
+      "name": "Cobblestone Car Wash",
+      "city": "Northglenn",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "053b4e24-c400-448f-809c-9c7f0fe7f955",
+      "name": "Cobblestone Auto Spa",
+      "city": "Gilbert",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "83a0982f-6236-427c-9c0e-e573024009b6",
+      "name": "Oil Changers",
+      "city": "Simi Valley",
+      "state": "CA",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "9cce7521-3d02-483b-98a5-ffe8acb1ad3b",
+      "name": "Haffner's Gentle Touch Car Wash",
+      "city": "Lawrence",
+      "state": "MA",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "ad4ff195-def2-4bc8-a4da-aedd3d353b82",
+      "name": "Super Klean Car Wash",
+      "city": "Broken Arrow",
+      "state": "OK",
+      "matched": "superkleancarwash.com"
+    },
+    {
+      "id": "8c794928-f9ea-486e-8a71-3d34d8a08833",
+      "name": "Cobblestone Car Wash",
+      "city": "Boise",
+      "state": "ID",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "4c92dde3-12f3-4a25-a40c-8285244dc5b4",
+      "name": "Haffner's Car Wash",
+      "city": "Lawrence",
+      "state": "MA",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "c6e8e4dc-5553-42ec-adef-6d61f0dd6f24",
+      "name": "Brown Bear Car Wash",
+      "city": "Redmond",
+      "state": "WA",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "621b7294-5c98-4283-b1a8-d83bd89614c7",
+      "name": "Drive & Shine Car Wash",
+      "city": "Lima",
+      "state": "OH",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "80b96618-ff1e-45cf-85a3-af7df1956ca0",
+      "name": "Cobblestone Car Wash",
+      "city": "Commerce City",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "5db0361b-d942-4f06-92f2-77cf80d99575",
+      "name": "Cobblestone Auto Spa",
+      "city": "Gilbert",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "b907df5d-59dd-40c0-bb81-2f101a99bca8",
+      "name": "Oil Changers & Car Wash",
+      "city": "Cameron",
+      "state": "MO",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "a9ffd9fc-cd71-4b2a-a747-21efee8d0c28",
+      "name": "Cobblestone Car Wash",
+      "city": "Caldwell",
+      "state": "ID",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "fc7d3fd4-50d4-4cbb-ab3e-c42ee9b708f3",
+      "name": "Cobblestone Auto Spa",
+      "city": "Scottsdale",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "6866878e-1b51-4e3a-9fd4-2b8a784fcfa6",
+      "name": "Splash Car Wash Express",
+      "city": "Shelburne",
+      "state": "VT",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "8a93bf71-eb23-4b7e-88d9-2d2d0ddba399",
+      "name": "Haffner's Gas Station and Car Wash",
+      "city": "Lawrence",
+      "state": "MA",
+      "matched": "haffners.com"
+    },
+    {
+      "id": "7a4cecdf-9206-4ddf-918e-e09009c3dbe7",
+      "name": "The Washbox",
+      "city": "Farmville",
+      "state": "VA",
+      "matched": "washboxva.com"
+    },
+    {
+      "id": "f8ba7c99-fbd7-42c3-92e7-9333abea3bd2",
+      "name": "GATE Express Carwash",
+      "city": "Ponte Vedra Beach",
+      "state": "FL",
+      "matched": "gateexpresscarwash.com"
+    },
+    {
+      "id": "46f6fa20-9a1e-4977-b086-7574cabb8030",
+      "name": "Cobblestone Car Wash",
+      "city": "Parker",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "45fb37fc-2fa5-47ad-af10-e7b7362fc90b",
+      "name": "Pure Car Wash - Novi",
+      "city": "Novi",
+      "state": "MI",
+      "matched": "purecarwash.com"
+    },
+    {
+      "id": "1cdd9e33-401b-4a05-9a78-6a24a9070649",
+      "name": "Cobblestone Auto Spa",
+      "city": "Glendale",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "97397137-3c3a-47f2-aa12-9342a2e43717",
+      "name": "Serpentini Laser Wash",
+      "city": "Medina",
+      "state": "OH",
+      "matched": "serpentinimedina.com"
+    },
+    {
+      "id": "a97f3b78-800b-4dd3-951d-7c411801f4db",
+      "name": "Cobblestone Car Wash",
+      "city": "Meridian",
+      "state": "ID",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "219daf77-b706-489b-a25f-95b977df040a",
+      "name": "Oil Changers & Car Wash",
+      "city": "North Bend",
+      "state": "OR",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "771d0093-276c-4750-b46f-1712cd99d183",
+      "name": "Cobblestone Car Wash",
+      "city": "Twin Falls",
+      "state": "ID",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "fa941197-5c0e-47ac-95fe-c6a763a4e4ed",
+      "name": "Oil Changers & Car Wash",
+      "city": "Lemoore",
+      "state": "CA",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "8f225650-61e6-467e-9a48-36aca272f8ce",
+      "name": "Cobblestone Auto Spa",
+      "city": "Tempe",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "3424fb2f-320d-4dfd-b7bc-8e1a6e7c6711",
+      "name": "Cobblestone Auto Spa",
+      "city": "San Tan Valley",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "eb77c1ff-f657-4ee8-bd3b-12b1c9c77e72",
+      "name": "Cobblestone Car Wash",
+      "city": "Boise",
+      "state": "ID",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "a28767df-dc01-4fea-a705-f99b0b3472dd",
+      "name": "Cobblestone Auto Spa",
+      "city": "Goodyear",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "77e90a2b-855c-43a6-929d-637d11c0937e",
+      "name": "Cobblestone Auto Spa",
+      "city": "Laveen Village",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "3f299368-7d99-45e4-9b6f-6a3dc49612bd",
+      "name": "Cobblestone Car Wash",
+      "city": "Ontario",
+      "state": "OR",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "91ca6b58-0a07-49ed-8d87-34355f8bf430",
+      "name": "Cobblestone Car Wash",
+      "city": "Aurora",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "7351c220-b834-480f-b164-1b5c47c4543a",
+      "name": "Cobblestone Car Wash",
+      "city": "Fort Collins",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "6138819c-f840-4653-9825-3869394235f0",
+      "name": "Cobblestone Car Wash",
+      "city": "Thornton",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f378b19f-4744-4839-b52e-aee8dc931ab4",
+      "name": "Cobblestone Car Wash",
+      "city": "Lakewood",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "9723e219-0fe2-4b7c-8284-91cb4eda31d3",
+      "name": "Cobblestone Car Wash",
+      "city": "Boise",
+      "state": "ID",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "982f23d5-21af-4fda-8f2c-2643944aed59",
+      "name": "GATE Express Carwash",
+      "city": "Jacksonville",
+      "state": "FL",
+      "matched": "gateexpresscarwash.com"
+    },
+    {
+      "id": "319489cf-c420-4f0e-a85b-eb2843b266a3",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "6a55a30b-b022-4d2a-9555-f6eb13bf5c5e",
+      "name": "Grease Monkey",
+      "city": "Rapid City",
+      "state": "SD",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "8bf96b04-da45-4df3-ac16-7cf36e0faa17",
+      "name": "Grease Monkey",
+      "city": "Denver",
+      "state": "CO",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "f6f5a908-4b60-412d-8230-967e490fc1c1",
+      "name": "Grease Monkey",
+      "city": "Denver",
+      "state": "CO",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "dee5983d-f90f-4468-8816-1df7076688f8",
+      "name": "Grease Monkey",
+      "city": "Brighton",
+      "state": "CO",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "39f6a5f2-55fb-4084-89c3-e012da93d6b3",
+      "name": "Oil Changers & Car Wash",
+      "city": "Coos Bay",
+      "state": "OR",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "4bb02887-7ba4-4de5-b8dd-03d331bdb635",
+      "name": "Cobblestone Car Wash",
+      "city": "Littleton",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "924a2bf5-7f54-4799-ba16-94a2629ce37f",
+      "name": "Cobblestone Auto Spa",
+      "city": "Mesa",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "8b35233c-88fa-4a16-9302-d3161b3f3adc",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "1cac999f-8b2b-41c5-ab31-b247a75c01ff",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "3b8603ef-9a80-4f82-a6d1-7a7f9f47e40e",
+      "name": "Cobblestone Auto Spa",
+      "city": "Tolleson",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "7aa64a38-627c-42d1-af6f-79bad17a274d",
+      "name": "Cobblestone Auto Spa",
+      "city": "Gilbert",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "43a4f8b3-ee69-430b-b05f-2efcfdbaa310",
+      "name": "Blue Tide Car Wash",
+      "city": "Mitchell",
+      "state": "SD",
+      "matched": "bluetidecarwash.com"
+    },
+    {
+      "id": "4ee97e6b-3969-43bd-8c7b-dc6d96fbe195",
+      "name": "Cobblestone Auto Spa",
+      "city": "Tempe",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "db1a6798-320f-45db-be2c-f0b09b27bdf2",
+      "name": "Cobblestone Auto Spa",
+      "city": "San Tan Valley",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "ebf75294-ab39-4230-ab08-e17fea9f264c",
+      "name": "Grease Monkey 1135",
+      "city": "Cibolo",
+      "state": "TX",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "620fb8bd-b167-4ee8-8aa4-80032d526f40",
+      "name": "Grease Monkey",
+      "city": "Littleton",
+      "state": "CO",
+      "matched": "greasemonkey.com"
+    },
+    {
+      "id": "2a0ded60-1b2d-46d8-b152-ea6178ccc482",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "12f8c6f1-9fcb-40d1-bf4e-59c644e0c0f8",
+      "name": "Cobblestone Auto Spa",
+      "city": "Goodyear",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f5894c6f-1ec6-4aec-a128-e4751a5165f9",
+      "name": "Cobblestone Car Wash",
+      "city": "Littleton",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "49d218a5-dc4f-4c0e-833f-6c4ae8b1309c",
+      "name": "Cobblestone Auto Spa",
+      "city": "Scottsdale",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f7bb8003-43ae-4144-a560-6703df79026c",
+      "name": "Cobblestone Auto Spa",
+      "city": "Tempe",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "618a7ccf-3c3a-447a-9c3d-b4ae724422ef",
+      "name": "Cobblestone Car Wash",
+      "city": "Meridian",
+      "state": "ID",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "4c924488-eef8-41cc-a0ce-96754998b00e",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "0f6fd1e0-8157-4c81-b644-73c17d3e6472",
+      "name": "Cobblestone Car Wash",
+      "city": "Erie",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "c3eaf7be-a918-4edf-846c-1e059f0757cf",
+      "name": "Cobblestone Auto Spa",
+      "city": "Cave Creek",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "5384b91b-0e20-4bc1-a0a7-4889b3d2446c",
+      "name": "Cobblestone Car Wash",
+      "city": "Aurora",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f50099d1-646a-41ae-ac37-0f1dc1d9f3ed",
+      "name": "Cobblestone Auto Spa",
+      "city": "Tempe",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "0de55b3c-e23b-41c5-9dd9-b5fd1c0bc6f2",
+      "name": "Cobblestone Car Wash",
+      "city": "Northglenn",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "6ec8ea1f-a5cb-4473-9378-9167e4983253",
+      "name": "Cobblestone Car Wash",
+      "city": "Fort Collins",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "da7ce965-26a1-43f3-a06f-479ba0f137a4",
+      "name": "Splash Car Wash Express",
+      "city": "Randolph",
+      "state": "MA",
+      "matched": "splashcarwashes.com"
+    },
+    {
+      "id": "04de76c7-0965-4c21-9f4c-b14639012426",
+      "name": "Cobblestone Car Wash",
+      "city": "Aurora",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "179c1741-7e92-43c5-ae1d-cfb731d244ad",
+      "name": "Cobblestone Car Wash",
+      "city": "Denver",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "25baec8b-bac5-4ed3-9963-04ed6cbc3c74",
+      "name": "Cobblestone Car Wash",
+      "city": "Denver",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "f3dc48c7-f8f2-4dec-99f3-70f15438b129",
+      "name": "Cobblestone Auto Spa",
+      "city": "Mesa",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "ffd24066-2692-4523-a2b0-d57fa7d0d8e1",
+      "name": "Cobblestone Car Wash",
+      "city": "Highlands Ranch",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "17e791e2-c3bb-44ec-bfa8-cf13286c0c47",
+      "name": "Cobblestone Car Wash",
+      "city": "Denver",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "e68786a3-01d7-4c2c-8301-cb42a5a36256",
+      "name": "Cobblestone Car Wash",
+      "city": "Northglenn",
+      "state": "CO",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "053b4e24-c400-448f-809c-9c7f0fe7f955",
+      "name": "Cobblestone Auto Spa",
+      "city": "Gilbert",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "c1aef093-0782-40af-992e-7a9658cfc322",
+      "name": "Oil Changers & Car Wash",
+      "city": "San Jose",
+      "state": "CA",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "2bb3a927-fdf1-4d49-8ae2-cc8032d00286",
+      "name": "GATE Express Carwash",
+      "city": "Middleburg",
+      "state": "FL",
+      "matched": "gateexpresscarwash.com"
+    },
+    {
+      "id": "02e058d5-70e0-4ffb-94af-01d405ba4711",
+      "name": "Oil Changers + Repair",
+      "city": "Pflugerville",
+      "state": "TX",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "7e6df36e-ac0e-4cf6-9fff-52e5ebc6c8d1",
+      "name": "Brown Bear Car Wash",
+      "city": "Seattle",
+      "state": "WA",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "3e2c3ef0-6531-4dbc-b355-afc3aa66ae7c",
+      "name": "Star Wash Massillon",
+      "city": "Massillon",
+      "state": "OH",
+      "matched": "starwashmassillon.com"
+    },
+    {
+      "id": "7524e0ab-6cae-45ed-8e30-76df703afe63",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "05a681cc-164f-4e92-833f-5aafb22ee9dd",
+      "name": "Drive & Shine Car Wash and Oil Change",
+      "city": "Crown Point",
+      "state": "IN",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "c1aef093-0782-40af-992e-7a9658cfc322",
+      "name": "Oil Changers & Car Wash",
+      "city": "San Jose",
+      "state": "CA",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "2bb3a927-fdf1-4d49-8ae2-cc8032d00286",
+      "name": "GATE Express Carwash",
+      "city": "Middleburg",
+      "state": "FL",
+      "matched": "gateexpresscarwash.com"
+    },
+    {
+      "id": "02e058d5-70e0-4ffb-94af-01d405ba4711",
+      "name": "Oil Changers + Repair",
+      "city": "Pflugerville",
+      "state": "TX",
+      "matched": "oilchangers.com"
+    },
+    {
+      "id": "7e6df36e-ac0e-4cf6-9fff-52e5ebc6c8d1",
+      "name": "Brown Bear Car Wash",
+      "city": "Seattle",
+      "state": "WA",
+      "matched": "brownbear.com"
+    },
+    {
+      "id": "3e2c3ef0-6531-4dbc-b355-afc3aa66ae7c",
+      "name": "Star Wash Massillon",
+      "city": "Massillon",
+      "state": "OH",
+      "matched": "starwashmassillon.com"
+    },
+    {
+      "id": "7524e0ab-6cae-45ed-8e30-76df703afe63",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    },
+    {
+      "id": "05a681cc-164f-4e92-833f-5aafb22ee9dd",
+      "name": "Drive & Shine Car Wash and Oil Change",
+      "city": "Crown Point",
+      "state": "IN",
+      "matched": "driveandshine.com"
+    },
+    {
+      "id": "7524e0ab-6cae-45ed-8e30-76df703afe63",
+      "name": "Cobblestone Auto Spa",
+      "city": "Phoenix",
+      "state": "AZ",
+      "matched": "cobblestone.com"
+    }
+  ]
+}

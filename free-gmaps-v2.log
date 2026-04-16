@@ -1,0 +1,13 @@
+[09:09:47] ============================================================
+[09:09:47] FREE GMaps Review Mine v2 (limit=100)
+[09:09:47] ============================================================
+[09:10:04] Processing 100 car-wash/gas/convenience listings
+[09:11:21]   [20/100] {'touchless': 0, 'touchless-weak': 0, 'contradicted': 0, 'unclear': 20, 'errors': 0} promoted=0
+[09:12:25]   ✓ TOUCHLESS  LUV Car Wash — Atlanta, GA  ({'touchless': 3})
+[09:12:36]   [40/100] {'touchless': 1, 'touchless-weak': 0, 'contradicted': 0, 'unclear': 39, 'errors': 0} promoted=1
+[09:13:53]   [60/100] {'touchless': 1, 'touchless-weak': 0, 'contradicted': 0, 'unclear': 59, 'errors': 0} promoted=1
+[09:15:14]   [80/100] {'touchless': 1, 'touchless-weak': 0, 'contradicted': 0, 'unclear': 79, 'errors': 0} promoted=1
+[09:16:32]   [100/100] {'touchless': 1, 'touchless-weak': 0, 'contradicted': 0, 'unclear': 99, 'errors': 0} promoted=1
+[09:16:32] ============================================================
+[09:16:32] DONE. Promoted: 1. Stats: {'touchless': 1, 'touchless-weak': 0, 'contradicted': 0, 'unclear': 99, 'errors': 0}
+[09:16:32] ============================================================
