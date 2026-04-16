@@ -1,0 +1,18 @@
+{
+  "promoted": [
+    {
+      "id": "66fddda1-3fb2-4d3f-9a93-45ee6bac3352",
+      "name": "Car Caress",
+      "city": "Somers Point",
+      "state": "NJ",
+      "reason": "compound+auto"
+    },
+    {
+      "id": "44432863-094b-4610-90e6-7077e905bb5e",
+      "name": "Orton's Cenex International Falls",
+      "city": "International Falls",
+      "state": "MN",
+      "reason": "multiple-compound"
+    }
+  ]
+}
