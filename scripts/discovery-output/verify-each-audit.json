@@ -1,0 +1,38 @@
+{
+  "keep": 3582,
+  "uncertain": 162,
+  "reverted": 3,
+  "revertDetails": [
+    {
+      "id": "a0c33c4b-4ef3-4a18-8bfd-b92e59865cd8",
+      "name": "Go Touch Less Car Wash",
+      "city": "Jacksonville",
+      "state": "FL",
+      "reason": "reviews-say-not-touchless",
+      "excerpts": [
+        "9-16-25 if you own an expensive low vehicle, don’t take it here. It’s my own fault for not listening to my gut but my rim was scratched while on the track. Apparently there is a tool that comes out to",
+        "First actual touch-less car wash that I’ve seen in Florida (other car wash I went to advertise touchless but it’s actually isn’t touchless). Customers service is really friendly.\nTheo and James are pr"
+      ]
+    },
+    {
+      "id": "c26cd5ce-4059-493b-aa51-f633c4d4356f",
+      "name": "Laser Car Wash",
+      "city": "Stafford",
+      "state": "VA",
+      "reason": "negative-review-only-no-counter",
+      "excerpts": [
+        "Car wash is not touch free. Card reader does not work, therefore a car wash is not allowed. I would recommend going down the street to the Circle K or 610 Car Wash"
+      ]
+    },
+    {
+      "id": "843430ab-c236-4d70-87be-b1f82115073c",
+      "name": "Brushless Car Wash",
+      "city": "Rego Park",
+      "state": "NY",
+      "reason": "negative-review-only-no-counter",
+      "excerpts": [
+        "Not brushless."
+      ]
+    }
+  ]
+}

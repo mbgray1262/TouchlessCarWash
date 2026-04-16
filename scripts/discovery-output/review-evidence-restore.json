@@ -1,0 +1,845 @@
+{
+  "restored": [
+    {
+      "id": "85b901a6-8637-4cdb-8e25-f9a2bcd01de2",
+      "name": "Delta Car Wash",
+      "city": "Eugene",
+      "state": "OR",
+      "reviews": 27
+    },
+    {
+      "id": "589a97e1-b2ac-4fde-add2-27cc5174f360",
+      "name": "Splash-N-Dash",
+      "city": "Tacoma",
+      "state": "WA",
+      "reviews": 26
+    },
+    {
+      "id": "4c2f4fee-92b9-4689-a69b-762cd3119204",
+      "name": "5th Street Car Wash",
+      "city": "Niles",
+      "state": "MI",
+      "reviews": 19
+    },
+    {
+      "id": "51ef4e18-b383-4cb0-9c0c-599c75668569",
+      "name": "National Car Wash",
+      "city": "New Berlin",
+      "state": "WI",
+      "reviews": 19
+    },
+    {
+      "id": "9a2a5f76-ebfc-4020-ba66-7746579e3113",
+      "name": "Commerce Car Wash",
+      "city": "Shippensburg",
+      "state": "PA",
+      "reviews": 17
+    },
+    {
+      "id": "c4ebc7e3-5e62-449b-b0e1-b702f796beb5",
+      "name": "Scuds & Suds Car Wash",
+      "city": "El Paso",
+      "state": "TX",
+      "reviews": 16
+    },
+    {
+      "id": "ca468546-c6bd-4f93-96c8-1576725ff609",
+      "name": "The Car Wash Western Ave",
+      "city": "Moore",
+      "state": "OK",
+      "reviews": 14
+    },
+    {
+      "id": "df12815a-a04f-47ba-90bd-3768404d143f",
+      "name": "4 Clean Wheels Car Wash \"Rossville\"",
+      "city": "Rosedale",
+      "state": "MD",
+      "reviews": 14
+    },
+    {
+      "id": "012cb190-badc-4d52-9217-58313d807c6a",
+      "name": "Surfside Car Wash",
+      "city": "Fort Myers",
+      "state": "FL",
+      "reviews": 13
+    },
+    {
+      "id": "6be71930-9b93-4f2b-bf7d-a896095d3a85",
+      "name": "Quick Car Wash II",
+      "city": "Sparks",
+      "state": "NV",
+      "reviews": 13
+    },
+    {
+      "id": "ce16cefa-8b5f-4d6f-ad2a-03e128a77c8d",
+      "name": "24-7 Car Wash",
+      "city": "San Antonio",
+      "state": "TX",
+      "reviews": 13
+    },
+    {
+      "id": "4ea7b924-43c6-4786-8495-a2632d6049f2",
+      "name": "McBubbles Car Wash",
+      "city": "McKees Rocks",
+      "state": "PA",
+      "reviews": 12
+    },
+    {
+      "id": "11603533-93e1-4756-bbd8-c1c4b0873319",
+      "name": "Super Klean Car Wash",
+      "city": "Broken Arrow",
+      "state": "OK",
+      "reviews": 11
+    },
+    {
+      "id": "ccc1de2f-1987-4de7-885f-ccb1e708c5ee",
+      "name": "Wash-N-Clean Car Wash",
+      "city": "Lakewood",
+      "state": "CO",
+      "reviews": 11
+    },
+    {
+      "id": "22b79363-d0e8-4b3a-b385-e6c2df2f344b",
+      "name": "Rainbow Carwash",
+      "city": "Renton",
+      "state": "WA",
+      "reviews": 10
+    },
+    {
+      "id": "c1d56160-0fa1-4662-aa37-9d111ea8eec2",
+      "name": "Super Klean Car Wash",
+      "city": "Broken Arrow",
+      "state": "OK",
+      "reviews": 10
+    },
+    {
+      "id": "2cd4beaa-fbc8-475c-b0a3-b6bab6141f2c",
+      "name": "Rain Auto Wash",
+      "city": "Rhinelander",
+      "state": "WI",
+      "reviews": 9
+    },
+    {
+      "id": "33b79488-2e82-4c74-9a76-a7ffbb827ad3",
+      "name": "Pittsburgh Pride Car Wash",
+      "city": "Pittsburgh",
+      "state": "PA",
+      "reviews": 9
+    },
+    {
+      "id": "76f5c707-4d54-4834-a196-61479f8632f2",
+      "name": "Splash N Dash",
+      "city": "Bradenton",
+      "state": "FL",
+      "reviews": 9
+    },
+    {
+      "id": "b229df0a-713c-4827-b726-9923ee6cf1e5",
+      "name": "Executive Car Wash - Touchless",
+      "city": "Maryville",
+      "state": "IL",
+      "reviews": 9
+    },
+    {
+      "id": "d13b9217-c9f7-46eb-abcf-68d99fe5a450",
+      "name": "Speedi Car Wash",
+      "city": "Lakewood",
+      "state": "WA",
+      "reviews": 9
+    },
+    {
+      "id": "dacb8d64-8d62-4749-b0b0-695b3949d415",
+      "name": "Monster Wash",
+      "city": "Anchorage",
+      "state": "AK",
+      "reviews": 8
+    },
+    {
+      "id": "f5cf58bb-ee72-4d96-938e-df0725d7d6ed",
+      "name": "Sparkle Spot Free Car Wash",
+      "city": "Sarasota",
+      "state": "FL",
+      "reviews": 8
+    },
+    {
+      "id": "f6920e2a-2afe-43db-841c-7ac1d020bd0c",
+      "name": "Frog's Car Wash",
+      "city": "Erie",
+      "state": "PA",
+      "reviews": 8
+    },
+    {
+      "id": "58864255-e450-4e9e-9c33-3d6862d14b41",
+      "name": "Power Wash",
+      "city": "Bettendorf",
+      "state": "IA",
+      "reviews": 7
+    },
+    {
+      "id": "b42b406d-933f-4d7e-96b6-a3245b972137",
+      "name": "Auto Wash Express",
+      "city": "Tucson",
+      "state": "AZ",
+      "reviews": 7
+    },
+    {
+      "id": "e3fe702b-c9fe-43db-9581-21edb82a8e25",
+      "name": "Philthy Philz Car Wash Coronado",
+      "city": "Coronado",
+      "state": "CA",
+      "reviews": 7
+    },
+    {
+      "id": "f1311f7f-20bd-499c-9688-36a99ae6b7cc",
+      "name": "Splash-time Self Serve Car Wash Bryant",
+      "city": "Bryant",
+      "state": "AR",
+      "reviews": 7
+    },
+    {
+      "id": "6962eda8-4957-43ad-b8c8-d9be3bc8e64c",
+      "name": "Supreme Machine Express Car Wash",
+      "city": "Lockport",
+      "state": "IL",
+      "reviews": 6
+    },
+    {
+      "id": "8653b6b8-caab-4598-9258-dd781e5b694b",
+      "name": "Sparkles Car Wash",
+      "city": "Lafayette",
+      "state": "LA",
+      "reviews": 6
+    },
+    {
+      "id": "2e9dc65d-7bce-43a6-84e2-9413daf14182",
+      "name": "Belleair Car Wash",
+      "city": "Clearwater",
+      "state": "FL",
+      "reviews": 5
+    },
+    {
+      "id": "6db9850d-757b-497f-b831-385ed8a0a0ab",
+      "name": "Bubble Brush Car Wash",
+      "city": "Woodstock",
+      "state": "GA",
+      "reviews": 5
+    },
+    {
+      "id": "782cde16-5ed4-41f4-81a0-8d2cc6a42b2d",
+      "name": "Crystal Clear Car Wash",
+      "city": "Clifton",
+      "state": "CO",
+      "reviews": 5
+    },
+    {
+      "id": "787f1c4f-fa9d-4bf4-b5a1-0bd8c1f8ef53",
+      "name": "Spotfree Car Wash",
+      "city": "Des Moines",
+      "state": "IA",
+      "reviews": 5
+    },
+    {
+      "id": "79059877-354c-440e-9f9b-3f6250fdcf91",
+      "name": "Spotless Car Wash & Laundry",
+      "city": "Cincinnati",
+      "state": "OH",
+      "reviews": 5
+    },
+    {
+      "id": "84c60c91-fb19-4780-b805-e7fea06f7548",
+      "name": "Green Clean Express Auto Wash",
+      "city": "Virginia Beach",
+      "state": "VA",
+      "reviews": 5
+    },
+    {
+      "id": "b1a82be1-26ef-4f25-884f-71ad1b8fa19e",
+      "name": "Whale of A Wash",
+      "city": "Albuquerque",
+      "state": "NM",
+      "reviews": 5
+    },
+    {
+      "id": "17fba5d2-6f29-40dd-895d-d3d385b95fcb",
+      "name": "Wave Car Wash LLC",
+      "city": "Newington",
+      "state": "CT",
+      "reviews": 4
+    },
+    {
+      "id": "5e359ce5-18c4-4df0-b4a2-9d00017b046f",
+      "name": "Wash Works Car and Pet Wash",
+      "city": "Euclid",
+      "state": "OH",
+      "reviews": 4
+    },
+    {
+      "id": "6139e8bd-866a-488e-a7cb-60e1715872e8",
+      "name": "Coastal Carolina Car Wash",
+      "city": "Wilmington",
+      "state": "NC",
+      "reviews": 4
+    },
+    {
+      "id": "6b419900-7be8-4063-9ba6-0c530cd21710",
+      "name": "Hiland Car Wash",
+      "city": "Des Moines",
+      "state": "IA",
+      "reviews": 4
+    },
+    {
+      "id": "7debd92c-da0a-4e71-9f81-113b7b92d653",
+      "name": "Sweet Pea's Wash Works",
+      "city": "Pittsburgh",
+      "state": "PA",
+      "reviews": 4
+    },
+    {
+      "id": "8b9029a9-9e37-47dc-a1a8-3849b04c6e3f",
+      "name": "Oasis Car Wash",
+      "city": "Littleton",
+      "state": "CO",
+      "reviews": 4
+    },
+    {
+      "id": "9cee5443-01b4-40a6-bc63-3dc3aef094a2",
+      "name": "Sundance Auto Spa",
+      "city": "Yucaipa",
+      "state": "CA",
+      "reviews": 4
+    },
+    {
+      "id": "019cc118-d714-4737-92be-5be5e4af8f4f",
+      "name": "Spot Free Car Wash",
+      "city": "Columbus",
+      "state": "OH",
+      "reviews": 3
+    },
+    {
+      "id": "23cebc75-ac06-4997-a166-48ae60615b40",
+      "name": "Champion's AutoWash",
+      "city": "Wisconsin Rapids",
+      "state": "WI",
+      "reviews": 3
+    },
+    {
+      "id": "4f0c0a73-84d5-4409-9f00-0acddb529652",
+      "name": "Gloss Auto Wash & Detail",
+      "city": "Boulder",
+      "state": "CO",
+      "reviews": 3
+    },
+    {
+      "id": "5ea24fd0-c913-4d5e-93eb-6471f0c6f4e8",
+      "name": "Grand Junction Truck & Car Wash",
+      "city": "Grand Junction",
+      "state": "CO",
+      "reviews": 3
+    },
+    {
+      "id": "875d5e3b-2263-4215-aa03-dc50b8ea561f",
+      "name": "Big Boy's Truck Wash",
+      "city": "Rolla",
+      "state": "MO",
+      "reviews": 3
+    },
+    {
+      "id": "87743e23-1b5a-4d0f-bfa8-8a34e0175164",
+      "name": "Soaps N Suds",
+      "city": "Newport News",
+      "state": "VA",
+      "reviews": 3
+    },
+    {
+      "id": "9220e4f8-2d2f-43b9-9433-d21926dff554",
+      "name": "Sonshine Car Wash - Clarksville",
+      "city": "Clarksville",
+      "state": "TN",
+      "reviews": 3
+    },
+    {
+      "id": "bef8199d-548f-473e-b1aa-349128c8a751",
+      "name": "Westside Carwash Inc",
+      "city": "Eugene",
+      "state": "OR",
+      "reviews": 3
+    },
+    {
+      "id": "d58d0c37-4233-449c-99a6-6bd60a11d702",
+      "name": "The Carwash At Broad Street",
+      "city": "Montoursville",
+      "state": "PA",
+      "reviews": 3
+    },
+    {
+      "id": "076ccd4f-2541-4e68-9bea-e3db3752f4cc",
+      "name": "Hangry Planet",
+      "city": "San Bruno",
+      "state": "CA",
+      "reviews": 2
+    },
+    {
+      "id": "32692d54-8140-4de0-aa42-ef3d04c7adde",
+      "name": "Jurassic Car Wash - Marbach",
+      "city": "San Antonio",
+      "state": "TX",
+      "reviews": 2
+    },
+    {
+      "id": "335beb6c-ac11-418b-b13e-f2edc45a4c51",
+      "name": "Northdale",
+      "city": "Grand Forks",
+      "state": "ND",
+      "reviews": 2
+    },
+    {
+      "id": "3e1a9f90-64e4-4552-af85-df499c336f3b",
+      "name": "Joe's Car Wash & Seat Cover",
+      "city": "Wichita",
+      "state": "KS",
+      "reviews": 2
+    },
+    {
+      "id": "47ba526b-5d5e-4817-8812-3af8b9fde976",
+      "name": "Bad Buds Car Wash",
+      "city": "Fresno",
+      "state": "CA",
+      "reviews": 2
+    },
+    {
+      "id": "68d1c787-9171-430f-be30-a5032d84c35e",
+      "name": "Super Clean",
+      "city": "Orleans",
+      "state": "IN",
+      "reviews": 2
+    },
+    {
+      "id": "7650365a-31c5-4247-8e70-004c10aaf69e",
+      "name": "Flagship Carwash",
+      "city": "District Heights",
+      "state": "MD",
+      "reviews": 2
+    },
+    {
+      "id": "765c32a4-d0e3-4d32-abe7-478d7ad2ecb3",
+      "name": "Chevron, drive through car wash",
+      "city": "Pullman",
+      "state": "WA",
+      "reviews": 2
+    },
+    {
+      "id": "8cb0a402-7662-4659-ad41-8f815db6609a",
+      "name": "Champion's Auto Spa",
+      "city": "Jenks",
+      "state": "OK",
+      "reviews": 2
+    },
+    {
+      "id": "9204e0c6-9b66-4bcc-9fd9-0a5e2746c69d",
+      "name": "Holiday Stationstores",
+      "city": "Ham Lake",
+      "state": "MN",
+      "reviews": 2
+    },
+    {
+      "id": "b342cfd6-2e5a-45a8-b381-2903194ed0c3",
+      "name": "Soaps N Suds",
+      "city": "Newport News",
+      "state": "VA",
+      "reviews": 2
+    },
+    {
+      "id": "b7f23ad0-d21c-4cba-8a5c-b32c0986b4bb",
+      "name": "Oasis Car Wash",
+      "city": "Mesa",
+      "state": "AZ",
+      "reviews": 2
+    },
+    {
+      "id": "b90b3e3c-1bfa-4be9-853d-a3cdfe5de185",
+      "name": "Super Wash",
+      "city": "Napoleon",
+      "state": "OH",
+      "reviews": 2
+    },
+    {
+      "id": "c348d22e-9aff-4637-b0b3-56ff9d0c1936",
+      "name": "Spot Free Rinse Car Wash",
+      "city": "San Diego",
+      "state": "CA",
+      "reviews": 2
+    },
+    {
+      "id": "cd12955c-dd69-4527-9ebc-bf3318388fdb",
+      "name": "Jacks Car Wash",
+      "city": "Dumas",
+      "state": "TX",
+      "reviews": 2
+    },
+    {
+      "id": "d6f0c30c-de1a-4ba1-9fdf-3109930ea20f",
+      "name": "Kimo's Car Wash",
+      "city": "Reedley",
+      "state": "CA",
+      "reviews": 2
+    },
+    {
+      "id": "ddea79a6-d05a-43bf-89ed-2642116f7dcc",
+      "name": "Holiday Stationstores",
+      "city": "Waite Park",
+      "state": "MN",
+      "reviews": 2
+    },
+    {
+      "id": "dfa5b2e6-151e-4577-9b6c-7c7e5789d48a",
+      "name": "Chevron Car Wash",
+      "city": "Vancouver",
+      "state": "WA",
+      "reviews": 2
+    },
+    {
+      "id": "e46212cb-045a-4e4a-9122-7bba21a53997",
+      "name": "Smart Car Wash NMB",
+      "city": "North Miami Beach",
+      "state": "FL",
+      "reviews": 2
+    },
+    {
+      "id": "fa757511-ed0f-4dfb-9b2e-7580b8c55986",
+      "name": "Kwik Trip #971",
+      "city": "New Berlin",
+      "state": "WI",
+      "reviews": 2
+    },
+    {
+      "id": "00167b8d-e7aa-42ca-a8ec-fd3af8f36eaf",
+      "name": "Kwik Trip",
+      "city": "Ashwaubenon",
+      "state": "WI",
+      "reviews": 1
+    },
+    {
+      "id": "0047787a-d01e-4995-ba5c-90f75024d66b",
+      "name": "Circle K",
+      "city": "Duluth",
+      "state": "MN",
+      "reviews": 1
+    },
+    {
+      "id": "01ad9215-1d58-470f-8663-11153d210566",
+      "name": "Auto Splash",
+      "city": "Fair Oaks",
+      "state": "CA",
+      "reviews": 1
+    },
+    {
+      "id": "03810a6b-4105-4a9c-8159-a23fcc0e0038",
+      "name": "Crystal Clean Car Wash",
+      "city": "Louisville",
+      "state": "KY",
+      "reviews": 1
+    },
+    {
+      "id": "102fbaad-e887-423f-bdb0-883f99c33793",
+      "name": "Bethel Road Car Wash",
+      "city": "Columbus",
+      "state": "OH",
+      "reviews": 1
+    },
+    {
+      "id": "19a13427-0f46-4d48-983e-a6bad7c6f01e",
+      "name": "VIP Carwash",
+      "city": "North Salt Lake",
+      "state": "UT",
+      "reviews": 1
+    },
+    {
+      "id": "19bc6baa-4f89-4439-94d6-a4c52e4a9dcc",
+      "name": "Asmus Touchless/Self-serve Carwash",
+      "city": "Torrington",
+      "state": "WY",
+      "reviews": 1
+    },
+    {
+      "id": "1bd64431-0f4d-48fc-93e1-cb42d422bdd5",
+      "name": "Kwik Trip",
+      "city": "Baraboo",
+      "state": "WI",
+      "reviews": 1
+    },
+    {
+      "id": "241611c2-66d5-4d82-8448-995533c18990",
+      "name": "Kwik Trip",
+      "city": "Neenah",
+      "state": "WI",
+      "reviews": 1
+    },
+    {
+      "id": "2bc25cda-4ac4-4d75-8f9e-d064168393a9",
+      "name": "Circle K",
+      "city": "Rochester",
+      "state": "MN",
+      "reviews": 1
+    },
+    {
+      "id": "308a22a3-366d-4f50-901b-cf821905cf82",
+      "name": "Holiday Stationstores",
+      "city": "Roseville",
+      "state": "MN",
+      "reviews": 1
+    },
+    {
+      "id": "3716335c-77ad-4545-9b2b-218ac4682116",
+      "name": "Circle K",
+      "city": "Duluth",
+      "state": "MN",
+      "reviews": 1
+    },
+    {
+      "id": "3f03a56c-fb5d-48fc-9840-c5f22ff1f74a",
+      "name": "Soft Touch Auto Wash",
+      "city": "Chicopee",
+      "state": "MA",
+      "reviews": 1
+    },
+    {
+      "id": "44afd16f-fd1f-40c2-8e91-b23d3b0dfeb6",
+      "name": "Stierlin Auto Wash",
+      "city": "Mountain View",
+      "state": "CA",
+      "reviews": 1
+    },
+    {
+      "id": "49033849-cc86-4ba3-bcc9-018b394a0556",
+      "name": "Kwik Trip",
+      "city": "Eau Claire",
+      "state": "WI",
+      "reviews": 1
+    },
+    {
+      "id": "4d7e0fa0-a147-493f-a0ed-022826ecc6b9",
+      "name": "Best Car Wash",
+      "city": "Catonsville",
+      "state": "MD",
+      "reviews": 1
+    },
+    {
+      "id": "4e46c4f6-4020-44ea-b06f-6ee81cbeb09a",
+      "name": "Holiday Stationstores",
+      "city": "Victoria",
+      "state": "MN",
+      "reviews": 1
+    },
+    {
+      "id": "56299d44-cb74-4a47-95c4-f2612c94e0ed",
+      "name": "Liberty Auto Spa",
+      "city": "Jacksonville",
+      "state": "NC",
+      "reviews": 1
+    },
+    {
+      "id": "563faf21-d42c-4cef-acd6-21432b3098bb",
+      "name": "Lilac Car Wash",
+      "city": "Rochester",
+      "state": "NH",
+      "reviews": 1
+    },
+    {
+      "id": "5e6f802c-8df9-46b2-b16d-faae0a5f43e4",
+      "name": "Kwik Trip",
+      "city": "Crivitz",
+      "state": "WI",
+      "reviews": 1
+    },
+    {
+      "id": "609121fb-ef08-4a83-9451-5d1915ece2bb",
+      "name": "Sam's Car Wash",
+      "city": "Temple Hills",
+      "state": "MD",
+      "reviews": 1
+    },
+    {
+      "id": "62e73663-4dbd-4666-858c-d0f7553958f4",
+      "name": "Kwik Trip",
+      "city": "Madison",
+      "state": "WI",
+      "reviews": 1
+    },
+    {
+      "id": "658393ae-7f44-4d2d-b911-85a988d83f7b",
+      "name": "Circle K",
+      "city": "Eau Claire",
+      "state": "WI",
+      "reviews": 1
+    },
+    {
+      "id": "68baaac1-39bd-4a5c-af03-88fb1f9239a3",
+      "name": "Car Wash Palace",
+      "city": "Seattle",
+      "state": "WA",
+      "reviews": 1
+    },
+    {
+      "id": "81581d30-7dc6-42b7-a82a-8b45e7394227",
+      "name": "Chevron Car Wash",
+      "city": "Salt Lake City",
+      "state": "UT",
+      "reviews": 1
+    },
+    {
+      "id": "81ff2b83-4b00-48d9-9a49-1dc7b23adc8f",
+      "name": "Holiday Stationstores",
+      "city": "New Ulm",
+      "state": "MN",
+      "reviews": 1
+    },
+    {
+      "id": "93b703f4-aa1f-4ab6-a2ae-63c0dd0d51d4",
+      "name": "Take 5 Car Wash",
+      "city": "McKinney",
+      "state": "TX",
+      "reviews": 1
+    },
+    {
+      "id": "944acbf2-c596-4ec2-a067-fe68ca679fee",
+      "name": "Delta Sonic Car Wash",
+      "city": "Syracuse",
+      "state": "NY",
+      "reviews": 1
+    },
+    {
+      "id": "a87893a9-a32d-44a5-83ad-e16a12cab98a",
+      "name": "PureMagic Car Wash",
+      "city": "Knoxville",
+      "state": "TN",
+      "reviews": 1
+    },
+    {
+      "id": "aa243a0f-f327-421e-bae9-636dee413f42",
+      "name": "Shield System Self Service Car Wash",
+      "city": "Billerica",
+      "state": "MA",
+      "reviews": 1
+    },
+    {
+      "id": "aaecc6d9-5894-46d2-b0c4-5ed00fd319c8",
+      "name": "Coyote Carwash",
+      "city": "Boulder",
+      "state": "CO",
+      "reviews": 1
+    },
+    {
+      "id": "b0620ad3-ddc6-4bc5-991c-532e4ab30a9c",
+      "name": "Take 5 Car Wash",
+      "city": "Hot Springs",
+      "state": "AR",
+      "reviews": 1
+    },
+    {
+      "id": "b086a9f1-bd98-48a7-97f7-0fdb06e20158",
+      "name": "Baywash Auto Wash",
+      "city": "Jerseyville",
+      "state": "IL",
+      "reviews": 1
+    },
+    {
+      "id": "c985b25c-def7-44ee-8798-1d0a42ace2b3",
+      "name": "Kwik Trip",
+      "city": "Monroe",
+      "state": "WI",
+      "reviews": 1
+    },
+    {
+      "id": "d3f6dad6-097e-4bf0-9555-51c741840daf",
+      "name": "Holiday Stationstores",
+      "city": "Eagan",
+      "state": "MN",
+      "reviews": 1
+    },
+    {
+      "id": "daa3fefb-0967-4bfa-834b-c226ab280d12",
+      "name": "Holiday Stationstores",
+      "city": "Big Lake",
+      "state": "MN",
+      "reviews": 1
+    },
+    {
+      "id": "e6f4cff0-9fac-49ae-a1c7-2d02f512532c",
+      "name": "Kwik Trip",
+      "city": "Franklin",
+      "state": "WI",
+      "reviews": 1
+    },
+    {
+      "id": "ef0b0e0f-77ff-4414-8f68-acab8e3c9107",
+      "name": "Zion Car Wash",
+      "city": "Tucson",
+      "state": "AZ",
+      "reviews": 1
+    },
+    {
+      "id": "ef4deee1-b3a5-41c9-8970-4c8a326c9332",
+      "name": "Holiday Stationstores",
+      "city": "Blaine",
+      "state": "MN",
+      "reviews": 1
+    }
+  ],
+  "skipped": [
+    {
+      "id": "012fb369-a1df-4555-a8e5-b0e12296c0a2",
+      "name": "Cowell's Cleaners &Laundromat & Car Wash",
+      "city": "Newport",
+      "state": "NC",
+      "parent_chain": null,
+      "google_subtypes": "Car wash, Laundromat, Self service car wash",
+      "classification_source": "reverted_apr15_google_subtype_selfservice",
+      "is_touchless": false,
+      "reason": "google-self-service"
+    },
+    {
+      "id": "13d6bdf7-2eef-4201-874f-b0953c9a1c42",
+      "name": "The Wash",
+      "city": "Baird",
+      "state": "TX",
+      "parent_chain": null,
+      "google_subtypes": "Laundromat, Car wash, Laundry service, Self service car wash",
+      "classification_source": "reverted_apr15_google_subtype_selfservice",
+      "is_touchless": false,
+      "reason": "google-self-service"
+    },
+    {
+      "id": "1d3840ac-53f9-4168-89a3-ed10ebfca099",
+      "name": "The Wash Barn Car/RV Wash",
+      "city": "Mandan",
+      "state": "ND",
+      "parent_chain": null,
+      "google_subtypes": "Self service car wash",
+      "classification_source": "reverted_apr15_google_subtype_selfservice",
+      "is_touchless": false,
+      "reason": "google-self-service"
+    },
+    {
+      "id": "37f79836-bc5c-4cde-93a1-7a14611ade2d",
+      "name": "Wash Works",
+      "city": "Clinton",
+      "state": "MA",
+      "parent_chain": null,
+      "google_subtypes": "Car wash, Self service car wash",
+      "classification_source": "reverted_apr15_google_subtype_selfservice",
+      "is_touchless": false,
+      "reason": "google-self-service"
+    },
+    {
+      "id": "d321ed2e-e180-46a1-8461-df5585e5910e",
+      "name": "Chevron Carwash",
+      "city": "Walnut",
+      "state": "CA",
+      "parent_chain": null,
+      "google_subtypes": "Self service car wash",
+      "classification_source": "reverted_apr15_google_subtype_selfservice",
+      "is_touchless": false,
+      "reason": "google-self-service"
+    }
+  ]
+}
