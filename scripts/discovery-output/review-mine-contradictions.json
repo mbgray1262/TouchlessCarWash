@@ -1,0 +1,89 @@
+{
+  "timestamp": "2026-04-17T12:21:32.007317",
+  "contradictions": [
+    {
+      "id": "c8308c9b-9137-45e3-b165-3a9767379739",
+      "name": "Midtown Touchless Car Wash",
+      "city": "Wagner",
+      "state": "SD",
+      "parent_chain": null,
+      "aggregates": {
+        "self_serve": 5
+      },
+      "neg_sentences": 0,
+      "pos_sentences": 0
+    },
+    {
+      "id": "8f225650-61e6-467e-9a48-36aca272f8ce",
+      "name": "Cobblestone Auto Spa",
+      "city": "Tempe",
+      "state": "AZ",
+      "parent_chain": null,
+      "aggregates": {
+        "hand_wash": 8
+      },
+      "neg_sentences": 0,
+      "pos_sentences": 0
+    },
+    {
+      "id": "a279a062-7f3a-4adb-a4ef-d8da84efb829",
+      "name": "Cielo Car Wash",
+      "city": "Rogers",
+      "state": "MN",
+      "parent_chain": null,
+      "aggregates": {
+        "hand_wash": 20
+      },
+      "neg_sentences": 0,
+      "pos_sentences": 0
+    },
+    {
+      "id": "05ec87f7-c43a-4116-878d-f0bf4d6f357d",
+      "name": "Touch Free Wash",
+      "city": "San Bruno",
+      "state": "CA",
+      "parent_chain": null,
+      "aggregates": {
+        "hand_wash": 2
+      },
+      "neg_sentences": 0,
+      "pos_sentences": 0
+    },
+    {
+      "id": "990a5032-597e-4a48-a29f-f7de2cf88474",
+      "name": "Ford Programming Phoenix",
+      "city": "Phoenix",
+      "state": "AZ",
+      "parent_chain": "Clean Freak Car Wash",
+      "aggregates": {
+        "tunnel": 3
+      },
+      "neg_sentences": 0,
+      "pos_sentences": 0
+    },
+    {
+      "id": "7a4eb72e-d6cf-46c7-b1b0-f7ce01646c66",
+      "name": "Greenhill Car Wash",
+      "city": "Middletown",
+      "state": "DE",
+      "parent_chain": null,
+      "aggregates": {
+        "hand_wash": 3
+      },
+      "neg_sentences": 0,
+      "pos_sentences": 0
+    },
+    {
+      "id": "428ce114-0cb9-456c-ad31-f5ff17d756c5",
+      "name": "PrimeWash Express",
+      "city": "Upland",
+      "state": "CA",
+      "parent_chain": null,
+      "aggregates": {
+        "tunnel": 15
+      },
+      "neg_sentences": 0,
+      "pos_sentences": 0
+    }
+  ]
+}
