@@ -1,0 +1,142 @@
+[
+  {
+    "url": "https://www.scrubadub.com/locations/biddeford-me-elm-st-biddeford/",
+    "city": "Biddeford",
+    "state": "ME",
+    "streetHint": "elm st",
+    "key": "elm"
+  },
+  {
+    "url": "https://www.scrubadub.com/locations/brighton-ma-faneuil-st-boston/",
+    "city": "Brighton",
+    "state": "MA",
+    "streetHint": "faneuil st",
+    "key": "faneuil"
+  },
+  {
+    "url": "https://www.scrubadub.com/locations/brookline-ma-harvard-st-brookline/",
+    "city": "Brookline",
+    "state": "MA",
+    "streetHint": "harvard st",
+    "key": "harvard"
+  },
+  {
+    "url": "https://www.scrubadub.com/locations/chelsea-ma-eastern-ave-chelsea/",
+    "city": "Chelsea",
+    "state": "MA",
+    "streetHint": "eastern ave",
+    "key": "eastern"
+  },
+  {
+    "url": "https://www.scrubadub.com/locations/dorchester-ma-w-howell-st-dorchester/",
+    "city": "Dorchester",
+    "state": "MA",
+    "streetHint": "w howell st",
+    "key": "howell"
+  },
+  {
+    "url": "https://www.scrubadub.com/locations/framingham-ma-worcester-rd-framingham/",
+    "city": "Framingham",
+    "state": "MA",
+    "streetHint": "worcester rd",
+    "key": "worcester"
+  },
+  {
+    "url": "https://www.scrubadub.com/locations/marlborough-ma-maple-st-marlboro/",
+    "city": "Marlborough",
+    "state": "MA",
+    "streetHint": "maple st",
+    "key": "maple"
+  },
+  {
+    "url": "https://www.scrubadub.com/locations/natick-ma-worcester-st-natick/",
+    "city": "Natick",
+    "state": "MA",
+    "streetHint": "worcester st",
+    "key": "worcester"
+  },
+  {
+    "url": "https://www.scrubadub.com/locations/portland-me-forest-ave-portland/",
+    "city": "Portland",
+    "state": "ME",
+    "streetHint": "forest ave",
+    "key": "forest"
+  },
+  {
+    "url": "https://www.scrubadub.com/locations/quincy-ma-coddington-st-quincy/",
+    "city": "Quincy",
+    "state": "MA",
+    "streetHint": "coddington st",
+    "key": "coddington"
+  },
+  {
+    "url": "https://www.scrubadub.com/locations/roslindale-ma-american-legion-highway-boston/",
+    "city": "Roslindale",
+    "state": "MA",
+    "streetHint": "american legion highway",
+    "key": "american"
+  },
+  {
+    "url": "https://www.scrubadub.com/locations/salem-nh-n-broadway-salem/",
+    "city": "Salem",
+    "state": "NH",
+    "streetHint": "n broadway",
+    "key": "broadway"
+  },
+  {
+    "url": "https://www.scrubadub.com/locations/shrewsbury-ma-boston-turnpike-shrewsbury/",
+    "city": "Shrewsbury",
+    "state": "MA",
+    "streetHint": "boston turnpike",
+    "key": "boston"
+  },
+  {
+    "url": "https://www.scrubadub.com/locations/south-portland-me-gorham-rd-south-portland/",
+    "city": "South Portland",
+    "state": "ME",
+    "streetHint": "gorham rd",
+    "key": "gorham"
+  },
+  {
+    "url": "https://www.scrubadub.com/locations/warwick-ri-bald-hill-road-warwick/",
+    "city": "Warwick",
+    "state": "RI",
+    "streetHint": "bald hill road",
+    "key": "bald"
+  },
+  {
+    "url": "https://www.scrubadub.com/locations/woburn-ma-mishawum-rd-woburn/",
+    "city": "Woburn",
+    "state": "MA",
+    "streetHint": "mishawum rd",
+    "key": "mishawum"
+  },
+  {
+    "url": "https://www.scrubadub.com/locations/worcester-ma-grafton-st-worcester/",
+    "city": "Worcester",
+    "state": "MA",
+    "streetHint": "grafton st",
+    "key": "grafton"
+  },
+  {
+    "url": "https://www.scrubadub.com/locations/worcester-ma-jennings-st-worcester/",
+    "city": "Worcester",
+    "state": "MA",
+    "streetHint": "jennings st",
+    "key": "jennings"
+  },
+  {
+    "url": "https://www.scrubadub.com/locations/worcester-ma-park-ave-worcester/",
+    "city": "Worcester",
+    "state": "MA",
+    "streetHint": "park ave",
+    "key": "park"
+  },
+  {
+    "url": "https://www.scrubadub.com/locations/worcester-ma-shrewsbury-st-worcester/",
+    "city": "Worcester",
+    "state": "MA",
+    "streetHint": "shrewsbury st",
+    "key": "shrewsbury"
+  }
+]

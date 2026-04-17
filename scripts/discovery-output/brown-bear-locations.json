@@ -1,0 +1,362 @@
+[
+  {
+    "street": "1800 15th Ave",
+    "city": "Seattle",
+    "state": "WA",
+    "zip": "98119",
+    "url": "https://brownbear.com/wash/15th/",
+    "num": "1800",
+    "key": "15th"
+  },
+  {
+    "street": "5950 6th Ave",
+    "city": "Tacoma",
+    "state": "WA",
+    "zip": "98406",
+    "url": "https://brownbear.com/wash/6th-ave/",
+    "num": "5950",
+    "key": "6th"
+  },
+  {
+    "street": "2 \n3920 Auburn Way",
+    "city": "Auburn",
+    "state": "WA",
+    "zip": "98002",
+    "url": "https://brownbear.com/wash/auburn-self-serve/",
+    "num": "2",
+    "key": "3920"
+  },
+  {
+    "street": "814 Auburn Way",
+    "city": "Auburn",
+    "state": "WA",
+    "zip": "98002",
+    "url": "https://brownbear.com/wash/auburn/",
+    "num": "814",
+    "key": "auburn"
+  },
+  {
+    "street": "16048 Aurora Ave",
+    "city": "Shoreline",
+    "state": "WA",
+    "zip": "98133",
+    "url": "https://brownbear.com/wash/aurora-ss/",
+    "num": "16048",
+    "key": "aurora"
+  },
+  {
+    "street": "16032 Aurora Ave",
+    "city": "Shoreline",
+    "state": "WA",
+    "zip": "98133",
+    "url": "https://brownbear.com/wash/aurora/",
+    "num": "16032",
+    "key": "aurora"
+  },
+  {
+    "street": "8296 Avondale Way",
+    "city": "Redmond",
+    "state": "WA",
+    "zip": "98052",
+    "url": "https://brownbear.com/wash/avondale/",
+    "num": "8296",
+    "key": "avondale"
+  },
+  {
+    "street": "406 High School Road",
+    "city": "Bainbridge Is.",
+    "state": "WA",
+    "zip": "98110",
+    "url": "https://brownbear.com/wash/bainbridge-island/",
+    "num": "406",
+    "key": "high"
+  },
+  {
+    "street": "5111 15th Ave",
+    "city": "Seattle",
+    "state": "WA",
+    "zip": "98107",
+    "url": "https://brownbear.com/wash/ballard/",
+    "num": "5111",
+    "key": "15th"
+  },
+  {
+    "street": "14801 NE 8th St",
+    "city": "Bellevue",
+    "state": "WA",
+    "zip": "98007",
+    "url": "https://brownbear.com/wash/bellevue/",
+    "num": "14801",
+    "key": "ne"
+  },
+  {
+    "street": "2400 1st St",
+    "city": "Cheney",
+    "state": "WA",
+    "zip": "99004",
+    "url": "https://brownbear.com/wash/cheney/",
+    "num": "2400",
+    "key": "1st"
+  },
+  {
+    "street": "22706 Marine View Dr",
+    "city": "Des Moines",
+    "state": "WA",
+    "zip": "98198",
+    "url": "https://brownbear.com/wash/des-moines/",
+    "num": "22706",
+    "key": "marine"
+  },
+  {
+    "street": "1500 NE Fairgrounds Rd",
+    "city": "Bremerton",
+    "state": "WA",
+    "zip": "98311",
+    "url": "https://brownbear.com/wash/e-bremerton-2/",
+    "num": "1500",
+    "key": "ne"
+  },
+  {
+    "street": "1145 Roosevelt Ave",
+    "city": "Enumclaw",
+    "state": "WA",
+    "zip": "98022",
+    "url": "https://brownbear.com/wash/enumclaw/",
+    "num": "1145",
+    "key": "roosevelt"
+  },
+  {
+    "street": "3724 Factoria Blvd",
+    "city": "Bellevue",
+    "state": "WA",
+    "zip": "98006",
+    "url": "https://brownbear.com/wash/factoria/",
+    "num": "3724",
+    "key": "factoria"
+  },
+  {
+    "street": "55 NW Gilman Blvd",
+    "city": "Issaquah",
+    "state": "WA",
+    "zip": "98027",
+    "url": "https://brownbear.com/wash/gilman/",
+    "num": "55",
+    "key": "nw"
+  },
+  {
+    "street": "800 S Grady Way",
+    "city": "Renton",
+    "state": "WA",
+    "zip": "98057",
+    "url": "https://brownbear.com/wash/grady-way/",
+    "num": "800",
+    "key": "grady"
+  },
+  {
+    "street": "22121 SE 56th St",
+    "city": "Issaquah",
+    "state": "WA",
+    "zip": "98027",
+    "url": "https://brownbear.com/wash/issaquah/",
+    "num": "22121",
+    "key": "se"
+  },
+  {
+    "street": "1202 W. Meeker St",
+    "city": "Kent",
+    "state": "WA",
+    "zip": "98032",
+    "url": "https://brownbear.com/wash/kent/",
+    "num": "1202",
+    "key": "meeker"
+  },
+  {
+    "street": "14400 124th Ave",
+    "city": "Kirkland",
+    "state": "WA",
+    "zip": "98034",
+    "url": "https://brownbear.com/wash/kingsgate/",
+    "num": "14400",
+    "key": "124th"
+  },
+  {
+    "street": "601 7th Ave",
+    "city": "Kirkland",
+    "state": "WA",
+    "zip": "98033",
+    "url": "https://brownbear.com/wash/kirkland-ss/",
+    "num": "601",
+    "key": "7th"
+  },
+  {
+    "street": "14312 Lake City Way",
+    "city": "Seattle",
+    "state": "WA",
+    "zip": "98125",
+    "url": "https://brownbear.com/wash/lake-city/",
+    "num": "14312",
+    "key": "lake"
+  },
+  {
+    "street": "10913 Bridgeport Way",
+    "city": "Lakewood",
+    "state": "WA",
+    "zip": "98499",
+    "url": "https://brownbear.com/wash/lakewood/",
+    "num": "10913",
+    "key": "bridgeport"
+  },
+  {
+    "street": "3977 Leary Way",
+    "city": "Seattle",
+    "state": "WA",
+    "zip": "98107",
+    "url": "https://brownbear.com/wash/leary-way-ss/",
+    "num": "3977",
+    "key": "leary"
+  },
+  {
+    "street": "202 164th St",
+    "city": "Lynnwood",
+    "state": "WA",
+    "zip": "98037",
+    "url": "https://brownbear.com/wash/lynnwood-martha-lake/",
+    "num": "202",
+    "key": "164th"
+  },
+  {
+    "street": "12506 15th Ave",
+    "city": "Seattle",
+    "state": "WA",
+    "zip": "98125",
+    "url": "https://brownbear.com/wash/ne-125th-ss/",
+    "num": "12506",
+    "key": "15th"
+  },
+  {
+    "street": "34007 Hoyt Rd",
+    "city": "Federal Way",
+    "state": "WA",
+    "zip": "98023",
+    "url": "https://brownbear.com/wash/northshore/",
+    "num": "34007",
+    "key": "hoyt"
+  },
+  {
+    "street": "13204 Pacific Ave",
+    "city": "Parkland",
+    "state": "WA",
+    "zip": "98444",
+    "url": "https://brownbear.com/wash/parkland/",
+    "num": "13204",
+    "key": "pacific"
+  },
+  {
+    "street": "19774 7th Ave",
+    "city": "Poulsbo",
+    "state": "WA",
+    "zip": "98370",
+    "url": "https://brownbear.com/wash/poulsbo-7th-ave/",
+    "num": "19774",
+    "key": "7th"
+  },
+  {
+    "street": "18764 State Hwy",
+    "city": "Poulsbo",
+    "state": "WA",
+    "zip": "98370",
+    "url": "https://brownbear.com/wash/poulsbo/",
+    "num": "18764",
+    "key": "state"
+  },
+  {
+    "street": "17809 Redmond Way",
+    "city": "Redmond",
+    "state": "WA",
+    "zip": "98052",
+    "url": "https://brownbear.com/wash/redmond/",
+    "num": "17809",
+    "key": "redmond"
+  },
+  {
+    "street": "1 \n621 Rainier Ave",
+    "city": "Renton",
+    "state": "WA",
+    "zip": "98057",
+    "url": "https://brownbear.com/wash/renton-1/",
+    "num": "1",
+    "key": "621"
+  },
+  {
+    "street": "2 \n77 Rainier Ave",
+    "city": "Renton",
+    "state": "WA",
+    "zip": "98057",
+    "url": "https://brownbear.com/wash/renton-2/",
+    "num": "2",
+    "key": "77"
+  },
+  {
+    "street": "3050 228th Ave",
+    "city": "Sammamish",
+    "state": "WA",
+    "zip": "98075",
+    "url": "https://brownbear.com/wash/sammamish/",
+    "num": "3050",
+    "key": "228th"
+  },
+  {
+    "street": "3082 NW Bucklin Hill Road",
+    "city": "Silverdale",
+    "state": "WA",
+    "zip": "98383",
+    "url": "https://brownbear.com/wash/silverdale/",
+    "num": "3082",
+    "key": "nw"
+  },
+  {
+    "street": "8915 Soper Hill Rd",
+    "city": "Marysville",
+    "state": "WA",
+    "zip": "98270",
+    "url": "https://brownbear.com/wash/soper-hill-ss/",
+    "num": "8915",
+    "key": "soper"
+  },
+  {
+    "street": "8907 Soper Hill Rd",
+    "city": "Marysville",
+    "state": "WA",
+    "zip": "98270",
+    "url": "https://brownbear.com/wash/soper-hill/",
+    "num": "8907",
+    "key": "soper"
+  },
+  {
+    "street": "5625 North Market Street",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99208",
+    "url": "https://brownbear.com/wash/spokane-market-st/",
+    "num": "5625",
+    "key": "north"
+  },
+  {
+    "street": "1226 South Pines Road",
+    "city": "Spokane Valley",
+    "state": "WA",
+    "zip": "99206",
+    "url": "https://brownbear.com/wash/spokane-pines-rd/",
+    "num": "1226",
+    "key": "south"
+  },
+  {
+    "street": "1821 West Sunset Blvd",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99204",
+    "url": "https://brownbear.com/wash/spokane-sunset-blvd/",
+    "num": "1821",
+    "key": "west"
+  }
+]

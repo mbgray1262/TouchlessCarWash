@@ -1,0 +1,146 @@
+[
+  {
+    "street": "121 E Van Buren St",
+    "city": "Avondale",
+    "state": "AZ",
+    "zip": "85323",
+    "url": "https://www.elephantcarwash.com/our-arizona-wash-locations",
+    "num": "121",
+    "key": "van"
+  },
+  {
+    "street": "10380 N 59th Ave",
+    "city": "Glendale",
+    "state": "AZ",
+    "zip": "85302",
+    "url": "https://www.elephantcarwash.com/our-arizona-wash-locations",
+    "num": "10380",
+    "key": "59th"
+  },
+  {
+    "street": "13620 N 67th Ave",
+    "city": "Peoria",
+    "state": "AZ",
+    "zip": "85383",
+    "url": "https://www.elephantcarwash.com/our-arizona-wash-locations",
+    "num": "13620",
+    "key": "67th"
+  },
+  {
+    "street": "7420 W Peoria Ave",
+    "city": "Peoria",
+    "state": "AZ",
+    "zip": "85345",
+    "url": "https://www.elephantcarwash.com/our-arizona-wash-locations",
+    "num": "7420",
+    "key": "peoria"
+  },
+  {
+    "street": "13820 N 40th St",
+    "city": "Phoenix",
+    "state": "AZ",
+    "zip": "85032",
+    "url": "https://www.elephantcarwash.com/our-arizona-wash-locations",
+    "num": "13820",
+    "key": "40th"
+  },
+  {
+    "street": "802 A Street",
+    "city": "Auburn",
+    "state": "WA",
+    "zip": "98002",
+    "url": "https://www.elephantcarwash.com/our-washington-wash-locations",
+    "num": "802",
+    "key": "a"
+  },
+  {
+    "street": "4300 A Street",
+    "city": "Auburn",
+    "state": "WA",
+    "zip": "98002",
+    "url": "https://www.elephantcarwash.com/our-washington-wash-locations",
+    "num": "4300",
+    "key": "a"
+  },
+  {
+    "street": "13855 First Ave",
+    "city": "Seattle",
+    "state": "WA",
+    "zip": "98168",
+    "url": "https://www.elephantcarwash.com/our-washington-wash-locations",
+    "num": "13855",
+    "key": "first"
+  },
+  {
+    "street": "27240 168th Pl",
+    "city": "Covington",
+    "state": "WA",
+    "zip": "98042",
+    "url": "https://www.elephantcarwash.com/our-washington-wash-locations",
+    "num": "27240",
+    "key": "168th"
+  },
+  {
+    "street": "31458 Pacific Hwy",
+    "city": "Federal Way",
+    "state": "WA",
+    "zip": "98003",
+    "url": "https://www.elephantcarwash.com/our-washington-wash-locations",
+    "num": "31458",
+    "key": "pacific"
+  },
+  {
+    "street": "3175 56th St",
+    "city": "Gig Harbor",
+    "state": "WA",
+    "zip": "98335",
+    "url": "https://www.elephantcarwash.com/our-washington-wash-locations",
+    "num": "3175",
+    "key": "56th"
+  },
+  {
+    "street": "412 Keene Rd",
+    "city": "Richland",
+    "state": "WA",
+    "zip": "99352",
+    "url": "https://www.elephantcarwash.com/our-washington-wash-locations",
+    "num": "412",
+    "key": "keene"
+  },
+  {
+    "street": "9105 Martin Way",
+    "city": "Olympia",
+    "state": "WA",
+    "zip": "98516",
+    "url": "https://www.elephantcarwash.com/our-washington-wash-locations",
+    "num": "9105",
+    "key": "martin"
+  },
+  {
+    "street": "406 Ellingson Rd",
+    "city": "Pacific",
+    "state": "WA",
+    "zip": "98047",
+    "url": "https://www.elephantcarwash.com/our-washington-wash-locations",
+    "num": "406",
+    "key": "ellingson"
+  },
+  {
+    "street": "715 39th Ave",
+    "city": "Puyallup",
+    "state": "WA",
+    "zip": "98373",
+    "url": "https://www.elephantcarwash.com/our-washington-wash-locations",
+    "num": "715",
+    "key": "39th"
+  },
+  {
+    "street": "15525 Main Street",
+    "city": "Sumner",
+    "state": "WA",
+    "zip": "98390",
+    "url": "https://www.elephantcarwash.com/our-washington-wash-locations",
+    "num": "15525",
+    "key": "main"
+  }
+]

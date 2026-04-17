@@ -40,6 +40,26 @@ const CHAIN_DATA = {
     source_url: 'https://cobblestone.com/locations/',
     locations: loadLocationsFromJson('scripts/discovery-output/cobblestone-locations.json'),
   },
+  'brown-bear': {
+    name: "Brown Bear",
+    name_pattern: /^brown\s+bear\b/i,
+    source_url: 'https://brownbear.com/',
+    locations: loadLocationsFromJson('scripts/discovery-output/brown-bear-locations.json'),
+  },
+  elephant: {
+    name: "Elephant Car Wash",
+    name_pattern: /^elephant\s+car\s+wash\b/i,
+    source_url: 'https://elephantcarwash.com/',
+    locations: loadLocationsFromJson('scripts/discovery-output/elephant-locations.json'),
+  },
+  scrubadub: {
+    name: "ScrubaDub",
+    // Match both "ScrubaDub" and "Scruba Dub" variants
+    name_pattern: /^scrub[a\s]*dub/i,
+    source_url: 'https://www.scrubadub.com/',
+    // Derived from URL slugs — num is empty, matcher falls back to city+state+key
+    locations: loadLocationsFromJson('scripts/discovery-output/scrubadub-locations.json'),
+  },
   autowash: {
     name: "Autowash",
     // Strict pattern: must start with "Autowash" (not just contain) OR contain "Autowash @"
@@ -76,13 +96,18 @@ if (!chainInfo) {
 console.log(`=== Reconciling ${chainInfo.name} ===`);
 console.log(`Authoritative: ${chainInfo.locations.length} locations from ${chainInfo.source_url}\n`);
 
-// Match: state === AND city contains city AND address contains both num and key
+// Match: state AND city-first-word contained AND address contains num (if given)
+// AND address contains key.
+// If num is empty (e.g. URL-slug-derived where we don't have the number),
+// match on city + state + key only.
 function matchAuth(listing, auth) {
   if (listing.state !== auth.state) return false;
   const c = (listing.city || '').toLowerCase();
   if (!c.includes(auth.city.toLowerCase().split(' ')[0])) return false;
   const addr = (listing.address || '').toLowerCase();
-  return addr.includes(auth.num) && addr.includes(auth.key.toLowerCase());
+  const numOK = !auth.num || addr.includes(auth.num);
+  const keyOK = !auth.key || addr.includes(auth.key.toLowerCase());
+  return numOK && keyOK;
 }
 
 // Pull listings likely owned by this chain. Strict matching — we require:
