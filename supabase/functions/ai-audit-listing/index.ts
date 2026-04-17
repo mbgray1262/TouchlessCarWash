@@ -181,7 +181,10 @@ async function analyzeListing(listing: Listing, snippets: ReviewSnippet[], apiKe
   const parts: Array<unknown> = [{ text: prompt }, ...imageParts];
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+    // Upgraded from gemini-2.5-flash to gemini-2.5-pro (2026-04-17) — Flash was
+    // missing attendant-contact, mitter curtains, and low-res composition issues.
+    // Pro catches those reliably. Cost ~5-10x higher but still pennies per listing.
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
