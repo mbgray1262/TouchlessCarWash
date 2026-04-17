@@ -43,6 +43,9 @@ interface ListingData {
   touchless_verified: string | null;
   touchless_evidence: string | null;
   parent_chain: string | null;
+  is_approved: boolean | null;
+  is_touchless: boolean | null;
+  crawl_notes: string | null;
 }
 
 interface SourceCounts {
@@ -74,7 +77,7 @@ export function useFastCuration(listingId: string) {
   const loadListing = useCallback(async () => {
     const { data } = await supabase
       .from('listings')
-      .select('id, name, city, state, slug, latitude, longitude, google_place_id, website, hero_image, hero_image_source, photos, street_view_url, google_photo_url, blocked_photos, equipment_brand, equipment_model, touchless_verified, touchless_evidence, parent_chain')
+      .select('id, name, city, state, slug, latitude, longitude, google_place_id, website, hero_image, hero_image_source, photos, street_view_url, google_photo_url, blocked_photos, equipment_brand, equipment_model, touchless_verified, touchless_evidence, parent_chain, is_approved, is_touchless, crawl_notes')
       .eq('id', listingId)
       .maybeSingle();
     if (data) {
