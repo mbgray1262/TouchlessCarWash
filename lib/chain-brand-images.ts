@@ -106,12 +106,10 @@ export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/f84d785d-9b54-49f2-9aed-04ae0393ea32/web_0_1772825416731.jpg',
   ],
 
-  // Drive & Shine — 18 locations across IN/MI with incredibly high ratings (4.9 avg).
-  'Drive & Shine': [
-    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/c7785252-3cc7-4459-8072-43d1f24c29fe/hero-cropped-1774231070115.png',
-    'https://lh3.googleusercontent.com/p/AF1QipPSv8yEE9AFTldrNS4oTvArjnnVidDeyVCh880P=w1600-h1200',
-    'https://lh3.googleusercontent.com/p/AF1QipO2GcHWJkkEdzl55im2LTsr720ZjPv7nVNklnDV=w1600-h1200',
-  ],
+  // NOTE: Drive & Shine was removed 2026-04-17 — their own FAQ at
+  // driveandshine.com/car-wash confirms they use "Neoglide Foam Wraps" which
+  // are soft-cloth contact equipment, not touchless. All 39 locations reverted.
+  // Do NOT re-add unless chain switches to touchless.
 
   // Phase 3 — Tier 2 regional chains. Hero images pulled from top-rated listings per chain.
   'Prestige Car Wash': [

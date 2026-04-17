@@ -33,7 +33,7 @@ async function getSecret(supabaseUrl: string, serviceKey: string, name: string):
   } catch { return undefined; }
 }
 
-async function fetchImageAsBase64(url: string, maxBytes = 500_000): Promise<{ data: string; mimeType: string } | null> {
+async function fetchImageAsBase64(url: string, maxBytes = 4_000_000): Promise<{ data: string; mimeType: string } | null> {
   try {
     const r = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0' },
@@ -132,9 +132,21 @@ function buildPrompt(listing: Listing, snippets: ReviewSnippet[]): string {
   parts.push('For each photo: does the equipment shown match a touchless automatic wash, a soft-cloth tunnel, a self-serve wand bay, a detailer bay, or a gas station with no wash visible?');
   parts.push('');
   parts.push('Also SPECIFICALLY evaluate the HERO image (first photo) for quality:');
-  parts.push('  GOOD: shows the actual facility/building, OR touchless equipment in operation, OR legitimate brand logo/storefront');
-  parts.push('  OK: shows related but generic content (e.g. exterior street view, adjacent signage)');
-  parts.push('  BAD: irrelevant (stock images, wrong business, receipts, interior of car, food/drinks, obscured by text overlay, blurry/unusable, cartoon clip art)');
+  parts.push('  GOOD: shows the actual facility exterior/building, OR genuine TOUCHLESS equipment (high-pressure nozzles, spray arches, water-only spray bars), OR legitimate brand logo/storefront');
+  parts.push('  OK: shows related but generic content (e.g. exterior street view, adjacent signage, parking lot)');
+  parts.push('  BAD — mark BAD if the hero shows ANY of the following:');
+  parts.push('    • Soft-cloth curtains, cloth drapes, mitter curtains (red/blue/multicolor strips hanging from above)');
+  parts.push('    • Rotating brushes, spinning brushes, wheel scrubbers, foam brushes (any brush making contact)');
+  parts.push('    • "Soft Touch" signage on equipment (even if facility also has touchless)');
+  parts.push('    • Self-serve wand bay (human holding wand/hose)');
+  parts.push('    • Hand-wash, hand-dry, hand-detail, or ANY attendant/employee touching a vehicle (drying, buffing, waxing, vacuuming the exterior, polishing)');
+  parts.push('    • "Courtesy drying", "hand dry", "free towel dry" signage or scene');
+  parts.push('    • Tunnel conveyor with visible cloth/brush equipment');
+  parts.push('    • Stock images, wrong business, receipts, car interiors, food/drinks, text overlays, cartoon art');
+  parts.push('    • LOW QUALITY: obviously pixelated, grainy, low-resolution (looks sub-800px wide), blurry, dark/underexposed, or compressed with JPEG artifacts');
+  parts.push('    • POOR COMPOSITION: facility is tiny and lost in the frame (>60% sky or parking lot with no subject), heavily tilted/crooked, or the main subject is cut off at an awkward edge');
+  parts.push('    • Self-serve wand bay structures visible from outside (open covered bays with pay meters/wands — hallmark of self-serve, not touchless)');
+  parts.push('  CRITICAL: This is a TOUCHLESS directory. The hero must not depict ANY human-vehicle contact or cloth/brush contact equipment — even if the facility also offers touchless. Showing contact imagery contradicts the "no touch" promise and misleads users. When in doubt between GOOD and BAD, choose BAD.');
   parts.push('');
   parts.push('Respond ONLY with a single JSON object (no markdown, no code fence):');
   parts.push(`{
