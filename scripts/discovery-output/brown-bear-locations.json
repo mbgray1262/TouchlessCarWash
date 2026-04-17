@@ -18,15 +18,6 @@
     "key": "6th"
   },
   {
-    "street": "2 \n3920 Auburn Way",
-    "city": "Auburn",
-    "state": "WA",
-    "zip": "98002",
-    "url": "https://brownbear.com/wash/auburn-self-serve/",
-    "num": "2",
-    "key": "3920"
-  },
-  {
     "street": "814 Auburn Way",
     "city": "Auburn",
     "state": "WA",
@@ -34,15 +25,6 @@
     "url": "https://brownbear.com/wash/auburn/",
     "num": "814",
     "key": "auburn"
-  },
-  {
-    "street": "16048 Aurora Ave",
-    "city": "Shoreline",
-    "state": "WA",
-    "zip": "98133",
-    "url": "https://brownbear.com/wash/aurora-ss/",
-    "num": "16048",
-    "key": "aurora"
   },
   {
     "street": "16032 Aurora Ave",
@@ -180,15 +162,6 @@
     "key": "124th"
   },
   {
-    "street": "601 7th Ave",
-    "city": "Kirkland",
-    "state": "WA",
-    "zip": "98033",
-    "url": "https://brownbear.com/wash/kirkland-ss/",
-    "num": "601",
-    "key": "7th"
-  },
-  {
     "street": "14312 Lake City Way",
     "city": "Seattle",
     "state": "WA",
@@ -207,15 +180,6 @@
     "key": "bridgeport"
   },
   {
-    "street": "3977 Leary Way",
-    "city": "Seattle",
-    "state": "WA",
-    "zip": "98107",
-    "url": "https://brownbear.com/wash/leary-way-ss/",
-    "num": "3977",
-    "key": "leary"
-  },
-  {
     "street": "202 164th St",
     "city": "Lynnwood",
     "state": "WA",
@@ -223,15 +187,6 @@
     "url": "https://brownbear.com/wash/lynnwood-martha-lake/",
     "num": "202",
     "key": "164th"
-  },
-  {
-    "street": "12506 15th Ave",
-    "city": "Seattle",
-    "state": "WA",
-    "zip": "98125",
-    "url": "https://brownbear.com/wash/ne-125th-ss/",
-    "num": "12506",
-    "key": "15th"
   },
   {
     "street": "34007 Hoyt Rd",
@@ -313,15 +268,6 @@
     "url": "https://brownbear.com/wash/silverdale/",
     "num": "3082",
     "key": "nw"
-  },
-  {
-    "street": "8915 Soper Hill Rd",
-    "city": "Marysville",
-    "state": "WA",
-    "zip": "98270",
-    "url": "https://brownbear.com/wash/soper-hill-ss/",
-    "num": "8915",
-    "key": "soper"
   },
   {
     "street": "8907 Soper Hill Rd",
