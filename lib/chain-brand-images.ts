@@ -112,11 +112,9 @@ export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
   // Do NOT re-add unless chain switches to touchless.
 
   // Phase 3 — Tier 2 regional chains. Hero images pulled from top-rated listings per chain.
-  'Prestige Car Wash': [
-    'https://lh3.googleusercontent.com/p/AF1QipM9AsvjiSz_T8ht6sO2SbIk_qgUMVYJWXasu4J7=w1600-h1200',
-    'https://lh3.googleusercontent.com/p/AF1QipN9xVcHv-nCmj8_FwAIuMYOL33T0x7_BeJIpDmZ=w1600-h1200',
-    'https://lh3.googleusercontent.com/p/AF1QipOUxk1zyHN13AdewwiAwqcIVuU-HfQOaPxMkvC8=w1600-h1200',
-  ],
+  // NOTE: Prestige Car Wash removed 2026-04-17 — their own site at prestigewash.com
+  // advertises "soft cloth technology" which is contact equipment, not touchless.
+  // All Prestige locations reverted. Do NOT re-add.
   'Flagstop Car Wash': [
     'https://lh3.googleusercontent.com/p/AF1QipPITO9VbG0Ga-Qd6MUIC1Xfxbd96bP8z3xSazcU=w1600-h1200',
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/c693d734-b6ab-4e93-87f9-9880d417c70d/google-1773935527664.jpg',
