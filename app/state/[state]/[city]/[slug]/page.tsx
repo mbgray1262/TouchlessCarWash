@@ -52,11 +52,16 @@ function getStateCode(stateSlug: string): string | null {
 
 
 async function getListing(slug: string): Promise<Listing | null> {
+  // Fetch by slug regardless of is_touchless — we want to handle three cases:
+  //   1. Touchless listing exists → render detail page
+  //   2. Listing exists but is_touchless=false (reverted) → 301 redirect
+  //      to city hub (NOT a 404) to preserve AdSense health + PageRank
+  //   3. Listing doesn't exist at all → 404 (after trying slug-prefix
+  //      lookup for old URL schemes)
   const { data, error } = await supabase
     .from('listings')
     .select('*')
     .eq('slug', slug)
-    .eq('is_touchless', true)
     .maybeSingle();
 
   if (error || !data) return null;
@@ -836,16 +841,24 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
   if (!listing) {
     // Try to find a listing with a longer slug that starts with the requested slug.
     // This handles old short slugs (e.g. "rice-street-car-wash") that were replaced
-    // with longer address-based slugs (e.g. "rice-street-car-wash-1736-rice-st-...").
+    // with longer address-based slugs.
     const redirectUrl = await findListingByPartialSlug(params.slug);
     if (redirectUrl) permanentRedirect(redirectUrl); // 308 — tells Google to transfer PageRank to the new slug
 
-    // Non-touchless listings (including those previously flagged touchless and later
-    // re-classified) return a plain 404. Previously this path rendered a "not a
-    // touchless car wash" explainer page at HTTP 200, which Google treated as
-    // low-value content and dropped slowly via noindex. A true 404 is processed
-    // much faster and removes these URLs from Google's index cleanly.
+    // True unknown slug — 404 is appropriate.
     notFound();
+  }
+
+  // Listing EXISTS but is NOT a touchless wash (either never was, or was
+  // reverted after re-classification). Do NOT return 404 — mass 404s on
+  // previously-indexed URLs hurt site health signals (AdSense approval,
+  // crawl reputation). Instead 301-redirect to the city hub page, which
+  // Google treats as a normal site reorganization and which transfers
+  // any accumulated PageRank to the city page.
+  if (!listing.is_touchless || !listing.is_approved) {
+    const stateSlug = getStateSlug(listing.state) || params.state;
+    const citySlug = slugify(listing.city) || params.city;
+    permanentRedirect(`/state/${stateSlug}/${citySlug}`);  // 308 permanent redirect
   }
 
   const [nearbyListings, reviewSnippets, rankings, chainResult, verificationStats] = await Promise.all([
