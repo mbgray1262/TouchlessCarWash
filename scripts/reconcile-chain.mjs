@@ -33,6 +33,13 @@ const CHAIN_DATA = {
     source_url: 'https://www.superwash.com/locations/',
     locations: loadLocationsFromJson('scripts/discovery-output/super-wash-locations.json'),
   },
+  cobblestone: {
+    name: "Cobblestone",
+    // Cobblestone locations use names like "Cobblestone Car Wash", "Cobblestone Auto Spa"
+    name_pattern: /^cobblestone\b/i,
+    source_url: 'https://cobblestone.com/locations/',
+    locations: loadLocationsFromJson('scripts/discovery-output/cobblestone-locations.json'),
+  },
   autowash: {
     name: "Autowash",
     // Strict pattern: must start with "Autowash" (not just contain) OR contain "Autowash @"

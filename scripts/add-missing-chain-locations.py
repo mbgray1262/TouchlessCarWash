@@ -21,6 +21,11 @@ CHAIN = sys.argv[1] if len(sys.argv) > 1 else 'super-wash'
 CHAIN_NAME_MAP = {
     'super-wash': "Super Wash",
     'autowash': "Autowash",
+    'cobblestone': "Cobblestone",
+    'brown-bear': "Brown Bear",
+    'elephant': "Elephant Car Wash",
+    'scrubadub': "ScrubaDub",
+    'prestige': "Prestige Car Wash",
 }
 CHAIN_NAME = CHAIN_NAME_MAP.get(CHAIN, CHAIN)
 
