@@ -858,7 +858,28 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
   if (!listing.is_touchless || !listing.is_approved) {
     const stateSlug = getStateSlug(listing.state) || params.state;
     const citySlug = slugify(listing.city) || params.city;
-    permanentRedirect(`/state/${stateSlug}/${citySlug}`);  // 308 permanent redirect
+    // Verify target city hub has approved touchless listings before redirecting there
+    // — otherwise we send crawlers/users into a 404. Fall back to state, then home.
+    const { count: cityCount } = await supabase
+      .from('listings')
+      .select('*', { count: 'exact', head: true })
+      .eq('state', listing.state)
+      .eq('city', listing.city)
+      .eq('is_touchless', true)
+      .eq('is_approved', true);
+    if ((cityCount ?? 0) > 0) {
+      permanentRedirect(`/state/${stateSlug}/${citySlug}`);
+    }
+    const { count: stateCount } = await supabase
+      .from('listings')
+      .select('*', { count: 'exact', head: true })
+      .eq('state', listing.state)
+      .eq('is_touchless', true)
+      .eq('is_approved', true);
+    if ((stateCount ?? 0) > 0) {
+      permanentRedirect(`/state/${stateSlug}`);
+    }
+    permanentRedirect('/');
   }
 
   const [nearbyListings, reviewSnippets, rankings, chainResult, verificationStats] = await Promise.all([
