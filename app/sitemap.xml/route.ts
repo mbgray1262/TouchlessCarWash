@@ -45,6 +45,7 @@ export async function GET() {
       .from('listings')
       .select('id, slug, city, state, created_at, updated_at, latitude, longitude, rating, review_count, is_claimed, is_featured, crawl_snapshot, extracted_data')
       .eq('is_touchless', true)
+      .eq('is_approved', true)  // exclude held/pending-enrichment listings that 308 instead of 200
       .range(offset, offset + PAGE_SIZE - 1);
     if (!page || page.length === 0) break;
     // Convert the heavy JSON fields to boolean flags immediately so we don't
@@ -228,6 +229,7 @@ export async function GET() {
     .from('listings')
     .select('equipment_brand')
     .eq('is_touchless', true)
+    .eq('is_approved', true)
     .not('equipment_brand', 'is', null);
 
   const brandCountMap = new Map<string, number>();
@@ -251,6 +253,7 @@ export async function GET() {
     .from('listings')
     .select('equipment_brand, equipment_model')
     .eq('is_touchless', true)
+    .eq('is_approved', true)
     .not('equipment_brand', 'is', null)
     .not('equipment_model', 'is', null);
 
