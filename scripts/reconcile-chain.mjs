@@ -21,7 +21,18 @@ const ARG_CHAIN = process.argv[2];  // e.g. "autowash"
 const EXECUTE = process.argv.includes('--execute');
 
 // Authoritative location data for each chain, scraped from their own sites.
+// For large chains, locations can be loaded from a separate JSON file.
+function loadLocationsFromJson(path) {
+  try { return JSON.parse(readFileSync(path, 'utf8')); } catch { return []; }
+}
+
 const CHAIN_DATA = {
+  'super-wash': {
+    name: "Super Wash",
+    name_pattern: /^super\s*wash\b/i,
+    source_url: 'https://www.superwash.com/locations/',
+    locations: loadLocationsFromJson('scripts/discovery-output/super-wash-locations.json'),
+  },
   autowash: {
     name: "Autowash",
     // Strict pattern: must start with "Autowash" (not just contain) OR contain "Autowash @"

@@ -1,0 +1,88 @@
+{
+  "brown-bear": {
+    "url": "https://www.brownbear.com/locations/",
+    "md_length": 57378,
+    "addresses_found": 2,
+    "state_zip_pairs": 2,
+    "sample_addrs": [
+      "3977 Leary Way",
+      "3977 Leary Way"
+    ]
+  },
+  "elephant": {
+    "url": "https://elephantcarwash.com/locations/",
+    "md_length": 6791,
+    "addresses_found": 0,
+    "state_zip_pairs": 0,
+    "sample_addrs": []
+  },
+  "scrubadub": {
+    "url": "https://scrubadub.com/locations/",
+    "md_length": 10712,
+    "addresses_found": 5,
+    "state_zip_pairs": 0,
+    "sample_addrs": [
+      "11 Jennings St",
+      "102 Elm St",
+      "5 Faneuil St",
+      "143 Harvard St",
+      "294 Eastern Ave"
+    ]
+  },
+  "prestige": {
+    "url": "https://www.prestigewash.com/locations/",
+    "md_length": 3578,
+    "addresses_found": 0,
+    "state_zip_pairs": 0,
+    "sample_addrs": []
+  },
+  "super-wash": {
+    "url": "https://www.superwash.com/locations/",
+    "md_length": 55583,
+    "addresses_found": 122,
+    "state_zip_pairs": 150,
+    "sample_addrs": [
+      "1104 S. Main St",
+      "812 Stryker St",
+      "1201 Grand Ave",
+      "1875 Elmwood Ave",
+      "507 E. North St"
+    ]
+  },
+  "cobblestone": {
+    "url": "https://cobblestone.com/locations/",
+    "md_length": 23520,
+    "addresses_found": 0,
+    "state_zip_pairs": 0,
+    "sample_addrs": []
+  },
+  "drive-and-shine": {
+    "url": "https://driveandshine.com/locations/",
+    "md_length": 6439,
+    "addresses_found": 0,
+    "state_zip_pairs": 0,
+    "sample_addrs": []
+  },
+  "hoffman": {
+    "url": "https://www.hoffmancarwash.com/locations/",
+    "md_length": 8511,
+    "addresses_found": 6,
+    "state_zip_pairs": 0,
+    "sample_addrs": [
+      "194 Broad St",
+      "217 Northside Dr",
+      "1315 Erie Blvd",
+      "1315 Erie Blvd",
+      "1727 Black River Blvd"
+    ]
+  },
+  "grease-monkey": {
+    "url": "https://greasemonkeyauto.com/locations/",
+    "md_length": 5298,
+    "addresses_found": 1,
+    "state_zip_pairs": 1,
+    "sample_addrs": [
+      "5575 DTC Parkway"
+    ]
+  }
+}
