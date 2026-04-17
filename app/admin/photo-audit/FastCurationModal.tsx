@@ -377,8 +377,50 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-3 border-b bg-gray-50">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-lg font-bold text-gray-900">{listing.name}</h2>
+                {/* Status badge — shows whether listing is live, held, or reverted */}
+                {(() => {
+                  const rawNotes = (listing as { crawl_notes?: string | null }).crawl_notes ?? '';
+                  const isReverted = listing.is_touchless === false;
+                  const isApproved = listing.is_approved === true;
+                  const wasReverted = /\bREVERTED\b/i.test(rawNotes);
+                  const isHeld = isReverted === false && isApproved === false;
+                  if (isReverted) {
+                    return (
+                      <span
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 cursor-help"
+                        title={rawNotes || 'Reverted — no longer classified as touchless'}
+                      >
+                        <span className="w-2 h-2 rounded-full bg-red-500" />
+                        Not Touchless
+                      </span>
+                    );
+                  }
+                  if (isHeld) {
+                    return (
+                      <span
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 cursor-help"
+                        title={rawNotes || 'Held — needs hero/enrichment before going live'}
+                      >
+                        <span className="w-2 h-2 rounded-full bg-amber-500" />
+                        Held (not live)
+                      </span>
+                    );
+                  }
+                  if (isApproved) {
+                    return (
+                      <span
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 cursor-help"
+                        title={wasReverted ? `Previously reverted, now live again. ${rawNotes}` : 'Live on touchlesscarwashfinder.com'}
+                      >
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                        Live
+                      </span>
+                    );
+                  }
+                  return null;
+                })()}
                 {listing.touchless_verified === 'user_review' && (
                   <span
                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 cursor-help"
