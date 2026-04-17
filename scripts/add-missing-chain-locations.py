@@ -70,12 +70,15 @@ async def main():
     with open(f'scripts/discovery-output/{CHAIN}-locations.json') as f:
         authoritative = json.load(f)
 
-    # Load existing DB listings for this chain name (strict)
+    # Load existing DB listings for this chain name (strict).
+    # PostgREST wildcard for ilike in URL is '*', not '%'. Spaces must be
+    # URL-encoded.
     existing = []
     offset = 0
+    encoded_name = CHAIN_NAME.replace(' ', '+')
     while True:
         page = sb_req('GET',
-            f'/rest/v1/listings?select=id,name,address,city,state&name=ilike.%{quote(CHAIN_NAME)}%&limit=1000&offset={offset}')
+            f'/rest/v1/listings?select=id,name,address,city,state&name=ilike.*{encoded_name}*&limit=1000&offset={offset}')
         if not page: break
         existing.extend(page)
         if len(page) < 1000: break
