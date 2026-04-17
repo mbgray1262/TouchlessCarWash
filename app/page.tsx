@@ -116,10 +116,15 @@ async function getStateListingCounts(): Promise<Record<string, number>> {
 }
 
 async function getTotalCount(): Promise<number> {
+  // Count only listings that are actually visible to users (is_approved=true).
+  // Without this filter we'd overstate by 500–800 from listings held pending
+  // enrichment (Yelp imports, metro-sweep survivors, etc.) that can't be
+  // reached by clicking through state/city/metro pages.
   const { count, error } = await supabase
     .from('listings')
     .select('*', { count: 'exact', head: true })
-    .eq('is_touchless', true);
+    .eq('is_touchless', true)
+    .eq('is_approved', true);
 
   return error ? 0 : (count ?? 0);
 }
