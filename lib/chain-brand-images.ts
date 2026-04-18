@@ -52,6 +52,15 @@ export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
     `${STORAGE}/power-market-3.jpg`,
   ],
 
+  // Max Car Wash — South Florida operator of Chevron/Marathon/Shell/Exxon/Mobil
+  // branded locations, most with Istobal touchless equipment (similar to H&S
+  // Energy Group's Power Market). Reusing Power Market touchless bay photos.
+  'Max Car Wash': [
+    `${STORAGE}/power-market.jpg`,
+    `${STORAGE}/power-market-2.jpg`,
+    `${STORAGE}/power-market-3.jpg`,
+  ],
+
   // BP gas station canopy with BP sunflower logo — from Monee, IL location. 1600×900. Hosted in Supabase (251 KB).
   'BP': `${STORAGE}/bp.jpg`,
 
