@@ -101,12 +101,17 @@ NEGATIVE_PATTERNS = [
     re.compile(r'\bmitter\s+(curtain|drape)', re.I),
     re.compile(r'\bhand[- ]?wash(ed|ing)?\s+(car|vehicle)', re.I),
     re.compile(r'\battendant.{0,30}(dried|dries|dry|hand)', re.I),
-    re.compile(r'\bsoft[- ]?touch\s+(wash|bay|system|car\s+wash)', re.I),
+    # "soft touch" followed by any wash-related word (automatic, wash, bay, system, car wash, etc.)
+    re.compile(r'\bsoft[- ]?touch\s+(wash|bay|system|car\s+wash|auto(matic)?|tunnel)', re.I),
     re.compile(r'\b(neoglide|closed[- ]?cell)\s+foam', re.I),
     re.compile(r'\bconveyor\s+(tunnel|belt)\s+(with|using)\s+(brush|cloth)', re.I),
     re.compile(r'\btunnel\s+wash', re.I),
     re.compile(r'\bself[- ]?serv(e|ice)\s+(only|bays only)\b', re.I),
 ]
+
+# Name patterns that are nuclear-strength contra signals — a business that
+# calls ITSELF "soft touch" is explicitly NOT touchless, regardless of reviews.
+NAME_NEGATIVE = re.compile(r'\bsoft[- ]?touch\b|\bsoft[- ]?cloth\b|\bhand[- ]?car[- ]?wash\b|\bhand[- ]?wash\b(?!.*touch)|\bfull[- ]?service\b|\bdetailing\s+(?:center|services)\b', re.I)
 
 # Amenities are a structured field — simpler substring match, high authority
 # (staff-entered or chain-declared, not noisy prose).
@@ -246,24 +251,33 @@ def pick_hero(candidates):
 
 # ============ Decision ============
 
-def decide(evidence, has_photo, name_positive, is_currently_approved=False, is_chain_verified=False, amenity_contra=None):
+def decide(evidence, has_photo, name_positive, is_currently_approved=False, is_chain_verified=False, amenity_contra=None, name_negative=False):
     pos = len(evidence['positive'])
     neg = len(evidence['negative'])
     amen_neg = len(amenity_contra or [])
 
+    # NUCLEAR: name contains "soft touch"/"hand wash"/"soft cloth" etc. → ALWAYS revert.
+    # A business that calls itself this is NOT touchless, no matter how many positive mentions
+    # appear in random reviews.
+    if name_negative:
+        return 'revert', f'name contains explicit non-touchless signal (soft touch / hand wash / etc.)'
+
     # Revert thresholds — HIGHER bar when already-approved (don't undo good data lightly).
     if is_currently_approved:
-        # Structured amenity contra is high-authority: even 1 hit triggers revert if no positive evidence.
         if amen_neg >= 1 and pos == 0 and not is_chain_verified and not name_positive:
             return 'revert', f'amenity contra ({amenity_contra[0]}) + no positive evidence'
         if neg >= 5: return 'revert', f'{neg} contra signals (strong, already-approved review)'
         if neg >= 4 and pos <= 1: return 'revert', f'{neg} contra vs {pos} positive (already-approved review)'
-        # NEW: require positive evidence to stay approved. "Assume touchless" default is gone.
+        # Require positive evidence to stay approved.
         if pos == 0 and not is_chain_verified and not name_positive:
             return 'revert', f'no positive evidence (pos=0, not chain/name-verified)'
-        if pos >= 1 or is_chain_verified or name_positive:
+        # Tighter: a single stray review mention is NOT enough on its own. Require
+        # corroboration: (a) chain verification, (b) touchless in name, or (c) ≥2 positives.
+        if pos == 1 and not is_chain_verified and not name_positive:
+            return 'revert', f'single stray positive mention with no corroboration (pos=1 only)'
+        if pos >= 2 or is_chain_verified or name_positive:
             return 'approve', f'keep-approved: pos={pos} neg={neg} chain={is_chain_verified} name={name_positive}'
-        return 'approve', f'keep-approved: insufficient contra (pos={pos} neg={neg})'
+        return 'revert', f'insufficient evidence (pos={pos} neg={neg})'
 
     # === HELD-LISTING PATH ===
     # Policy: evidence-less listings are NOT touchless. No more "hold" purgatory.
@@ -357,6 +371,9 @@ def main():
 
         # Name-level positive signal — includes laser wash (equipment type)
         name_positive = bool(re.search(r'touch[- ]?(less|free)|brushless|no touch|\blaser\s*(wash|car)', name, re.I))
+        # Name-level NEGATIVE signal — business calls itself "soft touch"/"hand wash"/etc.
+        # Nuclear: a business that labels itself this way is NOT touchless, end of story.
+        name_negative = bool(NAME_NEGATIVE.search(name)) and not name_positive
 
         # Build photo candidates
         candidates = []
@@ -378,7 +395,8 @@ def main():
         action, reason = decide(evidence, has_photo, name_positive,
                                 is_currently_approved=bool(l.get('is_approved')),
                                 is_chain_verified=is_chain_verified,
-                                amenity_contra=amenity_contra)
+                                amenity_contra=amenity_contra,
+                                name_negative=name_negative)
         stats['actions'][action] = stats['actions'].get(action, 0) + 1
 
         patch = {}
