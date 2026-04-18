@@ -1486,7 +1486,14 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                       )}
                       {listing.latitude && listing.longitude ? (
                         <a
-                          href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${listing.latitude},${listing.longitude}`}
+                          // Prefer place_id when available — opens to the business's canonical
+                          // street view orientation (not an arbitrary nearby pano that can be
+                          // inside the building or facing the wrong way).
+                          href={
+                            listing.google_place_id
+                              ? `https://www.google.com/maps/place/?q=place_id:${listing.google_place_id}&layer=c&cbll=${listing.latitude},${listing.longitude}`
+                              : `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${listing.latitude},${listing.longitude}`
+                          }
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 py-2 rounded-lg transition-colors"
