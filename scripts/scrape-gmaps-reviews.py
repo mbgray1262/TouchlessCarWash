@@ -325,7 +325,7 @@ async def main():
             await scrape_one(crawler, l, stats)
             stats['processed'] += 1
             if idx % 20 == 0 and idx > 0:
-                log(f'  -- progress {idx}/{len(listings)} reviews_found={stats["total_reviews_found"]} --')
+                log(f'  -- progress {idx}/{len(listings)} snippets_found={stats["total_snippets_found"]} --')
             # Polite 2 sec delay
             await asyncio.sleep(2)
 
