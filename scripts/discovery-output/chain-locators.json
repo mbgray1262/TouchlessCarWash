@@ -1,0 +1,211 @@
+[
+  {
+    "chain": "Pinnacle 365",
+    "url": "https://www.pinnacle365.com/",
+    "hits": []
+  },
+  {
+    "chain": "Max Car Wash",
+    "url": "https://mcwash.com/",
+    "hits": []
+  },
+  {
+    "chain": "BP",
+    "url": "https://www.bp.com/en_us/united-states.html",
+    "error": "fetch failed",
+    "hits": []
+  },
+  {
+    "chain": "Power Market",
+    "url": "https://pwrmarket.com/",
+    "hits": []
+  },
+  {
+    "chain": "Brown Bear",
+    "url": "https://www.brownbear.com/",
+    "hits": []
+  },
+  {
+    "chain": "Holiday Stationstores",
+    "url": "https://www.holidaystationstores.com/",
+    "hits": []
+  },
+  {
+    "chain": "Elephant Car Wash",
+    "url": "https://www.elephantcarwash.com/",
+    "hits": []
+  },
+  {
+    "chain": "Extra Mile",
+    "url": "https://www.extramile.com/",
+    "hits": []
+  },
+  {
+    "chain": "Super Wash",
+    "url": "https://www.superwash.com/",
+    "hits": []
+  },
+  {
+    "chain": "Autowash",
+    "url": "https://autowash.com/",
+    "hits": []
+  },
+  {
+    "chain": "Delta Sonic",
+    "url": "https://deltasoniccarwash.com/",
+    "hits": []
+  },
+  {
+    "chain": "Sheetz",
+    "url": "https://www.sheetz.com/",
+    "hits": []
+  },
+  {
+    "chain": "Splash Car Wash",
+    "url": "https://splashcarwashes.com/",
+    "hits": []
+  },
+  {
+    "chain": "Flagstop Car Wash",
+    "url": "https://flagstopcarwash.com/",
+    "hits": []
+  },
+  {
+    "chain": "Mr. Magic Car Wash",
+    "url": "https://mrmagic.com/",
+    "hits": []
+  },
+  {
+    "chain": "Rocky Mountain Car Wash",
+    "url": "https://rockymountaincarwash.com/",
+    "hits": [
+      {
+        "locator": "JSON-LD LocalBusiness (all locations)",
+        "id": null,
+        "pattern": "<script[^>]*application/ld\\+json[^>]*>[^<]*LocalBusiness",
+        "match": "<script type=\"application/ld+json\">{\"address\":\"102 Bartz Lane\\nBelgrade, MT, 59714\\nUnited States\",\"image\":\"https://stat"
+      }
+    ]
+  },
+  {
+    "chain": "Foam & Wash",
+    "url": "https://foamandwash.com/",
+    "hits": []
+  },
+  {
+    "chain": "BellStores",
+    "url": "https://www.bellstores.com/",
+    "hits": []
+  },
+  {
+    "chain": "Blue Tide Car Wash",
+    "url": "https://bluetidecarwash.com/",
+    "hits": []
+  },
+  {
+    "chain": "Gorilla Wash",
+    "url": "https://gorillawash.com/",
+    "hits": []
+  },
+  {
+    "chain": "Kwik Trip",
+    "url": "https://www.kwiktrip.com/",
+    "hits": []
+  },
+  {
+    "chain": "Auto Spa Speedy Wash",
+    "url": "https://autospaspeedywash.com/",
+    "hits": []
+  },
+  {
+    "chain": "Salty Dog Car Wash",
+    "url": "https://saltydogcarwash.com/",
+    "hits": []
+  },
+  {
+    "chain": "ProClean Auto Wash",
+    "url": "https://procleancarwash.com/",
+    "hits": []
+  },
+  {
+    "chain": "Hy-Vee",
+    "url": "https://www.hy-vee.com/",
+    "hits": []
+  },
+  {
+    "chain": "Terrible's",
+    "url": "https://terriblescarwash.com/",
+    "hits": []
+  },
+  {
+    "chain": "Dirtbuster Car Wash",
+    "url": "https://dirtbustercarwash.com/",
+    "hits": []
+  },
+  {
+    "chain": "IQ Car Wash",
+    "url": "https://iqcarwash.com/",
+    "hits": [
+      {
+        "locator": "JSON-LD LocalBusiness (all locations)",
+        "id": null,
+        "pattern": "<script[^>]*application/ld\\+json[^>]*>[^<]*LocalBusiness",
+        "match": "<script type=\"application/ld+json\">{\"address\":\"2513 N. 14th St.\\nPonca City, OK\",\"image\":\"https://static1.squarespace.co"
+      }
+    ]
+  },
+  {
+    "chain": "Wooly Wash",
+    "url": "https://www.woolywash.com/",
+    "hits": []
+  },
+  {
+    "chain": "Royal Rinse Car Wash",
+    "url": "https://royalrinsecarwash.com/",
+    "hits": []
+  },
+  {
+    "chain": "Prestige Car Wash",
+    "url": "https://prestigewash.com/",
+    "hits": []
+  },
+  {
+    "chain": "Zappy's Auto Washes",
+    "url": "https://zappys.com/",
+    "error": "fetch failed",
+    "hits": []
+  },
+  {
+    "chain": "Power Wash USA",
+    "url": "https://powerwashusa.com/",
+    "hits": []
+  },
+  {
+    "chain": "Splash'n Shine",
+    "url": "https://splashnshine.com/",
+    "hits": []
+  },
+  {
+    "chain": "Jurassic Car Wash",
+    "url": "https://jurassiccarwash.com/",
+    "hits": [
+      {
+        "locator": "JSON-LD LocalBusiness (all locations)",
+        "id": null,
+        "pattern": "<script[^>]*application/ld\\+json[^>]*>[^<]*LocalBusiness",
+        "match": "<script type=\"application/ld+json\">{\"address\":\"\",\"image\":\"https://static1.squarespace.com/static/66bfadbd7bf5e8671ec7c4b"
+      }
+    ]
+  },
+  {
+    "chain": "ScrubaDub",
+    "url": "https://www.scrubadub.com/",
+    "hits": []
+  },
+  {
+    "chain": "Cascade Car Wash",
+    "url": "https://cascadecarwash.com/",
+    "error": "fetch failed",
+    "hits": []
+  }
+]
