@@ -1,0 +1,334 @@
+[
+  {
+    "domain": "bluewaveexpress.com",
+    "wp_available": false
+  },
+  {
+    "domain": "gocarwash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "elcarwash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "modwash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "mistercarwash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "whitewatercw.com",
+    "wp_available": false
+  },
+  {
+    "domain": "brownbear.com",
+    "wp_available": false
+  },
+  {
+    "domain": "clubcarwash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "splashcarwashes.com",
+    "wp_available": false
+  },
+  {
+    "domain": "quickquack.com",
+    "wp_available": false
+  },
+  {
+    "domain": "autowash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "superwash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "kwiktrip.com",
+    "wp_available": false
+  },
+  {
+    "domain": "bellstores.com",
+    "wp_available": false
+  },
+  {
+    "domain": "holidaystationstores.com",
+    "wp_available": false
+  },
+  {
+    "domain": "sheetz.com",
+    "wp_available": false
+  },
+  {
+    "domain": "hyvee.com",
+    "wp_available": false
+  },
+  {
+    "domain": "flagstopcarwash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "tommys-express.com",
+    "wp_available": true,
+    "location_routes_in_index": [
+      "/wp/v2/locations",
+      "/wp/v2/locations/(?P<id>[\\d]+)",
+      "/wp/v2/menu-locations",
+      "/wp/v2/menu-locations/(?P<location>[\\w-]+)"
+    ],
+    "probe_hits": {
+      "/wp-json/wp/v2/types": "custom_types=['locations']",
+      "/wp-json/wp/v2/locations": "array[10]"
+    }
+  },
+  {
+    "domain": "mrmagic.com",
+    "wp_available": false
+  },
+  {
+    "domain": "mcwash.com",
+    "wp_available": true,
+    "location_routes_in_index": [
+      "/elementor/v1/form-submissions/restore/(?P<id>[\\d]+)",
+      "/elementor/v1/form-submissions/restore",
+      "/wp/v2/menu-locations",
+      "/wp/v2/menu-locations/(?P<location>[\\w-]+)"
+    ],
+    "probe_hits": {}
+  },
+  {
+    "domain": "foamandwash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "rockymountaincarwash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "bluetidecarwash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "deltasoniccarwash.com",
+    "wp_available": true,
+    "location_routes_in_index": [
+      "/siteground-optimizer/v1/heartbeat/(?P<location>[^/]+)",
+      "/wp/v2/menu-locations",
+      "/wp/v2/menu-locations/(?P<location>[\\w-]+)"
+    ],
+    "probe_hits": {}
+  },
+  {
+    "domain": "terriblescarwash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "saltydogcarwash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "dirtbustercarwash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "autospaspeedywash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "procleancarwash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "iqcarwash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "royalrinsecarwash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "powerwashusa.com",
+    "wp_available": false
+  },
+  {
+    "domain": "splashnshine.com",
+    "wp_available": false
+  },
+  {
+    "domain": "luvcarwash.com",
+    "wp_available": true,
+    "location_routes_in_index": [
+      "/siteground-optimizer/v1/heartbeat/(?P<location>[^/]+)",
+      "/wpgmza/v1",
+      "/wpgmza/v1/maps(\\/\\d+)?",
+      "/wpgmza/v1/markers/\\d+",
+      "/wpgmza/v1/markers",
+      "/wpgmza/v1/markers/base64[A-Za-z0-9+\\- ]+(={0,3})?(\\/[A-Za-z0-9+\\- ]+(={0,3})?)?",
+      "/wpgmza/v1/(features|polygons|polylines|circles|rectangles|pointlabels)(\\/\\d+)?",
+      "/wpgmza/v1/(features|polygons|polylines|circles|rectangles|pointlabels)(\\/\\d+)?/base64[A-Za-z0-9+\\- ]+(={0,3})?(\\/[A-Za-z0-9+\\- ]+(={0,3})?)?",
+      "/wpgmza/v1/(polygons|polylines|circles|rectangles|pointlabels)(\\/\\d+)?",
+      "/wpgmza/v1/markers(\\/\\d+)?"
+    ],
+    "probe_hits": {
+      "/wp-json/wpgmza/v1/markers": "array[2]"
+    }
+  },
+  {
+    "domain": "woolywash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "ricecarwash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "whitewatercarwash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "jurassiccarwash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "maxcarwash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "dennys-auto-wash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "surfsidecarwashes.com",
+    "wp_available": false
+  },
+  {
+    "domain": "fastwashbrothers.com",
+    "wp_available": false
+  },
+  {
+    "domain": "waterworks-carwash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "sudscarwash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "zappys.com",
+    "wp_available": false
+  },
+  {
+    "domain": "fins.com",
+    "wp_available": false
+  },
+  {
+    "domain": "ducky.com",
+    "wp_available": false
+  },
+  {
+    "domain": "cascadecarwash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "nationalcarwash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "touchsupreme.com",
+    "wp_available": false
+  },
+  {
+    "domain": "captaincarwash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "pwrmarket.com",
+    "wp_available": true,
+    "location_routes_in_index": [
+      "/yoast/v1/wpseo_locations",
+      "/complianz/v1/store_cookies",
+      "/wp/v2/wpseo_locations",
+      "/wp/v2/wpseo_locations/(?P<id>[\\d]+)",
+      "/wp/v2/wpseo_locations/(?P<parent>[\\d]+)/revisions",
+      "/wp/v2/wpseo_locations/(?P<parent>[\\d]+)/revisions/(?P<id>[\\d]+)",
+      "/wp/v2/wpseo_locations/(?P<id>[\\d]+)/autosaves",
+      "/wp/v2/wpseo_locations/(?P<parent>[\\d]+)/autosaves/(?P<id>[\\d]+)",
+      "/wp/v2/wpseo_locations_category",
+      "/wp/v2/wpseo_locations_category/(?P<id>[\\d]+)"
+    ],
+    "probe_hits": {}
+  },
+  {
+    "domain": "breezethrough.com",
+    "wp_available": false
+  },
+  {
+    "domain": "rainbowcarwash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "ponycarwash.com",
+    "wp_available": true,
+    "location_routes_in_index": [
+      "/siteground-optimizer/v1/heartbeat/(?P<location>[^/]+)",
+      "/yoast/v1/wpseo_locations",
+      "/elementor/v1/form-submissions/restore/(?P<id>[\\d]+)",
+      "/elementor/v1/form-submissions/restore",
+      "/wp/v2/wpseo_locations",
+      "/wp/v2/wpseo_locations/(?P<id>[\\d]+)",
+      "/wp/v2/wpseo_locations/(?P<parent>[\\d]+)/revisions",
+      "/wp/v2/wpseo_locations/(?P<parent>[\\d]+)/revisions/(?P<id>[\\d]+)",
+      "/wp/v2/wpseo_locations/(?P<id>[\\d]+)/autosaves",
+      "/wp/v2/wpseo_locations/(?P<parent>[\\d]+)/autosaves/(?P<id>[\\d]+)"
+    ],
+    "probe_hits": {
+      "/wp-json/wp/v2/types": "custom_types=['wpseo_locations']"
+    }
+  },
+  {
+    "domain": "scrubadub.com",
+    "wp_available": true,
+    "location_routes_in_index": [
+      "/wp/v2/menu-locations",
+      "/wp/v2/menu-locations/(?P<location>[\\w-]+)"
+    ],
+    "probe_hits": {}
+  },
+  {
+    "domain": "autobellcarwash.com",
+    "wp_available": false
+  },
+  {
+    "domain": "solumcarwash.com",
+    "wp_available": true,
+    "location_routes_in_index": [
+      "/wp/v2/menu-locations",
+      "/wp/v2/menu-locations/(?P<location>[\\w-]+)"
+    ],
+    "probe_hits": {}
+  },
+  {
+    "domain": "hoffmancarwash.com",
+    "wp_available": true,
+    "location_routes_in_index": [
+      "/aioseo/v1/backup/restore",
+      "/wc-admin/onboarding/profile/update-store-currency-and-measurement-units",
+      "/wc-admin/ai/store-title",
+      "/wc-admin/ai/store-info",
+      "/wc-admin/launch-your-store/initialize-coming-soon",
+      "/wc-admin/launch-your-store/update-survey-status",
+      "/wc-admin/launch-your-store/survey-completed",
+      "/wc-admin/launch-your-store/woopayments/test-orders/count",
+      "/wc-admin/launch-your-store/woopayments/test-orders",
+      "/wc-analytics/data/countries/(?P<location>[\\w-]+)"
+    ],
+    "probe_hits": {
+      "/wp-json/wp/v2/types": "custom_types=['locations']",
+      "/wp-json/wp/v2/locations": "array[10]"
+    }
+  }
+]

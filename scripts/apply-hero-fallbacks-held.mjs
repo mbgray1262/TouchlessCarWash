@@ -20,17 +20,30 @@ const sb = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_A
 const chainBrandSrc = readFileSync('lib/chain-brand-images.ts', 'utf8');
 const CHAIN_BRAND = new Map();
 const STORAGE = 'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/chain-brands';
-// Match: 'Chain Name': `${STORAGE}/file.jpg`  OR  'Chain Name': 'https://...'  OR  'Chain Name': ['https://...', ...]
-const re = /'([^']+)':\s*(?:`\$\{STORAGE\}\/([^`]+)`|'(https?:[^']+)'|\[([^\]]+)\])/g;
+
+// Parser handles:
+//   'Chain': `${STORAGE}/file.jpg`
+//   'Chain': 'https://...'
+//   'Chain': [ ... multiline array of backtick/single-quoted URLs ... ]
+// Strategy: find 'Chain': then read until matching end-of-value (closing ] or ' or `)
+// by matching [\s\S] non-greedy up to a `,\n` followed by another `'Chain':` or `};`
+
+// Use [\s\S] and non-greedy match with multiline array support
+const re = /'([^']+)':\s*([`'"\[][\s\S]*?)(?=\n\s*(?:\/\/|'[^']+':|}))/g;
 let m;
 while ((m = re.exec(chainBrandSrc))) {
   const name = m[1];
-  if (m[2]) CHAIN_BRAND.set(name, `${STORAGE}/${m[2]}`);
-  else if (m[3]) CHAIN_BRAND.set(name, m[3]);
-  else if (m[4]) {
-    const first = m[4].match(/'(https?:[^']+)'/);
-    if (first) CHAIN_BRAND.set(name, first[1]);
-  }
+  const value = m[2];
+  // Extract the first URL from the value block
+  // Try template literal: `${STORAGE}/file.ext`
+  let urlM = value.match(/`\$\{STORAGE\}\/([^`]+)`/);
+  if (urlM) { CHAIN_BRAND.set(name, `${STORAGE}/${urlM[1]}`); continue; }
+  // Try single-quoted full URL
+  urlM = value.match(/'(https?:[^']+)'/);
+  if (urlM) { CHAIN_BRAND.set(name, urlM[1]); continue; }
+  // Try double-quoted
+  urlM = value.match(/"(https?:[^"]+)"/);
+  if (urlM) { CHAIN_BRAND.set(name, urlM[1]); continue; }
 }
 console.log(`Loaded ${CHAIN_BRAND.size} chain-brand images\n`);
 
