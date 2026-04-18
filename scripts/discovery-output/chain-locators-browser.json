@@ -1,0 +1,160 @@
+[
+  {
+    "chain": "Max Car Wash",
+    "url": "https://mcwash.com/#map",
+    "hits": {
+      "Storepoint": "storepoint.co/v1/1631b416ca3f0d"
+    },
+    "network_n": 229,
+    "html_len": 185371
+  },
+  {
+    "chain": "Holiday Stationstores",
+    "url": "https://www.holidaystationstores.com/locations",
+    "hits": {},
+    "network_n": 133,
+    "html_len": 981650
+  },
+  {
+    "chain": "Sheetz",
+    "url": "https://www.sheetz.com/stores",
+    "hits": {},
+    "network_n": 2,
+    "html_len": 7552
+  },
+  {
+    "chain": "Autowash",
+    "url": "https://autowash.com/locations/",
+    "hits": {},
+    "network_n": 461,
+    "html_len": 1113283
+  },
+  {
+    "chain": "Super Wash",
+    "url": "https://www.superwash.com/locations",
+    "hits": {},
+    "network_n": 268,
+    "html_len": 1294844
+  },
+  {
+    "chain": "Splash Car Wash",
+    "url": "https://splashcarwashes.com/locations/",
+    "hits": {},
+    "network_n": 300,
+    "html_len": 1183805
+  },
+  {
+    "chain": "Delta Sonic",
+    "url": "https://deltasoniccarwash.com/locations",
+    "hits": {},
+    "network_n": 399,
+    "html_len": 445784
+  },
+  {
+    "chain": "Brown Bear",
+    "url": "https://www.brownbear.com/locations/",
+    "hits": {
+      "Storepoint": "storepoint.co/v1/166ea08f6d3e63"
+    },
+    "network_n": 352,
+    "html_len": 327095
+  },
+  {
+    "chain": "BellStores",
+    "url": "https://www.bellstores.com/locations/",
+    "hits": {},
+    "network_n": 227,
+    "html_len": 343613
+  },
+  {
+    "chain": "Power Market",
+    "url": "https://pwrmarket.com/locations/",
+    "hits": {},
+    "network_n": 153,
+    "html_len": 1191574
+  },
+  {
+    "chain": "Elephant Car Wash",
+    "url": "https://www.elephantcarwash.com/locations",
+    "hits": {},
+    "network_n": 84,
+    "html_len": 212855
+  },
+  {
+    "chain": "Gorilla Wash",
+    "url": "https://gorillawash.com/locations",
+    "hits": {},
+    "network_n": 212,
+    "html_len": 143477
+  },
+  {
+    "chain": "Flagstop Car Wash",
+    "url": "https://flagstopcarwash.com/locations/",
+    "hits": {},
+    "network_n": 511,
+    "html_len": 261562
+  },
+  {
+    "chain": "Mr. Magic Car Wash",
+    "url": "https://mrmagic.com/locations",
+    "hits": {},
+    "network_n": 2,
+    "html_len": 392
+  },
+  {
+    "chain": "Zappy's",
+    "url": "https://zappys.com/locations",
+    "hits": {},
+    "network_n": 0,
+    "html_len": 0
+  },
+  {
+    "chain": "Foam & Wash",
+    "url": "https://foamandwash.com/locations",
+    "hits": {},
+    "network_n": 56,
+    "html_len": 182848
+  },
+  {
+    "chain": "Blue Tide Car Wash",
+    "url": "https://bluetidecarwash.com/locations",
+    "hits": {},
+    "network_n": 142,
+    "html_len": 147958
+  },
+  {
+    "chain": "Salty Dog Car Wash",
+    "url": "https://saltydogcarwash.com/locations",
+    "hits": {},
+    "network_n": 102,
+    "html_len": 189507
+  },
+  {
+    "chain": "Auto Spa Speedy Wash",
+    "url": "https://autospaspeedywash.com/locations",
+    "hits": {},
+    "network_n": 2,
+    "html_len": 2427
+  },
+  {
+    "chain": "Terrible's",
+    "url": "https://terriblescarwash.com/locations",
+    "hits": {},
+    "network_n": 5,
+    "html_len": 14288
+  },
+  {
+    "chain": "ScrubaDub",
+    "url": "https://www.scrubadub.com/locations",
+    "hits": {},
+    "network_n": 146,
+    "html_len": 156855
+  },
+  {
+    "chain": "BP",
+    "url": "https://www.bp.com/en_us/united-states/home/products-and-services/bp-car-wash.html",
+    "hits": {},
+    "network_n": 0,
+    "html_len": 0
+  }
+]
