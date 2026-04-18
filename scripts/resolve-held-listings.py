@@ -63,40 +63,51 @@ async def sb_patch(session, path, body):
         return r.status
 
 
-def get_places_api_key():
+def get_serpapi_key():
     env_file = os.path.join(os.path.dirname(SCRIPT_DIR), '.env.local')
     if not os.path.exists(env_file): return None
     for line in open(env_file):
-        if line.startswith('GOOGLE_PLACES_API_KEY='):
-            return line.split('=',1)[1].strip().strip('"').strip("'")
-        if line.startswith('GOOGLE_MAPS_API_KEY='):
+        if line.startswith('SERPAPI_KEY='):
             return line.split('=',1)[1].strip().strip('"').strip("'")
     return None
 
 
-async def fetch_places_photo_url(session, place_id, api_key):
-    """Return a direct photo URL for the first photo of a Place, or None."""
-    if not api_key: return None
-    # Places API (new) — get place details with photos
-    url = f'https://places.googleapis.com/v1/places/{place_id}?fields=photos&key={api_key}'
-    headers = {'X-Goog-FieldMask': 'photos'}
+async def fetch_serpapi_places_photos(session, place_id, api_key):
+    """Return a list of Google Places photo URLs via SerpAPI (user-submitted, not street-view).
+
+    These are the photos Google displays on the business's Maps listing — typically
+    uploaded by the owner or customers showing the actual facility. Way more
+    reliable than auto-generated Street View.
+    """
+    if not api_key or not place_id: return []
+    # SerpAPI google_maps engine — place lookup by place_id returns place_info with photos
+    url = 'https://serpapi.com/search.json'
+    params = {
+        'engine': 'google_maps',
+        'type': 'place',
+        'place_id': place_id,
+        'api_key': api_key,
+    }
     try:
-        async with session.get(url, headers=headers, ssl=SSL_CTX, timeout=aiohttp.ClientTimeout(total=15)) as r:
-            if r.status != 200: return None
+        async with session.get(url, params=params, ssl=SSL_CTX, timeout=aiohttp.ClientTimeout(total=30)) as r:
+            if r.status != 200: return []
             j = await r.json()
-            photos = j.get('photos') or []
-            if not photos: return None
-            photo_name = photos[0].get('name')
-            if not photo_name: return None
-            # Get the photo media (returns the actual image URL via redirect)
-            media_url = f'https://places.googleapis.com/v1/{photo_name}/media?maxHeightPx=800&maxWidthPx=1200&skipHttpRedirect=true&key={api_key}'
-            async with session.get(media_url, ssl=SSL_CTX, timeout=aiohttp.ClientTimeout(total=15)) as r2:
-                if r2.status != 200: return None
-                j2 = await r2.json()
-                return j2.get('photoUri')
+            # SerpAPI returns place_results with a photos field or a separate photos_results
+            photos = []
+            place_results = j.get('place_results') or {}
+            # Option 1: direct photos array in place_results
+            for p in place_results.get('photos', []) or []:
+                if isinstance(p, dict) and p.get('thumbnail'):
+                    photos.append(p['thumbnail'])
+                elif isinstance(p, str):
+                    photos.append(p)
+            # Option 2: thumbnail field on place_results
+            if not photos and place_results.get('thumbnail'):
+                photos.append(place_results['thumbnail'])
+            return photos
     except Exception as e:
-        log(f'    Places fetch error: {e}')
-        return None
+        log(f'    SerpAPI fetch error for {place_id[:15]}: {e}')
+        return []
 
 
 async def resolve_one(session, listing, audit, api_key, stats):
@@ -140,14 +151,16 @@ async def resolve_one(session, listing, audit, api_key, stats):
         photos = listing.get('photos') or []
         place_id = listing.get('google_place_id')
 
-        # Path 4: have google_photo or street_view fallback already
-        if google_photo or street_view:
+        # Path 4: have google_photo (user-submitted to Google, reliable)
+        # NOTE: street_view_url removed as a fallback — auto-generated Street View
+        # is too unreliable (random angles, wrong building, trees blocking facility).
+        if google_photo:
             patch = {
                 'is_approved': True,
                 'hero_image': None, 'hero_image_source': None,
-                'crawl_notes': f'[{today}] Auto-approved via resolve-held: {verdict}, page falls back to existing {"google_photo_url" if google_photo else "street_view_url"}.'
+                'crawl_notes': f'[{today}] Auto-approved via resolve-held: {verdict}, page falls back to existing google_photo_url.'
             }
-            action = 'approve-fallback-existing'
+            action = 'approve-fallback-google-photo'
 
         # Path 5: promote photos[0] to hero
         elif photos and isinstance(photos, list) and len(photos) > 0:
@@ -159,18 +172,19 @@ async def resolve_one(session, listing, audit, api_key, stats):
             # Don't approve yet — wait for audit to verify the new hero
             action = 'promote-photo-needs-reaudit'
 
-        # Path 6: fetch Places API photo
+        # Path 6: fetch Google Places photo via SerpAPI (user-submitted facility photos, reliable)
         elif place_id and api_key and not SKIP_PLACES:
-            photo_url = await fetch_places_photo_url(session, place_id, api_key)
-            if photo_url:
+            photos_found = await fetch_serpapi_places_photos(session, place_id, api_key)
+            if photos_found:
                 patch = {
-                    'hero_image': photo_url,
-                    'hero_image_source': 'google-places-api',
-                    'crawl_notes': f'[{today}] Hero fetched via Google Places API; next audit cron will verify.'
+                    'hero_image': photos_found[0],
+                    'photos': photos_found,  # store all for future fallbacks
+                    'hero_image_source': 'serpapi-places',
+                    'crawl_notes': f'[{today}] Hero fetched via SerpAPI Google Places ({len(photos_found)} photos stored); next audit cron will verify the new hero.'
                 }
-                action = 'places-api-fetch-needs-reaudit'
+                action = 'serpapi-fetch-needs-reaudit'
             else:
-                action = 'places-api-no-photo'
+                action = 'serpapi-no-photo'
         else:
             action = 'stay-held-no-recovery-path'
     else:
@@ -197,9 +211,11 @@ async def main():
     log(f'HELD RESOLVER — dry_run={DRY_RUN} skip_places={SKIP_PLACES}')
     log('=' * 60)
 
-    api_key = None if SKIP_PLACES else get_places_api_key()
+    api_key = None if SKIP_PLACES else get_serpapi_key()
     if not SKIP_PLACES and not api_key:
-        log('⚠ No GOOGLE_PLACES_API_KEY in .env.local — place_id path disabled')
+        log('⚠ No SERPAPI_KEY in .env.local — place_id path disabled')
+    elif api_key:
+        log(f'✓ SerpAPI key loaded — can fetch Google Places photos for place_id listings')
 
     async with aiohttp.ClientSession() as session:
         # Pull all held listings
