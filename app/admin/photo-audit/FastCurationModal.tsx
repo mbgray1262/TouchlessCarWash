@@ -775,17 +775,19 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
             <button
               onClick={() => {
                 if (listing.google_place_id) {
-                  // Open directly to reviews tab via place_id
+                  // Open directly to reviews tab via place_id (exact match, no ambiguity)
                   window.open(`https://www.google.com/maps/place/?q=place_id:${listing.google_place_id}&hl=en#reviews`, '_blank');
                 } else {
-                  const query = encodeURIComponent(`${listing.name}, ${listing.city}, ${listing.state}`);
-                  window.open(`https://www.google.com/maps/search/${query}`, '_blank');
+                  // Include full street address so Google doesn't pick the nearest unrelated business
+                  const addrParts = [listing.address, listing.city, listing.state, listing.zip].filter(Boolean).join(', ');
+                  const query = encodeURIComponent(`${listing.name} ${addrParts}`);
+                  window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
                 }
               }}
               className="flex items-center gap-1 px-3 py-2 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 text-sm"
-              title="Open Google Reviews — search 'touch' to verify touchless"
+              title={listing.google_place_id ? 'Open exact Google listing reviews' : 'No Google place_id — searching by address (may show nearest match if business not on Maps)'}
             >
-              Reviews
+              Reviews{!listing.google_place_id ? ' ⚠' : ''}
             </button>
             <button
               onClick={toggleTouchlessVerified}
