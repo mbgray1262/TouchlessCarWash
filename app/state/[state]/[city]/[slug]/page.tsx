@@ -1449,7 +1449,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                   )}
                 </div>
 
-                {listing.latitude && listing.longitude && (
+                {(listing.address || (listing.latitude && listing.longitude)) && (
                   <div className="mt-4 flex flex-col gap-2">
                     <TrackableLink
                       href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${streetAddress(listing.address, listing.city, listing.state, listing.zip)}, ${listing.city}, ${listing.state} ${listing.zip}`)}`}
@@ -1463,7 +1463,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                       Get Directions
                     </TrackableLink>
                     <div className="flex gap-2">
-                      {listing.google_place_id && (
+                      {listing.google_place_id ? (
                         <a
                           href={`https://www.google.com/maps/place/?q=place_id:${listing.google_place_id}`}
                           target="_blank"
@@ -1473,16 +1473,38 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                           <ExternalLink className="w-3 h-3" />
                           View on Google
                         </a>
+                      ) : (
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${listing.name}, ${streetAddress(listing.address, listing.city, listing.state, listing.zip)}, ${listing.city}, ${listing.state} ${listing.zip}`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 py-2 rounded-lg transition-colors"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          View on Google
+                        </a>
                       )}
-                      <a
-                        href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${listing.latitude},${listing.longitude}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 py-2 rounded-lg transition-colors"
-                      >
-                        <MapPin className="w-3 h-3" />
-                        Street View
-                      </a>
+                      {listing.latitude && listing.longitude ? (
+                        <a
+                          href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${listing.latitude},${listing.longitude}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 py-2 rounded-lg transition-colors"
+                        >
+                          <MapPin className="w-3 h-3" />
+                          Street View
+                        </a>
+                      ) : (
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${streetAddress(listing.address, listing.city, listing.state, listing.zip)}, ${listing.city}, ${listing.state} ${listing.zip}`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 py-2 rounded-lg transition-colors"
+                        >
+                          <MapPin className="w-3 h-3" />
+                          Open Map
+                        </a>
+                      )}
                     </div>
                   </div>
                 )}

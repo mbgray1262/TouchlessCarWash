@@ -71,7 +71,7 @@ export interface LowResListing {
   hero_image_source: string | null;
 }
 
-export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup' | 'no_hero' | 'low_res' | 'held';
+export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup' | 'no_hero' | 'low_res' | 'held' | 'unscanned';
 
 const POLL_INTERVAL = 3000; // 3 seconds — fast enough to show per-listing progress
 const PAGE_SIZE = 25;
@@ -260,6 +260,63 @@ export function usePhotoAudit() {
 
     // low_res filter is handled separately via loadLowResPage — skip here
     if (filter === 'low_res') {
+      setLoading(false);
+      return;
+    }
+
+    // "unscanned" filter: touchless listings never touched by the AI photo auditor.
+    // Shows listings where photo_audited_at IS NULL so the admin can manually curate
+    // them without ever invoking paid Claude API calls.
+    if (filter === 'unscanned') {
+      const { count: totalUnscanned } = await supabase
+        .from('listings').select('id', { count: 'exact', head: true })
+        .eq('is_touchless', true).is('photo_audited_at', null);
+
+      const { data: unscannedListings } = await supabase
+        .from('listings')
+        .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
+        .eq('is_touchless', true).is('photo_audited_at', null)
+        // Prioritize: no hero first (need the most attention), then alphabetical
+        .order('hero_image', { ascending: true, nullsFirst: true })
+        .order('name', { ascending: true })
+        .range(offset, offset + PAGE_SIZE - 1);
+
+      const allResults: AuditResult[] = [];
+      for (const l of unscannedListings ?? []) {
+        const hasHero = !!l.hero_image;
+        const hasGallery = (l.photos ?? []).length > 0;
+        let quality: string;
+        if (hasHero) quality = 'has_hero_unscanned';
+        else if (hasGallery) quality = 'has_candidates';
+        else quality = 'missing';
+
+        allResults.push({
+          id: `unscanned-${l.id}`,
+          listing_id: l.id,
+          listing_name: l.name,
+          listing_city: l.city,
+          listing_state: l.state,
+          listing_hero: l.hero_image,
+          hero_quality: quality,
+          equipment_brand: l.equipment_brand,
+          equipment_model: l.equipment_model,
+          equipment_confidence: null,
+          equipment_source_photo: null,
+          suggested_hero_url: null,
+          suggested_hero_reason: hasHero ? 'Has hero — unscanned' : hasGallery ? 'Has photo candidates — unscanned' : 'No hero yet — unscanned',
+          photos_to_remove: [],
+          reviewed: false,
+          applied: hasHero,
+          created_at: '',
+          raw_response: null,
+          google_photos_added: 0,
+          google_photos_screened: 0,
+          listing_parent_chain: l.parent_chain ?? null,
+        });
+      }
+
+      setResults(allResults);
+      setFilteredTotal(totalUnscanned ?? 0);
       setLoading(false);
       return;
     }
