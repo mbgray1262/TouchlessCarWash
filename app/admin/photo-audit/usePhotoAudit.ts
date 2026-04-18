@@ -71,7 +71,7 @@ export interface LowResListing {
   hero_image_source: string | null;
 }
 
-export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup' | 'no_hero' | 'low_res';
+export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup' | 'no_hero' | 'low_res' | 'held';
 
 const POLL_INTERVAL = 3000; // 3 seconds — fast enough to show per-listing progress
 const PAGE_SIZE = 25;
@@ -110,13 +110,14 @@ export function usePhotoAudit() {
   const [page, setPage] = useState(1);
   const [noHeroCount, setNoHeroCount] = useState(0);
   const [filteredTotal, setFilteredTotal] = useState(0);
+  const [heldCount, setHeldCount] = useState(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const continuingRef = useRef(false);
 
   const [noHeroUnprocessed, setNoHeroUnprocessed] = useState(0);
 
   const loadQueueStats = useCallback(async () => {
-    const [totalRes, auditedRes, noHeroRes, noHeroUnprocessedRes] = await Promise.all([
+    const [totalRes, auditedRes, noHeroRes, noHeroUnprocessedRes, heldRes] = await Promise.all([
       // Total = ALL touchless listings (including chain brand locations with null hero_image)
       supabase.from('listings').select('id', { count: 'exact', head: true })
         .eq('is_touchless', true),
@@ -128,12 +129,16 @@ export function usePhotoAudit() {
       // Count only unprocessed No Hero listings (for Run All button)
       supabase.from('listings').select('id', { count: 'exact', head: true })
         .eq('is_touchless', true).is('hero_image', null).is('photo_audited_at', null),
+      // Held = touchless + not approved (admin review queue)
+      supabase.from('listings').select('id', { count: 'exact', head: true })
+        .eq('is_touchless', true).eq('is_approved', false),
     ]);
 
     const total = totalRes.count ?? 0;
     const audited = auditedRes.count ?? 0;
     setNoHeroCount(noHeroRes.count ?? 0);
     setNoHeroUnprocessed(noHeroUnprocessedRes.count ?? 0);
+    setHeldCount(heldRes.count ?? 0);
     setQueueStats({
       totalUntagged: total,
       alreadyAudited: audited,
@@ -255,6 +260,62 @@ export function usePhotoAudit() {
 
     // low_res filter is handled separately via loadLowResPage — skip here
     if (filter === 'low_res') {
+      setLoading(false);
+      return;
+    }
+
+    // "held" filter: touchless listings that are not yet approved — one-at-a-time
+    // review queue for the admin to add heroes and release holds.
+    if (filter === 'held') {
+      const { count: totalHeld } = await supabase
+        .from('listings').select('id', { count: 'exact', head: true })
+        .eq('is_touchless', true).eq('is_approved', false);
+
+      const { data: heldListings } = await supabase
+        .from('listings')
+        .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
+        .eq('is_touchless', true).eq('is_approved', false)
+        // Prioritize: no hero first (they need the most attention), then oldest-touched
+        .order('hero_image', { ascending: true, nullsFirst: true })
+        .order('photo_audited_at', { ascending: true, nullsFirst: true })
+        .range(offset, offset + PAGE_SIZE - 1);
+
+      const allResults: AuditResult[] = [];
+      for (const l of heldListings ?? []) {
+        const hasHero = !!l.hero_image;
+        const hasGallery = (l.photos ?? []).length > 0;
+        let quality: string;
+        if (hasHero) quality = 'has_hero_needs_approval';
+        else if (hasGallery) quality = 'has_candidates';
+        else quality = 'missing';
+
+        allResults.push({
+          id: `held-${l.id}`,
+          listing_id: l.id,
+          listing_name: l.name,
+          listing_city: l.city,
+          listing_state: l.state,
+          listing_hero: l.hero_image,
+          hero_quality: quality,
+          equipment_brand: l.equipment_brand,
+          equipment_model: l.equipment_model,
+          equipment_confidence: null,
+          equipment_source_photo: null,
+          suggested_hero_url: null,
+          suggested_hero_reason: hasHero ? 'Has hero — ready to approve' : hasGallery ? 'Has photo candidates' : 'Needs hero — add via Google Photos / Street View / Upload',
+          photos_to_remove: [],
+          reviewed: false,
+          applied: hasHero,
+          created_at: '',
+          raw_response: null,
+          google_photos_added: 0,
+          google_photos_screened: 0,
+          listing_parent_chain: l.parent_chain ?? null,
+        });
+      }
+
+      setResults(allResults);
+      setFilteredTotal(totalHeld ?? 0);
       setLoading(false);
       return;
     }
@@ -691,11 +752,13 @@ export function usePhotoAudit() {
     reload: loadResults,
     noHeroCount,
     noHeroUnprocessed,
+    heldCount,
     // Remove a listing from results by listing_id (used when approving from editor)
     removeFromResults: (listingId: string) => {
       setResults(prev => prev.filter(r => r.listing_id !== listingId));
       setFilteredTotal(prev => Math.max(0, prev - 1));
       setNoHeroCount(prev => Math.max(0, prev - 1));
+      setHeldCount(prev => Math.max(0, prev - 1));
     },
     // Low Res tab
     lowResListings,
