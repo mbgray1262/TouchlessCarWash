@@ -39,12 +39,14 @@ LOG_FILE = os.path.join(SCRIPT_DIR, 'verify-held-cached.log')
 LIMIT = 0
 DRY_RUN = False
 IDS_ARG = None
+INCLUDE_APPROVED = False  # Also process currently-approved listings to catch contra-evidence
 
 for i, a in enumerate(sys.argv[1:], 1):
     if a == '--limit' and i < len(sys.argv)-1: LIMIT = int(sys.argv[i+1])
     elif a.startswith('--limit='): LIMIT = int(a.split('=')[1])
     elif a == '--dry-run': DRY_RUN = True
     elif a.startswith('--ids='): IDS_ARG = a.split('=',1)[1].split(',')
+    elif a == '--include-approved': INCLUDE_APPROVED = True
 
 
 def log(msg):
@@ -217,15 +219,24 @@ def pick_hero(candidates):
 
 # ============ Decision ============
 
-def decide(evidence, has_photo, name_positive):
+def decide(evidence, has_photo, name_positive, is_currently_approved=False):
     pos = len(evidence['positive'])
     neg = len(evidence['negative'])
 
-    # Strong negative wins
+    # Revert thresholds — HIGHER bar when already-approved (don't undo good data lightly).
+    if is_currently_approved:
+        # Require overwhelming contra evidence: >=4 contra AND <=1 positive, OR >=5 contra period
+        if neg >= 5: return 'revert', f'{neg} contra signals (strong, already-approved review)'
+        if neg >= 4 and pos <= 1: return 'revert', f'{neg} contra vs {pos} positive (already-approved review)'
+        # Everything else: leave approved alone
+        if pos >= 1: return 'approve', f'keep-approved: pos={pos} neg={neg}'
+        return 'approve', f'keep-approved: insufficient contra (pos={pos} neg={neg})'
+
+    # Held-listing thresholds (original, aggressive)
     if neg >= 3: return 'revert', f'{neg} contra signals'
     if neg >= 2 and pos == 0: return 'revert', f'{neg} contra, 0 positive'
 
-    # Strong positive
+    # Strong positive — promote to approved
     if pos >= 3 and neg == 0: return 'approve', f'{pos} positive, 0 contra'
     if pos >= 2 and neg <= 1 and has_photo: return 'approve', f'{pos} positive, {neg} contra, has photo'
     if pos >= 1 and neg == 0 and has_photo and name_positive: return 'approve', f'{pos} positive + touchless name + photo'
@@ -250,8 +261,10 @@ def main():
     else:
         held = []
         offset = 0
+        # If --include-approved: process both approved + held. Otherwise just held.
+        approval_filter = '' if INCLUDE_APPROVED else '&is_approved=eq.false'
         while True:
-            rows = sb_get(f'/rest/v1/listings?select=id,name,city,state,website,hero_image,photos,crawl_snapshot,parent_chain&is_touchless=eq.true&is_approved=eq.false&limit=1000&offset={offset}')
+            rows = sb_get(f'/rest/v1/listings?select=id,name,city,state,website,hero_image,photos,crawl_snapshot,parent_chain,is_approved&is_touchless=eq.true{approval_filter}&limit=1000&offset={offset}')
             if not rows: break
             held.extend(rows)
             if len(rows) < 1000: break
@@ -310,7 +323,7 @@ def main():
         best_photo, scored = pick_hero(candidates)
         has_photo = best_photo is not None
 
-        action, reason = decide(evidence, has_photo, name_positive)
+        action, reason = decide(evidence, has_photo, name_positive, is_currently_approved=bool(l.get('is_approved')))
         stats['actions'][action] = stats['actions'].get(action, 0) + 1
 
         patch = {}
