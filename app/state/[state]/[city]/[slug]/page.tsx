@@ -227,7 +227,13 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   const topAmenities = (listing.amenities || []).slice(0, 3).join(', ');
   const amenityPart = topAmenities ? ` Touch-free, brushless car wash offering ${topAmenities}.` : '';
   const canonicalUrl = `${SITE_URL}/state/${params.state}/${params.city}/${params.slug}`;
-  const chainBrandImageMeta = listing.hero_image_source !== 'manual'
+  // Location-specific admin-curated photos ALWAYS beat the generic chain brand image.
+  // The brand image is only the fallback when we don't have a human-verified hero.
+  // ('chain-brand-auto', 'google-auto', 'streetview-auto', etc. are machine-assigned and
+  //  should be replaced by brand image for chain locations.)
+  const HUMAN_SOURCES = new Set(['manual', 'gallery', 'upload', 'crop', 'paste', 'text-verified-pick']);
+  const isHumanCurated = listing.hero_image_source ? HUMAN_SOURCES.has(listing.hero_image_source) : false;
+  const chainBrandImageMeta = !isHumanCurated
     ? getChainBrandImage(listing.parent_chain, listing.id) : null;
   const rawHeroImage = chainBrandImageMeta ?? listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
   const heroImage = rawHeroImage ? ensureHttps(rawHeroImage) : null;
@@ -895,7 +901,10 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
   const cityName = listing.city;
   const todayKey = getTodayKey();
 
-  const chainBrandImage = listing.hero_image_source !== 'manual'
+  // Location-specific admin-curated photos ALWAYS beat the generic chain brand image.
+  const HUMAN_HERO_SOURCES = new Set(['manual', 'gallery', 'upload', 'crop', 'paste', 'text-verified-pick']);
+  const isHumanHero = listing.hero_image_source ? HUMAN_HERO_SOURCES.has(listing.hero_image_source) : false;
+  const chainBrandImage = !isHumanHero
     ? getChainBrandImage(listing.parent_chain, listing.id) : null;
   const heroImage = chainBrandImage ?? listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
   const logoImage = listing.logo_photo ?? listing.google_logo_url ?? null;
