@@ -108,6 +108,33 @@ NEGATIVE_PATTERNS = [
     re.compile(r'\bself[- ]?serv(e|ice)\s+(only|bays only)\b', re.I),
 ]
 
+# Amenities are a structured field — simpler substring match, high authority
+# (staff-entered or chain-declared, not noisy prose).
+AMENITY_CONTRA = [
+    'hand wash', 'hand car wash', 'hand-wash',
+    'soft cloth', 'soft-cloth', 'soft touch', 'soft-touch',
+    'full service', 'full-service',
+    'foam brush', 'mitter',
+    'tunnel wash', 'conveyor',
+]
+
+
+def scan_amenities(amenities):
+    """Return list of contra signals found in amenities array."""
+    hits = []
+    if not amenities: return hits
+    if isinstance(amenities, str):
+        try: amenities = json.loads(amenities)
+        except: return hits
+    if not isinstance(amenities, list): return hits
+    for a in amenities:
+        al = str(a).lower()
+        for k in AMENITY_CONTRA:
+            if k in al:
+                hits.append(str(a))
+                break
+    return hits
+
 
 def scan_evidence(text):
     """Return dict: {'positive': [...], 'negative': [...]} with up to 5 snippets each."""
@@ -219,35 +246,49 @@ def pick_hero(candidates):
 
 # ============ Decision ============
 
-def decide(evidence, has_photo, name_positive, is_currently_approved=False, is_chain_verified=False):
+def decide(evidence, has_photo, name_positive, is_currently_approved=False, is_chain_verified=False, amenity_contra=None):
     pos = len(evidence['positive'])
     neg = len(evidence['negative'])
+    amen_neg = len(amenity_contra or [])
 
     # Revert thresholds — HIGHER bar when already-approved (don't undo good data lightly).
     if is_currently_approved:
+        # Structured amenity contra is high-authority: even 1 hit triggers revert if no positive evidence.
+        if amen_neg >= 1 and pos == 0 and not is_chain_verified and not name_positive:
+            return 'revert', f'amenity contra ({amenity_contra[0]}) + no positive evidence'
         if neg >= 5: return 'revert', f'{neg} contra signals (strong, already-approved review)'
         if neg >= 4 and pos <= 1: return 'revert', f'{neg} contra vs {pos} positive (already-approved review)'
-        if pos >= 1: return 'approve', f'keep-approved: pos={pos} neg={neg}'
+        # NEW: require positive evidence to stay approved. "Assume touchless" default is gone.
+        if pos == 0 and not is_chain_verified and not name_positive:
+            return 'revert', f'no positive evidence (pos=0, not chain/name-verified)'
+        if pos >= 1 or is_chain_verified or name_positive:
+            return 'approve', f'keep-approved: pos={pos} neg={neg} chain={is_chain_verified} name={name_positive}'
         return 'approve', f'keep-approved: insufficient contra (pos={pos} neg={neg})'
 
-    # Held-listing thresholds
+    # === HELD-LISTING PATH ===
+    # Policy: evidence-less listings are NOT touchless. No more "hold" purgatory.
+    # Valid evidence types: positive text, chain verification, or name-positive+photo+no-contra.
     if neg >= 3: return 'revert', f'{neg} contra signals'
     if neg >= 2 and pos == 0: return 'revert', f'{neg} contra, 0 positive'
+    if amen_neg >= 1 and pos == 0 and not is_chain_verified:
+        return 'revert', f'amenity contra ({amenity_contra[0]}) + no positive evidence'
 
-    # Chain-verified listings (Max Car Wash, Brown Bear, etc. with Storepoint per-location
-    # touchless tag) are authoritative — approve if they have a photo and no strong contra.
-    if is_chain_verified and has_photo and neg <= 1:
-        return 'approve', f'chain-verified + photo + neg={neg}'
+    # Chain-verified listings (Storepoint per-location touchless tag, Circle K/Holiday/etc.)
+    # are authoritative — approve if no strong contra.
+    if is_chain_verified and neg <= 1:
+        return 'approve', f'chain-verified, neg={neg}'
 
-    # Strong positive
+    # Positive text evidence = valid evidence (photo is nice-to-have, not required)
     if pos >= 3 and neg == 0: return 'approve', f'{pos} positive, 0 contra'
-    if pos >= 2 and neg <= 1 and has_photo: return 'approve', f'{pos} positive, {neg} contra, has photo'
-    if pos >= 1 and neg == 0 and has_photo and name_positive: return 'approve', f'{pos} positive + touchless name + photo'
-    # Chain-verified without photo — stay held (need hero first)
-    if is_chain_verified and not has_photo:
-        return 'hold', f'chain-verified but no photo yet'
+    if pos >= 2 and neg <= 1: return 'approve', f'{pos} positive, {neg} contra'
+    if pos >= 1 and neg == 0: return 'approve', f'{pos} positive, 0 contra'
+    if pos >= 1 and neg <= 1 and (has_photo or name_positive): return 'approve', f'{pos} positive + photo/name'
+    # Mixed-facility: positive significantly outweighs negative (most car washes are mixed)
+    if pos >= 3 and pos > neg * 2: return 'approve', f'mixed-facility: {pos} positive > {neg} contra (2x)'
+    if pos >= 4 and pos > neg: return 'approve', f'mixed-facility: {pos} positive > {neg} contra'
 
-    return 'hold', f'pos={pos} neg={neg} photo={has_photo} name_touch={name_positive} chain={is_chain_verified}'
+    # Nothing matched above → no positive evidence → REVERT (not hold).
+    return 'revert', f'no positive evidence (pos={pos} neg={neg} chain={is_chain_verified} name={name_positive} photo={has_photo})'
 
 
 # ============ Main ============
@@ -262,7 +303,7 @@ def main():
         held = []
         for i in range(0, len(IDS_ARG), 50):
             chunk = ','.join(IDS_ARG[i:i+50])
-            rows = sb_get(f'/rest/v1/listings?select=id,name,city,state,website,hero_image,photos,crawl_snapshot,parent_chain,touchless_verified,google_photo_url&id=in.({chunk})')
+            rows = sb_get(f'/rest/v1/listings?select=id,name,city,state,website,hero_image,photos,crawl_snapshot,parent_chain,touchless_verified,google_photo_url,amenities&id=in.({chunk})')
             held.extend(rows or [])
     else:
         held = []
@@ -270,7 +311,7 @@ def main():
         # If --include-approved: process both approved + held. Otherwise just held.
         approval_filter = '' if INCLUDE_APPROVED else '&is_approved=eq.false'
         while True:
-            rows = sb_get(f'/rest/v1/listings?select=id,name,city,state,website,hero_image,photos,crawl_snapshot,parent_chain,touchless_verified,google_photo_url,is_approved&is_touchless=eq.true{approval_filter}&limit=1000&offset={offset}')
+            rows = sb_get(f'/rest/v1/listings?select=id,name,city,state,website,hero_image,photos,crawl_snapshot,parent_chain,touchless_verified,google_photo_url,is_approved,amenities&is_touchless=eq.true{approval_filter}&limit=1000&offset={offset}')
             if not rows: break
             held.extend(rows)
             if len(rows) < 1000: break
@@ -285,7 +326,8 @@ def main():
     for i in range(0, len(ids), 50):
         chunk = ','.join(ids[i:i+50])
         try:
-            rows = sb_get(f'/rest/v1/review_snippets?select=listing_id,review_text,is_touchless_evidence&listing_id=in.({chunk})')
+            # Only trust snippets flagged as touchless evidence (skips demoted Yelp sweeps, etc.)
+            rows = sb_get(f'/rest/v1/review_snippets?select=listing_id,review_text,is_touchless_evidence&listing_id=in.({chunk})&is_touchless_evidence=eq.true')
         except Exception as e:
             log(f'  review_snippets fetch fail for chunk {i}: {e}')
             continue
@@ -313,8 +355,8 @@ def main():
         combined = f'{name}\n{snapshot_md}\n{review_map.get(lid, "")}'
         evidence = scan_evidence(combined)
 
-        # Name-level positive signal
-        name_positive = bool(re.search(r'touch[- ]?(less|free)|brushless|no touch', name, re.I))
+        # Name-level positive signal — includes laser wash (equipment type)
+        name_positive = bool(re.search(r'touch[- ]?(less|free)|brushless|no touch|\blaser\s*(wash|car)', name, re.I))
 
         # Build photo candidates
         candidates = []
@@ -332,15 +374,21 @@ def main():
         has_photo = best_photo is not None
 
         is_chain_verified = (l.get('touchless_verified') == 'chain')
+        amenity_contra = scan_amenities(l.get('amenities'))
         action, reason = decide(evidence, has_photo, name_positive,
                                 is_currently_approved=bool(l.get('is_approved')),
-                                is_chain_verified=is_chain_verified)
+                                is_chain_verified=is_chain_verified,
+                                amenity_contra=amenity_contra)
         stats['actions'][action] = stats['actions'].get(action, 0) + 1
 
         patch = {}
         if action == 'approve':
             patch['is_approved'] = True
-            patch['touchless_verified'] = 'text-verified'
+            # Only set 'text-verified' if there's no stronger existing tag — NEVER downgrade
+            # 'chain' (authoritative per-location chain verification) to 'text-verified'.
+            existing_tv = l.get('touchless_verified')
+            if existing_tv != 'chain':
+                patch['touchless_verified'] = 'text-verified'
             if best_photo:
                 patch['hero_image'] = best_photo
                 patch['hero_image_source'] = 'text-verified-pick'

@@ -379,6 +379,23 @@ export default function PhotoAuditPage() {
           </div>
         )}
 
+        {/* Paid-API cost warning */}
+        <div className="rounded-lg border-2 border-amber-400 bg-amber-50 p-3 text-sm text-amber-900 space-y-2">
+          <div>
+            <div className="font-bold mb-1">⚠️ &ldquo;Run Batch&rdquo; / &ldquo;Run All&rdquo; use paid Anthropic API credits</div>
+            <div>
+              Each listing processed makes Claude vision API calls (Haiku + Sonnet) for photo classification.
+              Rough cost: <strong>~$0.02–$0.05 per listing</strong>. &ldquo;Run All ({(viewFilter === 'no_hero' ? noHeroUnprocessed : queueStats.remaining).toLocaleString()})&rdquo; would cost roughly <strong>${(((viewFilter === 'no_hero' ? noHeroUnprocessed : queueStats.remaining) * 0.035).toFixed(0))}</strong> in API credits.
+            </div>
+          </div>
+          <div className="pt-2 border-t border-amber-300">
+            <div className="font-bold mb-1">✅ Free manual curation</div>
+            <div>
+              <strong>Click any listing name below</strong> to open the manual photo curator — you can pick an existing photo, upload a new one, or paste an image URL as the hero. No AI, no API cost. Ignore the Run Batch / Run All buttons entirely.
+            </div>
+          </div>
+        </div>
+
         {/* Run controls */}
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2">
@@ -393,20 +410,31 @@ export default function PhotoAuditPage() {
             />
           </div>
           <button
-            onClick={() => runBatch(batchLimit, false, viewFilter === 'no_hero' ? true : includeGooglePhotos)}
+            onClick={() => {
+              const estCost = (batchLimit * 0.035).toFixed(2);
+              if (confirm(`This will cost approximately $${estCost} in paid Anthropic API credits (${batchLimit} listings × ~$0.035 each). Continue?`)) {
+                runBatch(batchLimit, false, viewFilter === 'no_hero' ? true : includeGooglePhotos);
+              }
+            }}
             disabled={running || batchLimit < 1}
             className="flex items-center gap-1.5 px-4 py-2 bg-[#0F2744] text-white rounded-lg text-sm font-medium hover:bg-[#1a3a5c] disabled:opacity-50"
           >
             {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-            {running ? 'Running...' : 'Run Batch'}
+            {running ? 'Running...' : 'Run Batch (paid)'}
           </button>
           <button
-            onClick={() => runBatch(viewFilter === 'no_hero' ? noHeroUnprocessed : queueStats.remaining, false, viewFilter === 'no_hero' ? true : includeGooglePhotos)}
+            onClick={() => {
+              const n = viewFilter === 'no_hero' ? noHeroUnprocessed : queueStats.remaining;
+              const estCost = (n * 0.035).toFixed(0);
+              if (confirm(`⚠️ This will cost approximately $${estCost} in paid Anthropic API credits (${n} listings × ~$0.035 each). Are you sure?`)) {
+                runBatch(n, false, viewFilter === 'no_hero' ? true : includeGooglePhotos);
+              }
+            }}
             disabled={running || (viewFilter === 'no_hero' ? noHeroUnprocessed === 0 : queueStats.remaining === 0)}
             className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-50"
           >
             {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-            Run All ({(viewFilter === 'no_hero' ? noHeroUnprocessed : queueStats.remaining).toLocaleString()})
+            Run All ({(viewFilter === 'no_hero' ? noHeroUnprocessed : queueStats.remaining).toLocaleString()}) (paid)
           </button>
         </div>
         {/* Job progress */}
@@ -447,6 +475,7 @@ export default function PhotoAuditPage() {
               { key: 'no_hero' as ViewFilter, label: `No Hero (${viewFilter === 'no_hero' ? filteredTotal : noHeroCount})` },
               { key: 'low_res' as ViewFilter, label: `Low Res${stats.low_res_total > 0 ? ` (${stats.low_res_total})` : ''}` },
               { key: 'held' as ViewFilter, label: `Held (${viewFilter === 'held' ? filteredTotal : heldCount})` },
+              { key: 'unscanned' as ViewFilter, label: `Unscanned (${viewFilter === 'unscanned' ? filteredTotal : queueStats.remaining})` },
             ]).map(f => (
               <button
                 key={f.key}
