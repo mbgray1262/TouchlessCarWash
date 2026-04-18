@@ -304,7 +304,7 @@ export default function PhotoAuditPage() {
     viewFilter, unreviewedOnly, setUnreviewedOnly, page, filteredTotal, totalPages, pageSize,
     changeFilter, changePage,
     runBatch, applyEquipment, rejectResult, applyAllHighConfidence, undoApply, reload,
-    noHeroCount, noHeroUnprocessed, removeFromResults,
+    noHeroCount, noHeroUnprocessed, heldCount, removeFromResults,
     lowResListings, lowResTotal, lowResPage, lowResTotalPages, changeLowResPage,
     dismissLowRes, scanForLowRes, scanProgress,
   } = usePhotoAudit();
@@ -446,6 +446,7 @@ export default function PhotoAuditPage() {
               { key: 'cleanup' as ViewFilter, label: `Cleanup (${stats.cleanup_total})` },
               { key: 'no_hero' as ViewFilter, label: `No Hero (${viewFilter === 'no_hero' ? filteredTotal : noHeroCount})` },
               { key: 'low_res' as ViewFilter, label: `Low Res${stats.low_res_total > 0 ? ` (${stats.low_res_total})` : ''}` },
+              { key: 'held' as ViewFilter, label: `Held (${viewFilter === 'held' ? filteredTotal : heldCount})` },
             ]).map(f => (
               <button
                 key={f.key}
