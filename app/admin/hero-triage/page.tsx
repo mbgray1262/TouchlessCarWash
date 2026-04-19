@@ -333,7 +333,7 @@ function TriageCardView({
             : card.audit_verdict === 'UNCERTAIN' ? 'bg-amber-500 text-white'
             : card.audit_verdict === 'NOT_TOUCHLESS' ? 'bg-red-600 text-white'
             : 'bg-gray-500 text-white'
-          }`}>{card.audit_verdict.replace('TOUCHLESS_', '')} {card.audit_confidence ? `${card.audit_confidence}%` : ''}</span>
+          }`}>{card.audit_verdict?.replace('TOUCHLESS_', '')} {card.audit_confidence ? `${card.audit_confidence}%` : ''}</span>
         )}
         {isHumanHero && card.hero_image && (
           <span className="absolute bottom-2 left-2 px-2 py-0.5 bg-blue-600 text-white text-[10px] rounded-full">Manual</span>
