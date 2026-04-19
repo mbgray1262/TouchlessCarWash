@@ -642,11 +642,14 @@ export function useFastCuration(listingId: string) {
     const ok = await saveAll();
     if (!ok) return;
 
-    // Set reviewed_at timestamp on the listing
+    // Set reviewed_at + photo_audited_at timestamps and is_approved=true.
+    // photo_audited_at is what filters listings out of the "Unscanned" tab, so
+    // approving without setting it would leave them in the queue forever.
     if (listing) {
+      const now = new Date().toISOString();
       await supabase
         .from('listings')
-        .update({ reviewed_at: new Date().toISOString(), is_approved: true })
+        .update({ reviewed_at: now, photo_audited_at: now, is_approved: true })
         .eq('id', listing.id);
     }
 

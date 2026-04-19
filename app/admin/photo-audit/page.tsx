@@ -740,8 +740,9 @@ export default function PhotoAuditPage() {
           listingId={editorListingId}
           onClose={() => setEditorListingId(null)}
           onUpdate={() => {
-            // On No Hero tab, immediately remove the approved listing from the queue
-            if (viewFilter === 'no_hero' && editorListingId) {
+            // On No Hero or Unscanned tab, immediately remove the approved listing
+            // from the queue so the count decrements and the user doesn't see it again.
+            if ((viewFilter === 'no_hero' || viewFilter === 'unscanned') && editorListingId) {
               removeFromResults(editorListingId);
             }
             setTimeout(() => reload(), 500);
