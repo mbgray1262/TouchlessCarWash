@@ -2,28 +2,23 @@
  * Listing quality helpers — determine whether a touchless listing is "thin"
  * and should be excluded from the search index.
  *
- * A listing is considered thin when:
- *   - It has no source we can pull unique content from:
- *       - no crawl_snapshot (we never successfully crawled the site), AND
- *       - no extracted_data (no structured facts we could ground a description in)
- *   - AND it does not have a strong user-review signal that would justify keeping
- *     the page indexed purely on review trust:
- *       - rating >= 4.0 AND review_count >= 20
- *     (listings that meet the review floor stay indexed even without crawl data,
- *     because Google treats user review volume as a legitimate trust signal.)
+ * A listing is considered thin ONLY when it has no evidence of real operation:
+ *   - no crawl_snapshot (we never successfully crawled the site), AND
+ *   - no extracted_data (no structured facts), AND
+ *   - zero Google reviews (no user evidence the business even operates).
+ *
+ * Rating is intentionally NOT a filter. This is a comprehensive directory,
+ * not a curated best-of — a 3.2-star car wash with 150 reviews is still a
+ * real business people want to find, and the reviews themselves are content.
+ * We only hide the true "ghost" listings that have nothing.
  *
  * Thin listings are still shown on city/state hub pages — this helper only
  * affects whether the individual listing detail page appears in Google search
- * results. Hub pages continue to link to them, so the user-visible directory
- * comprehensiveness is unchanged.
- *
- * The goal is to stop advertising a large tail of low-content listing pages
- * to Google, which hurts the site-wide quality signal and has been contributing
- * to repeated AdSense application rejections.
+ * results.
  */
 
-export const REVIEW_FLOOR_COUNT = 20;
-export const REVIEW_FLOOR_RATING = 4.0;
+export const REVIEW_FLOOR_COUNT = 1;  // ≥1 review = proof of real operation
+export const REVIEW_FLOOR_RATING = 0; // no rating requirement (kept for export-compat)
 
 export type ListingQualityFields = {
   crawl_snapshot?: unknown | null;
@@ -48,11 +43,8 @@ export function isThinListing(listing: ListingQualityFields): boolean {
     listing.crawl_snapshot != null || listing.extracted_data != null;
   if (hasContent) return false;
 
-  // No content — keep indexed only if review signal is strong enough.
-  const rating = listing.rating ?? 0;
+  // No content — keep indexed if it has at least 1 Google review.
+  // Any review is proof the business exists and has customers.
   const reviewCount = listing.review_count ?? 0;
-  const meetsReviewFloor =
-    rating >= REVIEW_FLOOR_RATING && reviewCount >= REVIEW_FLOOR_COUNT;
-
-  return !meetsReviewFloor;
+  return reviewCount < REVIEW_FLOOR_COUNT;
 }
