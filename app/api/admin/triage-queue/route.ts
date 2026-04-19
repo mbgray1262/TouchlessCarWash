@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 
 type Queue = 'bad_hero' | 'uncertain_audit' | 'held_no_audit' | 'approved_risky';
 
-const LISTING_FIELDS = 'id,name,slug,city,state,hero_image,google_photo_url,street_view_url,is_approved,is_touchless,website,parent_chain,touchless_verified,amenities,crawl_notes,review_count';
+const LISTING_FIELDS = 'id,name,slug,city,state,hero_image,hero_image_source,google_photo_url,street_view_url,google_place_id,latitude,longitude,is_approved,is_touchless,website,parent_chain,touchless_verified,amenities,crawl_notes,review_count';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;

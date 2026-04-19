@@ -3,13 +3,19 @@
 /**
  * Fast batch hero-image triage.
  *
- * Shows 12 heroes at a time in a grid with one-click Keep / Hold / Revert.
- * Loads from ai_audits joined with listings so admin can see what Gemini
- * flagged and agree/disagree in bulk. ~10x faster than the per-listing modal.
+ * Shows 12 heroes at a time in a grid with clear actions:
+ *   - Keep / Hold / Revert (fast triage)
+ *   - Fix Hero (opens the manual photo curator to upload/paste/pick Google photos)
+ *   - Google Maps / Street View quick links
  */
 import { useEffect, useCallback, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { CheckCircle2, PauseCircle, XCircle, RefreshCw, ExternalLink, Filter } from 'lucide-react';
+import {
+  CheckCircle2, PauseCircle, XCircle, RefreshCw, ExternalLink, Filter,
+  Pencil, Map as MapIcon, Eye, AlertTriangle,
+} from 'lucide-react';
+import { FastCurationModal } from '../photo-audit/FastCurationModal';
+import { getChainBrandImage } from '@/lib/chain-brand-images';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,8 +31,10 @@ interface TriageCard {
   city: string;
   state: string;
   hero_image: string | null;
+  hero_image_source: string | null;
   google_photo_url: string | null;
   street_view_url: string | null;
+  google_place_id: string | null;
   is_approved: boolean;
   is_touchless: boolean;
   website: string | null;
@@ -35,6 +43,8 @@ interface TriageCard {
   amenities: string[] | null;
   crawl_notes: string | null;
   review_count: number | null;
+  latitude: number | null;
+  longitude: number | null;
   audit_verdict: string | null;
   audit_confidence: number | null;
   audit_flags: string[] | null;
@@ -59,6 +69,7 @@ export default function HeroTriagePage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [actionStatus, setActionStatus] = useState<Record<string, 'pending' | 'done' | 'error'>>({});
+  const [curatorListingId, setCuratorListingId] = useState<string | null>(null);
 
   const loadPage = useCallback(async () => {
     setLoading(true);
@@ -80,11 +91,14 @@ export default function HeroTriagePage() {
 
   const act = useCallback(async (id: string, action: 'keep' | 'hold' | 'revert') => {
     setActionStatus(s => ({ ...s, [id]: 'pending' }));
-    const patch: Partial<{ is_approved: boolean; is_touchless: boolean; touchless_verified: null; hero_image: null; hero_image_source: null; crawl_notes: string }> = {};
-    const today = new Date().toISOString().slice(0, 10);
+    const patch: Partial<{ is_approved: boolean; is_touchless: boolean; touchless_verified: null; hero_image: null; hero_image_source: null; crawl_notes: string; photo_audited_at: string; reviewed_at: string }> = {};
+    const now = new Date().toISOString();
+    const today = now.slice(0, 10);
     if (action === 'keep') {
       patch.is_approved = true;
-      patch.crawl_notes = `[${today}] Admin approved via hero-triage.`;
+      patch.photo_audited_at = now;
+      patch.reviewed_at = now;
+      patch.crawl_notes = `[${today}] Admin kept via hero-triage.`;
     } else if (action === 'hold') {
       patch.is_approved = false;
       patch.hero_image = null;
@@ -105,7 +119,6 @@ export default function HeroTriagePage() {
       return;
     }
     setActionStatus(s => ({ ...s, [id]: 'done' }));
-    // Remove card from view after brief delay
     setTimeout(() => setCards(cs => cs.filter(c => c.id !== id)), 250);
   }, []);
 
@@ -124,7 +137,7 @@ export default function HeroTriagePage() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Hero Triage</h1>
-            <p className="text-sm text-gray-500">Fast batch review — one click per listing</p>
+            <p className="text-sm text-gray-500">Fast batch review — Keep, Hold, Revert, or open the curator to pick a better hero</p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -134,6 +147,18 @@ export default function HeroTriagePage() {
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Reload
             </button>
           </div>
+        </div>
+
+        {/* How to use box */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-900">
+          <div className="font-semibold mb-1">How to use this page</div>
+          <ul className="list-disc pl-5 space-y-0.5 text-xs">
+            <li><strong>Keep</strong>: hero + classification are OK. Approves listing + marks audited.</li>
+            <li><strong>Hold</strong>: clears the bad hero; listing goes off the live site until you add a new hero via the curator.</li>
+            <li><strong>Revert</strong>: this isn&rsquo;t really touchless → remove from the directory entirely.</li>
+            <li><strong>Fix Hero</strong> (pencil icon): opens the same manual curator as Photo Audit — upload a file, paste a URL, pick from Google Photos / Street View candidates.</li>
+            <li><strong>Maps</strong>: quick link to verify the location on Google Maps before deciding.</li>
+          </ul>
         </div>
 
         {/* Queue selector */}
@@ -156,7 +181,7 @@ export default function HeroTriagePage() {
         <div className="text-xs text-gray-500 mb-2 flex items-center gap-4">
           <span>Queue total: <strong>{total}</strong></span>
           <span>Showing {offset + 1}–{Math.min(offset + PAGE_SIZE, total)}</span>
-          <span className="ml-auto text-gray-400">Keyboard: 1 = Keep, 2 = Hold, 3 = Revert on hovered card</span>
+          <span className="ml-auto text-gray-400">Keyboard on hovered card: 1=Keep, 2=Hold, 3=Revert, 4=Fix Hero</span>
         </div>
 
         {loading && <div className="text-center py-12 text-gray-400">Loading…</div>}
@@ -169,7 +194,13 @@ export default function HeroTriagePage() {
         {/* Card grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {cards.map(c => (
-            <TriageCardView key={c.id} card={c} status={actionStatus[c.id]} onAction={act} />
+            <TriageCardView
+              key={c.id}
+              card={c}
+              status={actionStatus[c.id]}
+              onAction={act}
+              onFixHero={() => setCuratorListingId(c.id)}
+            />
           ))}
         </div>
 
@@ -196,6 +227,19 @@ export default function HeroTriagePage() {
           </div>
         )}
       </div>
+
+      {/* Manual curator modal (same as Photo Audit) */}
+      {curatorListingId && (
+        <FastCurationModal
+          listingId={curatorListingId}
+          onClose={() => setCuratorListingId(null)}
+          onUpdate={() => {
+            // After saving a new hero, remove the card from the triage queue
+            setCards(cs => cs.filter(c => c.id !== curatorListingId));
+            setCuratorListingId(null);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -204,10 +248,12 @@ function TriageCardView({
   card,
   status,
   onAction,
+  onFixHero,
 }: {
   card: TriageCard;
   status?: 'pending' | 'done' | 'error';
   onAction: (id: string, action: 'keep' | 'hold' | 'revert') => void;
+  onFixHero: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
 
@@ -217,13 +263,35 @@ function TriageCardView({
       if (e.key === '1') onAction(card.id, 'keep');
       else if (e.key === '2') onAction(card.id, 'hold');
       else if (e.key === '3') onAction(card.id, 'revert');
+      else if (e.key === '4') onFixHero();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [hovered, card.id, onAction]);
+  }, [hovered, card.id, onAction, onFixHero]);
 
-  const heroUrl = card.hero_image || card.google_photo_url || card.street_view_url;
+  // Mirror the public listing page's hero priority:
+  // manual/curated heroes win > chain brand image > hero_image > google > street view
+  const chainBrand = card.parent_chain ? getChainBrandImage(card.parent_chain, card.id) : null;
+  const HUMAN_SOURCES = new Set(['manual', 'gallery', 'upload', 'crop', 'paste', 'text-verified-pick']);
+  const isHumanHero = card.hero_image_source ? HUMAN_SOURCES.has(card.hero_image_source) : false;
+  const resolvedHero = (isHumanHero && card.hero_image) || chainBrand || card.hero_image || card.google_photo_url || card.street_view_url;
+
+  // "Stale reasoning" — AI wrote hero_reasoning describing a hero that no longer exists
+  const reasoningIsStale = !!card.hero_reasoning && !card.hero_image && !card.google_photo_url;
+
   const dim = status === 'done' ? 'opacity-40' : '';
+
+  // Google Maps link by place_id (exact business) if available, else lat/lng
+  const mapsHref = card.google_place_id
+    ? `https://www.google.com/maps/place/?q=place_id:${card.google_place_id}`
+    : (card.latitude && card.longitude
+      ? `https://www.google.com/maps/@${card.latitude},${card.longitude},18z`
+      : `https://www.google.com/maps/search/${encodeURIComponent(`${card.name} ${card.city} ${card.state}`)}`);
+  const streetViewHref = card.google_place_id
+    ? `https://www.google.com/maps/place/?q=place_id:${card.google_place_id}&layer=c`
+    : (card.latitude && card.longitude
+      ? `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${card.latitude},${card.longitude}`
+      : null);
 
   return (
     <div
@@ -233,10 +301,19 @@ function TriageCardView({
     >
       {/* Hero */}
       <div className="relative aspect-video bg-gray-100">
-        {heroUrl ? (
-          <img src={heroUrl} alt="" className="w-full h-full object-cover" />
+        {resolvedHero ? (
+          <img src={resolvedHero} alt="" className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-300 text-sm">No hero</div>
+          <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 text-xs gap-1 bg-gray-50">
+            <AlertTriangle className="w-5 h-5 text-amber-500" />
+            <div className="font-medium text-gray-600">No hero stored</div>
+            <button
+              onClick={onFixHero}
+              className="mt-1 px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
+            >
+              Fix Hero →
+            </button>
+          </div>
         )}
         {card.hero_quality && (
           <span className={`absolute top-2 left-2 px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -255,6 +332,12 @@ function TriageCardView({
             : 'bg-gray-500 text-white'
           }`}>{card.audit_verdict.replace('TOUCHLESS_', '')} {card.audit_confidence ? `${card.audit_confidence}%` : ''}</span>
         )}
+        {isHumanHero && card.hero_image && (
+          <span className="absolute bottom-2 left-2 px-2 py-0.5 bg-blue-600 text-white text-[10px] rounded-full">Manual</span>
+        )}
+        {!isHumanHero && chainBrand && (
+          <span className="absolute bottom-2 left-2 px-2 py-0.5 bg-purple-600 text-white text-[10px] rounded-full">Chain brand</span>
+        )}
       </div>
 
       {/* Body */}
@@ -269,20 +352,49 @@ function TriageCardView({
             target="_blank"
             rel="noreferrer"
             className="text-blue-600 hover:text-blue-800 shrink-0"
-            title="View listing"
+            title="View listing (live site)"
           >
             <ExternalLink className="w-3.5 h-3.5" />
           </a>
         </div>
 
+        {/* Quick verification links */}
+        <div className="flex items-center gap-2 mt-2 mb-2 text-xs">
+          <a href={mapsHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-700">
+            <MapIcon className="w-3 h-3" /> Maps
+          </a>
+          {streetViewHref && (
+            <a href={streetViewHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-700">
+              <Eye className="w-3 h-3" /> Street View
+            </a>
+          )}
+          <button
+            onClick={onFixHero}
+            className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 hover:bg-blue-200 rounded text-blue-700 font-medium ml-auto"
+            title="Open the manual photo curator (4)"
+          >
+            <Pencil className="w-3 h-3" /> Fix Hero
+          </button>
+        </div>
+
+        {/* Stale-reasoning warning */}
+        {reasoningIsStale && (
+          <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 p-1.5 rounded mb-1.5 flex gap-1.5">
+            <AlertTriangle className="w-3 h-3 shrink-0 mt-[1px]" />
+            <span>
+              <strong>Stale reasoning:</strong> AI&rsquo;s description below refers to a hero that has since been cleared. Click <em>Fix Hero</em> to pick a new one.
+            </span>
+          </div>
+        )}
+
         {/* Audit reasoning */}
         {card.hero_reasoning && (
-          <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded mt-1 mb-2 line-clamp-3" title={card.hero_reasoning}>
-            <strong className="text-gray-700">Hero:</strong> {card.hero_reasoning}
+          <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded mb-2 line-clamp-3" title={card.hero_reasoning}>
+            <strong className="text-gray-700">AI verdict:</strong> {card.hero_reasoning}
           </div>
         )}
         {card.audit_reasoning && !card.hero_reasoning && (
-          <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded mt-1 mb-2 line-clamp-3" title={card.audit_reasoning}>
+          <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded mb-2 line-clamp-3" title={card.audit_reasoning}>
             {card.audit_reasoning}
           </div>
         )}
@@ -293,7 +405,7 @@ function TriageCardView({
             onClick={() => onAction(card.id, 'keep')}
             disabled={status === 'pending'}
             className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded text-xs font-medium disabled:opacity-50"
-            title="Keep: approve + clear hold (1)"
+            title="Keep: approve + mark audited (1)"
           >
             <CheckCircle2 className="w-3.5 h-3.5" /> Keep
           </button>
