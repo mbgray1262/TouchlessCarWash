@@ -264,6 +264,61 @@ export function usePhotoAudit() {
       return;
     }
 
+    // "all" filter: show ALL touchless listings (not just AI-scanned ones).
+    // Queries the listings table directly so chain-auto-approved + FastCuration-approved
+    // listings are included, not just those with photo_audit_results rows.
+    if (filter === 'all') {
+      const { count: totalAll } = await supabase
+        .from('listings').select('id', { count: 'exact', head: true })
+        .eq('is_touchless', true);
+
+      const { data: allListings } = await supabase
+        .from('listings')
+        .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
+        .eq('is_touchless', true)
+        .order('name', { ascending: true })
+        .range(offset, offset + PAGE_SIZE - 1);
+
+      const allResults: AuditResult[] = [];
+      for (const l of allListings ?? []) {
+        const hasHero = !!l.hero_image;
+        const hasGallery = (l.photos ?? []).length > 0;
+        let quality: string;
+        if (hasHero) quality = 'has_hero';
+        else if (hasGallery) quality = 'has_candidates';
+        else quality = 'missing';
+
+        allResults.push({
+          id: `all-${l.id}`,
+          listing_id: l.id,
+          listing_name: l.name,
+          listing_city: l.city,
+          listing_state: l.state,
+          listing_hero: l.hero_image,
+          hero_quality: quality,
+          equipment_brand: l.equipment_brand,
+          equipment_model: l.equipment_model,
+          equipment_confidence: null,
+          equipment_source_photo: null,
+          suggested_hero_url: null,
+          suggested_hero_reason: hasHero ? 'Has hero' : 'No hero',
+          photos_to_remove: [],
+          reviewed: !!l.photo_audited_at,
+          applied: hasHero,
+          created_at: '',
+          raw_response: null,
+          google_photos_added: 0,
+          google_photos_screened: 0,
+          listing_parent_chain: l.parent_chain ?? null,
+        });
+      }
+
+      setResults(allResults);
+      setFilteredTotal(totalAll ?? 0);
+      setLoading(false);
+      return;
+    }
+
     // "unscanned" filter: touchless listings never touched by the AI photo auditor.
     // Shows listings where photo_audited_at IS NULL so the admin can manually curate
     // them without ever invoking paid Claude API calls.

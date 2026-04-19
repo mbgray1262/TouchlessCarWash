@@ -467,7 +467,7 @@ export default function PhotoAuditPage() {
           <div className="flex items-center gap-1.5">
             <Filter className="w-3.5 h-3.5 text-gray-400" />
             {([
-              { key: 'all' as ViewFilter, label: `AI-scanned (${unreviewedOnly ? filteredTotal : stats.total})` },
+              { key: 'all' as ViewFilter, label: `All (${viewFilter === 'all' ? filteredTotal : queueStats.totalUntagged})` },
               { key: 'review' as ViewFilter, label: `Need Review (${stats.needs_review})` },
               { key: 'equipment' as ViewFilter, label: `Equipment (${stats.equipment_total})` },
               { key: 'heroes' as ViewFilter, label: `Poor Heroes (${stats.heroes_total})` },
