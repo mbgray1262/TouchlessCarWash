@@ -28,6 +28,8 @@ const TUNNEL_CHAINS = [
   'mr clean car wash', 'crew carwash', 'club car wash', 'wash nation',
   'white water express', 'el car wash', 'wash factory', 'rocket car wash',
   'soapy joe', 'spinx express', 'speedway car wash',
+  'cobblestone car wash', 'cobblestone auto spa', 'bluebird car wash',
+  'wash depot', 'super star car wash', 'car spa express', 'modwash',
 ];
 
 function isTunnelChain(name: string): string | null {
@@ -86,16 +88,19 @@ serve(async (req) => {
   const limit: number = Math.min(Math.max(1, body.limit ?? 50), 500);
   const dryRun: boolean = !!body.dryRun;
 
-  // Fetch approved touchless listings that have a place_id but no recent validation
-  // (We look for listings where google_category is null — they've never been validated)
-  const { data: listings, error: queryErr } = await supabase
+  // Fetch approved touchless listings that have a place_id. When forceAll=true,
+  // re-validate even listings we previously processed (catches name rebrands like
+  // Cobblestone → Bluebird where the old stored name differs from current Google name).
+  let query = supabase
     .from('listings')
     .select('id,name,google_place_id,touchless_verified')
     .eq('is_touchless', true)
     .eq('is_approved', true)
-    .not('google_place_id', 'is', null)
-    .is('google_category', null)
-    .limit(limit);
+    .not('google_place_id', 'is', null);
+  if (!body.forceAll) {
+    query = query.is('google_category', null);
+  }
+  const { data: listings, error: queryErr } = await query.limit(limit);
 
   if (queryErr) {
     return new Response(JSON.stringify({ error: queryErr.message }), {

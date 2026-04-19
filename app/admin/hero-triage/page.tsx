@@ -315,7 +315,10 @@ function TriageCardView({
             </button>
           </div>
         )}
-        {card.hero_quality && (
+        {/* AI verdict badges removed — they were frequently stale (from batch audits
+            run against heroes that have since been replaced) and misled the admin.
+            Rely on the admin's own visual judgment instead. */}
+        {false && card.hero_quality && (
           <span className={`absolute top-2 left-2 px-2 py-0.5 rounded-full text-xs font-medium ${
             card.hero_quality === 'BAD' ? 'bg-red-600 text-white'
             : card.hero_quality === 'GOOD' ? 'bg-emerald-600 text-white'
@@ -323,7 +326,7 @@ function TriageCardView({
             : 'bg-gray-500 text-white'
           }`}>Hero: {card.hero_quality}</span>
         )}
-        {card.audit_verdict && (
+        {false && card.audit_verdict && (
           <span className={`absolute top-2 right-2 px-2 py-0.5 rounded-full text-xs font-medium ${
             card.audit_verdict === 'TOUCHLESS_CONFIRMED' ? 'bg-emerald-600 text-white'
             : card.audit_verdict === 'TOUCHLESS_PROBABLE' ? 'bg-emerald-500 text-white'
@@ -377,27 +380,9 @@ function TriageCardView({
           </button>
         </div>
 
-        {/* Stale-reasoning warning */}
-        {reasoningIsStale && (
-          <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 p-1.5 rounded mb-1.5 flex gap-1.5">
-            <AlertTriangle className="w-3 h-3 shrink-0 mt-[1px]" />
-            <span>
-              <strong>Stale reasoning:</strong> AI&rsquo;s description below refers to a hero that has since been cleared. Click <em>Fix Hero</em> to pick a new one.
-            </span>
-          </div>
-        )}
-
-        {/* Audit reasoning */}
-        {card.hero_reasoning && (
-          <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded mb-2 line-clamp-3" title={card.hero_reasoning}>
-            <strong className="text-gray-700">AI verdict:</strong> {card.hero_reasoning}
-          </div>
-        )}
-        {card.audit_reasoning && !card.hero_reasoning && (
-          <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded mb-2 line-clamp-3" title={card.audit_reasoning}>
-            {card.audit_reasoning}
-          </div>
-        )}
+        {/* AI reasoning REMOVED — stored verdicts are from old batch audits that
+            frequently referenced heroes which have since been replaced. Showing
+            them was actively misleading. Trust your own eyes on the image above. */}
 
         {/* Actions */}
         <div className="flex gap-1 mt-2">

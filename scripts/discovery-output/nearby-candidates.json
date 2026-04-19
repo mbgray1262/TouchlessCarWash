@@ -1,5 +1,13 @@
 {
-  "timestamp": "2026-04-16T15:02:16.865343",
-  "total_candidates": 0,
-  "candidates": []
+  "timestamp": "2026-04-17T13:05:46.705401",
+  "total_candidates": 1,
+  "candidates": [
+    {
+      "place_id": "ChIJseJq6WDDUogRG0kuIVfeq2U",
+      "seeds": [
+        "030db027-1616-49d1-885a-233673c26032"
+      ],
+      "first_seen": "2026-04-17T10:20:17.525183"
+    }
+  ]
 }

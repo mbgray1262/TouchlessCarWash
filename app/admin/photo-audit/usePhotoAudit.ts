@@ -262,14 +262,23 @@ export function usePhotoAudit() {
     // Queries the listings table directly so chain-auto-approved + FastCuration-approved
     // listings are included, not just those with photo_audit_results rows.
     if (filter === 'all') {
-      const { count: totalAll } = await supabase
+      let countQuery = supabase
         .from('listings').select('id', { count: 'exact', head: true })
         .eq('is_touchless', true);
-
-      const { data: allListings } = await supabase
+      let dataQuery = supabase
         .from('listings')
         .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
-        .eq('is_touchless', true)
+        .eq('is_touchless', true);
+
+      // When "Unreviewed only" is checked, hide listings that have already been
+      // photo_audited (either by AI batch or manual FastCuration approval stamp).
+      if (unreviewed) {
+        countQuery = countQuery.is('photo_audited_at', null);
+        dataQuery = dataQuery.is('photo_audited_at', null);
+      }
+
+      const { count: totalAll } = await countQuery;
+      const { data: allListings } = await dataQuery
         .order('name', { ascending: true })
         .range(offset, offset + PAGE_SIZE - 1);
 
