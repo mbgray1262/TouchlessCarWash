@@ -217,7 +217,11 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
   if (!metro) notFound();
 
   const allListings = await getMetroListings(metro);
-  if (allListings.length < 5) notFound();
+  // Minimum 3 listings to make a meaningful "best-of" page. Below that, 404.
+  // Bumped from 5 → 3 so small metros (e.g. Grants Pass, which has 4) get
+  // indexable pages. Lifting too low risks Google flagging thin content, so
+  // 3 is the floor.
+  if (allListings.length < 3) notFound();
 
   const listingIds = allListings.map((l) => l.id);
   const touchlessReviewCounts = await getTouchlessReviewCounts(listingIds);

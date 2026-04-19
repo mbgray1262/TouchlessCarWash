@@ -160,7 +160,7 @@ export async function GET() {
   </url>`;
   });
 
-  // Best Of metro area pages — only include metros with 5+ listings (matching the page threshold)
+  // Best Of metro area pages — only include metros with 3+ listings (matches the page threshold)
   const geoListings = listings.filter(l => l.latitude != null && l.longitude != null) as Array<typeof listings[number] & { latitude: number; longitude: number }>;
   const bestOfUrls: string[] = [];
   for (const metro of METRO_AREAS) {
@@ -170,9 +170,9 @@ export async function GET() {
       if (l.latitude >= box.minLat && l.latitude <= box.maxLat && l.longitude >= box.minLng && l.longitude <= box.maxLng) {
         if (haversineDistance(metro.lat, metro.lng, l.latitude, l.longitude) <= metro.radiusMiles) count++;
       }
-      if (count >= 5) break; // Early exit — we only need to know ≥5
+      if (count >= 3) break; // Early exit — we only need to know ≥3
     }
-    if (count >= 5) {
+    if (count >= 3) {
       bestOfUrls.push(`  <url>
     <loc>${baseUrl}/best/${metro.slug}</loc>
     <lastmod>${now}</lastmod>
