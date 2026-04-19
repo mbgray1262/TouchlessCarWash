@@ -39,10 +39,11 @@ const navigation: NavEntry[] = [
     icon: List,
     items: [
       { href: '/admin/listings', label: 'Manage Listings', icon: List },
-      { href: '/admin/hero-review', label: 'Hero Review', icon: Eye },
-      { href: '/admin/ai-photo-review', label: 'AI Photo QA', icon: Camera },
       { href: '/admin/photo-audit', label: 'Photo Audit', icon: Camera },
-      { href: '/admin/hero-triage', label: 'Hero Triage ⚡', icon: Zap },
+      // Deprecated: Hero Review, AI Photo QA, Hero Triage — all redundant with
+      // Photo Audit (which has Unscanned / Held / All / No Hero filters + manual
+      // curator). Keeping the pages accessible via direct URL for now but
+      // removing from the nav so admin has one clear place to do photo work.
       { href: '/admin/bulk-verify', label: 'Bulk Verify', icon: ShieldCheck },
       { href: '/admin/touchless-cleanup', label: 'Touchless Cleanup', icon: ShieldCheck },
       { href: '/admin/filters', label: 'Filters', icon: Filter },
