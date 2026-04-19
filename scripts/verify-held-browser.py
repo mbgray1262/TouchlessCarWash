@@ -390,7 +390,10 @@ def main():
         best_photo, scored = pick_hero(candidates)
         has_photo = best_photo is not None
 
-        is_chain_verified = (l.get('touchless_verified') == 'chain')
+        # 'chain', 'user_review', 'admin' are all authoritative — don't re-revert these.
+        # 'user_review' is set when real Google customer reviews explicitly confirmed touchless;
+        # 'admin' is manual admin approval. Trust them the same as chain verification.
+        is_chain_verified = l.get('touchless_verified') in ('chain', 'user_review', 'admin')
         amenity_contra = scan_amenities(l.get('amenities'))
         action, reason = decide(evidence, has_photo, name_positive,
                                 is_currently_approved=bool(l.get('is_approved')),
