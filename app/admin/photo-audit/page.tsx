@@ -305,6 +305,7 @@ export default function PhotoAuditPage() {
     changeFilter, changePage,
     runBatch, applyEquipment, rejectResult, applyAllHighConfidence, undoApply, reload,
     noHeroCount, noHeroUnprocessed, heldCount, removeFromResults,
+    noHeroSubFilter, setNoHeroSubFilter, markAllChainListingsAudited,
     lowResListings, lowResTotal, lowResPage, lowResTotalPages, changeLowResPage,
     dismissLowRes, scanForLowRes, scanProgress,
   } = usePhotoAudit();
@@ -504,6 +505,35 @@ export default function PhotoAuditPage() {
               />
               <span className={unreviewedOnly ? 'text-violet-700 font-semibold' : 'text-gray-500'}>Unreviewed only</span>
             </label>
+          )}
+          {viewFilter === 'no_hero' && (
+            <div className="flex items-center gap-2 ml-2 flex-wrap">
+              <span className="text-xs text-gray-500">Show:</span>
+              {([
+                { key: 'non_chain' as const, label: 'Non-chain only (truly missing)', desc: 'Independent listings with no hero — these genuinely need you to pick a photo.' },
+                { key: 'chain_only' as const, label: 'Chain only (has brand image)', desc: 'Chain locations — already render their brand image on the public site; no action needed.' },
+                { key: 'all' as const, label: 'All', desc: 'Both groups combined' },
+              ]).map(o => (
+                <button
+                  key={o.key}
+                  onClick={() => setNoHeroSubFilter(o.key)}
+                  title={o.desc}
+                  className={`px-2.5 py-1 rounded text-xs font-medium ${noHeroSubFilter === o.key ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                >
+                  {o.label}
+                </button>
+              ))}
+              <button
+                onClick={async () => {
+                  const n = await markAllChainListingsAudited();
+                  alert(`Auto-approved ${n} chain listings (they render their brand image; no hero curation needed).`);
+                }}
+                className="px-2.5 py-1 rounded text-xs font-medium bg-green-600 text-white hover:bg-green-700"
+                title="Mark every chain listing with a null hero as audited — they render the CHAIN_BRAND_IMAGES brand photo automatically."
+              >
+                ✓ Auto-approve all chain listings
+              </button>
+            </div>
           )}
           {stats.equipment > 0 && viewFilter !== 'low_res' && (
             <button

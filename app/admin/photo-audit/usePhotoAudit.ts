@@ -107,6 +107,10 @@ export function usePhotoAudit() {
   const [activeJob, setActiveJob] = useState<BatchJob | null>(null);
   const [viewFilter, setViewFilter] = useState<ViewFilter>('all');
   const [unreviewedOnly, setUnreviewedOnly] = useState(false);
+  // Sub-filter for the "No Hero" tab — 'all' shows every listing with null hero_image,
+  // 'non_chain' hides chain listings (they render a brand image so admin doesn't need
+  // to curate them), 'chain_only' shows just chain listings.
+  const [noHeroSubFilter, setNoHeroSubFilter] = useState<'all' | 'non_chain' | 'chain_only'>('non_chain');
   const [page, setPage] = useState(1);
   const [noHeroCount, setNoHeroCount] = useState(0);
   const [filteredTotal, setFilteredTotal] = useState(0);
@@ -158,52 +162,42 @@ export function usePhotoAudit() {
     }
   }, []);
 
-  // Load a single page of results using the server-side RPC
+  // Load a single page of results using the server-side RPC.
+  // Note: `noHeroSubFilter` is read from component state below (captured via closure);
+  // loadPage is re-created when it changes so pagination reacts to filter changes.
   const loadPage = useCallback(async (filter: ViewFilter, pageNum: number, unreviewed: boolean = false) => {
     setLoading(true);
     const offset = (pageNum - 1) * PAGE_SIZE;
 
-    // Special handling for "no_hero" filter — shows:
-    // 1. Listings with no hero image (need processing)
-    // 2. Listings with AI-selected hero awaiting approval (photo_audited_at set, is_approved not true, hero_image_source = 'google')
+    // Special handling for "no_hero" filter — shows listings with no hero_image.
+    // Pagination bug fix: previously fetched only first PAGE_SIZE then sliced by offset
+    // → empty results on page 2+. Now uses .range() directly.
+    // Also supports noHeroSubFilter: 'all' | 'non_chain' | 'chain_only'
     if (filter === 'no_hero') {
-      // Count: touchless listings that either have no hero OR have an unapproved AI-selected hero
-      const [noHeroCountRes, pendingApprovalRes] = await Promise.all([
-        supabase.from('listings').select('id', { count: 'exact', head: true })
-          .eq('is_touchless', true).is('hero_image', null),
-        supabase.from('listings').select('id', { count: 'exact', head: true })
-          .eq('is_touchless', true).not('hero_image', 'is', null)
-          .eq('hero_image_source', 'google')
-          .not('photo_audited_at', 'is', null)
-          .or('is_approved.is.null,is_approved.eq.false'),
-      ]);
-      const totalNoHero = (noHeroCountRes.count ?? 0) + (pendingApprovalRes.count ?? 0);
+      const sub = noHeroSubFilter; // 'all' | 'non_chain' | 'chain_only'
 
-      // Fetch both groups and merge
-      const [noHeroListings, pendingListings] = await Promise.all([
-        supabase.from('listings')
-          .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
-          .eq('is_touchless', true).is('hero_image', null)
-          .order('photo_audited_at', { ascending: false, nullsFirst: false })
-          .limit(PAGE_SIZE),
-        supabase.from('listings')
-          .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
-          .eq('is_touchless', true).not('hero_image', 'is', null)
-          .eq('hero_image_source', 'google')
-          .not('photo_audited_at', 'is', null)
-          .or('is_approved.is.null,is_approved.eq.false')
-          .order('photo_audited_at', { ascending: false })
-          .limit(PAGE_SIZE),
+      let countQuery = supabase.from('listings').select('id', { count: 'exact', head: true })
+        .eq('is_touchless', true).eq('is_approved', true).is('hero_image', null);
+      let dataQuery = supabase.from('listings')
+        .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
+        .eq('is_touchless', true).eq('is_approved', true).is('hero_image', null);
+
+      if (sub === 'non_chain') {
+        countQuery = countQuery.is('parent_chain', null);
+        dataQuery = dataQuery.is('parent_chain', null);
+      } else if (sub === 'chain_only') {
+        countQuery = countQuery.not('parent_chain', 'is', null);
+        dataQuery = dataQuery.not('parent_chain', 'is', null);
+      }
+
+      const [{ count: totalNoHero }, { data: listings }] = await Promise.all([
+        countQuery,
+        dataQuery.order('parent_chain', { ascending: true, nullsFirst: true })
+          .order('name', { ascending: true })
+          .range(offset, offset + PAGE_SIZE - 1),
       ]);
 
-      // Merge: pending approval first, then no hero
-      const allListings = [
-        ...(pendingListings.data ?? []),
-        ...(noHeroListings.data ?? []),
-      ].slice(offset, offset + PAGE_SIZE);
-      const listings = allListings;
-
-      const count = totalNoHero;
+      const count = totalNoHero ?? 0;
 
       const toResult = (l: NonNullable<typeof listings>[number], quality: string): AuditResult => ({
         id: `nohero-${l.id}`,
@@ -456,7 +450,7 @@ export function usePhotoAudit() {
       setFilteredTotal(pageData.total ?? 0);
     }
     setLoading(false);
-  }, []);
+  }, [noHeroSubFilter]);
 
   const LOW_RES_PAGE_SIZE = 50;
 
@@ -865,6 +859,29 @@ export function usePhotoAudit() {
     noHeroCount,
     noHeroUnprocessed,
     heldCount,
+    // No Hero tab sub-filter ('all' | 'non_chain' | 'chain_only')
+    noHeroSubFilter,
+    setNoHeroSubFilter: (sub: 'all' | 'non_chain' | 'chain_only') => {
+      setNoHeroSubFilter(sub);
+      setPage(1);
+    },
+    // Bulk-mark all chain listings in the current No Hero query as audited
+    // (they render from CHAIN_BRAND_IMAGES so no hero curation is needed).
+    markAllChainListingsAudited: async () => {
+      const now = new Date().toISOString();
+      const { data } = await supabase.from('listings')
+        .select('id')
+        .eq('is_touchless', true).eq('is_approved', true).is('hero_image', null)
+        .not('parent_chain', 'is', null)
+        .limit(5000);
+      const ids = (data ?? []).map(r => r.id);
+      for (let i = 0; i < ids.length; i += 100) {
+        await supabase.from('listings').update({ photo_audited_at: now, reviewed_at: now, hero_image_source: 'chain-brand' }).in('id', ids.slice(i, i + 100));
+      }
+      await loadQueueStats();
+      await loadPage(viewFilter, page, unreviewedOnly);
+      return ids.length;
+    },
     // Remove a listing from results by listing_id (used when approving from editor)
     removeFromResults: (listingId: string) => {
       setResults(prev => prev.filter(r => r.listing_id !== listingId));
