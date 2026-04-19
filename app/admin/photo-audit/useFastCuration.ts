@@ -26,6 +26,8 @@ interface ListingData {
   name: string;
   city: string;
   state: string;
+  address: string | null;
+  zip: string | null;
   slug: string;
   latitude: number | null;
   longitude: number | null;
@@ -77,7 +79,7 @@ export function useFastCuration(listingId: string) {
   const loadListing = useCallback(async () => {
     const { data } = await supabase
       .from('listings')
-      .select('id, name, city, state, slug, latitude, longitude, google_place_id, website, hero_image, hero_image_source, photos, street_view_url, google_photo_url, blocked_photos, equipment_brand, equipment_model, touchless_verified, touchless_evidence, parent_chain, is_approved, is_touchless, crawl_notes')
+      .select('id, name, city, state, address, zip, slug, latitude, longitude, google_place_id, website, hero_image, hero_image_source, photos, street_view_url, google_photo_url, blocked_photos, equipment_brand, equipment_model, touchless_verified, touchless_evidence, parent_chain, is_approved, is_touchless, crawl_notes')
       .eq('id', listingId)
       .maybeSingle();
     if (data) {
