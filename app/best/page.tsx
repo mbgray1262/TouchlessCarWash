@@ -95,8 +95,22 @@ export default async function BestOfIndexPage() {
 
   const totalMetros = metros.length;
 
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://touchlesscarwashfinder.com' },
+      { '@type': 'ListItem', position: 2, name: 'Best Of', item: 'https://touchlesscarwashfinder.com/best' },
+    ],
+  };
+
   return (
-    <main>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+      <main>
       {/* Hero */}
       <section className="bg-[#0F2744] text-white py-16 px-4">
         <div className="container mx-auto max-w-4xl text-center">
@@ -191,5 +205,6 @@ export default async function BestOfIndexPage() {
         </div>
       </section>
     </main>
+    </>
   );
 }

@@ -267,6 +267,17 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
     .slice(0, 4)
     .map(([name]) => name);
 
+  // Structured data — BreadcrumbList (mirrors visible breadcrumb)
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://touchlesscarwashfinder.com' },
+      { '@type': 'ListItem', position: 2, name: 'Best Of', item: 'https://touchlesscarwashfinder.com/best' },
+      { '@type': 'ListItem', position: 3, name: metro.name, item: `https://touchlesscarwashfinder.com/best/${metro.slug}` },
+    ],
+  };
+
   // Structured data — ItemList for rankings
   const itemListSchema = {
     '@context': 'https://schema.org',
@@ -334,6 +345,10 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}

@@ -39,6 +39,15 @@ const organizationSchema = {
   knowsAbout: ['touchless car wash', 'brushless car wash', 'laser car wash', 'paint protection', 'ceramic coating care'],
 };
 
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://touchlesscarwashfinder.com' },
+    { '@type': 'ListItem', position: 2, name: 'About', item: 'https://touchlesscarwashfinder.com/about' },
+  ],
+};
+
 async function getStats() {
   // Fetch all review counts in batches to avoid Supabase 1000-row default limit
   const listingRes = await supabase.from('listings').select('id', { count: 'exact', head: true }).eq('is_touchless', true);
@@ -123,6 +132,10 @@ export default async function AboutPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
 
       <main>
