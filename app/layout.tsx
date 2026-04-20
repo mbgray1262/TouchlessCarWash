@@ -72,6 +72,15 @@ export default function RootLayout({
                 gtag('config', 'G-55HHXHEVFP');
               `}
             </Script>
+            {/* Google AdSense loader — required for AdSense approval
+                verification AND for any AdUnit components to serve ads. */}
+            <Script
+              id="adsbygoogle-init"
+              async
+              strategy="afterInteractive"
+              src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2012332157653110"
+              crossOrigin="anonymous"
+            />
           </>
         )}
         {/* Google Maps is loaded on-demand by HeroSection when user interacts with search */}
