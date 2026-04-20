@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ChevronRight, Calendar, User, ArrowLeft, ArrowRight } from 'lucide-react';
+import { ChevronRight, Calendar, User, ArrowLeft, ArrowRight, Sparkles, CheckCircle2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase, type BlogPost } from '@/lib/supabase';
 import { US_STATES, slugify } from '@/lib/constants';
 import { generateTop10ChainsContent } from '@/lib/dynamic-blog-top10';
 import { generateSubscriptionsContent } from '@/lib/dynamic-blog-subscriptions';
+import { getTakeaways } from '@/lib/blog-takeaways';
 import type { Metadata } from 'next';
 
 export const revalidate = 3600; // Revalidate dynamic blog content hourly
@@ -243,11 +244,13 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
   const { prev, next } = await getAdjacentPosts(post.published_at);
 
+  const takeaways = getTakeaways(post.slug);
   const articleJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: post.title,
     description: post.meta_description || post.excerpt || '',
+    ...(takeaways && takeaways.length > 0 ? { abstract: takeaways.join(' ') } : {}),
     author: {
       '@type': 'Organization',
       name: post.author,
@@ -355,6 +358,29 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
       )}
 
       <div className="container mx-auto px-4 max-w-3xl py-12">
+        {takeaways && takeaways.length > 0 && (
+          <aside
+            aria-labelledby="key-takeaways-heading"
+            className="mb-10 rounded-2xl border border-[#22C55E]/20 bg-gradient-to-br from-[#F0F9FF] to-[#ECFDF5] p-6 md:p-7"
+          >
+            <h2
+              id="key-takeaways-heading"
+              className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-[#0F2744] mb-4"
+            >
+              <Sparkles className="w-4 h-4 text-[#22C55E]" />
+              Key Takeaways
+            </h2>
+            <ul className="space-y-3">
+              {takeaways.map((point, i) => (
+                <li key={i} className="flex items-start gap-3 text-[15px] leading-relaxed text-gray-800">
+                  <CheckCircle2 className="w-5 h-5 text-[#22C55E] shrink-0 mt-0.5" />
+                  <span>{point}</span>
+                </li>
+              ))}
+            </ul>
+          </aside>
+        )}
+
         <article
           className="prose-content"
           dangerouslySetInnerHTML={{ __html: renderedContent }}
