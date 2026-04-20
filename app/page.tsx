@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ListingCard } from '@/components/ListingCard';
+import { RedirectBanner } from '@/components/RedirectBanner';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { US_STATES, getStateSlug } from '@/lib/constants';
 import type { Metadata } from 'next';
@@ -190,6 +191,7 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen">
+      <RedirectBanner />
       {/* Preload hero image with responsive AVIF — matches <picture> srcset in HeroSection */}
       <link
         rel="preload"

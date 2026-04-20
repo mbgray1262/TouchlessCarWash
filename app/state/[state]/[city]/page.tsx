@@ -1,12 +1,14 @@
 import { cache, Suspense } from 'react';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { US_STATES, getStateName, slugify } from '@/lib/constants';
 import { CityListingsClient } from '@/components/CityListingsClient';
+import { RedirectBanner } from '@/components/RedirectBanner';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
+import { getAnyCityCoords, findNearestTouchlessCityPath } from '@/lib/geo-fallback';
 
 import type { Metadata } from 'next';
 
@@ -41,11 +43,25 @@ function getStateCode(stateSlug: string): string | null {
  * slugified form matches the URL slug.
  */
 const resolveCityName = cache(async (stateCode: string, citySlug: string): Promise<string | null> => {
+  // Intentionally does NOT filter on is_touchless: we need to resolve the
+  // city name even for cities whose only listings have been reverted. The
+  // downstream getCityListings() applies the touchless filter, and if that
+  // returns empty the page handler performs a soft-404 redirect to the
+  // nearest live city rather than a hard 404.
+  //
+  // The previous approach of selecting all city rows in a state and
+  // scanning them client-side hit Supabase's default 1000-row cap in
+  // large states like TX (3,800+ listings), causing valid-but-rare city
+  // slugs to falsely resolve to null. Instead we candidate-match via
+  // case-insensitive ilike on the first token of the slug, then slug-
+  // compare each candidate server-side. Small, fast, state-scoped.
+  const firstToken = citySlug.split('-')[0];
   const { data } = await supabase
     .from('listings')
     .select('city')
-    .eq('is_touchless', true)
-    .eq('state', stateCode);
+    .eq('state', stateCode)
+    .ilike('city', `${firstToken}%`)
+    .limit(1000);
   if (!data) return null;
 
   const seen = new Set<string>();
@@ -228,9 +244,29 @@ export default async function CityPage({ params }: CityPageProps) {
     getFilters(),
   ]);
 
-  // Return proper 404 for cities with no listings at all.
+  // City has no approved touchless listings — happens when every listing
+  // in the city was reverted (not actually touchless) or deleted (business
+  // closed / not a car wash). 301-redirect to the geographically nearest
+  // city that does have approved listings, preferring same state. Better
+  // UX than state-level fallback: a user searching for Rocky Mount, VA
+  // lands on the closest touchless option, not an abstract state page.
   if (allListings.length === 0) {
-    notFound();
+    const flag = `?from=empty-city&orig=${encodeURIComponent(params.city)}`;
+    const coords = await getAnyCityCoords(stateCode!, params.city);
+    if (coords) {
+      const nearest = await findNearestTouchlessCityPath(coords, stateCode);
+      if (nearest) permanentRedirect(`${nearest}${flag}`);
+    }
+    const { count: stateCount } = await supabase
+      .from('listings')
+      .select('*', { count: 'exact', head: true })
+      .eq('state', stateCode!)
+      .eq('is_touchless', true)
+      .eq('is_approved', true);
+    if ((stateCount ?? 0) > 0) {
+      permanentRedirect(`/state/${params.state}${flag}`);
+    }
+    permanentRedirect(`/${flag}`);
   }
 
   // Substitute template placeholders with live counts + top-listing data
@@ -444,6 +480,7 @@ export default async function CityPage({ params }: CityPageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
+      <RedirectBanner />
 
       <div className="bg-[#0F2744] py-12">
         <div className="container mx-auto px-4 max-w-6xl">

@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
 import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants';
+import { getAnyCityCoords, findNearestTouchlessCityPath } from '@/lib/geo-fallback';
 import { streetAddress, hasStreetAddress } from '@/lib/utils';
 import { DEFAULT_OG_IMAGE, ensureHttps, truncateDescription } from '@/lib/seo';
 import { getChainBrandImage } from '@/lib/chain-brand-images';
@@ -851,8 +852,16 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     const redirectUrl = await findListingByPartialSlug(params.slug);
     if (redirectUrl) permanentRedirect(redirectUrl); // 308 — tells Google to transfer PageRank to the new slug
 
-    // True unknown slug — 404 is appropriate.
-    notFound();
+    const flag = `?from=removed-listing&orig=${encodeURIComponent(params.slug)}`;
+    const stateCode = getStateCode(params.state);
+    if (stateCode) {
+      const coords = await getAnyCityCoords(stateCode, params.city);
+      if (coords) {
+        const nearest = await findNearestTouchlessCityPath(coords, stateCode);
+        if (nearest) permanentRedirect(`${nearest}${flag}`);
+      }
+    }
+    permanentRedirect(`/state/${params.state}/${params.city}${flag}`);
   }
 
   // Listing EXISTS but is NOT a touchless wash (either never was, or was
@@ -864,8 +873,8 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
   if (!listing.is_touchless || !listing.is_approved) {
     const stateSlug = getStateSlug(listing.state) || params.state;
     const citySlug = slugify(listing.city) || params.city;
-    // Verify target city hub has approved touchless listings before redirecting there
-    // — otherwise we send crawlers/users into a 404. Fall back to state, then home.
+    // Prefer the listing's own city hub (most relevant to the original
+    // query), but only if that hub still has approved touchless listings.
     const { count: cityCount } = await supabase
       .from('listings')
       .select('*', { count: 'exact', head: true })
@@ -873,8 +882,16 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
       .eq('city', listing.city)
       .eq('is_touchless', true)
       .eq('is_approved', true);
+    const flag = `?from=removed-listing&orig=${encodeURIComponent(listing.name)}`;
     if ((cityCount ?? 0) > 0) {
-      permanentRedirect(`/state/${stateSlug}/${citySlug}`);
+      permanentRedirect(`/state/${stateSlug}/${citySlug}${flag}`);
+    }
+    if (listing.latitude != null && listing.longitude != null) {
+      const nearest = await findNearestTouchlessCityPath(
+        { lat: Number(listing.latitude), lng: Number(listing.longitude) },
+        listing.state,
+      );
+      if (nearest) permanentRedirect(`${nearest}${flag}`);
     }
     const { count: stateCount } = await supabase
       .from('listings')
@@ -883,9 +900,9 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
       .eq('is_touchless', true)
       .eq('is_approved', true);
     if ((stateCount ?? 0) > 0) {
-      permanentRedirect(`/state/${stateSlug}`);
+      permanentRedirect(`/state/${stateSlug}${flag}`);
     }
-    permanentRedirect('/');
+    permanentRedirect(`/${flag}`);
   }
 
   const [nearbyListings, reviewSnippets, rankings, chainResult, verificationStats] = await Promise.all([

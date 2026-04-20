@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants';
 import { StateListingsClient } from '@/components/StateListingsClient';
+import { RedirectBanner } from '@/components/RedirectBanner';
 import { getFilters, getStateListingsPaginated } from '@/lib/listing-queries';
 import { FEATURES } from '@/lib/features';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
@@ -248,6 +249,7 @@ export default async function StatePage({ params }: StatePageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
       />
+      <RedirectBanner />
 
       <div className="bg-[#0F2744] py-10">
         <div className="container mx-auto px-4 max-w-6xl">
