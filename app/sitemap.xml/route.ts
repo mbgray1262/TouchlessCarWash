@@ -99,6 +99,7 @@ export async function GET() {
         .from('review_snippets')
         .select('listing_id')
         .in('listing_id', idChunk)
+        .eq('is_touchless_evidence', true)
         .range(rowOffset, rowOffset + SNIPPET_PAGE - 1);
       if (!rows || rows.length === 0) break;
       for (const r of rows) {

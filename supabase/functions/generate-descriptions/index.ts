@@ -452,15 +452,18 @@ Deno.serve(async (req: Request) => {
           // strongest differentiator for chain locations that share all other
           // data with sibling locations — real customer words from THIS
           // specific wash are genuinely unique content Google can't find on
-          // other pages. Feeding them to the prompt lets the AI quote or
-          // paraphrase specific observations ("customers mention the free
-          // vacuums work consistently", "several reviews note the 24-hour
-          // availability"), which breaks up the templated chain-description
-          // problem.
+          // other pages.
+          //
+          // Filter to is_touchless_evidence=true ONLY so the AI is paraphrasing
+          // from the exact same pool of reviews that appear in the page's
+          // visible reviews section. Otherwise a user could read a description
+          // quoting "the store is well-stocked" and then scroll to the reviews
+          // section and find no matching text — looks like the AI made it up.
           const { data: snippets } = await supabase
             .from('review_snippets')
             .select('review_text, rating, sentiment')
             .eq('listing_id', task.listing_id)
+            .eq('is_touchless_evidence', true)
             .order('rating', { ascending: false, nullsFirst: false })
             .limit(5);
           const listingWithSnippets = { ...listing, review_snippets: snippets ?? [] };

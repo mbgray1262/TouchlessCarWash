@@ -201,16 +201,19 @@ async function getReviewSnippets(listingId: string): Promise<ReviewSnippet[]> {
 }
 
 /**
- * Count of review_snippets rows for this listing (ANY snippet, not just
- * touchless-evidence ones). Used by isThinListing to gate indexing of
- * chain listings — a chain location with ≥2 real customer reviews is
- * considered unique enough to stay indexed.
+ * Count of touchless-evidence review_snippets rows for this listing. Used
+ * by isThinListing to gate indexing of chain listings — we only count
+ * touchless-evidence snippets because (a) those are the only snippets we
+ * display to users, and (b) those are the only snippets the description
+ * generator paraphrases from. Counting non-touchless reviews would keep
+ * indexed pages that have nothing unique to show the reader.
  */
 async function getReviewSnippetCount(listingId: string): Promise<number> {
   const { count } = await supabase
     .from('review_snippets')
     .select('*', { count: 'exact', head: true })
-    .eq('listing_id', listingId);
+    .eq('listing_id', listingId)
+    .eq('is_touchless_evidence', true);
   return count ?? 0;
 }
 
