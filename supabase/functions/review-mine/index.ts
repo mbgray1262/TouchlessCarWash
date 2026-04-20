@@ -1023,7 +1023,7 @@ Deno.serve(async (req: Request) => {
       // touchless listings that still need review snippet enrichment
       const allListings = body.all_listings === true;
 
-      const COLS = 'id, name, slug, google_place_id, google_maps_url, city, state, rating, review_count, is_touchless';
+      const COLS = 'id, name, slug, google_place_id, google_maps_url, city, state, rating, review_count, is_touchless, hero_image, parent_chain';
 
       let listings: Array<Record<string, unknown>> | null = null;
       let fetchError: { message: string } | null = null;
@@ -1195,16 +1195,23 @@ Deno.serve(async (req: Request) => {
 
             const snippetCount = await insertReviewSnippets(supabase, listing.id, reviews);
 
-            await supabase.from('listings').update({
+            // Only auto-approve if the listing already has a hero image
+            // (existing enriched listing being reclassified). Newly-imported
+            // SerpAPI skeletons without a hero stay is_approved=false — the
+            // auto-hero pipeline has to find them a hero first.
+            const hasHero = !!(listing as Record<string, unknown>).hero_image;
+            const updateRow: Record<string, unknown> = {
               is_touchless: true,
-              is_approved: true,
               touchless_verified: 'user_review',
               review_mine_status: 'touchless_found',
               review_extract_status: 'extracted',
               touchless_review_count: snippetCount,
               touchless_sentiment: aiResult.sentiment,
               crawl_notes: `Reclassified as touchless via review mining (AI verified) — ${snippetCount} review(s). AI: ${aiResult.reasoning}`,
-            }).eq('id', listing.id);
+            };
+            if (hasHero) updateRow.is_approved = true;
+
+            await supabase.from('listings').update(updateRow).eq('id', listing.id);
 
             await syncFiltersForListing(supabase, listing.id, true, [], filterMap);
 
@@ -1327,7 +1334,7 @@ Deno.serve(async (req: Request) => {
 
       const { data: listing } = await supabase
         .from('listings')
-        .select('id, name, google_place_id, city, state')
+        .select('id, name, google_place_id, city, state, hero_image, parent_chain')
         .eq('id', listingId)
         .maybeSingle();
 
@@ -1369,16 +1376,22 @@ Deno.serve(async (req: Request) => {
           const filterMap: FilterMap = {};
           for (const f of filters || []) filterMap[f.slug] = f.id;
 
-          await supabase.from('listings').update({
+          // Same hero-gate as scan_batch: only auto-approve if listing already
+          // has a hero image. New SerpAPI skeletons without a hero must go
+          // through the auto-hero pipeline before approval.
+          const hasHero = !!(listing as Record<string, unknown>).hero_image;
+          const updateRow: Record<string, unknown> = {
             is_touchless: true,
-            is_approved: true,
             touchless_verified: 'user_review',
             review_mine_status: 'touchless_found',
             review_extract_status: 'extracted',
             touchless_review_count: snippetCount,
             touchless_sentiment: aiResult.sentiment,
             crawl_notes: `Reclassified as touchless via review mining (AI verified) — ${snippetCount} review(s). AI: ${aiResult.reasoning}`,
-          }).eq('id', listing.id);
+          };
+          if (hasHero) updateRow.is_approved = true;
+
+          await supabase.from('listings').update(updateRow).eq('id', listing.id);
 
           await syncFiltersForListing(supabase, listing.id, true, [], filterMap);
 

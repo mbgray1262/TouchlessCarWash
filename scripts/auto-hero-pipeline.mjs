@@ -28,15 +28,42 @@ const SUPABASE_URL = env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const SERVICE_KEY = env.SUPABASE_SERVICE_ROLE_KEY || ANON;
 const sb = createClient(SUPABASE_URL, SERVICE_KEY);
-const GOOGLE_KEY = env.GOOGLE_PLACES_API_KEY || 'AIzaSyDdpVEhRmJy1bizV1mG933G2TII4BOcDBg';
+const GOOGLE_KEY = env.GOOGLE_PLACES_API_KEY;
+const GOOGLE_URL_SIGNING_SECRET = env.GOOGLE_URL_SIGNING_SECRET;
 const ANTHROPIC_KEY = env.ANTHROPIC_API_KEY;
 if (!ANTHROPIC_KEY) { console.error('Missing ANTHROPIC_API_KEY in .env.local'); process.exit(1); }
+if (!GOOGLE_KEY) { console.error('Missing GOOGLE_PLACES_API_KEY in .env.local'); process.exit(1); }
+
+// Sign a Google Maps URL using HMAC-SHA1 with the URL signing secret.
+// Without signing, Street View Static is capped at 640x640. Signed URLs can
+// request up to 2048x2048 for hero-quality images at no extra cost.
+import crypto from 'node:crypto';
+function signGoogleUrl(url) {
+  if (!GOOGLE_URL_SIGNING_SECRET) return url; // fallback: unsigned (capped at 640)
+  const u = new URL(url);
+  const pathAndQuery = u.pathname + u.search;
+  // Google's signing secret is URL-safe base64; convert to standard base64 for HMAC key
+  const keyBuffer = Buffer.from(
+    GOOGLE_URL_SIGNING_SECRET.replace(/-/g, '+').replace(/_/g, '/'),
+    'base64'
+  );
+  const hmac = crypto.createHmac('sha1', keyBuffer);
+  hmac.update(pathAndQuery);
+  // Signature is URL-safe base64 (no padding stripped; Google accepts padded)
+  const signature = hmac.digest('base64').replace(/\+/g, '-').replace(/\//g, '_');
+  return `${url}&signature=${signature}`;
+}
 
 const LOG = resolve(repoRoot, 'scripts/auto-hero-pipeline.log');
 const REPORT = resolve(repoRoot, 'scripts/auto-hero-pipeline-report.json');
 const DRY_RUN = process.argv.includes('--dry-run');
 const LIMIT = parseInt(process.argv.find(a => a.startsWith('--limit='))?.split('=')[1] || '100', 10);
 const ONE_ID = process.argv.find(a => a.startsWith('--id='))?.split('=')[1];
+// upgrade-heroes mode: find real facility photos for already-approved listings
+// that currently show a brand fallback (hero_image IS NULL + parent_chain set).
+// Never demotes approval — just upgrades the hero if a real photo is available.
+const UPGRADE_HEROES = process.argv.includes('--upgrade-heroes');
+const CHAIN_FILTER = process.argv.find(a => a.startsWith('--chain='))?.split('=')[1];
 
 function log(msg) {
   const line = `[${new Date().toISOString().slice(11, 19)}] ${msg}`;
@@ -170,11 +197,13 @@ async function fetchStreetViewCandidates(lat, lng, placeId) {
     const meta = await metaRes.json();
     if (meta.status !== 'OK') return { error: meta.status || 'no_pano', urls: [] };
 
-    // Generate 4 headings around the location
+    // Generate 4 headings around the location. Request 2048x1152 for
+    // hero-quality resolution. Signing required or Google silently caps at 640.
     const panoId = meta.pano_id;
-    const urls = [0, 90, 180, 270].map(heading =>
-      `https://maps.googleapis.com/maps/api/streetview?size=1200x675&pano=${panoId}&fov=90&heading=${heading}&pitch=0&key=${GOOGLE_KEY}`
-    );
+    const urls = [0, 90, 180, 270].map(heading => {
+      const base = `https://maps.googleapis.com/maps/api/streetview?size=2048x1152&pano=${panoId}&fov=90&heading=${heading}&pitch=0&key=${GOOGLE_KEY}`;
+      return signGoogleUrl(base);
+    });
     return { panoId, urls };
   } catch (e) { return { error: e.message, urls: [] }; }
 }
@@ -306,16 +335,23 @@ async function processListing(listing, chainBrands) {
     }
   }
 
-  // Held for review if nothing worked
+  // Held for review if nothing worked.
+  // In UPGRADE_HEROES mode: don't mark held (listing is already approved + showing brand fallback).
   if (!result.final_source) {
-    if (!DRY_RUN) {
-      await sb.from('listings').update({
-        hero_image_source: 'held_for_review',
-        crawl_notes: `[auto ${new Date().toISOString().slice(0,10)}] Held — auto-hero pipeline found no usable image (chain: none, google photos: ${placeData?.photos?.length || 0} rejected, streetview: no pano or rejected).`,
-      }).eq('id', listing.id);
+    if (UPGRADE_HEROES) {
+      // Keep existing state — brand fallback still renders fine.
+      result.final_source = 'kept_brand_fallback';
+      log(`  = no google photo found, keeping chain brand fallback`);
+    } else {
+      if (!DRY_RUN) {
+        await sb.from('listings').update({
+          hero_image_source: 'held_for_review',
+          crawl_notes: `[auto ${new Date().toISOString().slice(0,10)}] Held — auto-hero pipeline found no usable image (chain: none, google photos: ${placeData?.photos?.length || 0} rejected, streetview: no pano or rejected).`,
+        }).eq('id', listing.id);
+      }
+      result.final_source = 'held_for_review';
+      log(`  ⏸ HELD for manual review`);
     }
-    result.final_source = 'held_for_review';
-    log(`  ⏸ HELD for manual review`);
   }
 
   // Description
@@ -328,19 +364,27 @@ async function processListing(listing, chainBrands) {
     }
   }
 
-  // Approval gate
-  const { data: final } = await sb.from('listings').select('hero_image, hero_image_source, hours, description').eq('id', listing.id).maybeSingle();
-  const hasHero = !!final?.hero_image || final?.hero_image_source === 'chain-brand-auto';
-  const hasHours = final?.hours && Object.keys(final.hours).length > 0;
-  const hasDesc = !!final?.description;
-  const complete = hasHero && hasHours && hasDesc && final?.hero_image_source !== 'held_for_review';
+  // Approval gate — skip in UPGRADE_HEROES mode (listing is already approved).
+  if (!UPGRADE_HEROES) {
+    const { data: final } = await sb.from('listings').select('hero_image, hero_image_source, hours, description').eq('id', listing.id).maybeSingle();
+    const hasHero = !!final?.hero_image || final?.hero_image_source === 'chain-brand-auto';
+    const hasHours = final?.hours && Object.keys(final.hours).length > 0;
+    const hasDesc = !!final?.description;
+    const complete = hasHero && hasHours && hasDesc && final?.hero_image_source !== 'held_for_review';
 
-  if (complete && !DRY_RUN) {
-    await sb.from('listings').update({ is_approved: true }).eq('id', listing.id);
-    result.approved = true;
-    log(`  ✅ APPROVED (hero=${final.hero_image_source})`);
-  } else if (!complete) {
-    log(`  ⏸ not approved: hero=${hasHero} hours=${hasHours} desc=${hasDesc}`);
+    if (complete && !DRY_RUN) {
+      await sb.from('listings').update({ is_approved: true }).eq('id', listing.id);
+      result.approved = true;
+      log(`  ✅ APPROVED (hero=${final.hero_image_source})`);
+    } else if (!complete) {
+      log(`  ⏸ not approved: hero=${hasHero} hours=${hasHours} desc=${hasDesc}`);
+    }
+  } else {
+    // In upgrade mode, just report whether we successfully upgraded
+    if (result.final_source && result.final_source !== 'kept_brand_fallback') {
+      result.approved = true; // signals "upgraded" for reporting
+      log(`  ✅ hero upgraded to ${result.final_source}`);
+    }
   }
   return result;
 }
@@ -351,15 +395,25 @@ async function run() {
   const chainBrands = loadChainBrands();
   log(`Loaded ${chainBrands.length} chain names`);
 
-  let query = sb.from('listings')
-    .select('id, name, city, state, hero_image, hero_image_source, parent_chain, google_place_id, google_photo_url, website, phone, photos, hours, description, latitude, longitude, rating, review_count')
-    .eq('is_touchless', true)
-    .eq('is_approved', false)
-    .not('google_place_id', 'is', null)
-    .limit(LIMIT);
-  if (ONE_ID) query = sb.from('listings')
-    .select('id, name, city, state, hero_image, hero_image_source, parent_chain, google_place_id, google_photo_url, website, phone, photos, hours, description, latitude, longitude, rating, review_count')
-    .eq('id', ONE_ID);
+  const SELECT_COLS = 'id, name, city, state, hero_image, hero_image_source, parent_chain, google_place_id, google_photo_url, website, phone, photos, hours, description, latitude, longitude, rating, review_count';
+  let query;
+  if (ONE_ID) {
+    query = sb.from('listings').select(SELECT_COLS).eq('id', ONE_ID);
+  } else if (UPGRADE_HEROES) {
+    // Upgrade mode: approved touchless listings that have NO hero_image.
+    // Finds real facility photos for them (non-chain too).
+    query = sb.from('listings').select(SELECT_COLS)
+      .eq('is_touchless', true).eq('is_approved', true)
+      .is('hero_image', null)
+      .not('google_place_id', 'is', null);
+    if (CHAIN_FILTER) query = query.eq('parent_chain', CHAIN_FILTER);
+    query = query.limit(LIMIT);
+  } else {
+    query = sb.from('listings').select(SELECT_COLS)
+      .eq('is_touchless', true).eq('is_approved', false)
+      .not('google_place_id', 'is', null)
+      .limit(LIMIT);
+  }
 
   const { data: candidates } = await query;
   log(`Found ${candidates?.length ?? 0} candidates\n`);
