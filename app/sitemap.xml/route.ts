@@ -23,6 +23,7 @@ export async function GET() {
   // doesn't support selecting "is null" computed columns, so we fetch both
   // rows with non-null values via two queries and mark the listings accordingly.
   type SitemapRow = {
+    id: string;
     slug: string;
     city: string;
     state: string;
@@ -34,6 +35,8 @@ export async function GET() {
     review_count: number | null;
     is_claimed: boolean | null;
     is_featured: boolean | null;
+    parent_chain: string | null;
+    google_description: string | null;
     has_crawl_snapshot?: boolean;
     has_extracted_data?: boolean;
   };
@@ -43,7 +46,7 @@ export async function GET() {
   while (true) {
     const { data: page } = await supabase
       .from('listings')
-      .select('id, slug, city, state, created_at, updated_at, latitude, longitude, rating, review_count, is_claimed, is_featured, crawl_snapshot, extracted_data')
+      .select('id, slug, city, state, created_at, updated_at, latitude, longitude, rating, review_count, is_claimed, is_featured, parent_chain, google_description, crawl_snapshot, extracted_data')
       .eq('is_touchless', true)
       .eq('is_approved', true)  // exclude held/pending-enrichment listings that 308 instead of 200
       .range(offset, offset + PAGE_SIZE - 1);
@@ -53,6 +56,7 @@ export async function GET() {
     for (const row of page) {
       const typed = row as SitemapRow & { crawl_snapshot: unknown; extracted_data: unknown };
       allListings.push({
+        id: typed.id,
         slug: typed.slug,
         city: typed.city,
         state: typed.state,
@@ -64,12 +68,47 @@ export async function GET() {
         review_count: typed.review_count,
         is_claimed: typed.is_claimed,
         is_featured: typed.is_featured,
+        parent_chain: typed.parent_chain,
+        google_description: typed.google_description,
         has_crawl_snapshot: typed.crawl_snapshot != null,
         has_extracted_data: typed.extracted_data != null,
       });
     }
     if (page.length < PAGE_SIZE) break;
     offset += PAGE_SIZE;
+  }
+
+  // Count review_snippets per listing — only needed for CHAIN listings since
+  // non-chain listings don't use the snippet-count signal for indexing. We
+  // fetch just the listing_id column (~cheap) and tally in memory instead of
+  // doing a per-listing count query (would be 1,000+ round trips).
+  const chainListingIds = allListings.filter(l => l.parent_chain).map(l => l.id);
+  const snippetCountByListing = new Map<string, number>();
+  const SNIPPET_PAGE = 1000;
+  let snipOffset = 0;
+  while (chainListingIds.length > 0) {
+    // in() can handle many IDs but we chunk to stay well under any payload limits
+    const chunkStart = snipOffset;
+    const chunkEnd = Math.min(snipOffset + 500, chainListingIds.length);
+    const idChunk = chainListingIds.slice(chunkStart, chunkEnd);
+    if (idChunk.length === 0) break;
+    // Paginate rows within the chunk — some listings may have 50+ snippets.
+    let rowOffset = 0;
+    while (true) {
+      const { data: rows } = await supabase
+        .from('review_snippets')
+        .select('listing_id')
+        .in('listing_id', idChunk)
+        .range(rowOffset, rowOffset + SNIPPET_PAGE - 1);
+      if (!rows || rows.length === 0) break;
+      for (const r of rows) {
+        snippetCountByListing.set(r.listing_id, (snippetCountByListing.get(r.listing_id) ?? 0) + 1);
+      }
+      if (rows.length < SNIPPET_PAGE) break;
+      rowOffset += SNIPPET_PAGE;
+    }
+    snipOffset = chunkEnd;
+    if (chunkEnd >= chainListingIds.length) break;
   }
 
   // Filter to only valid US states (prevents non-US listings from polluting
@@ -84,6 +123,9 @@ export async function GET() {
       review_count: l.review_count,
       is_claimed: l.is_claimed,
       is_featured: l.is_featured,
+      parent_chain: l.parent_chain,
+      google_description: l.google_description,
+      review_snippet_count: snippetCountByListing.get(l.id) ?? 0,
     })) return false;
     return true;
   });

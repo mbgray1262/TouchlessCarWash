@@ -200,6 +200,20 @@ async function getReviewSnippets(listingId: string): Promise<ReviewSnippet[]> {
   return (data || []) as ReviewSnippet[];
 }
 
+/**
+ * Count of review_snippets rows for this listing (ANY snippet, not just
+ * touchless-evidence ones). Used by isThinListing to gate indexing of
+ * chain listings — a chain location with ≥2 real customer reviews is
+ * considered unique enough to stay indexed.
+ */
+async function getReviewSnippetCount(listingId: string): Promise<number> {
+  const { count } = await supabase
+    .from('review_snippets')
+    .select('*', { count: 'exact', head: true })
+    .eq('listing_id', listingId);
+  return count ?? 0;
+}
+
 // ── Best Of Rankings ──────────────────────────────────────────────────
 
 interface BestOfRanking {
@@ -263,12 +277,17 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
     `${ratingPrefix}${rankingPrefix}${listing.name} at ${streetAddress(listing.address, listing.city, listing.state, listing.zip)}, ${listing.city}, ${listing.state}.${amenityPart} Hours, directions & more.`
   );
 
-  // Thin listings (no crawl data and weak review signal) are excluded from
-  // Google's index to stop dragging down the site-wide quality signal. They
-  // remain visible on city/state hub pages — only the standalone detail page
-  // URL is hidden from search results. See lib/listing-quality.ts for the
+  // Thin listings (true ghosts OR chain locations without unique per-
+  // location signals) are excluded from Google's index so they stop
+  // dragging down the site-wide quality signal and stop triggering
+  // "scaled content" flags during AdSense review. They remain visible
+  // on city/state hub pages — only the standalone detail page URL is
+  // hidden from search results. See lib/listing-quality.ts for the
   // exact criteria.
-  const thin = isThinListing(listing);
+  const reviewSnippetCount = listing.parent_chain
+    ? await getReviewSnippetCount(listing.id)
+    : 0; // Only matters for chain listings; non-chain can skip this query.
+  const thin = isThinListing({ ...listing, review_snippet_count: reviewSnippetCount });
   const robots = thin ? { index: false, follow: true } : undefined;
 
   return {

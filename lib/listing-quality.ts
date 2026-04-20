@@ -2,18 +2,33 @@
  * Listing quality helpers — determine whether a touchless listing is "thin"
  * and should be excluded from the search index.
  *
- * A listing is considered thin ONLY when it has no evidence of real operation:
- *   - no crawl_snapshot (we never successfully crawled the site), AND
- *   - no extracted_data (no structured facts), AND
- *   - zero Google reviews (no user evidence the business even operates).
+ * Two categories get noindexed:
  *
- * Rating is intentionally NOT a filter. This is a comprehensive directory,
- * not a curated best-of — a 3.2-star car wash with 150 reviews is still a
- * real business people want to find, and the reviews themselves are content.
- * We only hide the true "ghost" listings that have nothing.
+ * 1. TRUE GHOST LISTINGS — no evidence the business even operates:
+ *      - no crawl_snapshot, AND
+ *      - no extracted_data, AND
+ *      - zero Google reviews.
+ *
+ * 2. SCALED-DUPLICATE CHAIN LOCATIONS — a listing that IS part of a chain
+ *    (parent_chain set) but has no unique per-location signals that could
+ *    differentiate it from other locations of the same chain. Without those
+ *    signals, any AI description we generate would necessarily lean on the
+ *    shared corporate-website markdown, producing near-duplicate content
+ *    across hundreds of listings — the "scaled content abuse" pattern
+ *    Google's quality systems flag and which AdSense reviewers reject.
+ *    A chain listing is considered scaled-duplicate when ALL of:
+ *      - parent_chain is non-null, AND
+ *      - review_snippet_count < 2 (fewer than 2 customer reviews to quote), AND
+ *      - google_description is null/empty (no Google-provided unique blurb).
+ *    Hours alone don't save it — many chains have identical "24/7" defaults.
+ *
+ * Either category can be overridden by the is_claimed or is_featured flags.
+ *
+ * Rating is intentionally NOT a filter. Low-rated businesses are still real
+ * businesses searchers want to find, and reviews are themselves content.
  *
  * Thin listings are still shown on city/state hub pages — this helper only
- * affects whether the individual listing detail page appears in Google search
+ * affects whether the individual listing detail page appears in search
  * results.
  */
 
@@ -27,6 +42,15 @@ export type ListingQualityFields = {
   review_count?: number | null;
   is_claimed?: boolean | null;
   is_featured?: boolean | null;
+  parent_chain?: string | null;
+  google_description?: string | null;
+  /**
+   * Count of review_snippets rows for this listing. Not stored on the
+   * listings row itself — callers (detail page, sitemap) must provide it.
+   * When omitted, chain listings get the benefit of the doubt (assumed to
+   * have snippets).
+   */
+  review_snippet_count?: number;
 };
 
 /**
@@ -34,17 +58,24 @@ export type ListingQualityFields = {
  * See file-level doc for the full criteria.
  */
 export function isThinListing(listing: ListingQualityFields): boolean {
-  // Keep indexed if it's manually claimed or editorially featured — these
-  // are curated signals that override automatic quality checks.
+  // Manual overrides — curated signals always win.
   if (listing.is_claimed || listing.is_featured) return false;
 
-  // Keep indexed if it has any source of real content.
+  // Category 2: scaled-duplicate chain location. Checked FIRST because a
+  // chain listing might well have crawl_snapshot populated (with corporate
+  // markdown) — we still want to noindex if it has no per-location signals.
+  if (listing.parent_chain) {
+    const snippetCount = listing.review_snippet_count ?? Infinity;
+    const hasGoogleBlurb = !!(listing.google_description && listing.google_description.trim().length > 0);
+    if (snippetCount < 2 && !hasGoogleBlurb) return true;
+  }
+
+  // Category 1: true ghost listing. Has any content source → index.
   const hasContent =
     listing.crawl_snapshot != null || listing.extracted_data != null;
   if (hasContent) return false;
 
   // No content — keep indexed if it has at least 1 Google review.
-  // Any review is proof the business exists and has customers.
   const reviewCount = listing.review_count ?? 0;
   return reviewCount < REVIEW_FLOOR_COUNT;
 }
