@@ -231,7 +231,7 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   // The brand image is only the fallback when we don't have a human-verified hero.
   // ('chain-brand-auto', 'google-auto', 'streetview-auto', etc. are machine-assigned and
   //  should be replaced by brand image for chain locations.)
-  const HUMAN_SOURCES = new Set(['manual', 'gallery', 'upload', 'crop', 'paste', 'text-verified-pick']);
+  const HUMAN_SOURCES = new Set(['manual', 'gallery', 'upload', 'crop', 'paste', 'text-verified-pick', 'google-ai', 'streetview-ai']);
   const isHumanCurated = listing.hero_image_source ? HUMAN_SOURCES.has(listing.hero_image_source) : false;
   const chainBrandImageMeta = !isHumanCurated
     ? getChainBrandImage(listing.parent_chain, listing.id) : null;
@@ -902,7 +902,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
   const todayKey = getTodayKey();
 
   // Location-specific admin-curated photos ALWAYS beat the generic chain brand image.
-  const HUMAN_HERO_SOURCES = new Set(['manual', 'gallery', 'upload', 'crop', 'paste', 'text-verified-pick']);
+  const HUMAN_HERO_SOURCES = new Set(['manual', 'gallery', 'upload', 'crop', 'paste', 'text-verified-pick', 'google-ai', 'streetview-ai']);
   const isHumanHero = listing.hero_image_source ? HUMAN_HERO_SOURCES.has(listing.hero_image_source) : false;
   const chainBrandImage = !isHumanHero
     ? getChainBrandImage(listing.parent_chain, listing.id) : null;
