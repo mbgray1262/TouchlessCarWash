@@ -8,6 +8,7 @@ import { US_STATES, slugify } from '@/lib/constants';
 import { generateTop10ChainsContent } from '@/lib/dynamic-blog-top10';
 import { generateSubscriptionsContent } from '@/lib/dynamic-blog-subscriptions';
 import { getTakeaways } from '@/lib/blog-takeaways';
+import { getHowTo } from '@/lib/blog-howto-steps';
 import type { Metadata } from 'next';
 
 export const revalidate = 3600; // Revalidate dynamic blog content hourly
@@ -297,6 +298,22 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     ],
   };
 
+  const howTo = getHowTo(post.slug);
+  const howToJsonLd = howTo
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'HowTo',
+        name: howTo.name,
+        description: howTo.description,
+        step: howTo.steps.map((s, i) => ({
+          '@type': 'HowToStep',
+          position: i + 1,
+          name: s.name,
+          text: s.text,
+        })),
+      }
+    : null;
+
   return (
     <div className="min-h-screen">
       <script
@@ -307,6 +324,12 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
       />
+      {howToJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(howToJsonLd) }}
+        />
+      )}
 
       <div className="bg-[#0F2744] py-10">
         <div className="container mx-auto px-4 max-w-3xl">
