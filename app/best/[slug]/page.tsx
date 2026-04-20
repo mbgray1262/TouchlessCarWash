@@ -247,6 +247,26 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
   const year = new Date().getFullYear();
   const count = topListings.length;
 
+  // ── "At a Glance" summary stats ─────────────────────────────────────
+  // Concise, factual, extractable-by-LLM summary of the metro.
+  const ratedListings = topListings.filter((l) => l.rating && l.rating > 0);
+  const avgTopRating = ratedListings.length > 0
+    ? ratedListings.reduce((sum, l) => sum + Number(l.rating), 0) / ratedListings.length
+    : 0;
+  const topPick = topListings[0];
+
+  const amenityCounts = new Map<string, number>();
+  for (const listing of topListings) {
+    for (const amenity of listing.amenities ?? []) {
+      amenityCounts.set(amenity, (amenityCounts.get(amenity) ?? 0) + 1);
+    }
+  }
+  const topAmenities = Array.from(amenityCounts.entries())
+    .filter(([, c]) => c >= 2)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+    .map(([name]) => name);
+
   // Structured data — ItemList for rankings
   const itemListSchema = {
     '@context': 'https://schema.org',
@@ -360,6 +380,59 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
           </div>
         </div>
 
+        {/* At a Glance — concise, LLM-extractable summary */}
+        <section className="py-8 px-4 bg-white border-b border-gray-100" aria-labelledby="at-a-glance-heading">
+          <div className="container mx-auto max-w-3xl">
+            <div className="bg-gradient-to-br from-[#F0F9FF] to-[#ECFDF5] rounded-2xl border border-[#22C55E]/20 p-6">
+              <h2 id="at-a-glance-heading" className="text-sm font-semibold text-[#0F2744] uppercase tracking-widest mb-3 flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-[#22C55E]" />
+                At a Glance
+              </h2>
+              <p className="text-gray-800 text-[15px] leading-relaxed mb-4">
+                <strong>{metro.name}</strong> has <strong>{allListings.length} verified touchless car wash{allListings.length === 1 ? '' : 'es'}</strong> within {metro.radiusMiles} miles of the city center.
+                {topPick && (
+                  <>
+                    {' '}The top-ranked wash is <strong>{topPick.name}</strong> in {topPick.city}, {topPick.state}
+                    {topPick.rating > 0 && ` (${Number(topPick.rating).toFixed(1)} stars${topPick.review_count > 0 ? `, ${topPick.review_count.toLocaleString()} reviews` : ''})`}.
+                  </>
+                )}
+                {avgTopRating > 0 && (
+                  <> The top {count} locations average <strong>{avgTopRating.toFixed(1)} stars</strong>.</>
+                )}
+              </p>
+              <dl className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <dt className="text-gray-500 text-xs uppercase tracking-wide">Verified Washes</dt>
+                  <dd className="font-bold text-[#0F2744] text-lg">{allListings.length}</dd>
+                </div>
+                <div>
+                  <dt className="text-gray-500 text-xs uppercase tracking-wide">Ranked Here</dt>
+                  <dd className="font-bold text-[#0F2744] text-lg">{count}</dd>
+                </div>
+                {avgTopRating > 0 && (
+                  <div>
+                    <dt className="text-gray-500 text-xs uppercase tracking-wide">Avg Rating</dt>
+                    <dd className="font-bold text-[#0F2744] text-lg">{avgTopRating.toFixed(1)} ★</dd>
+                  </div>
+                )}
+                <div>
+                  <dt className="text-gray-500 text-xs uppercase tracking-wide">Search Radius</dt>
+                  <dd className="font-bold text-[#0F2744] text-lg">{metro.radiusMiles} mi</dd>
+                </div>
+              </dl>
+              {topAmenities.length > 0 && (
+                <p className="text-sm text-gray-600 mt-4">
+                  <span className="font-semibold text-[#0F2744]">Common amenities:</span>{' '}
+                  {topAmenities.join(' · ')}
+                </p>
+              )}
+              <p className="text-xs text-gray-500 mt-3">
+                Every listing is confirmed brushless — no cloth, no friction, no risk to your paint. Rankings use Google ratings, review volume, and verified touchless review evidence.
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* Expert Guide — unique editorial content per metro */}
         {METRO_CONTENT[metro.slug] && (() => {
           const guideParas = buildExpertGuide(metro.name, METRO_CONTENT[metro.slug], topListings.length);
@@ -380,8 +453,11 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
         })()}
 
         {/* Ranked Listings */}
-        <section className="py-12 px-4 bg-white">
+        <section className="py-12 px-4 bg-white" aria-labelledby="ranked-listings-heading">
           <div className="container mx-auto max-w-4xl">
+            <h2 id="ranked-listings-heading" className="text-2xl font-bold text-[#0F2744] mb-6">
+              Top {count} Touchless Car Washes in {metro.name}
+            </h2>
             <div className="space-y-6">
               {topListings.map((listing, idx) => {
                 const rank = idx + 1;
@@ -435,9 +511,9 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
                         <div className="flex-1 p-5 md:p-6 flex flex-col">
                           <div className="flex items-start justify-between gap-3 mb-2">
                             <div>
-                              <h2 className="text-lg md:text-xl font-bold text-[#0F2744] group-hover:text-[#22C55E] transition-colors">
+                              <h3 className="text-lg md:text-xl font-bold text-[#0F2744] group-hover:text-[#22C55E] transition-colors">
                                 {listing.name}
-                              </h2>
+                              </h3>
                               <div className="flex items-center gap-1.5 text-sm text-gray-500 mt-0.5">
                                 <MapPin className="w-3.5 h-3.5 shrink-0" />
                                 <span>{listing.city}, {listing.state}</span>
