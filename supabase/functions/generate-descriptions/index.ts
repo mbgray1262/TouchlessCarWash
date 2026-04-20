@@ -43,6 +43,8 @@ interface ListingData {
   price_range: string | null;
   crawl_snapshot: { data?: { markdown?: string } } | null;
   extracted_data: Record<string, unknown> | null;
+  parent_chain: string | null;
+  review_snippets?: Array<{ review_text: string; rating: number | null; sentiment: string | null }>;
 }
 
 async function generateDescriptionWithGemini(listing: ListingData, apiKey: string): Promise<string> {
@@ -170,6 +172,24 @@ async function generateDescriptionWithGemini(listing: ListingData, apiKey: strin
     parts.push(`\nWebsite content excerpt:\n${snapshotMd.substring(0, 3000)}`);
   }
 
+  // Include per-location customer review snippets — the strongest source of
+  // unique per-location content, especially for chain listings where every
+  // other data field might be identical to sibling locations. The AI should
+  // paraphrase observations customers actually made about THIS specific
+  // location rather than parroting corporate marketing copy.
+  const snippets = listing.review_snippets ?? [];
+  if (snippets.length > 0) {
+    const formatted = snippets
+      .map((s, i) => {
+        const stars = s.rating ? `${s.rating}★` : '';
+        const sent = s.sentiment ? ` (${s.sentiment})` : '';
+        const trimmed = s.review_text.replace(/\s+/g, ' ').trim().slice(0, 240);
+        return `  Review ${i + 1}${stars}${sent}: "${trimmed}"`;
+      })
+      .join('\n');
+    parts.push(`\nCustomer review snippets from this specific location (quote or paraphrase specific observations):\n${formatted}`);
+  }
+
   const context = parts.join('\n');
 
   // Count the structured-data fields we have. The richer the data, the longer
@@ -188,8 +208,12 @@ async function generateDescriptionWithGemini(listing: ListingData, apiKey: strin
     return true;
   }).length : 0;
 
-  const isRich = richFieldCount >= 3 || !!snapshotMd;
-  const isVeryRich = richFieldCount >= 5;
+  // Review snippets count as richness for chain listings — they're often the
+  // ONLY per-location content we have, and they're the most important
+  // differentiator for AdSense (real customer text, not corporate copy).
+  const hasSnippetRichness = snippets.length >= 2;
+  const isRich = richFieldCount >= 3 || !!snapshotMd || hasSnippetRichness;
+  const isVeryRich = richFieldCount >= 5 || (hasSnippetRichness && richFieldCount >= 2);
 
   const targetWords = isVeryRich ? '180-260' : isRich ? '130-200' : '70-120';
 
@@ -227,6 +251,8 @@ CRITICAL RULES (the directory has been flagged for low-quality content; these ru
 8. Tone: factual and informative, like a knowledgeable local writing a quick guide. Not promotional. Not sycophantic.
 
 9. Naturally include the business name, city, and state once each (for SEO), but do not stuff keywords.
+
+9a. CHAIN LOCATIONS: when the business is part of a named chain (parent_chain is set), the shared corporate website content will be the same across every location of that chain. You MUST lean heavily on the per-location customer review snippets, address, hours, and any location-specific amenities to differentiate this page from sibling locations. If you have review snippets, paraphrase specific observations customers made about THIS location (e.g. "several customers mention the free vacuums work consistently" or "reviewers highlight the 24-hour availability for late-shift drivers"). Do NOT lean primarily on the corporate tagline, founding year, or franchise-wide claims — those appear on every sibling page and are exactly the "scaled content" signal we are trying to avoid.
 
 10. End with a concrete call to action grounded in real data — e.g., the actual phone number, the actual hours, or "visit during the open hours listed below." Do NOT end with generic exhortations like "stop by today!"
 
@@ -417,12 +443,29 @@ Deno.serve(async (req: Request) => {
       try {
         const { data: listing } = await supabase
           .from('listings')
-          .select('id, name, city, state, address, zip, phone, website, rating, review_count, is_touchless, amenities, wash_packages, hours, google_description, google_category, google_subtypes, typical_time_spent, price_range, crawl_snapshot, extracted_data')
+          .select('id, name, city, state, address, zip, phone, website, rating, review_count, is_touchless, amenities, wash_packages, hours, google_description, google_category, google_subtypes, typical_time_spent, price_range, crawl_snapshot, extracted_data, parent_chain')
           .eq('id', task.listing_id)
           .maybeSingle();
 
         if (listing) {
-          const description = await generateDescriptionWithGemini(listing as ListingData, geminiKey);
+          // Fetch up to 5 per-listing customer review snippets. These are the
+          // strongest differentiator for chain locations that share all other
+          // data with sibling locations — real customer words from THIS
+          // specific wash are genuinely unique content Google can't find on
+          // other pages. Feeding them to the prompt lets the AI quote or
+          // paraphrase specific observations ("customers mention the free
+          // vacuums work consistently", "several reviews note the 24-hour
+          // availability"), which breaks up the templated chain-description
+          // problem.
+          const { data: snippets } = await supabase
+            .from('review_snippets')
+            .select('review_text, rating, sentiment')
+            .eq('listing_id', task.listing_id)
+            .order('rating', { ascending: false, nullsFirst: false })
+            .limit(5);
+          const listingWithSnippets = { ...listing, review_snippets: snippets ?? [] };
+
+          const description = await generateDescriptionWithGemini(listingWithSnippets as ListingData, geminiKey);
           if (description && description.length > 20) {
             await supabase.from('listings').update({
               description,
