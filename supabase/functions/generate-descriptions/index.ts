@@ -235,8 +235,15 @@ ${context}
 
 Write the description now. Remember: every sentence must contain a fact specific to THIS business.`;
 
-  // Gemini 2.5 Flash — free tier for directory-scale use. Same sophisticated
-  // prompt as before; we just swap the model endpoint.
+  // Gemini 2.5 Flash — free tier for directory-scale use.
+  //
+  // IMPORTANT: Gemini 2.5 Flash has "thinking" enabled by default, which
+  // consumes output tokens internally before generating the visible
+  // response. With the previous maxOutputTokens=800, thinking would
+  // consume 400-600 tokens and the actual description would truncate at
+  // ~120 chars mid-sentence. Fix: disable thinking entirely via
+  // thinkingBudget=0 AND raise the output budget so the 180-260 word
+  // target has plenty of headroom.
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
     {
@@ -246,8 +253,9 @@ Write the description now. Remember: every sentence must contain a fact specific
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.7,
-          maxOutputTokens: 800,
+          maxOutputTokens: 2048,
           topP: 0.9,
+          thinkingConfig: { thinkingBudget: 0 },
         },
       }),
     }
