@@ -90,27 +90,18 @@ function EquipmentRow({ result, onApply, onReject, onUndo, onOpenEditor }: {
     <div className={`border-b border-gray-100 last:border-0 ${!hasEquipment ? 'opacity-70' : ''}`}>
       {modalUrl && <PhotoModal url={modalUrl} onClose={() => setModalUrl(null)} />}
       <div className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50">
-        {/* Thumbnail — click to open listing editor.
-            Prefer the real listing hero so the row thumbnail matches what the
-            curation modal will show. Fall back to the AI equipment-scan photo
-            only when the listing has no hero (so the row doesn't go blank).
-            A "no hero" badge highlights the fallback case so the user knows
-            the modal will open empty. */}
-        {(result.listing_hero || result.equipment_source_photo) && (
-          <div className="relative shrink-0">
-            <PhotoThumb
-              url={result.listing_hero || result.equipment_source_photo!}
-              onClick={onOpenEditor}
-            />
-            {!result.listing_hero && result.equipment_source_photo && (
-              <span
-                className="absolute bottom-0 left-0 right-0 bg-amber-500/90 text-white text-[9px] font-bold text-center py-0.5"
-                title="This thumbnail is the AI equipment-scan photo. The listing has no hero set — the modal will open with an empty hero slot."
-              >
-                NO HERO
-              </span>
-            )}
-          </div>
+        {/* Thumbnail — always the listing's hero image. If there's no hero,
+            show an empty placeholder so what you click matches what the
+            curation modal opens to. */}
+        {result.listing_hero ? (
+          <PhotoThumb url={result.listing_hero} onClick={onOpenEditor} />
+        ) : (
+          <button
+            onClick={onOpenEditor}
+            className="shrink-0 w-20 h-20 rounded bg-gray-100 border border-dashed border-gray-300 flex items-center justify-center text-[10px] font-semibold text-gray-400 uppercase tracking-wide hover:bg-gray-200"
+          >
+            No Hero
+          </button>
         )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
