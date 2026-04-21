@@ -1,0 +1,1485 @@
+{
+  "generated_at": "2026-04-21T09:15:36.173Z",
+  "total_scanned": 3996,
+  "name_mismatches": [
+    {
+      "id": "15c4eb5f-662c-478b-b815-34fb07f6a637",
+      "slug": "car-wash-rialto-ca",
+      "city": "Rialto",
+      "state": "CA",
+      "db_name": "Car Wash",
+      "google_name": "Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "ce4d9856-e599-4368-bbda-c3dd0b3c0587",
+      "slug": "car-wash-xmohz4",
+      "city": "Montana",
+      "state": "MT",
+      "db_name": "Car WASH",
+      "google_name": "Car WASH",
+      "similarity": 0
+    },
+    {
+      "id": "efb2aeba-b85e-4eab-a597-7592cd282e1e",
+      "slug": "super-wash-1117-e-st-charles-rd-lombard-il",
+      "city": "Lombard",
+      "state": "IL",
+      "db_name": "Super Wash",
+      "google_name": "SUPERWASH LOMBARD",
+      "similarity": 0
+    },
+    {
+      "id": "ced15ef5-0401-43e6-a7c4-1c9122b8e4fe",
+      "slug": "upstate-laserwash",
+      "city": "Clifton Park",
+      "state": "NY",
+      "db_name": "Upstate LaserWash",
+      "google_name": "Spritz Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "a0ec7dfd-4e0e-4bb7-9ce9-c177df29d7ec",
+      "slug": "touchless-car-wash-10713-jollyville-rd-austin-tx-78759",
+      "city": "Austin",
+      "state": "TX",
+      "db_name": "Touchless Car Wash",
+      "google_name": "Circle K | Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "196493e4-3d55-4616-a2d5-3627b86c4e20",
+      "slug": "car-wash-charlotte-nc",
+      "city": "Charlotte",
+      "state": "NC",
+      "db_name": "Car Wash",
+      "google_name": "Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "38ac734f-aa26-4134-9111-6d1262cb3b88",
+      "slug": "car-wash-hfwlse",
+      "city": "Winchester",
+      "state": "WV",
+      "db_name": "Car Wash",
+      "google_name": "Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "d1eea994-733a-4ac5-9834-16ba3a407234",
+      "slug": "car-wash-junction-city-or",
+      "city": "Junction City",
+      "state": "OR",
+      "db_name": "Car Wash",
+      "google_name": "Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "535b20f1-484b-4cdb-bdfe-97e59f0e4851",
+      "slug": "car-wash-miami-fl",
+      "city": "Miami",
+      "state": "FL",
+      "db_name": "Car Wash",
+      "google_name": "Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "44128dec-e925-4f06-9504-3dda3c7613e9",
+      "slug": "car-wash-minnetonka-mn-1",
+      "city": "Minnetonka",
+      "state": "MN",
+      "db_name": "Car Wash",
+      "google_name": "Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "fe5f3756-9f38-4348-bf04-b874c7253f08",
+      "slug": "car-wash-88",
+      "city": "Salt Lake City",
+      "state": "UT",
+      "db_name": "Car Wash",
+      "google_name": "Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "37375a60-4262-4464-a3b0-b3eb08d4832b",
+      "slug": "holiday-stationstores-grand-forks-2250-s-columbia-rd-mn-2746382",
+      "city": "Grand Forks",
+      "state": "MN",
+      "db_name": "Holiday Stationstores",
+      "google_name": "Circle K",
+      "similarity": 0
+    },
+    {
+      "id": "842c1ee6-0bbe-4c1d-8419-63db7330f217",
+      "slug": "wooly-wash-du-quoin-il",
+      "city": "Du Quoin",
+      "state": "IL",
+      "db_name": "Wooly Wash",
+      "google_name": "Wonder Wash Laundry Center",
+      "similarity": 0
+    },
+    {
+      "id": "cc489888-88f4-4415-b82b-2f02ec462e22",
+      "slug": "terribles-car-wash-3428-st-rose-pkwy-henderson-nevada",
+      "city": "Henderson",
+      "state": "NV",
+      "db_name": "Terrible's Car Wash",
+      "google_name": "Terrible Herbst",
+      "similarity": 0
+    },
+    {
+      "id": "85f0ae9c-d3bc-4836-b2b1-8b73069942f2",
+      "slug": "holiday-stationstores-122",
+      "city": "Brandon",
+      "state": "SD",
+      "db_name": "Holiday Stationstores",
+      "google_name": "Circle K",
+      "similarity": 0
+    },
+    {
+      "id": "6ecbfd38-40fb-4317-8d9a-dc17d261633f",
+      "slug": "terribles-car-wash-1550-jamboree-rd-newport-beach-california",
+      "city": "Newport Beach",
+      "state": "CA",
+      "db_name": "Terrible's Car Wash",
+      "google_name": "Terrible Herbst Convenience Store",
+      "similarity": 0
+    },
+    {
+      "id": "d60a001a-9cd7-47b8-8f3b-5d3a747336f1",
+      "slug": "terribles-car-wash-henderson-nv-89115-163",
+      "city": "Henderson",
+      "state": "NV",
+      "db_name": "Terrible's Car Wash",
+      "google_name": "Terrible Herbst Convenience Store",
+      "similarity": 0
+    },
+    {
+      "id": "d071b7d9-b9ab-47f5-9550-4b953df78ffd",
+      "slug": "car-wash-riverside-ca",
+      "city": "Riverside",
+      "state": "CA",
+      "db_name": "Car Wash",
+      "google_name": "Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "087a4045-fe5d-4a3b-ad3a-aa754afb387a",
+      "slug": "greenway-auto-wash-3900-owen-rd-fenton-mi-48430-fenton-michigan",
+      "city": "Fenton",
+      "state": "MI",
+      "db_name": "Greenway Auto Wash",
+      "google_name": "Jax Kar Wash - Fenton",
+      "similarity": 0
+    },
+    {
+      "id": "4112dad5-5e98-40a8-b69d-78a3ec9fd403",
+      "slug": "terribles-car-wash-3366-st-rose-pkwy-henderson-nevada",
+      "city": "Henderson",
+      "state": "NV",
+      "db_name": "Terrible's Car Wash",
+      "google_name": "3366 St Rose Pkwy",
+      "similarity": 0
+    },
+    {
+      "id": "e362619f-9342-4180-b927-9d0af0f938cf",
+      "slug": "mocksville-auto-pride-carwash-hwy-601-across-from-lowes-1380-yadkinville-rd-mock",
+      "city": "Mocksville",
+      "state": "NC",
+      "db_name": "Mocksville Auto Pride Carwash",
+      "google_name": "Royal Rinse Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "5fe52311-759a-4522-bd62-b899d988e88d",
+      "slug": "terribles-car-wash-1700-e-main-st-barstow-california",
+      "city": "Barstow",
+      "state": "CA",
+      "db_name": "Terrible's Car Wash",
+      "google_name": "Chevron Barstow",
+      "similarity": 0
+    },
+    {
+      "id": "be14cf43-e77d-4b44-b189-c95f864f19a4",
+      "slug": "terribles-car-wash-47-e-cactus-ave-las-vegas-nevada",
+      "city": "Las Vegas",
+      "state": "NV",
+      "db_name": "Terrible's Car Wash",
+      "google_name": "Chevron",
+      "similarity": 0
+    },
+    {
+      "id": "fc2c79ee-ab8c-443b-9c7a-07936d0a5cd9",
+      "slug": "holiday-stationstores-95",
+      "city": "Hibbing",
+      "state": "MN",
+      "db_name": "Holiday Stationstores",
+      "google_name": "Circle K",
+      "similarity": 0
+    },
+    {
+      "id": "db6ede58-14bb-4129-a72d-5e6aa39f9de2",
+      "slug": "extra-mile-17",
+      "city": "Santa Monica",
+      "state": "CA",
+      "db_name": "Extra Mile",
+      "google_name": "ExtraMile",
+      "similarity": 0
+    },
+    {
+      "id": "d9938056-5103-426e-8d65-a5bc7fe84bba",
+      "slug": "supersuds-carwash-586-mast-rd-manchester-nh-03102-manchester-new-hampshire",
+      "city": "Manchester",
+      "state": "NH",
+      "db_name": "SuperSuds Carwash",
+      "google_name": "Super Suds Carwash",
+      "similarity": 0
+    },
+    {
+      "id": "ae85eef9-088b-4105-b323-ae19fc3e874c",
+      "slug": "holiday-stationstores-stanley-402-westview-ln-nd-2746432",
+      "city": "Stanley",
+      "state": "ND",
+      "db_name": "Holiday Stationstores",
+      "google_name": "Circle K",
+      "similarity": 0
+    },
+    {
+      "id": "8671e396-93ea-4e08-8a88-b74f18ca29a5",
+      "slug": "holiday-stationstores-rochester-701-broadway-ave-n-mn-2746423",
+      "city": "Rochester",
+      "state": "MN",
+      "db_name": "Holiday Stationstores",
+      "google_name": "Circle K",
+      "similarity": 0
+    },
+    {
+      "id": "ae1f09eb-223f-4ee8-8ef3-c433f8a00174",
+      "slug": "car-wash-82",
+      "city": "Las Vegas",
+      "state": "NV",
+      "db_name": "Car Wash",
+      "google_name": "Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "5f97a805-fcd2-44b7-817c-42788e885b1b",
+      "slug": "holiday-stationstores-126",
+      "city": "Sioux Falls",
+      "state": "SD",
+      "db_name": "Holiday Stationstores",
+      "google_name": "Circle K",
+      "similarity": 0
+    },
+    {
+      "id": "b15d6f78-47bb-4a4a-a077-49d7123c0990",
+      "slug": "terribles-car-wash-335-w-craig-rd-north-las-vegas-nevada",
+      "city": "North Las Vegas",
+      "state": "NV",
+      "db_name": "Terrible's Car Wash",
+      "google_name": "Terrible Herbst Convenience Store",
+      "similarity": 0
+    },
+    {
+      "id": "feac88ed-e0e6-4724-abfd-bb9c60052e61",
+      "slug": "terribles-car-wash-las-vegas-nv-89166-406",
+      "city": "Las Vegas",
+      "state": "NV",
+      "db_name": "Terrible's Car Wash",
+      "google_name": "Terribleś",
+      "similarity": 0
+    },
+    {
+      "id": "042384e2-ca7f-4c05-9d33-8292c800dd9b",
+      "slug": "terribles-car-wash-7560-oso-blanca-rd-las-vegas-nevada",
+      "city": "Las Vegas",
+      "state": "NV",
+      "db_name": "Terrible's Car Wash",
+      "google_name": "Terrible Herbst #332",
+      "similarity": 0
+    },
+    {
+      "id": "54d8dad2-7114-46f4-a775-7b93162bf7dd",
+      "slug": "terribles-car-wash-7300-w-cheyenne-ave-las-vegas-nevada",
+      "city": "Las Vegas",
+      "state": "NV",
+      "db_name": "Terrible's Car Wash",
+      "google_name": "Terrible Herbst Exterior Unattended Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "af4511af-26d3-4838-afd5-1fed4f7c1f7f",
+      "slug": "rosebud-carwash-425-rosebud-ave-clarksburg-wv-26301-clarksburg-west-virginia",
+      "city": "Clarksburg",
+      "state": "WV",
+      "db_name": "Rosebud Carwash",
+      "google_name": "Rose Bud Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "a2f42cae-1745-4881-8dc6-7e1ad2c8e5c8",
+      "slug": "terribles-car-wash-9235-s-jones-blvd-las-vegas-nevada",
+      "city": "Las Vegas",
+      "state": "NV",
+      "db_name": "Terrible's Car Wash",
+      "google_name": "Chevron",
+      "similarity": 0
+    },
+    {
+      "id": "f9262b5a-255e-4fa7-a6c7-f91c2e10b572",
+      "slug": "carwash-llc",
+      "city": "Tallahassee",
+      "state": "FL",
+      "db_name": "Carwash LLC",
+      "google_name": "Carwash LLC",
+      "similarity": 0
+    },
+    {
+      "id": "f12cccd1-0b79-493c-a792-7674e7174c9b",
+      "slug": "super-wash-620-nathan-ave-north-liberty-ia",
+      "city": "North Liberty",
+      "state": "IA",
+      "db_name": "Super Wash",
+      "google_name": "L D Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "3ee46434-0fb1-4a39-9938-86a2877dbe79",
+      "slug": "black-dog-carwash-5819-w-gate-city-blvd-greensboro-nc-27407-greensboro-north-car",
+      "city": "Greensboro",
+      "state": "NC",
+      "db_name": "Black Dog Carwash",
+      "google_name": "Royal Rinse Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "aa6b6265-7ebc-42dc-bdc9-9454089fffa3",
+      "slug": "patriot-car-wash-76-columbia-st-adams-ma-01220-adams-massachusetts",
+      "city": "Adams",
+      "state": "MA",
+      "db_name": "Patriot Car Wash",
+      "google_name": "Adams Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "b49d3619-0dc2-44c3-ab8d-7f50ac1bfa3a",
+      "slug": "power-market-169",
+      "city": "Prineville",
+      "state": "OR",
+      "db_name": "Power Market",
+      "google_name": "Pacific Pride",
+      "similarity": 0
+    },
+    {
+      "id": "049b466a-395f-453d-a202-d0311af2cf60",
+      "slug": "power-market-172",
+      "city": "Grants Pass",
+      "state": "OR",
+      "db_name": "Power Market",
+      "google_name": "H&S Energy",
+      "similarity": 0
+    },
+    {
+      "id": "7553467e-8e8f-4be3-8c63-6073f8fe830a",
+      "slug": "holiday-stationstores-124",
+      "city": "Sioux Falls",
+      "state": "SD",
+      "db_name": "Holiday Stationstores",
+      "google_name": "Circle K",
+      "similarity": 0
+    },
+    {
+      "id": "3718c0e1-dbc7-4a95-bc7d-7687ae6aaf16",
+      "slug": "holiday-stationstores-rochester-1851-assisi-dr-nw-mn-2746430",
+      "city": "Rochester",
+      "state": "MN",
+      "db_name": "Holiday Stationstores",
+      "google_name": "Circle K",
+      "similarity": 0
+    },
+    {
+      "id": "df061e4c-267c-4f50-b9df-3734b63a2c67",
+      "slug": "terribles-car-wash-1450-w-cheyenne-avenue-north-las-vegas-nevada",
+      "city": "North Las Vegas",
+      "state": "NV",
+      "db_name": "Terrible's Car Wash",
+      "google_name": "1450 W Cheyenne Ave",
+      "similarity": 0
+    },
+    {
+      "id": "1332b527-1f40-4805-b028-7b62a250217c",
+      "slug": "terribles-car-wash-3650-s-town-center-dr-200-las-vegas-nevada",
+      "city": "Las Vegas",
+      "state": "NV",
+      "db_name": "Terrible's Car Wash",
+      "google_name": "3650 S Town Center Dr #200",
+      "similarity": 0
+    },
+    {
+      "id": "1fc85a23-9c38-4bae-9cb6-2641aeac89b8",
+      "slug": "cascade-car-wash-5",
+      "city": "Fairfield",
+      "state": "OH",
+      "db_name": "Cascade Car Wash",
+      "google_name": "Splash & Dash Car Was",
+      "similarity": 0
+    },
+    {
+      "id": "4f385a2c-278f-4103-ba3b-2bfaa03ec1d8",
+      "slug": "54-touch-free-car-wash-928-e-harden-st-graham-nc-27253",
+      "city": "Graham",
+      "state": "NC",
+      "db_name": "54 Touch-Free Car Wash",
+      "google_name": "Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "f23152df-8ab4-4652-8ee0-59cbb9d51bfd",
+      "slug": "car-wash-1419-banks-ave-superior-wi-54880-superior-wisconsin",
+      "city": "Superior",
+      "state": "WI",
+      "db_name": "Car Wash",
+      "google_name": "Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "9fff375d-c91e-4349-9f6c-30a867f8caef",
+      "slug": "kwik-trip-208-n-lincoln-st-knoxville-ia-50138",
+      "city": "KNOXVILLE",
+      "state": "IA",
+      "db_name": "Kwik Trip",
+      "google_name": "208 N Lincoln St",
+      "similarity": 0
+    },
+    {
+      "id": "e19fee48-6968-44e5-91c6-21c8b9e85ba1",
+      "slug": "terribles-car-wash-5325-s-decatur-blvd-las-vegas-nevada",
+      "city": "Las Vegas",
+      "state": "NV",
+      "db_name": "Terrible's Car Wash",
+      "google_name": "Chevron",
+      "similarity": 0
+    },
+    {
+      "id": "1e0005b3-c8c5-4ee3-a896-4fff04200a46",
+      "slug": "clean-n-classy-car-wash-1241-w-clairemont-ave-eau-claire-wi-54701-eau-claire-wis",
+      "city": "Eau Claire",
+      "state": "WI",
+      "db_name": "Clean N Classy Car Wash",
+      "google_name": "Ship Shape Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "fbdd5eb1-4c85-48b4-9ed5-2c64b2f9711a",
+      "slug": "terribles-car-wash-5685-losee-road-north-las-vegas-nevada",
+      "city": "North Las Vegas",
+      "state": "NV",
+      "db_name": "Terrible's Car Wash",
+      "google_name": "5685 Losee Rd",
+      "similarity": 0
+    },
+    {
+      "id": "f7115150-b23f-42ad-920b-06c3594703d3",
+      "slug": "holiday-stationstores-94",
+      "city": "Grand Rapids",
+      "state": "MN",
+      "db_name": "Holiday Stationstores",
+      "google_name": "Circle K Gas Station",
+      "similarity": 0
+    },
+    {
+      "id": "69964e03-5732-4213-ad2f-c2c8b4deef66",
+      "slug": "terribles-car-wash-9430-peace-way-las-vegas-nevada",
+      "city": "Las Vegas",
+      "state": "NV",
+      "db_name": "Terrible's Car Wash",
+      "google_name": "Terrible Herbst Convenience Store",
+      "similarity": 0
+    },
+    {
+      "id": "ef323bae-4677-4393-bfff-fc637e32f460",
+      "slug": "terribles-car-wash-2755-e-craig-rd-north-las-vegas-nevada",
+      "city": "North Las Vegas",
+      "state": "NV",
+      "db_name": "Terrible's Car Wash",
+      "google_name": "2755 E Craig Rd",
+      "similarity": 0
+    },
+    {
+      "id": "f9583b81-9d91-4120-8b7b-099a50194659",
+      "slug": "the-wash-zone-2",
+      "city": "Ladson",
+      "state": "SC",
+      "db_name": "The Wash Zone",
+      "google_name": "Royal Rinse Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "f6e26cca-0e63-439b-8cfe-3f18553f55c1",
+      "slug": "holiday-stationstores-120",
+      "city": "Grand Forks",
+      "state": "ND",
+      "db_name": "Holiday Stationstores",
+      "google_name": "Circle K",
+      "similarity": 0
+    },
+    {
+      "id": "d7fd8106-86bb-470c-a3df-0ea1234ae190",
+      "slug": "holiday-stationstores-duluth-5699-miller-trunk-hwy-mn-2746409",
+      "city": "Duluth",
+      "state": "MN",
+      "db_name": "Holiday Stationstores",
+      "google_name": "Circle K Gas Station",
+      "similarity": 0
+    },
+    {
+      "id": "fca045a2-85af-42f9-a72d-421f91260128",
+      "slug": "super-wash-104-landmark-dr-winnebago-il",
+      "city": "Winnebago",
+      "state": "IL",
+      "db_name": "Super Wash",
+      "google_name": "Winnebago Superwash",
+      "similarity": 0
+    },
+    {
+      "id": "486a0882-ce73-40fa-a00e-fb154e313fe9",
+      "slug": "car-wash-73",
+      "city": "Anaheim",
+      "state": "CA",
+      "db_name": "Car Wash",
+      "google_name": "Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "87d1f1a9-a1ac-425e-8b1e-8d575f6355a4",
+      "slug": "clean-getaway-auto-wash-117-henslee-dr-dickson-tn-37055-dickson-tennessee",
+      "city": "Dickson",
+      "state": "TN",
+      "db_name": "Clean Getaway Auto Wash",
+      "google_name": "Sonshine Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "d21bfa66-f17c-456b-b2fa-bd29b4989a56",
+      "slug": "super-wash-1213-w-main-st-manchester-ia",
+      "city": "Manchester",
+      "state": "IA",
+      "db_name": "Super Wash",
+      "google_name": "Wonder Wash",
+      "similarity": 0
+    },
+    {
+      "id": "221a7d81-50e1-4a09-b777-b74ee2efb318",
+      "slug": "car-wash-tbf2i",
+      "city": "Cedar Rapids",
+      "state": "IA",
+      "db_name": "Car Wash",
+      "google_name": "Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "7ba7748e-b1b4-4c7c-bc8c-5ce131ced519",
+      "slug": "holiday-stationstores-125",
+      "city": "Sioux Falls",
+      "state": "SD",
+      "db_name": "Holiday Stationstores",
+      "google_name": "Circle K Gas Station",
+      "similarity": 0
+    },
+    {
+      "id": "58f622ca-3efd-4231-a56b-425b0980a01b",
+      "slug": "super-wash-623-s-2nd-st-center-city-ky",
+      "city": "Center City",
+      "state": "KY",
+      "db_name": "Super Wash",
+      "google_name": "Premium Auto Wash",
+      "similarity": 0
+    },
+    {
+      "id": "2ee07021-a2c4-40ce-b1a5-85049cbbf0ef",
+      "slug": "laserwash-7",
+      "city": "Austin",
+      "state": "TX",
+      "db_name": "LaserWash",
+      "google_name": "Circle K | Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "eaf3fb02-39c2-4613-9179-5010b2111a4e",
+      "slug": "touchless-car-wash-210-division-st-withee-wi-54498",
+      "city": "Withee",
+      "state": "WI",
+      "db_name": "Touchless Car Wash",
+      "google_name": "Withee car wash",
+      "similarity": 0
+    },
+    {
+      "id": "47af4ee4-06c4-415b-ba4a-bfd7e09e412b",
+      "slug": "brushless-carwash-11031-s-i-35-frontage-rd-austin-tx-78747-austin-texas",
+      "city": "Austin",
+      "state": "TX",
+      "db_name": "Brushless Carwash",
+      "google_name": "Carwash",
+      "similarity": 0
+    },
+    {
+      "id": "3da496d7-462f-406d-91c6-0d1bf5fd4997",
+      "slug": "touchfree-car-wash",
+      "city": "Tampa",
+      "state": "FL",
+      "db_name": "Touchfree Car Wash",
+      "google_name": "Circle K",
+      "similarity": 0
+    },
+    {
+      "id": "eaebbb01-2319-4682-9810-0635b5acaee5",
+      "slug": "terribles-car-wash-115-n-stephanie-st-henderson-nevada",
+      "city": "Henderson",
+      "state": "NV",
+      "db_name": "Terrible's Car Wash",
+      "google_name": "115 N Stephanie St",
+      "similarity": 0
+    },
+    {
+      "id": "6eaf8e5e-c969-42ca-8363-875aa09f4128",
+      "slug": "holiday-stationstores-scanlon-1309-hwy-45-mn-2746483",
+      "city": "Scanlon",
+      "state": "MN",
+      "db_name": "Holiday Stationstores",
+      "google_name": "Circle K",
+      "similarity": 0
+    },
+    {
+      "id": "e6714b31-56f1-4b66-b7bc-44d30b92df6c",
+      "slug": "terribles-car-wash-5530-warm-springs-road-las-vegas-nevada",
+      "city": "Las Vegas",
+      "state": "NV",
+      "db_name": "Terrible's Car Wash",
+      "google_name": "Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "27872a9c-73b6-4182-80c1-1c81b9147bf3",
+      "slug": "super-wash-1390-main-st-hamilton-oh",
+      "city": "Hamilton",
+      "state": "OH",
+      "db_name": "Super Wash",
+      "google_name": "Wash Me Superwash",
+      "similarity": 0
+    },
+    {
+      "id": "a42baee6-7d02-4cb4-bd52-e93c53131b45",
+      "slug": "terribles-car-wash-8356-grand-teton-drive-las-vegas-nevada",
+      "city": "Las Vegas",
+      "state": "NV",
+      "db_name": "Terrible's Car Wash",
+      "google_name": "8356 W Grand Teton Dr",
+      "similarity": 0
+    },
+    {
+      "id": "d2effc6b-d7c3-408d-8375-000a09b2c42a",
+      "slug": "holiday-stationstores-owatonna-330-w-north-st-mn-2746519",
+      "city": "Owatonna",
+      "state": "MN",
+      "db_name": "Holiday Stationstores",
+      "google_name": "Circle K",
+      "similarity": 0
+    },
+    {
+      "id": "1f34c1a0-639d-44fa-bf29-16820b22d600",
+      "slug": "terribles",
+      "city": "Las Vegas",
+      "state": "CA",
+      "db_name": "Terrible's",
+      "google_name": "Terrible´s",
+      "similarity": 0
+    },
+    {
+      "id": "e93acac5-74fb-4494-a0ac-63df5501e06d",
+      "slug": "holiday-stationstores-roberts-900-n-division-st-mn-2746486",
+      "city": "Roberts",
+      "state": "MN",
+      "db_name": "Holiday Stationstores",
+      "google_name": "Circle K Gas Station",
+      "similarity": 0
+    },
+    {
+      "id": "808dd105-ed07-43ae-b62a-041f3c2b632f",
+      "slug": "super-wash-320-w-delaware-st-decatur-mi",
+      "city": "Decatur",
+      "state": "MI",
+      "db_name": "Super Wash",
+      "google_name": "The Wash Tub Laundromat",
+      "similarity": 0
+    },
+    {
+      "id": "99f80d30-a8b7-44d4-9435-030d234d1761",
+      "slug": "super-wash-325-e-sangamon-ave-petersburg-il",
+      "city": "Petersburg",
+      "state": "IL",
+      "db_name": "Super Wash",
+      "google_name": "Laugh N Splash",
+      "similarity": 0
+    },
+    {
+      "id": "66844034-64ec-4a6c-b660-aac3ba8c0156",
+      "slug": "super-wash-2106-riverside-blvd-sioux-city-ia",
+      "city": "Sioux City",
+      "state": "IA",
+      "db_name": "Super Wash",
+      "google_name": "Riverside CAR WASH",
+      "similarity": 0
+    },
+    {
+      "id": "ef84633c-3e77-45b0-903b-3bba20bf68d3",
+      "slug": "car-wash-fresno-ca",
+      "city": "Fresno",
+      "state": "CA",
+      "db_name": "Car Wash",
+      "google_name": "Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "a5972f1e-526f-4632-8a50-1de06a560bcf",
+      "slug": "super-wash-1212-1st-ave-rock-falls-il",
+      "city": "Rock Falls",
+      "state": "IL",
+      "db_name": "Super Wash",
+      "google_name": "Cooper's Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "35661986-b36b-47a7-9b98-169b28d227f4",
+      "slug": "holiday-stationstores-130",
+      "city": "Hudson",
+      "state": "WI",
+      "db_name": "Holiday Stationstores",
+      "google_name": "Circle K Gas Station",
+      "similarity": 0
+    },
+    {
+      "id": "9f2a5ca3-56a4-4f3a-b03c-260e0ec86935",
+      "slug": "extra-mile-10",
+      "city": "Folsom",
+      "state": "CA",
+      "db_name": "Extra Mile",
+      "google_name": "ExtraMile",
+      "similarity": 0
+    },
+    {
+      "id": "509ccb44-a01b-4827-b290-fcd6ebe435ad",
+      "slug": "extra-mile-6",
+      "city": "Cypress",
+      "state": "CA",
+      "db_name": "Extra Mile",
+      "google_name": "Chevron",
+      "similarity": 0
+    },
+    {
+      "id": "83fdd780-87b8-419c-a2f3-e57f88d756b0",
+      "slug": "terribles-car-wash-8594-blue-diamond-rd-las-vegas-nevada",
+      "city": "Las Vegas",
+      "state": "NV",
+      "db_name": "Terrible's Car Wash",
+      "google_name": "8594 Blue Diamond Rd",
+      "similarity": 0
+    },
+    {
+      "id": "b6a3269b-88e3-4cbe-9dd5-013fde9a9348",
+      "slug": "holiday-stationstores-fargo-3190-36th-st-s-mn-2653863",
+      "city": "Fargo",
+      "state": "MN",
+      "db_name": "Holiday Stationstores",
+      "google_name": "Circle K",
+      "similarity": 0
+    },
+    {
+      "id": "41f2f354-1cf2-4ae1-9e59-c22415804bd9",
+      "slug": "power-market-158",
+      "city": "Vacaville",
+      "state": "CA",
+      "db_name": "Power Market",
+      "google_name": "H&S Energy - Extra Mile",
+      "similarity": 0
+    },
+    {
+      "id": "325bcfe7-1f8b-4780-a1fc-820f35326678",
+      "slug": "terribles-car-wash-5982-losee-rd-north-las-vegas-nevada",
+      "city": "North Las Vegas",
+      "state": "NV",
+      "db_name": "Terrible's Car Wash",
+      "google_name": "Parking lot",
+      "similarity": 0
+    },
+    {
+      "id": "50e27751-3468-45dc-b70b-2a13f2232d13",
+      "slug": "primrose-touch-free-car-wash-520-w-central-st-franklin-ma-02038",
+      "city": "Franklin",
+      "state": "MA",
+      "db_name": "Primrose Touch Free Car Wash",
+      "google_name": "Pro Clean Auto Wash",
+      "similarity": 0
+    },
+    {
+      "id": "8b47144d-96d0-41c4-94f5-68f73271c7e7",
+      "slug": "terribles-car-wash-8229-dean-martin-dr-las-vegas-nevada",
+      "city": "Las Vegas",
+      "state": "NV",
+      "db_name": "Terrible's Car Wash",
+      "google_name": "Chevron",
+      "similarity": 0
+    },
+    {
+      "id": "ae334746-7762-4668-b851-b3a1cd219f76",
+      "slug": "terribles-car-wash-4850-w-silverado-ranch-blvd-las-vegas-nevada",
+      "city": "Las Vegas",
+      "state": "NV",
+      "db_name": "Terrible's Car Wash",
+      "google_name": "4850 W Silverado Ranch Blvd",
+      "similarity": 0
+    },
+    {
+      "id": "c16c4e6e-7262-4447-905c-7df4cd1bb4f1",
+      "slug": "terribles-car-wash-4322-w-ann-rd-north-las-vegas-nevada",
+      "city": "North Las Vegas",
+      "state": "NV",
+      "db_name": "Terrible's Car Wash",
+      "google_name": "4322 W Ann Rd",
+      "similarity": 0
+    },
+    {
+      "id": "c5bc87bb-6a90-4f2e-8a96-6a098e23636e",
+      "slug": "holiday-stationstores-billings-2620-6th-ave-n-mt-2746274",
+      "city": "Billings",
+      "state": "MT",
+      "db_name": "Holiday Stationstores",
+      "google_name": "Circle K",
+      "similarity": 0
+    },
+    {
+      "id": "be05ec6d-2312-4bfd-bb35-f5f0f9964f7c",
+      "slug": "terribles-car-wash-1395-e-lake-mead-pkwy-henderson-nevada",
+      "city": "Henderson",
+      "state": "NV",
+      "db_name": "Terrible's Car Wash",
+      "google_name": "1395 E Lake Mead Pkwy",
+      "similarity": 0
+    },
+    {
+      "id": "25261578-fdf6-43ea-ba14-85d485c2ef92",
+      "slug": "super-wash-1105-first-ave-ottowa-il",
+      "city": "Ottowa",
+      "state": "IL",
+      "db_name": "Super Wash",
+      "google_name": "Express Suds LLC",
+      "similarity": 0
+    },
+    {
+      "id": "9cbb8ecf-dd5d-418f-b05c-0e026b02a306",
+      "slug": "chevron-523-2031-w-sample-road-pompano-beach-fl-33064",
+      "city": "Pompano Beach",
+      "state": "FL",
+      "db_name": "Chevron #523 (Max Car Wash)",
+      "google_name": "Carwash",
+      "similarity": 0
+    },
+    {
+      "id": "48edea94-bbc4-47f5-afa5-1cc1636e037a",
+      "slug": "extra-mile-12",
+      "city": "Roseville",
+      "state": "CA",
+      "db_name": "Extra Mile",
+      "google_name": "Chevron",
+      "similarity": 0
+    },
+    {
+      "id": "8112306a-78eb-4bb8-97f6-b1defa08141a",
+      "slug": "power-market-201",
+      "city": "Tualatin",
+      "state": "OR",
+      "db_name": "Power Market",
+      "google_name": "Parking lot",
+      "similarity": 0
+    },
+    {
+      "id": "c1fc709c-ac62-4a17-a76d-12dac3e6d747",
+      "slug": "carwash-1",
+      "city": "Austin",
+      "state": "TX",
+      "db_name": "Carwash",
+      "google_name": "Carwash",
+      "similarity": 0
+    },
+    {
+      "id": "cab9b87e-1a6c-4bc8-8969-dcdc979ad284",
+      "slug": "super-wash-1022-indianapolis-rd-greencastle-in",
+      "city": "Greencastle",
+      "state": "IN",
+      "db_name": "Super Wash",
+      "google_name": "I & H Enterprises Inc",
+      "similarity": 0
+    },
+    {
+      "id": "b94e38eb-e2c4-4175-9bcf-2a5450e851e2",
+      "slug": "super-wash-231-9th-ave-eldridge-ia",
+      "city": "Eldridge",
+      "state": "IA",
+      "db_name": "Super Wash",
+      "google_name": "Aqua-Tech Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "60806717-fe45-4054-877a-721359c3119b",
+      "slug": "super-wash-755-fox-rd-van-wert-oh",
+      "city": "Van Wert",
+      "state": "OH",
+      "db_name": "Super Wash",
+      "google_name": "Van Wert Superwash",
+      "similarity": 0
+    },
+    {
+      "id": "57a6e3cb-5deb-48ea-b699-496b4e2a02d0",
+      "slug": "touch-free-car-wash-2638-lakeview-rd-onekama-mi-49675",
+      "city": "Onekama",
+      "state": "MI",
+      "db_name": "Touch Free Car Wash",
+      "google_name": "Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "67532ec8-5aee-4312-9ac0-54b39a0e118a",
+      "slug": "car-wash",
+      "city": "Queens",
+      "state": "NY",
+      "db_name": "Car Wash",
+      "google_name": "Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "141bee85-d353-4c29-96c1-6aca03c84085",
+      "slug": "car-wash-100-commerce-st-sterling-va-20164-sterling-virginia",
+      "city": "Sterling",
+      "state": "VA",
+      "db_name": "Car Wash",
+      "google_name": "Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "c638df5b-7dfe-43cd-827b-25b8e3dda3f9",
+      "slug": "laserwash-of-willis-225-fm-1097-rd-w-willis-tx-77318",
+      "city": "Willis",
+      "state": "TX",
+      "db_name": "Laserwash of Willis",
+      "google_name": "Spotfree Carwash",
+      "similarity": 0
+    },
+    {
+      "id": "e37123fc-6259-4555-9840-3f241808ad95",
+      "slug": "terribles-car-wash-4280-e-tropical-pkwy-north-las-vegas-nevada",
+      "city": "North Las Vegas",
+      "state": "NV",
+      "db_name": "Terrible's Car Wash",
+      "google_name": "4280 E Tropical Pkwy",
+      "similarity": 0
+    },
+    {
+      "id": "1d1c6518-f3b3-45a3-8367-fdfdc2387f4f",
+      "slug": "double-bubble-car-wash-huntsville-alabama-868",
+      "city": "Huntsville",
+      "state": "AL",
+      "db_name": "Double Bubble Car Wash",
+      "google_name": "Whip Wash Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "14a1d123-7d14-42a4-9a42-6af4e421f67e",
+      "slug": "car-wash-colorado-springs-colorado-8389",
+      "city": "Colorado Springs",
+      "state": "CO",
+      "db_name": "Car Wash",
+      "google_name": "Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "ca69c53e-9cea-403a-8284-6b3b79e5f6ab",
+      "slug": "car-wash-shady-ln-leicester-ma-01524-leicester-massachusetts",
+      "city": "Leicester",
+      "state": "MA",
+      "db_name": "Car Wash",
+      "google_name": "Car Wash",
+      "similarity": 0
+    },
+    {
+      "id": "7bdf39b2-b880-4d42-a433-6567f877240c",
+      "slug": "food-mart-anaheim-california-5236",
+      "city": "Anaheim",
+      "state": "CA",
+      "db_name": "Power Market",
+      "google_name": "Food Mart",
+      "similarity": 0
+    },
+    {
+      "id": "93493985-7272-469e-84c8-fc235b96d81d",
+      "slug": "car-wash-wizards-1198-hendersonville-rd-previously-blue-ridge-laser-wash-1198-he",
+      "city": "Asheville",
+      "state": "NC",
+      "db_name": "Car Wash Wizards",
+      "google_name": "Car Wash Wizards | 1198 Hendersonville Rd (Previously Blue Ridge Laser Wash)",
+      "similarity": 0.13
+    },
+    {
+      "id": "5b33cfbf-717a-46a5-84ba-9362ae02af29",
+      "slug": "animas-auto-spa-car-wash-one-free-ultimate-automatic-wash-with-download-and-use--8540",
+      "city": "Durango",
+      "state": "CO",
+      "db_name": "Animas Auto Spa",
+      "google_name": "Animas Auto Spa - Car Wash - One Free Ultimate Automatic wash with download and use of our app!!!",
+      "similarity": 0.21
+    },
+    {
+      "id": "d030306f-ce81-429c-ab05-b967cd85bca5",
+      "slug": "cascade-car-wash-3",
+      "city": "Springboro",
+      "state": "OH",
+      "db_name": "Cascade Car Wash",
+      "google_name": "Cascade Car Wash Touchless Automatic - Springboro",
+      "similarity": 0.25
+    },
+    {
+      "id": "9e7f8f24-c15f-42f9-be88-6237610a7aaf",
+      "slug": "a-to-z-express-car-wash-260-middle-country-rd-coram-ny-11727-coram-new-york",
+      "city": "Coram",
+      "state": "NY",
+      "db_name": "A to Z EXPRESS CAR WASH",
+      "google_name": "ULTIMATE Express Wash",
+      "similarity": 0.25
+    },
+    {
+      "id": "3d6e096c-2e9f-48d1-9f4b-df5bc519a47b",
+      "slug": "elephant-car-wash-a-street-north-auburn-wa",
+      "city": "Auburn,",
+      "state": "WA",
+      "db_name": "Elephant Car Wash - A Street North",
+      "google_name": "Elephant Car wash",
+      "similarity": 0.25
+    },
+    {
+      "id": "7d5831c8-83b1-4294-a141-2ad5da2cdd65",
+      "slug": "oasis-car-wash-touchless-automatic-1309-hogansville-rd-lagrange-ga-30241-lagrang",
+      "city": "LaGrange",
+      "state": "GA",
+      "db_name": "Oasis Car Wash & Touchless Automatic",
+      "google_name": "The Wash Touchless Express | TOUCHLESS Car Wash | LaGrange",
+      "similarity": 0.25
+    },
+    {
+      "id": "6312ff46-b758-47d8-9b59-1468a2d49c59",
+      "slug": "super-wash-111-veterans-way-washington-court-house-oh",
+      "city": "Washington Court House",
+      "state": "OH",
+      "db_name": "Super Wash",
+      "google_name": "Washington Court House Super Car Wash",
+      "similarity": 0.25
+    },
+    {
+      "id": "dab57c82-11b3-46ef-8224-1ff8b4ce4aa5",
+      "slug": "luv-car-wash-5730-s-jones-blvd-las-vegas-nv-89118-las-vegas-nevada",
+      "city": "Las Vegas",
+      "state": "NV",
+      "db_name": "LUV Car Wash",
+      "google_name": "LUV Car Wash - S Jones Blvd",
+      "similarity": 0.25
+    },
+    {
+      "id": "e64e463e-91e9-4b0f-a5b8-8f36f5df18cd",
+      "slug": "super-wash-950-mississippi-view-ct-leclaire-ia",
+      "city": "LeClaire",
+      "state": "IA",
+      "db_name": "Super Wash",
+      "google_name": "Enright Enterprises DBA Super Wash",
+      "similarity": 0.25
+    },
+    {
+      "id": "10533317-01b9-4f75-aa52-78c55c9c53b5",
+      "slug": "holiday-stationstores-waverly-801-pacific-ave-mn-2653590",
+      "city": "Waverly",
+      "state": "MN",
+      "db_name": "Holiday Stationstores",
+      "google_name": "Holiday Stationstore - Waverly, MN",
+      "similarity": 0.25
+    },
+    {
+      "id": "744b633a-36c4-496c-ba8a-04b2d47141a0",
+      "slug": "jesses-car-wash-n-salina-blvd-1600-n-salina-st-syracuse-ny-13208-syracuse-new-yo",
+      "city": "Syracuse",
+      "state": "NY",
+      "db_name": "Jesse’s car wash n Salina blvd",
+      "google_name": "North Salina Car Wash",
+      "similarity": 0.25
+    },
+    {
+      "id": "99149ee4-65a3-4fbf-b46b-5e9772338c47",
+      "slug": "shell-205-11201-sw-184th-street-perrine-fl-33157",
+      "city": "Perrine",
+      "state": "FL",
+      "db_name": "Shell #205 (Max Car Wash)",
+      "google_name": "Shell",
+      "similarity": 0.33
+    },
+    {
+      "id": "8bc35a03-6817-41d5-b214-9b1e087e1528",
+      "slug": "marathon-602-980-northlake-blvd-lake-park-fl-33403",
+      "city": "Lake Park",
+      "state": "FL",
+      "db_name": "Marathon #602 (Max Car Wash)",
+      "google_name": "Marathon car wash",
+      "similarity": 0.33
+    },
+    {
+      "id": "319ad833-7356-412f-87a8-b555c8bc6044",
+      "slug": "marathon-106-14351-sw-96th-street-miami-fl-33186",
+      "city": "Miami",
+      "state": "FL",
+      "db_name": "Marathon #106 (Max Car Wash)",
+      "google_name": "Marathon Gas",
+      "similarity": 0.33
+    },
+    {
+      "id": "434b7f44-44e0-403d-8aa4-c1c0a786c9d7",
+      "slug": "chevron-352-15698-sw-88th-street-miami-fl-33196",
+      "city": "Miami",
+      "state": "FL",
+      "db_name": "Chevron #352 (Max Car Wash)",
+      "google_name": "Chevron Car Wash",
+      "similarity": 0.33
+    },
+    {
+      "id": "3ceb3722-d0ca-4515-a3c1-0738627d0fb1",
+      "slug": "exxon-33-50-se-8th-avenue-hialeah-fl-33013",
+      "city": "Hialeah",
+      "state": "FL",
+      "db_name": "Exxon #33 (Max Car Wash)",
+      "google_name": "Exxon",
+      "similarity": 0.33
+    },
+    {
+      "id": "82a86dee-8718-4c49-9e08-85b319cd60d4",
+      "slug": "chevron-360-801-sw-42nd-avenue-miami-fl-33134",
+      "city": "Miami",
+      "state": "FL",
+      "db_name": "Chevron #360 (Max Car Wash)",
+      "google_name": "Chevron",
+      "similarity": 0.33
+    },
+    {
+      "id": "6c7a1548-bb34-4e13-802d-904c32c84bd8",
+      "slug": "chevron-98-2498-nw-87th-avenue-doral-fl-33172",
+      "city": "Doral",
+      "state": "FL",
+      "db_name": "Chevron #98 (Max Car Wash)",
+      "google_name": "Chevron",
+      "similarity": 0.33
+    },
+    {
+      "id": "bd261fa4-0154-455f-8baf-8503deffedca",
+      "slug": "chevron-2-18301-nw-2nd-avenue-miami-fl-33169",
+      "city": "Miami",
+      "state": "FL",
+      "db_name": "Chevron #2 (Max Car Wash)",
+      "google_name": "Chevron",
+      "similarity": 0.33
+    },
+    {
+      "id": "7846a9e8-d271-439f-9d9a-780e607b9f16",
+      "slug": "exxon-mcgr-6305-east-8th-avenue-hialeah-fl-33013",
+      "city": "Hialeah",
+      "state": "FL",
+      "db_name": "Exxon #MCGR (Max Car Wash)",
+      "google_name": "Exxon",
+      "similarity": 0.33
+    },
+    {
+      "id": "f3b2ec56-ff7d-4cd8-87df-77327d6d49d3",
+      "slug": "auto-shine-car-wash-windham-detail-center",
+      "city": "Windham",
+      "state": "ME",
+      "db_name": "Auto Shine Car Wash Windham & Detail Center",
+      "google_name": "Auto Shine Car Wash",
+      "similarity": 0.33
+    },
+    {
+      "id": "7f56b7f4-161c-42b1-84d9-8e3feeb9a77c",
+      "slug": "extramile-4",
+      "city": "Pomona",
+      "state": "CA",
+      "db_name": "Power Market (ExtraMile)",
+      "google_name": "ExtraMile",
+      "similarity": 0.33
+    },
+    {
+      "id": "2fff5b7c-b7d9-4e8a-be9e-86dc2bfcca8e",
+      "slug": "holiday-stationstores-105",
+      "city": "New Ulm",
+      "state": "MN",
+      "db_name": "Holiday Stationstores",
+      "google_name": "Holiday Gas Station",
+      "similarity": 0.33
+    },
+    {
+      "id": "b91932e9-6d30-4a68-863e-73b94d25cd70",
+      "slug": "texaco",
+      "city": "Vacaville",
+      "state": "CA",
+      "db_name": "Power Market (Texaco)",
+      "google_name": "Texaco",
+      "similarity": 0.33
+    },
+    {
+      "id": "92e6a968-427e-4d5b-ba5c-a003371c0bdf",
+      "slug": "cyclone-touchless-car-wash-717-ontario-st-sarnia-on-N7T 1M3",
+      "city": "Sarnia",
+      "state": "ON",
+      "db_name": "Cyclone Touchless Car Wash",
+      "google_name": "Cyclone Touch Free Car Wash",
+      "similarity": 0.33
+    },
+    {
+      "id": "508141a3-331d-448d-a1bb-4a635e798f0f",
+      "slug": "marathon-166-21005-biscayne-blvd-aventura-fl-33180",
+      "city": "Aventura",
+      "state": "FL",
+      "db_name": "Marathon #166 (Max Car Wash)",
+      "google_name": "Marathon",
+      "similarity": 0.33
+    },
+    {
+      "id": "b942b897-b5f4-42f0-8db9-7f3c13932084",
+      "slug": "extramile-3",
+      "city": "Oceanside",
+      "state": "CA",
+      "db_name": "Power Market (ExtraMile)",
+      "google_name": "ExtraMile",
+      "similarity": 0.33
+    },
+    {
+      "id": "e5ca2979-f76d-4224-9990-a0abfef84d9e",
+      "slug": "kwik-trip-2611-bridge-ave-albert-lea-mn-56007",
+      "city": "ALBERT LEA",
+      "state": "MN",
+      "db_name": "Kwik Trip",
+      "google_name": "Kwik Trip of Albert Lea North",
+      "similarity": 0.33
+    },
+    {
+      "id": "0349595a-bee3-40c6-b056-a5b5c04aa0ad",
+      "slug": "holiday-stationstores-lakeville-16255-ipava-ave-n-mn-2653851",
+      "city": "Lakeville",
+      "state": "MN",
+      "db_name": "Holiday Stationstores",
+      "google_name": "Holiday Gas Station",
+      "similarity": 0.33
+    },
+    {
+      "id": "6f9f7435-6a28-4967-b6c3-e9577540674a",
+      "slug": "marathon-120-15198-sw-56th-street-miami-fl-33185",
+      "city": "Miami",
+      "state": "FL",
+      "db_name": "Marathon #120 (Max Car Wash)",
+      "google_name": "Marathon Gas",
+      "similarity": 0.33
+    },
+    {
+      "id": "95960139-673f-4eff-9f7f-f0a1cc96c7a2",
+      "slug": "chevron-179-4449-n-sr-7-lauderdale-lakes-fl-33319",
+      "city": "Lauderdale Lakes",
+      "state": "FL",
+      "db_name": "Chevron #179 (Max Car Wash)",
+      "google_name": "Chevron Car Wash",
+      "similarity": 0.33
+    },
+    {
+      "id": "d5984f5c-147a-494f-8b64-4583af75fe45",
+      "slug": "marathon-611-4200-nw-135th-street-opa-locka-fl-33054",
+      "city": "Opa Locka",
+      "state": "FL",
+      "db_name": "Marathon #611 (Max Car Wash)",
+      "google_name": "Marathon",
+      "similarity": 0.33
+    },
+    {
+      "id": "10fa1f3b-144e-4b7f-a11d-7d6ae7364c80",
+      "slug": "elite-car-wash-detail-771-columbia-turnpike-east-greenbush-ny-12061-east-greenbu",
+      "city": "East Greenbush",
+      "state": "NY",
+      "db_name": "Elite Car Wash & Detail",
+      "google_name": "Elite Car Wash",
+      "similarity": 0.33
+    },
+    {
+      "id": "4b5b7329-21ea-4ac6-bd2d-6004d0828db3",
+      "slug": "chevron-5",
+      "city": "Pomona",
+      "state": "CA",
+      "db_name": "Power Market (Chevron)",
+      "google_name": "Chevron",
+      "similarity": 0.33
+    },
+    {
+      "id": "17ff3edc-cae0-4860-80e3-d30b0eeb2f19",
+      "slug": "chevron-369-8219-w-flagler-street-miami-fl-33144",
+      "city": "Miami",
+      "state": "FL",
+      "db_name": "Chevron #369 (Max Car Wash)",
+      "google_name": "Chevron",
+      "similarity": 0.33
+    },
+    {
+      "id": "7f838997-38d3-48d5-8362-1bb8ed3b184c",
+      "slug": "super-wash-3108-blackiston-mill-rd-new-albany-in",
+      "city": "New Albany",
+      "state": "IN",
+      "db_name": "Super Wash",
+      "google_name": "Super Wash - New Albany",
+      "similarity": 0.33
+    },
+    {
+      "id": "824b25fb-0dea-4567-b216-e27c7177d1eb",
+      "slug": "mobil-815-498-s-cypress-road-pompano-beach-fl-33060",
+      "city": "Pompano Beach",
+      "state": "FL",
+      "db_name": "Mobil #815 (Max Car Wash)",
+      "google_name": "Mobil",
+      "similarity": 0.33
+    },
+    {
+      "id": "ecec23b0-b09f-4dcc-90c5-572438c1e10e",
+      "slug": "extramile",
+      "city": "Fullerton",
+      "state": "CA",
+      "db_name": "Power Market (ExtraMile)",
+      "google_name": "ExtraMile",
+      "similarity": 0.33
+    },
+    {
+      "id": "f09eb67d-3657-465d-8b2d-a58316b3c5b7",
+      "slug": "chevron-36-7400-nw-36th-street-miami-fl-33166",
+      "city": "Miami",
+      "state": "FL",
+      "db_name": "Chevron #36 (Max Car Wash)",
+      "google_name": "Chevron",
+      "similarity": 0.33
+    },
+    {
+      "id": "62c626ec-e209-4f4f-a836-1a3941e28df4",
+      "slug": "als-self-serve-car-wash-1423-w-landis-ave-vineland-nj-08360-vineland-new-jersey",
+      "city": "Vineland",
+      "state": "NJ",
+      "db_name": "CC's Touchless Car Wash",
+      "google_name": "CC's Self Serve Car Wash",
+      "similarity": 0.33
+    },
+    {
+      "id": "9a2e60e7-715c-45e9-8850-6dbc92ff8e79",
+      "slug": "clementines-carwash-louisville-kentucky-22413",
+      "city": "Louisville",
+      "state": "KY",
+      "db_name": "Clementine's Carwash",
+      "google_name": "Clementine's Carwash | TOUCHLESS Wash | Buechel",
+      "similarity": 0.33
+    },
+    {
+      "id": "3aaa4628-b3e8-437c-a5ce-c6dfd8e8db2c",
+      "slug": "clementines-carwash-la-grange-kentucky-22412",
+      "city": "La Grange",
+      "state": "KY",
+      "db_name": "Clementine's Carwash",
+      "google_name": "Clementine's Carwash | TOUCHLESS Wash | LaGrange",
+      "similarity": 0.33
+    },
+    {
+      "id": "46314f53-cd3e-4383-bdbd-9b360c7622f7",
+      "slug": "breckenridge-airport-road-carwash-touchlessautomatic-open-247-breckenridge-color-8381",
+      "city": "Breckenridge",
+      "state": "CO",
+      "db_name": "Breckenridge Airport Road Carwash",
+      "google_name": "Breckenridge Airport Road Carwash - Touchless/Automatic open 24/7",
+      "similarity": 0.38
+    },
+    {
+      "id": "bf7f2609-0177-44a0-86e9-5f98406bc612",
+      "slug": "carriage-house-express-wash-soft-touch-and-touchless-touch-free-car-wash-3026-ha",
+      "city": "Dayton",
+      "state": "OH",
+      "db_name": "Carriage House Express Wash",
+      "google_name": "Carriage House Express Wash - Soft Touch and Touchless / Touch Free Car Wash",
+      "similarity": 0.38
+    },
+    {
+      "id": "77f51ba9-f9a4-4b99-b882-bc5633e79a48",
+      "slug": "carriage-house-express-wash-soft-touch-and-touchless-touch-free-car-wash-1341-ge",
+      "city": "Columbus",
+      "state": "OH",
+      "db_name": "Carriage House Express Wash",
+      "google_name": "Carriage House Express Wash - Soft Touch and Touchless / Touch Free Car Wash",
+      "similarity": 0.38
+    },
+    {
+      "id": "0317044e-506d-481d-968a-98f55c0a5e4d",
+      "slug": "big-bear-car-wash",
+      "city": "Modesto",
+      "state": "CA",
+      "db_name": "Big Bear Car Wash",
+      "google_name": "Big Bear Car Wash Modesto - 7th Street",
+      "similarity": 0.4
+    },
+    {
+      "id": "b61242a2-ad1c-4c54-a673-495902a09744",
+      "slug": "red-rhino-car-wash-fairless-hills-2",
+      "city": "Fairless Hills",
+      "state": "PA",
+      "db_name": "Red Rhino Car Wash - Fairless Hills #2",
+      "google_name": "Red Rhino Car Wash",
+      "similarity": 0.4
+    },
+    {
+      "id": "e2875668-249d-45da-ac53-56e52952cf37",
+      "slug": "ccs-touchless-car-wash-1",
+      "city": "Vineland",
+      "state": "NJ",
+      "db_name": "CC's Touchless Car Wash",
+      "google_name": "CC's Touchless and Self Serve Car Wash",
+      "similarity": 0.4
+    },
+    {
+      "id": "cd259fce-ab28-4869-941a-683f0fcb2f23",
+      "slug": "ccs-touchless-car-wash-3100-boothwyn-rd-upper-chichester-pa-19061-upper-chichest",
+      "city": "Upper Chichester",
+      "state": "PA",
+      "db_name": "CC's Touchless Car Wash",
+      "google_name": "CC's Touchless and Self Serve Car Wash",
+      "similarity": 0.4
+    },
+    {
+      "id": "3fdad2de-ff77-4753-a5ef-dd9196394a27",
+      "slug": "ez-clean-car-wash-351-wheat-rd-minotola-nj-08341-minotola-new-jersey",
+      "city": "Minotola",
+      "state": "NJ",
+      "db_name": "CC's Touchless Car Wash",
+      "google_name": "CC's Touchless and Self Serve Car Wash",
+      "similarity": 0.4
+    },
+    {
+      "id": "b0d65583-27c0-41cb-a702-7762f85c28e6",
+      "slug": "the-wash-club-ramsey-car-wash-506-nj-17-n-ramsey-nj-07446-ramsey-new-jersey",
+      "city": "Ramsey",
+      "state": "NJ",
+      "db_name": "The Wash Club Ramsey Car Wash",
+      "google_name": "Ramsey Car Wash - A Member of the Wash Club Family",
+      "similarity": 0.43
+    }
+  ],
+  "place_not_found": [],
+  "duplicate_place_ids": [],
+  "api_errors": []
+}
