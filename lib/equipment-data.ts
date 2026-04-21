@@ -337,6 +337,19 @@ export const EQUIPMENT_BRAND_DATA: EquipmentBrandData[] = [
     seoTitle: 'Shinewash Touchless Car Wash Locations',
     seoDescription: 'Find touchless car washes using Shinewash equipment and touchless wash systems.',
   },
+  {
+    slug: 'futura',
+    label: 'Futura',
+    description: 'Futura manufactures touchless automatic car wash systems built for reliable, unattended operation. Their equipment uses high-pressure water jets and precisely applied chemistry to clean vehicles without any physical contact, delivering consistent wash quality across a range of vehicle sizes and conditions.',
+    features: [
+      'Touchless wash process using high-pressure water and staged chemical application',
+      'Designed for unattended in-bay automatic operation',
+      'Precise vehicle positioning and wash-cycle targeting',
+      'Commercial-duty construction built for daily use and straightforward maintenance',
+    ],
+    seoTitle: 'Futura Touchless Car Wash Locations',
+    seoDescription: 'Find touchless car washes using Futura equipment. Futura manufactures touchless automatic in-bay wash systems.',
+  },
 ];
 
 export const EQUIPMENT_MODEL_DATA: EquipmentModelData[] = [
@@ -599,6 +612,9 @@ export const EQUIPMENT_MODEL_DATA: EquipmentModelData[] = [
 
   // Delta Sonic
   { slug: 'custom-tunnel', name: 'Custom Tunnel', brandSlug: 'delta_sonic', description: 'Delta Sonic uses proprietary custom-built tunnel wash equipment designed and engineered in-house for their exclusive use across all Delta Sonic locations.', seoTitle: 'Delta Sonic Custom Tunnel Car Wash Locations', seoDescription: 'Find Delta Sonic car wash locations using their proprietary custom tunnel wash equipment.' },
+
+  // Futura models
+  { slug: 'revolution', name: 'Revolution', brandSlug: 'futura', description: 'The Futura Revolution is a touchless in-bay automatic car wash system that uses high-pressure water jets and staged chemical application to clean vehicles without any physical contact.', seoTitle: 'Futura Revolution Car Wash Locations', seoDescription: 'Find touchless car washes using the Futura Revolution automatic wash system.' },
 ];
 
 // --- Helper functions ---
