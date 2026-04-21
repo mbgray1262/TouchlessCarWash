@@ -123,7 +123,12 @@ async function fetchImageBase64(url) {
 
 // Screens a set of image URLs and returns the index of the best hero candidate,
 // or -1 if none are suitable. Uses Claude Sonnet 4 for visual judgment.
-async function pickBestHero(urls, listingName, city, state) {
+//
+// `sourceKind` is 'google' | 'streetview' — street view has slightly different
+// acceptance criteria because the four headings often show adjacent buildings
+// and we need at least one that plausibly identifies the wash (touchless bay
+// visible or a branded sign reading "Touchless Wash" / similar).
+async function pickBestHero(urls, listingName, city, state, sourceKind = 'google') {
   const images = [];
   for (let i = 0; i < urls.length; i++) {
     const img = await fetchImageBase64(urls[i]);
@@ -131,24 +136,38 @@ async function pickBestHero(urls, listingName, city, state) {
   }
   if (images.length === 0) return { index: -1, reason: 'all images failed to fetch' };
 
+  const svNote = sourceKind === 'streetview'
+    ? `\n\nSOURCE: These are STREET VIEW images at the four cardinal headings around the business address. For street view specifically, strongly prefer a heading that shows ONE of:\n` +
+      `  (a) the touchless wash BAY ENTRANCE (arched bay, tunnel-style opening, or laser-wash structure) clearly visible, OR\n` +
+      `  (b) a SIGN on the property that says "TOUCHLESS," "Touch Free," "Laser Wash," "Brushless," or equivalent, confirming to the user this is a touchless wash, OR\n` +
+      `  (c) the car wash BUILDING itself clearly recognisable from the street.\n` +
+      `If all four headings show only adjacent roads, neighbouring gas stations, or empty lots, return -1 so a fallback can be used instead.`
+    : '';
   const content = [
     { type: 'text', text:
-      `You are picking a HERO image for a touchless car wash listing page. ` +
-      `Business: "${listingName}" in ${city}, ${state}.\n\n` +
-      `CRITERIA for a good hero:\n` +
-      `- Shows the EXTERIOR of the car wash (storefront, bay entrance, building facade) OR\n` +
-      `- Shows touchless equipment (arch, laser wash, in-bay automatic) clearly\n\n` +
-      `REJECT:\n` +
-      `- Shot from inside a car (dashboard/windshield visible)\n` +
-      `- Stock logos, cartoons, or pure branding graphics\n` +
-      `- Interior shots of unrelated rooms\n` +
-      `- Parking-lot-only photos where the car wash isn't visible\n` +
-      `- Low-quality/blurry/dark photos where nothing is clear\n` +
-      `- Screenshots of menus or price lists\n` +
-      `- Photos that clearly don't show a car wash at all\n\n` +
-      `Review each image, then respond in JSON ONLY:\n` +
-      `{"best_index": <integer 0-${images.length - 1} or -1 if none acceptable>, "reason": "brief why"}\n` +
-      `If multiple are acceptable, pick the one that best shows the car wash exterior or equipment.`
+      `You are picking a HERO image for a TOUCHLESS car wash listing on a directory whose entire promise is "no brushes ever touch your vehicle." The hero must visually reinforce that promise. When in doubt, reject — we would rather show a generic fallback than a wrong image.\n\n` +
+      `Business: "${listingName}" in ${city}, ${state}.` + svNote + `\n\n` +
+      `ACCEPT only if the image is ONE of:\n` +
+      `1. A clean exterior photo of the CAR WASH BUILDING itself — storefront, bay entrance, or full facade, ideally with the bay or building clearly recognisable as a car wash.\n` +
+      `2. Touchless wash EQUIPMENT shown NOT touching a vehicle — a clean shot of the laser-wash arch, in-bay automatic gantry, spray boom, or dryer, either empty or with a clean car visible in the bay but not being scrubbed.\n` +
+      `3. A wide lot view where the car wash bay/building is the clear subject and occupies most of the frame.\n` +
+      `4. A SIGN that specifically identifies the wash as touchless ("TOUCHLESS WASH," "Touch Free," "Laser Wash," "Brushless," etc.) — accepted even if the sign is the dominant subject, because it directly confirms the service type to the user.\n\n` +
+      `HARD REJECT — pick -1 over any image that shows ANY of:\n` +
+      `- BRUSHES, CLOTH STRIPS, FOAM CURTAINS, or any rotating/scrubbing mechanism. Even if the business calls itself "touchless," if brushes are visible in this specific photo we will not use it.\n` +
+      `- Any equipment physically TOUCHING a vehicle (pads, rollers, mitter curtains pressed against a car).\n` +
+      `- A DIRTY CAR closeup — mud, grime, bug splatter, or "before" shots used to sell the wash.\n` +
+      `- A generic sign, banner, menu board, or price list as the dominant subject — UNLESS it explicitly identifies the wash as touchless (criterion 4 above). "Open 24 Hours," "$5 Wash," or generic logos filling the frame are REJECTED.\n` +
+      `- Stock logos, cartoons, clipart, illustrated graphics, rendered mockups, watermarked stock photos.\n` +
+      `- Shot from inside a car (dashboard/windshield/steering wheel visible).\n` +
+      `- Interior shots of unrelated rooms (offices, bathrooms, waiting areas).\n` +
+      `- Parking lots or empty pavement where you can't identify a car wash.\n` +
+      `- Gas pumps / convenience-store / restaurant shots where the wash is incidental.\n` +
+      `- Blurry, dark, low-resolution, or heavily distorted photos.\n` +
+      `- Photos of unrelated buildings, landscapes, food, people, or objects.\n` +
+      `- Screenshots, maps, diagrams, or anything that isn't a real photograph.\n\n` +
+      `PREFER (in order): clean exterior building shot → touchless-identifying sign → touchless equipment shot (no car being scrubbed) → wide lot with bay as subject. Pick -1 before picking something that breaks any HARD REJECT rule.\n\n` +
+      `Respond in JSON ONLY — no prose before or after:\n` +
+      `{"best_index": <integer 0-${images.length - 1} or -1 if none qualify>, "reason": "one sentence, 12-25 words, stating exactly what the chosen image shows or why all were rejected"}`
     },
   ];
   for (let i = 0; i < images.length; i++) {
@@ -317,7 +336,7 @@ async function processListing(listing, chainBrands) {
     const sv = await fetchStreetViewCandidates(listing.latitude, listing.longitude, listing.google_place_id);
     if (sv.error) { result.steps.push({ step: 'streetview', error: sv.error }); log(`  ✗ streetview: ${sv.error}`); }
     else if (sv.urls.length > 0) {
-      const pick = await pickBestHero(sv.urls, listing.name, listing.city, listing.state);
+      const pick = await pickBestHero(sv.urls, listing.name, listing.city, listing.state, 'streetview');
       result.steps.push({ step: 'streetview-ai', picked: pick.index >= 0, reason: pick.reason });
       if (pick.index >= 0) {
         result.final_hero = pick.url;

@@ -57,39 +57,55 @@ log(`Remaining for batch #2: ${remaining.length}`);
 
 if (remaining.length === 0) { log('Nothing to do'); process.exit(0); }
 
-// Kick off job with explicit listing_ids
-const start = await call({ action: 'start', regenerate: true, listing_ids: remaining });
-log(`Job ${start.job_id} created: ${start.total} listings`);
+// Chunk into sub-jobs of 200 listings each. A single `start` call with
+// 700+ listing_ids fails because the edge function's insert of that many
+// rows into description_tasks exceeds Supabase's transaction limits.
+const CHUNK = 200;
+let grandDone = 0, grandFailed = 0;
+const grandStart = Date.now();
 
-// Drive process_batch until done
-let done = 0, failed = 0, consecutiveErr = 0;
-const startTime = Date.now();
-while (true) {
-  try {
-    const r = await call({ action: 'process_batch', job_id: start.job_id });
-    consecutiveErr = 0;
-    if (r.done) {
-      const elapsed = ((Date.now() - startTime) / 60000).toFixed(1);
-      log(`DONE: processed=${done}, failed=${failed}, elapsed=${elapsed}m`);
-      break;
-    }
-    if (r.success) {
-      done++;
-      if (done % 25 === 0) {
-        const elapsed = (Date.now() - startTime) / 60000;
-        const rate = done / elapsed;
-        const eta = ((remaining.length - done - failed) / rate).toFixed(1);
-        log(`  progress: ${done}/${remaining.length} done, ${failed} failed, ${rate.toFixed(1)}/min, ETA ${eta}m`);
+for (let chunkStart = 0; chunkStart < remaining.length; chunkStart += CHUNK) {
+  const chunk = remaining.slice(chunkStart, chunkStart + CHUNK);
+  log(`\n=== Chunk ${Math.floor(chunkStart / CHUNK) + 1}: ${chunk.length} listings (${chunkStart + 1}-${chunkStart + chunk.length} of ${remaining.length}) ===`);
+
+  const start = await call({ action: 'start', regenerate: true, listing_ids: chunk });
+  log(`Job ${start.job_id} created`);
+
+  let done = 0, failed = 0, consecutiveErr = 0;
+  const chunkStartTime = Date.now();
+  while (true) {
+    try {
+      const r = await call({ action: 'process_batch', job_id: start.job_id });
+      consecutiveErr = 0;
+      if (r.done) {
+        const elapsed = ((Date.now() - chunkStartTime) / 60000).toFixed(1);
+        log(`  chunk DONE: done=${done}, failed=${failed}, elapsed=${elapsed}m`);
+        grandDone += done;
+        grandFailed += failed;
+        break;
       }
-    } else {
-      failed++;
-      if (r.error) log(`  fail: ${String(r.error).slice(0,150)}`);
+      if (r.success) {
+        done++;
+        if (done % 25 === 0) {
+          const overall = grandDone + done;
+          const elapsed = (Date.now() - grandStart) / 60000;
+          const rate = overall / elapsed;
+          const eta = ((remaining.length - overall - grandFailed - failed) / rate).toFixed(1);
+          log(`  progress: ${overall}/${remaining.length} overall, ${rate.toFixed(1)}/min, ETA ${eta}m`);
+        }
+      } else {
+        failed++;
+        if (r.error) log(`  fail: ${String(r.error).slice(0,150)}`);
+      }
+      await new Promise(r => setTimeout(r, 400));
+    } catch (e) {
+      consecutiveErr++;
+      log(`  ERR: ${e.message}`);
+      if (consecutiveErr > 10) { log('Aborting chunk'); break; }
+      await new Promise(r => setTimeout(r, 10000));
     }
-    await new Promise(r => setTimeout(r, 400));
-  } catch (e) {
-    consecutiveErr++;
-    log(`  ERR: ${e.message}`);
-    if (consecutiveErr > 10) { log('Aborting: too many consecutive errors'); break; }
-    await new Promise(r => setTimeout(r, 10000));
   }
 }
+
+const grandElapsed = ((Date.now() - grandStart) / 60000).toFixed(1);
+log(`\nDONE all chunks: total=${grandDone}, failed=${grandFailed}, elapsed=${grandElapsed}m`);
