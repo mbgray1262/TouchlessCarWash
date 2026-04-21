@@ -42,3 +42,6 @@ next-env.d.ts
 # Script logs and progress files (local only)
 scripts/*.log
 scripts/*-progress.json
+
+# Pipeline report artifacts (local only)
+scripts/*-report.json
