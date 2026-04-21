@@ -757,6 +757,38 @@ export default function PhotoAuditPage() {
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
+                  {/* Jump to specific page — useful for resuming manual review from where you left off */}
+                  <form
+                    className="flex items-center gap-1 ml-2 pl-2 border-l border-gray-200"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const input = (e.currentTarget.elements.namedItem('jumpPage') as HTMLInputElement);
+                      const n = parseInt(input.value, 10);
+                      if (Number.isFinite(n) && n >= 1 && n <= totalPages) {
+                        changePage(n);
+                        input.value = '';
+                        input.blur();
+                      }
+                    }}
+                  >
+                    <label htmlFor="jumpPage" className="text-xs text-gray-500">Go to</label>
+                    <input
+                      id="jumpPage"
+                      name="jumpPage"
+                      type="number"
+                      min={1}
+                      max={totalPages}
+                      placeholder={String(safePage)}
+                      className="w-16 h-8 px-2 text-xs text-center border border-gray-200 rounded focus:outline-none focus:border-orange-400"
+                    />
+                    <button
+                      type="submit"
+                      className="h-8 px-2 text-xs font-medium text-orange-600 hover:bg-orange-50 rounded"
+                    >
+                      Go
+                    </button>
+                    <span className="text-xs text-gray-400">of {totalPages}</span>
+                  </form>
                 </div>
               </div>
             )}
