@@ -17,8 +17,19 @@ const STORAGE = 'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/publ
 
 export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
   // Holiday Stationstores car wash building exterior — from Rogers, MN location hero.
-  // Hosted in Supabase (226 KB).
+  // Hosted in Supabase (226 KB). Most Holiday locations were rebranded to Circle K
+  // after the 2017 acquisition, but the building exteriors are largely the same.
   'Holiday Stationstores': `${STORAGE}/holiday-stationstores.jpg`,
+
+  // Circle K — acquired Holiday Stationstores in 2017 and rebranded most locations.
+  // Rotation of 3 manually curated hero crops from high-rated Circle K car washes.
+  // Fresno CA is the most established (4★ × 407 reviews); Grand Forks and Rochester
+  // are Michael-uploaded crops from former-Holiday locations now under Circle K signage.
+  'Circle K': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/feccec8c-8628-4a2c-9315-5492a6d0792d/hero-cropped-1774366441942.png',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/37375a60-4262-4464-a3b0-b3eb08d4832b/hero-cropped-1776786063396.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/8671e396-93ea-4e08-8a88-b74f18ca29a5/hero-cropped-1776786123461.jpg',
+  ],
 
   // Kwik Trip — rotation of 4 clean exterior photos, all touchless bays visible
   // without the problematic "SOFT TOUCH" signage from the previous single image.
