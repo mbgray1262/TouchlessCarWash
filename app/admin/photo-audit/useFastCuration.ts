@@ -65,6 +65,11 @@ export function useFastCuration(listingId: string) {
   const [listing, setListing] = useState<ListingData | null>(null);
   const [candidates, setCandidates] = useState<CandidatePhoto[]>([]);
   const [skippedUrls, setSkippedUrls] = useState<string[]>([]);
+  // Tracks an explicit "delete hero" action from the user so saveAll can
+  // distinguish it from "user didn't touch the hero" (which should preserve
+  // the existing value). Without this, the nullish-coalescing in saveAll
+  // falls back to listing.hero_image and silently reverts the deletion.
+  const [heroRemoved, setHeroRemoved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [discovering, setDiscovering] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -234,6 +239,7 @@ export function useFastCuration(listingId: string) {
       setListing(null);       // Clear stale listing to prevent old hero from flashing
       setCandidates([]);
       setSkippedUrls([]);
+      setHeroRemoved(false);
       setSourceCounts(null);
       setSelectedId(null);
       setClassifyResult(null);
@@ -341,6 +347,7 @@ export function useFastCuration(listingId: string) {
   }, []);
 
   const removeHero = useCallback(() => {
+    setHeroRemoved(true);
     setCandidates(prev => prev.map(c =>
       c.tag === 'hero' ? { ...c, tag: null } : c,
     ));
@@ -460,8 +467,12 @@ export function useFastCuration(listingId: string) {
       // skippedUrls tracks photos removed with X button
 
       // Save immediately with full-res URLs (external or Supabase)
-      // Then rehost external photos in the background after save completes
-      const heroUrl = (heroPhoto?.fullResUrl || heroPhoto?.url) ?? listing.hero_image;
+      // Then rehost external photos in the background after save completes.
+      // When heroRemoved is true, the user explicitly deleted the hero — write
+      // null instead of falling back to the existing DB value.
+      const heroUrl = heroPhoto
+        ? (heroPhoto.fullResUrl || heroPhoto.url)
+        : heroRemoved ? null : listing.hero_image;
       const equipUrl = (equipPhoto?.fullResUrl || equipPhoto?.url) ?? null;
       const galleryUrls = galleryPhotos.map(p => p.fullResUrl || p.url);
 
@@ -500,6 +511,10 @@ export function useFastCuration(listingId: string) {
         // Without 'manual', chain brand images (BP, Holiday, Kwik Trip) take priority
         // over a location-specific hero on the public listing page.
         updateData.hero_image_source = 'manual';
+      } else if (heroRemoved) {
+        // Explicit deletion: also null the source so chain-brand fallback
+        // (and downstream enrichment) can take over cleanly.
+        updateData.hero_image_source = null;
       }
 
       // equipment_photo column doesn't exist yet — store in classification_source for now
@@ -533,6 +548,9 @@ export function useFastCuration(listingId: string) {
       }).catch(() => {});
 
       console.log(`[SaveAll] Total save time: ${Math.round(performance.now() - t0)}ms`);
+
+      // Reset the explicit-deletion flag now that the null has been persisted.
+      if (heroRemoved) setHeroRemoved(false);
 
       // Background rehost: download external photos and update URLs in DB
       if (toRehost.length > 0) {
