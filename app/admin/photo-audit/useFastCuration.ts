@@ -88,51 +88,13 @@ export function useFastCuration(listingId: string) {
       .eq('id', listingId)
       .maybeSingle();
     if (data) {
-      // Clean up broken gallery images on load
-      const photos = (data.photos as string[] | null) ?? [];
-      if (photos.length > 0) {
-        const validPhotos: string[] = [];
-        const broken: string[] = [];
-        await Promise.all(photos.map(async (url: string) => {
-          try {
-            const r = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(5000) });
-            if (!r.ok) { broken.push(url); return; }
-            const contentType = r.headers.get('content-type') || '';
-            const contentLength = parseInt(r.headers.get('content-length') || '0', 10);
-            // Remove non-images and tiny files (<5KB = likely icons/placeholders)
-            if (!contentType.startsWith('image/') || (contentLength > 0 && contentLength < 5000)) {
-              broken.push(url);
-            } else {
-              validPhotos.push(url);
-            }
-          } catch {
-            broken.push(url);
-          }
-        }));
-        if (broken.length > 0) {
-          // Remove broken photos from DB
-          await supabase.from('listings').update({ photos: validPhotos }).eq('id', data.id);
-          data.photos = validPhotos;
-          console.log(`Cleaned ${broken.length} broken gallery photos from ${data.name}`);
-        }
-      }
-      // Also check hero image
-      if (data.hero_image) {
-        try {
-          const r = await fetch(data.hero_image, { method: 'HEAD', signal: AbortSignal.timeout(5000) });
-          if (!r.ok) {
-            await supabase.from('listings').update({ hero_image: null, hero_image_source: null }).eq('id', data.id);
-            data.hero_image = null;
-            data.hero_image_source = null;
-            console.log(`Cleaned broken hero image from ${data.name}`);
-          }
-        } catch {
-          await supabase.from('listings').update({ hero_image: null, hero_image_source: null }).eq('id', data.id);
-          data.hero_image = null;
-          data.hero_image_source = null;
-          console.log(`Cleaned broken hero image from ${data.name}`);
-        }
-      }
+      // NOTE: We intentionally do NOT run any browser-side HEAD probes here.
+      // A previous version of this code nulled hero_image and filtered photos[]
+      // whenever a HEAD fetch failed (CORS, timeout, network blip, extension
+      // blocking, etc.) — which wiped hundreds of perfectly-valid images from
+      // the DB every time a user opened a listing. If a photo URL is actually
+      // broken, the <img> onError handler in PhotoGrid catches it visually;
+      // we never silently mutate the DB based on a transient fetch failure.
       setListing(data as ListingData);
     }
     setLoading(false);
