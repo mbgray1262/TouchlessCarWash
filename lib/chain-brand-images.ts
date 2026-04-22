@@ -52,10 +52,12 @@ export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
     `${STORAGE}/power-market-2.jpg`,
     `${STORAGE}/power-market-3.jpg`,
   ],
+  // Extra Mile — using manually-curated hero crops from Roseville CA and
+  // Santa Monica CA (Chevron/Extra Mile branded, verified brush-free) instead
+  // of the Power Market rotation which had rollers visible.
   'Extra Mile': [
-    `${STORAGE}/power-market.jpg`,
-    `${STORAGE}/power-market-2.jpg`,
-    `${STORAGE}/power-market-3.jpg`,
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/48edea94-bbc4-47f5-afa5-1cc1636e037a/hero-cropped-1776872848735.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/ce6819ff-909d-412f-9298-af459856bb12/hero-cropped-1776785254452.jpg',
   ],
   'Pinnacle 365': [
     `${STORAGE}/power-market.jpg`,
