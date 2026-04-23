@@ -391,6 +391,13 @@ export function useFastCuration(listingId: string) {
     const body: Record<string, unknown> = {
       listing_id: listing!.id,
       set_as_hero: false,
+      // Background rehost: do NOT let the edge function mutate listings.photos.
+      // saveAll() already wrote the final photos[] and this call is only to
+      // convert an external URL into a supabase-hosted one; the caller
+      // (inside saveAll's Promise.allSettled loop) swaps the old URL for the
+      // rehosted one itself. Without this flag the edge function appends the
+      // rehosted URL, producing duplicates after every save.
+      update_listing: false,
     };
 
     if (photo.googlePhotoName) {
@@ -514,30 +521,38 @@ export function useFastCuration(listingId: string) {
       // Reset the explicit-deletion flag now that the null has been persisted.
       if (heroRemoved) setHeroRemoved(false);
 
-      // Background rehost: download external photos and update URLs in DB
+      // Background rehost: download external photos and swap their URLs in DB.
+      // IMPORTANT: Serialize this loop. Parallel rehosts race on the read-
+      // modify-write of listings.photos — each call reads, maps one URL, and
+      // writes back, so two overlapping operations make the later write
+      // overwrite the earlier one's URL replacement. Sequential is slower
+      // but correct, and it runs in the background post-save so the user
+      // doesn't wait on it.
       if (toRehost.length > 0) {
         console.log(`[SaveAll] Background rehosting ${toRehost.length} external photos...`);
         const listingId = listing.id;
-        Promise.allSettled(
-          toRehost.map(async (p) => {
+        (async () => {
+          for (const p of toRehost) {
             try {
               const rehostedUrl = await rehostPhoto(p);
               const savedUrl = p.fullResUrl || p.url;
-              // Update the URL in the DB (hero or photos array)
               if (p.tag === 'hero') {
                 await supabase.from('listings').update({ hero_image: rehostedUrl }).eq('id', listingId);
               }
-              // For gallery photos, update the photos array
               const { data: current } = await supabase.from('listings').select('photos').eq('id', listingId).single();
               if (current?.photos) {
-                const updated = (current.photos as string[]).map((u: string) => u === savedUrl ? rehostedUrl : u);
+                const mapped = (current.photos as string[]).map((u: string) => u === savedUrl ? rehostedUrl : u);
+                // Dedupe — defensive, in case another code path already
+                // added the rehosted URL while this rehost was in flight.
+                const updated = Array.from(new Set(mapped));
                 await supabase.from('listings').update({ photos: updated }).eq('id', listingId);
               }
             } catch (e) {
               console.warn(`[Rehost] Failed for ${p.url.slice(0, 60)}:`, e);
             }
-          }),
-        ).then(() => console.log('[SaveAll] Background rehost complete'));
+          }
+          console.log('[SaveAll] Background rehost complete');
+        })();
       }
 
       return true;
