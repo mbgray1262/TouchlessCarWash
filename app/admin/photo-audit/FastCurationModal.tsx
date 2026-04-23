@@ -6,7 +6,8 @@ import { useFastCuration, type CandidatePhoto } from './useFastCuration';
 import { PhotoGrid } from './PhotoGrid';
 import { CropModal } from '../hero-review/CropModal';
 import { autoEnhanceImage } from '../hero-review/autoEnhance';
-import { EQUIPMENT_BRANDS, EQUIPMENT_MODELS } from '../hero-review/types';
+import { EQUIPMENT_BRANDS } from '../hero-review/types';
+import { useEquipmentVocabulary } from '../hooks/useEquipmentVocabulary';
 import { getChainBrandImage } from '@/lib/chain-brand-images';
 
 interface Props {
@@ -32,6 +33,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
   const [enhancing, setEnhancing] = useState<string | null>(null);
   const [enhancedIds, setEnhancedIds] = useState<string[]>([]);
   const [originalUrls, setOriginalUrls] = useState<Record<string, string>>({}); // id -> original URL before enhance
+  const { getModelsForBrand, reload: reloadVocabulary } = useEquipmentVocabulary();
 
   // Reset local state when listing changes
   useEffect(() => {
@@ -634,7 +636,10 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                                 const val = e.target.value;
                                 if (val === '__custom__') {
                                   const custom = prompt('Enter manufacturer name:');
-                                  if (custom?.trim()) setEquipment(custom.trim(), null);
+                                  if (custom?.trim()) {
+                                    setEquipment(custom.trim(), null);
+                                    reloadVocabulary();
+                                  }
                                 } else {
                                   setEquipment(val || null, null);
                                 }
@@ -655,7 +660,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                       })()}
                       {/* Model selector — known models use dropdown + "Other" for free-text */}
                       {listing.equipment_brand && (() => {
-                        const models = EQUIPMENT_MODELS[listing.equipment_brand] ?? [];
+                        const models = getModelsForBrand(listing.equipment_brand);
                         const currentModel = listing.equipment_model ?? '';
                         const isCustomModel = currentModel && !models.includes(currentModel);
                         return (
@@ -665,7 +670,11 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                               const val = e.target.value;
                               if (val === '__custom__') {
                                 const custom = prompt('Enter model name:');
-                                if (custom?.trim()) setEquipment(listing.equipment_brand, custom.trim());
+                                if (custom?.trim()) {
+                                  setEquipment(listing.equipment_brand, custom.trim());
+                                  // Pick up the new custom model in dropdowns for other listings.
+                                  reloadVocabulary();
+                                }
                               } else {
                                 setEquipment(listing.equipment_brand, val || null);
                               }

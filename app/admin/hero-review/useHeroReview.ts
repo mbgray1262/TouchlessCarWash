@@ -62,15 +62,29 @@ export function useHeroReview() {
   const [customModels, setCustomModels] = useState<Record<string, string[]>>({});
 
   const loadCustomEntries = useCallback(async () => {
-    const { data } = await supabase
-      .from('listings')
-      .select('equipment_brand, equipment_model')
-      .not('equipment_brand', 'is', null)
-      .neq('equipment_brand', '__other__');
-    if (!data) return;
+    // Paginate past Supabase's 1000-row .select() default — the listings table
+    // has ~3.3k equipment-tagged rows, so an un-paginated query silently drops
+    // most custom entries (e.g. the four Magic Mist WashWorld "Razor Double
+    // Barrel" rows that sit past the first page).
+    const data: { equipment_brand: string | null; equipment_model: string | null }[] = [];
+    const PAGE = 1000;
+    let offset = 0;
+    while (true) {
+      const { data: rows, error } = await supabase
+        .from('listings')
+        .select('equipment_brand, equipment_model')
+        .not('equipment_brand', 'is', null)
+        .neq('equipment_brand', '__other__')
+        .range(offset, offset + PAGE - 1);
+      if (error || !rows || rows.length === 0) break;
+      data.push(...rows);
+      if (rows.length < PAGE) break;
+      offset += PAGE;
+    }
+    if (data.length === 0) return;
 
     // Discover custom brands not in hardcoded list
-    const knownBrandValues = new Set(EQUIPMENT_BRANDS.map(b => b.value));
+    const knownBrandValues = new Set<string>(EQUIPMENT_BRANDS.map(b => b.value));
     const seenBrands = new Set<string>();
     const novelBrands: { value: string; label: string }[] = [];
     for (const row of data) {

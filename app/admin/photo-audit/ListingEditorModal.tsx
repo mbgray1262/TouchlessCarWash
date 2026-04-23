@@ -7,7 +7,8 @@ import { supabase } from '@/lib/supabase';
 import { CropModal } from '../hero-review/CropModal';
 import { autoEnhanceImage } from '../hero-review/autoEnhance';
 import { getStateSlug, slugify } from '@/lib/constants';
-import { EQUIPMENT_BRANDS, EQUIPMENT_MODELS } from '../hero-review/types';
+import { EQUIPMENT_BRANDS } from '../hero-review/types';
+import { useEquipmentVocabulary } from '../hooks/useEquipmentVocabulary';
 
 interface ListingData {
   id: string;
@@ -39,6 +40,7 @@ interface Props {
 export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Props) {
   const [listing, setListing] = useState<ListingData | null>(null);
   const [loading, setLoading] = useState(true);
+  const { getModelsForBrand, reload: reloadVocabulary } = useEquipmentVocabulary();
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [cropOpen, setCropOpen] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
@@ -504,6 +506,9 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
     }).eq('id', listingId);
     setListing(prev => prev ? { ...prev, equipment_brand: brand, equipment_model: model } : prev);
     onUpdate?.();
+    // Refresh the custom-vocabulary cache so a newly-typed model appears in
+    // the dropdown for other listings in this session without a page reload.
+    reloadVocabulary();
   };
 
   const classifyWithAI = async () => {
@@ -1188,7 +1193,7 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
 
               {/* Model selector — only show when brand is selected */}
               {listing.equipment_brand && (() => {
-                const models = EQUIPMENT_MODELS[listing.equipment_brand] ?? [];
+                const models = getModelsForBrand(listing.equipment_brand);
                 const currentModel = listing.equipment_model ?? '';
                 const isKnownModel = models.includes(currentModel);
                 return (
