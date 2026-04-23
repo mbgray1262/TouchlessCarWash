@@ -10,10 +10,11 @@ Disallow: /favorites
 # These are not real pages — crawling them wastes crawl budget
 Disallow: /*?_rsc=
 
-# Block tracking query params that create duplicate URLs
-Disallow: /*?from=
-
-# Prioritize crawling of listing pages and location directories
-# All other pages are in the sitemap
+# Note: ?from= query-param variants (soft-404 redirect destinations) are
+# intentionally NOT blocked here. Googlebot must be able to follow the 308
+# redirects from removed listings; blocking the destination causes GSC to
+# report the whole redirect chain as "Blocked by robots.txt". The variants
+# are instead emitted with X-Robots-Tag: noindex via middleware, and the
+# clean canonical URL is what enters the index.
 
 Sitemap: https://touchlesscarwashfinder.com/sitemap.xml
