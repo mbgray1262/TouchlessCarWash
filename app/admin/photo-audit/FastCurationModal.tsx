@@ -25,7 +25,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
     tagPhoto, setAsHero, addToGallery, removeFromGallery, removeHero, skipPhoto,
     addCapture, addUpload, addHeroDirect, replaceUrl, updateWebsite, setFallbackHero,
     saveAll, approveAndNext, classifyEquipment, setEquipment,
-    toggleTouchlessVerified, markNotTouchless, deleteListing,
+    toggleTouchlessVerified, markNotTouchless, markClosed, deleteListing,
   } = useFastCuration(listingId);
 
   const [cropPhoto, setCropPhoto] = useState<CandidatePhoto | null>(null);
@@ -725,6 +725,41 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
             >
               <Trash2 className="w-4 h-4" /> Delete
             </button>
+
+            {/* Closed — dropdown with Permanent / Temporary.
+                Permanent: business is gone for good; 301 redirect to nearest city.
+                Temporary: business is currently closed (renovation, season); same redirect. */}
+            <div className="relative group">
+              <button
+                disabled={saving}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-sm font-medium disabled:opacity-50 border border-red-200"
+                title="Mark this location as closed. Unapproves the listing so its URL redirects to the nearest city with a 'closed' banner."
+              >
+                <Ban className="w-4 h-4" /> Closed ▾
+              </button>
+              <div className="absolute bottom-full left-0 mb-1 hidden group-hover:flex flex-col gap-0.5 bg-white border rounded-lg shadow-lg p-1 z-10 min-w-[160px]">
+                <button
+                  onClick={async () => {
+                    if (!confirm('Mark this listing as PERMANENTLY closed?\n\nIt will be unapproved and its URL will redirect to the nearest city.')) return;
+                    await markClosed('permanent'); onUpdate?.(); if (onNext) onNext(); else onClose();
+                  }}
+                  disabled={saving}
+                  className="text-left px-3 py-1.5 text-xs rounded hover:bg-red-50 text-red-700 whitespace-nowrap"
+                >
+                  Permanently closed
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!confirm('Mark this listing as TEMPORARILY closed?\n\nIt will be unapproved and its URL will redirect to the nearest city.')) return;
+                    await markClosed('temporary'); onUpdate?.(); if (onNext) onNext(); else onClose();
+                  }}
+                  disabled={saving}
+                  className="text-left px-3 py-1.5 text-xs rounded hover:bg-amber-50 text-amber-700 whitespace-nowrap"
+                >
+                  Temporarily closed
+                </button>
+              </div>
+            </div>
 
             <div className="flex-1" />
 

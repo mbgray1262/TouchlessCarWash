@@ -619,6 +619,26 @@ export function useFastCuration(listingId: string) {
     setSaving(false);
   }, [listing]);
 
+  // Mark listing as closed (permanently or temporarily). Matches the schema
+  // the detect-closed-via-places script uses, so the public listing page
+  // redirects to the nearest city with a closed-specific banner. Keeps the
+  // row (don't delete) so inbound URLs continue to resolve via 301.
+  const markClosed = useCallback(async (status: 'permanent' | 'temporary') => {
+    if (!listing) return;
+    setSaving(true);
+    const src = status === 'permanent'
+      ? 'closed_permanently_admin'
+      : 'closed_temporarily_admin';
+    const note = `[${new Date().toISOString().slice(0,10)}] Marked as closed ${status} via photo-audit admin.`;
+    await supabase.from('listings').update({
+      is_approved: false,
+      classification_source: src,
+      crawl_notes: note,
+    }).eq('id', listing.id);
+    await supabase.from('photo_audit_results').update({ reviewed: true, applied: true }).eq('listing_id', listing.id);
+    setSaving(false);
+  }, [listing]);
+
   // Approve listing (save + mark reviewed_at)
   const approveAndNext = async (onUpdate?: () => void, onNext?: () => void, onClose?: () => void): Promise<void> => {
     const ok = await saveAll();
@@ -696,6 +716,7 @@ export function useFastCuration(listingId: string) {
     setEquipment,
     toggleTouchlessVerified,
     markNotTouchless,
+    markClosed,
     updateWebsite,
     setFallbackHero,
     deleteListing,

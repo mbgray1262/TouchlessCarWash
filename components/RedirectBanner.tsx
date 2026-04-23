@@ -20,15 +20,29 @@ function RedirectBannerInner() {
   const [dismissed, setDismissed] = useState(false);
 
   if (dismissed) return null;
-  if (from !== 'removed-listing' && from !== 'empty-city') return null;
+  const VALID = new Set(['removed-listing', 'empty-city', 'closed-permanently', 'closed-temporarily']);
+  if (!from || !VALID.has(from)) return null;
+
+  const name = orig ? decodeURIComponent(orig).replace(/-/g, ' ') : null;
+  const city = orig
+    ? decodeURIComponent(orig).replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+    : null;
 
   const message =
-    from === 'removed-listing'
-      ? orig
-        ? `The listing you followed (${decodeURIComponent(orig).replace(/-/g, ' ')}) is no longer in our directory. We couldn't verify it as touchless, or the business has closed. Here's the nearest verified touchless wash.`
+    from === 'closed-permanently'
+      ? name
+        ? `${name} is permanently closed. Here are touchless car washes nearby.`
+        : 'That location is permanently closed. Here are touchless car washes nearby.'
+    : from === 'closed-temporarily'
+      ? name
+        ? `${name} is temporarily closed. Here are other touchless car washes nearby.`
+        : 'That location is temporarily closed. Here are other touchless car washes nearby.'
+    : from === 'removed-listing'
+      ? name
+        ? `The listing you followed (${name}) is no longer in our directory. We couldn't verify it as touchless, or the business has closed. Here's the nearest verified touchless wash.`
         : "The listing you followed is no longer in our directory — we couldn't verify it as touchless, or the business has closed. Here's the nearest verified touchless wash."
-      : orig
-        ? `We don't have any verified touchless washes in ${decodeURIComponent(orig).replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())} yet. Here's the nearest city with verified touchless options.`
+      : city
+        ? `We don't have any verified touchless washes in ${city} yet. Here's the nearest city with verified touchless options.`
         : "We don't have verified touchless washes in the city you searched yet. Here's the nearest city with verified touchless options.";
 
   return (
