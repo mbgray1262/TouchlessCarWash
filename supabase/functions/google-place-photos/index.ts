@@ -118,7 +118,12 @@ Deno.serve(async (req) => {
   // ── POST: Save a photo to listing ───────────────────────────
   if (req.method === 'POST') {
     const body = await req.json().catch(() => ({}));
-    const { photo_name, photo_url, listing_id, set_as_hero } = body;
+    const { photo_name, photo_url, listing_id, set_as_hero, update_listing } = body;
+    // Default: mutate listings.photos (append + optionally set hero). Pass
+    // update_listing=false from background rehost flows that have already
+    // written the final photos array and just need an external→supabase URL
+    // conversion — otherwise we double-write and create duplicates.
+    const shouldUpdateListing = update_listing !== false;
 
     if ((!photo_name && !photo_url) || !listing_id) {
       return json({ error: 'photo_name or photo_url, and listing_id required' }, 400);
@@ -164,23 +169,29 @@ Deno.serve(async (req) => {
       .from('listing-photos')
       .getPublicUrl(filename);
 
-    // 3. Update listing
-    const { data: listing } = await supabase
-      .from('listings')
-      .select('photos, hero_image')
-      .eq('id', listing_id)
-      .maybeSingle();
+    // 3. Update listing (skip when caller will manage photos[] themselves).
+    if (shouldUpdateListing) {
+      const { data: listing } = await supabase
+        .from('listings')
+        .select('photos, hero_image')
+        .eq('id', listing_id)
+        .maybeSingle();
 
-    const currentPhotos: string[] = listing?.photos ?? [];
-    const updatedPhotos = [...currentPhotos, publicUrl];
+      const currentPhotos: string[] = listing?.photos ?? [];
+      // Dedupe defensively: if the same public URL is already present (e.g.
+      // a client retry or parallel call), don't create a duplicate entry.
+      const updatedPhotos = currentPhotos.includes(publicUrl)
+        ? currentPhotos
+        : [...currentPhotos, publicUrl];
 
-    const updateData: Record<string, unknown> = { photos: updatedPhotos };
-    if (set_as_hero) {
-      updateData.hero_image = publicUrl;
-      updateData.hero_image_source = photo_url ? 'pasted' : 'google';
+      const updateData: Record<string, unknown> = { photos: updatedPhotos };
+      if (set_as_hero) {
+        updateData.hero_image = publicUrl;
+        updateData.hero_image_source = photo_url ? 'pasted' : 'google';
+      }
+
+      await supabase.from('listings').update(updateData).eq('id', listing_id);
     }
-
-    await supabase.from('listings').update(updateData).eq('id', listing_id);
 
     return json({
       url: publicUrl,
