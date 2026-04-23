@@ -9,9 +9,10 @@ import { Info, X } from 'lucide-react';
  * users understand why their URL changed. Reads `?from=` / `?orig=` query
  * params and explains what happened. Dismissible.
  *
- * The `?from=...` param variants are blocked from Google indexing by
- * robots.txt (`Disallow: /*?from=`), so this does not create duplicate
- * URL exposure in search results.
+ * The `?from=...` param variants are prevented from indexing via
+ * `X-Robots-Tag: noindex` set in middleware.ts — Googlebot must be able to
+ * crawl them (to follow the 308 redirect from removed listings) but the
+ * clean canonical URL is the version that should enter the index.
  */
 function RedirectBannerInner() {
   const searchParams = useSearchParams();
