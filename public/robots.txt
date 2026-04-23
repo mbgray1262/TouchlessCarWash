@@ -10,8 +10,13 @@ Disallow: /favorites
 # These are not real pages — crawling them wastes crawl budget
 Disallow: /*?_rsc=
 
-# Block tracking query params that create duplicate URLs
-Disallow: /*?from=
+# Note: /*?from= URLs (redirect-banner flags on removed/closed listings)
+# used to be disallowed here, which caused Google Search Console to flag
+# the originating listing URL as "blocked by robots.txt" — the 301 chain
+# ended at a blocked resource. We now handle de-indexing via an
+# X-Robots-Tag: noindex, follow header set in middleware.ts, which lets
+# Google follow the 301 and consolidate PageRank without indexing the
+# ?from= variant.
 
 # Prioritize crawling of listing pages and location directories
 # All other pages are in the sitemap
