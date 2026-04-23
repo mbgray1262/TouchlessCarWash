@@ -904,7 +904,15 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
       .eq('city', listing.city)
       .eq('is_touchless', true)
       .eq('is_approved', true);
-    const flag = `?from=removed-listing&orig=${encodeURIComponent(listing.name)}`;
+    // Closed businesses get a closed-specific banner; everything else
+    // (reverted-as-not-touchless, generic removal) gets the generic one.
+    const cs = (listing as Listing & { classification_source?: string | null }).classification_source ?? '';
+    const fromTag = cs.startsWith('closed_permanently')
+      ? 'closed-permanently'
+      : cs.startsWith('closed_temporarily')
+        ? 'closed-temporarily'
+        : 'removed-listing';
+    const flag = `?from=${fromTag}&orig=${encodeURIComponent(listing.name)}`;
     if ((cityCount ?? 0) > 0) {
       permanentRedirect(`/state/${stateSlug}/${citySlug}${flag}`);
     }
