@@ -36,30 +36,43 @@ export function useEquipmentVocabulary() {
       offset += PAGE;
     }
 
-    const knownBrandValues = new Set<string>(EQUIPMENT_BRANDS.map(b => b.value));
-    const seenBrands = new Set<string>();
+    // Brand-level dedupe: case-insensitive slug matching. "PDQ" in the DB
+    // should collapse onto the canonical "pdq" slug, not show as a duplicate.
+    const knownBrandLowers = new Set<string>(EQUIPMENT_BRANDS.map(b => b.value.toLowerCase()));
+    const seenBrandLowers = new Set<string>();
     const novelBrands: { value: string; label: string }[] = [];
     for (const row of all) {
       const b = row.equipment_brand;
-      if (!b || knownBrandValues.has(b) || seenBrands.has(b)) continue;
-      seenBrands.add(b);
+      if (!b) continue;
+      const bl = b.toLowerCase();
+      if (knownBrandLowers.has(bl) || seenBrandLowers.has(bl)) continue;
+      seenBrandLowers.add(bl);
       const label = b.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
       novelBrands.push({ value: b, label });
     }
     novelBrands.sort((a, b) => a.label.localeCompare(b.label));
 
-    const byBrand: Record<string, Set<string>> = {};
+    // Model-level dedupe: case-insensitive so "laserwash 360" in raw DB data
+    // collapses onto the canonical "LaserWash 360" instead of both appearing
+    // as separate dropdown options. Also dedupe case-variants within the
+    // novel list itself (e.g. two listings that typed "Double Barrel" and
+    // "double barrel" shouldn't produce two "Other" dropdown rows).
+    const byBrand: Record<string, Map<string, string>> = {};
     for (const row of all) {
       const b = row.equipment_brand;
       const m = row.equipment_model;
       if (!b || !m || m === '__other__') continue;
-      if (!byBrand[b]) byBrand[b] = new Set();
-      byBrand[b].add(m);
+      if (!byBrand[b]) byBrand[b] = new Map();
+      const key = m.toLowerCase();
+      if (!byBrand[b].has(key)) byBrand[b].set(key, m);
     }
     const extras: Record<string, string[]> = {};
-    for (const [brand, models] of Object.entries(byBrand)) {
-      const hardcoded = new Set(EQUIPMENT_MODELS[brand] ?? []);
-      const novel = Array.from(models).filter(m => !hardcoded.has(m)).sort();
+    for (const [brand, modelMap] of Object.entries(byBrand)) {
+      const hardcodedLowers = new Set((EQUIPMENT_MODELS[brand] ?? []).map(m => m.toLowerCase()));
+      const novel = Array.from(modelMap.entries())
+        .filter(([key]) => !hardcodedLowers.has(key))
+        .map(([, label]) => label)
+        .sort();
       if (novel.length > 0) extras[brand] = novel;
     }
 

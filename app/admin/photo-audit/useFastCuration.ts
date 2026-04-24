@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getStateSlug, slugify } from '@/lib/constants';
+import { canonicalizeEquipmentBrand, canonicalizeEquipmentModel } from '../hero-review/types';
 
 export type PhotoTag = 'hero' | 'gallery' | 'equipment' | 'skip' | null;
 export type PhotoSource = 'google_places' | 'google_maps' | 'google_search' | 'bing_search' | 'website' | 'street_view' | 'existing' | 'capture' | 'upload';
@@ -567,12 +568,18 @@ export function useFastCuration(listingId: string) {
   // Manually set equipment brand/model
   const setEquipment = useCallback(async (brand: string | null, model: string | null) => {
     if (!listing) return;
+    // Canonicalize before writing so custom-entry prompts and dropdown selections
+    // converge on a single value per real brand/model instead of creating case-
+    // variant duplicates (e.g. "Double Barrel" typed in the prompt collapses onto
+    // the "Razor Double Barrel" dropdown option for WashWorld).
+    const canonBrand = canonicalizeEquipmentBrand(brand);
+    const canonModel = canonicalizeEquipmentModel(canonBrand, model);
     await supabase.from('listings').update({
-      equipment_brand: brand,
-      equipment_model: model,
+      equipment_brand: canonBrand,
+      equipment_model: canonModel,
       classification_source: 'manual',
     }).eq('id', listing.id);
-    setListing(prev => prev ? { ...prev, equipment_brand: brand, equipment_model: model } : prev);
+    setListing(prev => prev ? { ...prev, equipment_brand: canonBrand, equipment_model: canonModel } : prev);
   }, [listing]);
 
   // Classify equipment using AI
