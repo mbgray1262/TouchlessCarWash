@@ -45,33 +45,41 @@ export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
   // BellStores Touch Free tunnel image — hosted in Supabase (104 KB)
   'BellStores': `${STORAGE}/bellstores.png`,
 
-  // H&S Energy Group brands — all use identical Istobal touchless equipment,
-  // so they share the same 3 car wash photos rotated across listings.
+  // H&S Energy Group brands + Max Car Wash — all use identical Istobal
+  // touchless equipment. Rotation is the verified brush-free Istobal bays
+  // from Extra Mile Roseville CA + Santa Monica CA plus Max Car Wash's
+  // manually-curated South Florida Istobal crops.
+  //
+  // Previous rotation (chain-brands/power-market.jpg, -2, -3) was retired
+  // 2026-04-24: one frame showed red contact rollers down the tunnel and
+  // another was a generic stock wheel/foam close-up that did not represent
+  // a touchless bay. Both violated our touchless-only imagery policy.
   'Power Market': [
-    `${STORAGE}/power-market.jpg`,
-    `${STORAGE}/power-market-2.jpg`,
-    `${STORAGE}/power-market-3.jpg`,
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/48edea94-bbc4-47f5-afa5-1cc1636e037a/hero-cropped-1776872848735.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/ce6819ff-909d-412f-9298-af459856bb12/hero-cropped-1776785254452.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/434b7f44-44e0-403d-8aa4-c1c0a786c9d7/hero-cropped-1776785359127.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/17ff3edc-cae0-4860-80e3-d30b0eeb2f19/hero-cropped-1776785397794.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/9cbb8ecf-dd5d-418f-b05c-0e026b02a306/hero-cropped-1776785418546.jpg',
   ],
-  // Extra Mile — using manually-curated hero crops from Roseville CA and
-  // Santa Monica CA (Chevron/Extra Mile branded, verified brush-free) instead
-  // of the Power Market rotation which had rollers visible.
   'Extra Mile': [
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/48edea94-bbc4-47f5-afa5-1cc1636e037a/hero-cropped-1776872848735.jpg',
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/ce6819ff-909d-412f-9298-af459856bb12/hero-cropped-1776785254452.jpg',
   ],
   'Pinnacle 365': [
-    `${STORAGE}/power-market.jpg`,
-    `${STORAGE}/power-market-2.jpg`,
-    `${STORAGE}/power-market-3.jpg`,
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/48edea94-bbc4-47f5-afa5-1cc1636e037a/hero-cropped-1776872848735.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/ce6819ff-909d-412f-9298-af459856bb12/hero-cropped-1776785254452.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/434b7f44-44e0-403d-8aa4-c1c0a786c9d7/hero-cropped-1776785359127.jpg',
   ],
-
   // Max Car Wash — South Florida operator of Chevron/Marathon/Shell/Exxon/Mobil
-  // branded locations, most with Istobal touchless equipment (similar to H&S
-  // Energy Group's Power Market). Reusing Power Market touchless bay photos.
+  // branded locations, most with Istobal touchless equipment (same family as
+  // H&S Energy's Power Market). Rotation uses the same verified-brush-free
+  // Istobal crops above plus Max's own Roseville curates.
   'Max Car Wash': [
-    `${STORAGE}/power-market.jpg`,
-    `${STORAGE}/power-market-2.jpg`,
-    `${STORAGE}/power-market-3.jpg`,
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/434b7f44-44e0-403d-8aa4-c1c0a786c9d7/hero-cropped-1776785359127.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/17ff3edc-cae0-4860-80e3-d30b0eeb2f19/hero-cropped-1776785397794.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/9cbb8ecf-dd5d-418f-b05c-0e026b02a306/hero-cropped-1776785418546.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/6c7a1548-bb34-4e13-802d-904c32c84bd8/hero-cropped-1776785438558.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/95960139-673f-4eff-9f7f-f0a1cc96c7a2/hero-cropped-1776785336946.jpg',
   ],
 
   // BP gas station canopy with BP sunflower logo — from Monee, IL location. 1600×900. Hosted in Supabase (251 KB).
