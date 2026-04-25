@@ -1,6 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Hard-block list: bots that ignore robots.txt or that we never want to serve.
+// Matched as case-insensitive substrings of the User-Agent header. Returns 403.
+// Kept separate from robots.txt because these bots routinely ignore it.
+const BLOCKED_USER_AGENTS = [
+  // AI training scrapers
+  'GPTBot',
+  'ClaudeBot',
+  'anthropic-ai',
+  'Claude-Web',
+  'CCBot',
+  'Amazonbot',
+  'Applebot-Extended',
+  'Meta-ExternalAgent',
+  'Bytespider',
+  'Diffbot',
+  'ImagesiftBot',
+  'Omgilibot',
+  'cohere-ai',
+  // SEO competitor-intel crawlers.
+  // AhrefsBot intentionally allowed: owner uses free Ahrefs for self-audits.
+  // PerplexityBot and FacebookBot also intentionally allowed (AI-answer
+  // traffic + Facebook ad landing-page verification).
+  'SemrushBot',
+  'DotBot',
+  'MJ12bot',
+  'DataForSeoBot',
+  'PetalBot',
+  'SeekportBot',
+  'BLEXBot',
+];
+
 export function middleware(request: NextRequest) {
+  const ua = request.headers.get('user-agent') || '';
+  if (ua && BLOCKED_USER_AGENTS.some((bot) => ua.toLowerCase().includes(bot.toLowerCase()))) {
+    return new NextResponse('Forbidden', { status: 403 });
+  }
+
   const response = NextResponse.next();
   response.headers.set('x-pathname', request.nextUrl.pathname);
 
