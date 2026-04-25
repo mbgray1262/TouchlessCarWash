@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ListingCard } from '@/components/ListingCard';
 import { RedirectBanner } from '@/components/RedirectBanner';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
+import { getApprovedTouchlessCount } from '@/lib/listing-queries';
 import { US_STATES, getStateSlug } from '@/lib/constants';
 import type { Metadata } from 'next';
 
@@ -19,7 +20,7 @@ export const revalidate = 3600;
 const TOP_STATES = ['CA', 'TX', 'FL', 'NY', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI', 'AZ', 'WA'];
 
 export async function generateMetadata(): Promise<Metadata> {
-  const count = await getTotalCount();
+  const count = await getApprovedTouchlessCount();
   const countStr = count > 0 ? count.toLocaleString() + '+' : '3,000+';
   return {
     title: { absolute: `Automatic Touchless Car Wash Near Me — ${countStr} Locations` },
@@ -116,19 +117,9 @@ async function getStateListingCounts(): Promise<Record<string, number>> {
   return data as Record<string, number>;
 }
 
-async function getTotalCount(): Promise<number> {
-  // Count only listings that are actually visible to users (is_approved=true).
-  // Without this filter we'd overstate by 500–800 from listings held pending
-  // enrichment (Yelp imports, metro-sweep survivors, etc.) that can't be
-  // reached by clicking through state/city/metro pages.
-  const { count, error } = await supabase
-    .from('listings')
-    .select('*', { count: 'exact', head: true })
-    .eq('is_touchless', true)
-    .eq('is_approved', true);
-
-  return error ? 0 : (count ?? 0);
-}
+// Listing count comes from the shared helper getApprovedTouchlessCount() in
+// lib/listing-queries.ts so the home page stat, About page stat, and any
+// other place we cite the directory size all show the same number.
 
 async function getTotalReviewCount(): Promise<number> {
   const { count, error } = await supabase
@@ -143,7 +134,7 @@ export default async function Home() {
     await Promise.all([
       getFeaturedListings(),
       getStateListingCounts(),
-      getTotalCount(),
+      getApprovedTouchlessCount(),
       getTotalReviewCount(),
     ]);
 
@@ -219,7 +210,7 @@ export default async function Home() {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto text-center">
             <div>
-              <div className="text-4xl md:text-5xl font-bold text-white mb-2">{totalCount}+</div>
+              <div className="text-4xl md:text-5xl font-bold text-white mb-2">{totalCount.toLocaleString()}+</div>
               <div className="text-sm text-white/80">Verified Listings</div>
             </div>
             <div>

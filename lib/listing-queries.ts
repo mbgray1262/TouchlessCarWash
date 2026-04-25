@@ -106,6 +106,23 @@ export async function getStateListingsPaginated(
   return (data as Listing[]) || [];
 }
 
+/**
+ * Canonical count of listings visible to users — touchless AND approved.
+ * Single source of truth for the "X+ Verified Listings" stat that appears
+ * on the home page, About page, blog post intros, and any other place we
+ * advertise the directory size. Without this shared helper the counts drift
+ * (e.g. About page used to query without is_approved and showed ~80 more
+ * than the home page).
+ */
+export async function getApprovedTouchlessCount(): Promise<number> {
+  const { count, error } = await supabase
+    .from('listings')
+    .select('*', { count: 'exact', head: true })
+    .eq('is_touchless', true)
+    .eq('is_approved', true);
+  return error ? 0 : (count ?? 0);
+}
+
 export async function getStateListingCountFiltered(stateCode: string, qualifiedIds: string[] | null): Promise<number> {
   if (qualifiedIds !== null && qualifiedIds.length === 0) return 0;
 
