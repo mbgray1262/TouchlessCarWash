@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { CheckCircle, MapPin, Star, Clock, Shield, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@supabase/supabase-js';
+import { getApprovedTouchlessCount } from '@/lib/listing-queries';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -49,29 +50,33 @@ const breadcrumbSchema = {
 };
 
 async function getStats() {
-  // Fetch all review counts in batches to avoid Supabase 1000-row default limit
-  const listingRes = await supabase.from('listings').select('id', { count: 'exact', head: true }).eq('is_touchless', true);
-  const totalListings = listingRes.count ?? 0;
+  // Use the shared helper so the "Verified Locations" stat here matches
+  // the home page exactly (both use is_touchless=true AND is_approved=true).
+  // Previously this counted unfiltered is_touchless listings and rounded
+  // down to the nearest 10, which inflated the displayed number by ~80
+  // listings vs. the home page (4,030+ vs 3,957+).
+  const totalListings = await getApprovedTouchlessCount();
 
   // Count actual review snippets stored in the DB — same metric the homepage uses.
-  // Previously this summed listing.review_count across all touchless listings
-  // (the aggregate Google review count), which inflated the number to ~689k and
-  // didn't match the homepage's "Customer Reviews" figure.
   const { count: totalReviews } = await supabase
     .from('review_snippets')
     .select('*', { count: 'exact', head: true });
 
-  const roundedListings = Math.floor(totalListings / 10) * 10;
   const roundedReviews = Math.floor((totalReviews ?? 0) / 100) * 100;
-  return [
-    { label: 'Verified Locations', value: `${roundedListings.toLocaleString()}+`, icon: MapPin },
-    { label: 'States + DC', value: '50', icon: CheckCircle },
-    { label: 'Customer Reviews', value: `${roundedReviews.toLocaleString()}+`, icon: Star },
-    { label: 'Hours Listings Updated', value: 'Weekly', icon: Clock },
-  ];
+  return {
+    totalListings,
+    stats: [
+      { label: 'Verified Locations', value: `${totalListings.toLocaleString()}+`, icon: MapPin },
+      { label: 'States + DC', value: '50', icon: CheckCircle },
+      { label: 'Customer Reviews', value: `${roundedReviews.toLocaleString()}+`, icon: Star },
+      { label: 'Hours Listings Updated', value: 'Weekly', icon: Clock },
+    ],
+  };
 }
 
-const DIFFERENTIATORS = [
+function buildDifferentiators(totalListings: number) {
+  const countLabel = totalListings > 0 ? `${totalListings.toLocaleString()}+` : '3,900+';
+  return [
   {
     icon: Shield,
     title: 'Every Listing is Verified Touchless',
@@ -80,7 +85,7 @@ const DIFFERENTIATORS = [
   },
   {
     icon: MapPin,
-    title: 'All 50 States + DC, 3,500+ Locations',
+    title: `All 50 States + DC, ${countLabel} Locations`,
     description:
       'From rural towns to major metros, we have built the most comprehensive touchless-only directory in the country — and we add new locations every week.',
   },
@@ -96,7 +101,8 @@ const DIFFERENTIATORS = [
     description:
       'See photos of each location before you go. Get accurate hours, phone numbers, and directions — all in one place, no clicking through to other sites.',
   },
-];
+  ];
+}
 
 const VERIFICATION_STEPS = [
   {
@@ -126,7 +132,8 @@ const VERIFICATION_STEPS = [
 ];
 
 export default async function AboutPage() {
-  const STATS = await getStats();
+  const { totalListings, stats } = await getStats();
+  const differentiators = buildDifferentiators(totalListings);
   return (
     <>
       <script
@@ -158,7 +165,7 @@ export default async function AboutPage() {
         <section className="bg-[#22C55E] py-10 px-4">
           <div className="container mx-auto max-w-5xl">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-              {STATS.map(({ label, value, icon: Icon }) => (
+              {stats.map(({ label, value, icon: Icon }) => (
                 <div key={label} className="flex flex-col items-center gap-1">
                   <Icon className="w-6 h-6 text-white mb-1" />
                   <span className="text-3xl font-bold text-white">{value}</span>
@@ -207,7 +214,7 @@ export default async function AboutPage() {
               </p>
             </div>
             <div className="grid md:grid-cols-2 gap-8">
-              {DIFFERENTIATORS.map(({ icon: Icon, title, description }) => (
+              {differentiators.map(({ icon: Icon, title, description }) => (
                 <div
                   key={title}
                   className="bg-white rounded-xl p-8 border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
