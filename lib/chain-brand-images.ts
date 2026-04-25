@@ -114,11 +114,19 @@ export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/bf17ff39-817e-43f0-8808-dd3e4f41b0fb/place_photo_0_1772041185404.jpg',
   ],
 
-  // Super Wash — 102 locations across 18 states. Reuses curated location hero images.
+  // Super Wash — 181 locations across 18 states. Rotation refreshed 2026-04-25
+  // to use the chain's iconic blue-overhang exterior at 4 different
+  // locations. Owner-curated picks: every photo shows the trademark blue
+  // facade with "SUPER WASH" + "SUPERMATIC" signage prominently.
+  // Elkhart IN (2048×1152, big centered SUPER WASH sign), Virden IL
+  // (1600×1200, "#1 CAR WASH FRANCHISE" + SUPERMATIC), Columbia City IN
+  // (2048×1152, SUPER WASH + SUPERMATIC dual sign), Bradley IL
+  // (1600×1200, classic SUPER WASH with American flags).
   'Super Wash': [
-    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/fe4a2837-95b3-44bb-923f-b460cdc5027b/hero-cropped-1773594478645.png',
-    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/12d58166-8c14-4321-a56a-f3cb03e3b78c/upload-1774101912034.jpg',
-    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/6a90b3f6-3c91-465f-9a69-79daa02b1754/google_photo.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/2d6e8151-b8b9-4ecb-a825-3c52c052760d/hero-cropped-1777112212971.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/7b2a5584-6a8c-4ed1-95bc-c2e2d05ec707/google-1777111415836.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/d5ef175a-0c7a-49cd-9e98-a58671b4413b/hero-cropped-1776862099064.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/325126bb-7641-4f82-84cb-bc90f5f3a5b6/google-1777111604296.jpg',
   ],
 
   // Splash Car Wash — 59 locations across CT/NY/VT. All photos verified brush-free &
