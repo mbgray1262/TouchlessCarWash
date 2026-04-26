@@ -4,11 +4,19 @@ import { notFound, permanentRedirect } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
-import { US_STATES, getStateName, slugify } from '@/lib/constants';
+import { US_STATES, getStateName, slugify, getStateSlug } from '@/lib/constants';
 import { CityListingsClient } from '@/components/CityListingsClient';
+import { ListingCard } from '@/components/ListingCard';
 import { RedirectBanner } from '@/components/RedirectBanner';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import { getAnyCityCoords, findNearestTouchlessCityPath } from '@/lib/geo-fallback';
+import {
+  getStateListingsForAugment,
+  pickAnchorFromListings,
+  selectNearby,
+  NEARBY_RADIUS_MILES,
+  INDEXABLE_MIN_EFFECTIVE,
+} from '@/lib/nearby-augment';
 
 import type { Metadata } from 'next';
 
@@ -73,11 +81,13 @@ const resolveCityName = cache(async (stateCode: string, citySlug: string): Promi
   return null;
 });
 
-// Cached so generateMetadata and component share the same result per request
+// Cached so generateMetadata and component share the same result per request.
+// We fetch latitude/longitude alongside the card columns so we can pick a
+// geographic anchor for the "in or near" augmentation without a second query.
 const getCityListings = cache(async (stateCode: string, cityName: string): Promise<Listing[]> => {
   const { data, error } = await supabase
     .from('listings')
-    .select(LISTING_CARD_COLUMNS)
+    .select(`${LISTING_CARD_COLUMNS}, latitude, longitude`)
     .eq('is_touchless', true)
     .eq('state', stateCode)
     .ilike('city', cityName)
@@ -86,6 +96,26 @@ const getCityListings = cache(async (stateCode: string, cityName: string): Promi
   if (error || !data) return [];
   return data as Listing[];
 });
+
+/**
+ * Resolve "nearby" augmentation for a city: find approved touchless listings
+ * within NEARBY_RADIUS_MILES of the city's anchor, excluding listings already
+ * shown for the city. Returns [] when the city has no listings with coords.
+ * Cached per (state, city) so generateMetadata and the page share results.
+ */
+const getNearbyForCity = cache(
+  async (
+    stateCode: string,
+    cityName: string,
+    inCity: Listing[],
+  ): Promise<Array<Listing & { _distance: number }>> => {
+    const anchor = pickAnchorFromListings(inCity);
+    if (!anchor) return [];
+    const stateListings = await getStateListingsForAugment(stateCode);
+    const exclude = new Set(inCity.map((l) => l.id));
+    return selectNearby(stateListings, anchor, cityName, exclude) as Array<Listing & { _distance: number }>;
+  },
+);
 
 // Returns the STATIC TEMPLATE with placeholders like {{TOTAL_LISTINGS}},
 // {{TOP_LISTING}}, {{TOP_RATING}}, {{TOP_REVIEWS}}. The placeholders get
@@ -176,6 +206,7 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
     getCityListings(stateCode, cityName),
     getCityDescriptionTemplate(stateCode, cityName),
   ]);
+  const nearby = await getNearbyForCity(stateCode, cityName, listings);
 
   const ratedListings = listings.filter(l => l.rating != null && l.rating > 0);
   const avgRating = ratedListings.length > 0
@@ -196,19 +227,20 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
     ? ` Avg ${avgRating}★ across ${totalReviews.toLocaleString()} reviews.`
     : '';
 
+  const effectiveCount = listings.length + nearby.length;
   const metaDescription = cityDesc
     ? cityDesc.substring(0, 155) + (cityDesc.length > 155 ? '...' : '')
-    : `Find ${listings.length} touchless, brushless, contactless & no-touch car washes in ${cityName}, ${stateName}.${ratingSnippet} Verified locations with ratings, hours, and directions.`;
+    : `Find ${effectiveCount} touchless, brushless, contactless & no-touch car washes in or near ${cityName}, ${stateName}.${ratingSnippet} Verified locations with ratings, hours, and directions.`;
 
   const now = new Date();
   const month = now.toLocaleString('default', { month: 'long' });
   const year = now.getFullYear();
   const canonicalUrl = `https://touchlesscarwashfinder.com/state/${params.state}/${params.city}`;
-  const title = `Best Touchless & Brushless Car Wash in ${cityName}, ${stateCode} — ${month} ${year}`;
+  const title = `Best Touchless & Brushless Car Washes In or Near ${cityName}, ${stateCode} — ${month} ${year}`;
 
-  // Noindex thin city pages — too few listings to be worth indexing and can hurt
-  // overall site quality score. Keep canonical so Google knows the URL is intentional.
-  const thinPage = listings.length < 3;
+  // Noindex pages where even the augmented (in-city + nearby) count is too thin
+  // to rank or be useful. Keep canonical so Google knows the URL is intentional.
+  const thinPage = effectiveCount < INDEXABLE_MIN_EFFECTIVE;
 
   return {
     title,
@@ -243,6 +275,11 @@ export default async function CityPage({ params }: CityPageProps) {
     getCityDescriptionTemplate(stateCode!, cityName),
     getFilters(),
   ]);
+
+  // "In or near" augmentation — pulls touchless listings from cities within
+  // NEARBY_RADIUS_MILES so single-listing cities still feel useful and clear
+  // Google's thin-content bar. cache() ensures we don't re-query for metadata.
+  const nearbyListings = await getNearbyForCity(stateCode!, cityName, allListings);
 
   // City has no approved touchless listings — happens when every listing
   // in the city was reverted (not actually touchless) or deleted (business
@@ -494,10 +531,13 @@ export default async function CityPage({ params }: CityPageProps) {
             <span className="text-white">{cityName}</span>
           </nav>
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
-            Touchless & Brushless Car Washes in {cityName}, {stateCode}
+            Touchless & Brushless Car Washes In or Near {cityName}, {stateCode}
           </h1>
           <p className="text-white/80 text-lg">
             {allListings.length} verified touchless car wash{allListings.length !== 1 ? 'es' : ''} in {cityName}
+            {nearbyListings.length > 0 && (
+              <> + {nearbyListings.length} more within {NEARBY_RADIUS_MILES} miles</>
+            )}
           </p>
         </div>
       </div>
@@ -508,9 +548,12 @@ export default async function CityPage({ params }: CityPageProps) {
           <p className="text-gray-700 text-base leading-relaxed">
             {cityDescription ? cityDescription : (
               <>
-                Find the best {introSynonyms} car washes in {cityName}, {stateName}. We&apos;ve verified{' '}
-                <strong>{allListings.length} location{allListings.length !== 1 ? 's' : ''}</strong> that offer brushless,
-                contactless washing to keep your car&apos;s paint and finish scratch-free.
+                Find the best {introSynonyms} car washes in or near {cityName}, {stateName}. We&apos;ve verified{' '}
+                <strong>{allListings.length} location{allListings.length !== 1 ? 's' : ''}</strong> in {cityName}
+                {nearbyListings.length > 0 && (
+                  <> plus <strong>{nearbyListings.length} nearby option{nearbyListings.length !== 1 ? 's' : ''} within {NEARBY_RADIUS_MILES} miles</strong></>
+                )}{' '}
+                that offer brushless, contactless washing to keep your car&apos;s paint and finish scratch-free.
                 {topRated.rating && (
                   <> Top-rated option: <strong>{topRated.name}</strong> ({topRated.rating} stars).</>
                 )}
@@ -538,6 +581,28 @@ export default async function CityPage({ params }: CityPageProps) {
             filterMap={filterMap}
           />
         </Suspense>
+
+        {nearbyListings.length > 0 && (
+          <div className="mt-14 pt-10 border-t border-gray-200">
+            <h2 className="text-2xl font-bold text-foreground mb-2">
+              More Touchless Car Washes Near {cityName}
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Verified touchless options within {NEARBY_RADIUS_MILES} miles of {cityName}, {stateName} — useful when the
+              in-town location is closed or out of the way.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {nearbyListings.map((l) => (
+                <ListingCard
+                  key={l.id}
+                  listing={l}
+                  href={`/state/${getStateSlug(l.state)}/${slugify(l.city)}/${l.slug}`}
+                  distance={l._distance}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="mt-10 text-center">
           <Button asChild variant="outline">
