@@ -513,10 +513,27 @@ function buildBreadcrumbSchema(items: { name: string; url: string }[]): object {
 }
 
 // Safely coerce extracted_data fields that may be a string instead of an array
+/**
+ * Normalize an extracted_data field to a string[] — strings pass through;
+ * objects shaped like {name, details, options} (some listings have these
+ * for special_features / amenities_detailed) get reduced to their `name`
+ * so we don't render a raw object as a React child and crash the page.
+ * Anything else is dropped.
+ */
 function asArray(val: unknown): string[] {
-  if (Array.isArray(val)) return val;
-  if (typeof val === 'string' && val.trim()) return [val];
-  return [];
+  const toStr = (v: unknown): string | null => {
+    if (typeof v === 'string') return v.trim() ? v : null;
+    if (v && typeof v === 'object' && typeof (v as { name?: unknown }).name === 'string') {
+      const name = (v as { name: string }).name;
+      return name.trim() ? name : null;
+    }
+    return null;
+  };
+  if (Array.isArray(val)) {
+    return val.map(toStr).filter((s): s is string => s !== null);
+  }
+  const single = toStr(val);
+  return single ? [single] : [];
 }
 
 function buildFAQs(listing: Listing, hours: Record<string, string> | null): { q: string; a: string }[] {
@@ -1290,14 +1307,16 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                     Membership Plans
                   </h2>
                   <div className="space-y-3">
-                    {listing.extracted_data!.membership_plans.map((plan, i) => (
+                    {listing.extracted_data!.membership_plans.map((plan, i) => {
+                      const planFeatures = asArray(plan.features);
+                      return (
                       <div key={i} className="p-3 rounded-lg bg-green-50 border border-green-100">
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1">
                             <div className="font-semibold text-[#0F2744]">{plan.name}</div>
-                            {plan.features && plan.features.length > 0 && (
+                            {planFeatures.length > 0 && (
                               <ul className="mt-1.5 space-y-0.5">
-                                {plan.features.map((f, j) => (
+                                {planFeatures.map((f, j) => (
                                   <li key={j} className="text-sm text-gray-600 flex items-start gap-1.5">
                                     <CheckCircle className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" />
                                     {f}
@@ -1311,7 +1330,8 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                           )}
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}

@@ -12,10 +12,25 @@ const BRAND_LABELS: Record<string, string> = {
   ds: 'D&S',
 };
 
+/**
+ * Normalize an extracted_data field to a string[] — strings pass through;
+ * objects shaped like {name, details, options} get reduced to their `name`
+ * so we don't render a raw object as a React child. Anything else is dropped.
+ */
 function asArray(val: unknown): string[] {
-  if (Array.isArray(val)) return val;
-  if (typeof val === 'string' && val.trim()) return [val];
-  return [];
+  const toStr = (v: unknown): string | null => {
+    if (typeof v === 'string') return v.trim() ? v : null;
+    if (v && typeof v === 'object' && typeof (v as { name?: unknown }).name === 'string') {
+      const name = (v as { name: string }).name;
+      return name.trim() ? name : null;
+    }
+    return null;
+  };
+  if (Array.isArray(val)) {
+    return val.map(toStr).filter((s): s is string => s !== null);
+  }
+  const single = toStr(val);
+  return single ? [single] : [];
 }
 
 /**
