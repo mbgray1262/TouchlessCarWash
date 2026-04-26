@@ -8,6 +8,7 @@ import { US_STATES, getStateName, slugify, getStateSlug } from '@/lib/constants'
 import { CityListingsClient } from '@/components/CityListingsClient';
 import { ListingCard } from '@/components/ListingCard';
 import { RedirectBanner } from '@/components/RedirectBanner';
+import { RelatedReading } from '@/components/RelatedReading';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import { getAnyCityCoords, findNearestTouchlessCityPath } from '@/lib/geo-fallback';
 import {
@@ -629,6 +630,8 @@ export default async function CityPage({ params }: CityPageProps) {
             </div>
           </div>
         )}
+
+        <RelatedReading />
 
         <div className="mt-14 pt-10 border-t border-gray-200">
           <h2 className="text-xl font-bold text-foreground mb-6">Frequently Asked Questions</h2>
