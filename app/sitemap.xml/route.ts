@@ -5,6 +5,7 @@ import { FEATURES } from '@/lib/features';
 import { EQUIPMENT_BRAND_DATA, EQUIPMENT_MODEL_DATA } from '@/lib/equipment-data';
 import { CHAINS } from '@/lib/chains';
 import { isThinListing } from '@/lib/listing-quality';
+import { NEARBY_RADIUS_MILES, INDEXABLE_MIN_EFFECTIVE } from '@/lib/nearby-augment';
 
 const VALID_STATE_CODES = new Set(US_STATES.map(s => s.code));
 
@@ -169,9 +170,56 @@ export async function GET() {
   </url>`;
   });
 
-  // Include all city pages with at least 1 listing in the sitemap.
+  // Only include cities whose page will be indexable. The city page noindexes
+  // when (in-city + nearby-within-radius) < INDEXABLE_MIN_EFFECTIVE, so the
+  // sitemap must mirror that — otherwise we advertise URLs that immediately
+  // tell Google not to index them, a contradiction that hurts crawl budget.
+  // For cities with enough in-city listings on their own this is a cheap
+  // length check; thinner cities require a nearby-count pass over the
+  // already-loaded listings array (no extra DB calls).
+  const listingsByCity = new Map<string, typeof listings>();
+  for (const l of listings) {
+    const k = `${l.state}||${l.city}`;
+    const arr = listingsByCity.get(k) ?? [];
+    arr.push(l);
+    listingsByCity.set(k, arr);
+  }
+
+  function pickCityAnchor(rows: typeof listings): { lat: number; lng: number } | null {
+    for (const r of rows) {
+      if (r.latitude != null && r.longitude != null) {
+        return { lat: Number(r.latitude), lng: Number(r.longitude) };
+      }
+    }
+    return null;
+  }
+
+  function effectiveCityCount(stateCode: string, cityKey: string): number {
+    const inCity = listingsByCity.get(cityKey) ?? [];
+    if (inCity.length >= INDEXABLE_MIN_EFFECTIVE) return inCity.length;
+    const anchor = pickCityAnchor(inCity);
+    if (!anchor) return inCity.length;
+    const cityName = inCity[0]?.city.toLowerCase().trim();
+    const need = INDEXABLE_MIN_EFFECTIVE - inCity.length;
+    let nearby = 0;
+    for (const l of listings) {
+      if (l.state !== stateCode) continue;
+      if (l.latitude == null || l.longitude == null) continue;
+      if (l.city.toLowerCase().trim() === cityName) continue;
+      const d = haversineDistance(anchor.lat, anchor.lng, Number(l.latitude), Number(l.longitude));
+      if (d <= NEARBY_RADIUS_MILES) {
+        nearby++;
+        if (nearby >= need) break;
+      }
+    }
+    return inCity.length + nearby;
+  }
+
   const cityUrls = Array.from(citySet)
-    .filter((key) => (cityCount.get(key) ?? 0) >= 1)
+    .filter((key) => {
+      const [stateCode] = key.split('||');
+      return effectiveCityCount(stateCode, key) >= INDEXABLE_MIN_EFFECTIVE;
+    })
     .map((key) => {
       const [stateCode, city] = key.split('||');
       const lastmod = cityLastmod.get(key) ?? now;

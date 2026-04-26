@@ -213,7 +213,7 @@ export function ListingCard({ listing, href, showVerifiedBadge = false, distance
           {distance != null && (
             <div className="flex items-center gap-1.5 text-sm text-blue-600 font-medium mb-1">
               <Navigation className="w-3.5 h-3.5 shrink-0" />
-              <span>{distance} mi away</span>
+              <span>{distance.toFixed(1)} mi away</span>
             </div>
           )}
 
@@ -233,6 +233,7 @@ export function ListingCard({ listing, href, showVerifiedBadge = false, distance
             if (ed?.membership_plans?.length) badges.push('membership program');
             if (ed?.special_features) {
               for (const f of ed.special_features) {
+                if (typeof f !== 'string') continue;
                 const fl = f.toLowerCase();
                 if (fl.includes('free vacuum') && !badges.includes('free vacuum')) badges.push('free vacuum');
                 if (fl.includes('ceramic') && !badges.includes('ceramic coating')) badges.push('ceramic coating');
@@ -244,8 +245,9 @@ export function ListingCard({ listing, href, showVerifiedBadge = false, distance
             if (remaining > 0 && listing.amenities?.length) {
               for (const a of listing.amenities) {
                 if (badges.length >= 4) break;
+                if (typeof a !== 'string') continue;
                 const al = a.toLowerCase();
-                if (!badges.some(b => b.toLowerCase() === al)) badges.push(a);
+                if (!badges.some(b => typeof b === 'string' && b.toLowerCase() === al)) badges.push(a);
               }
             }
             const totalExtra = (listing.amenities?.length || 0) + (ed?.special_features?.length || 0) - badges.length;
