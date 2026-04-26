@@ -58,14 +58,22 @@ export async function generateMetadata({ params }: ChainPageProps): Promise<Meta
   const canonicalUrl = `${SITE_URL}/chain/${params.slug}`;
   const heroImage = getChainHeroImage(chain.name);
 
+  // Lead with the actual question searchers ask: "Is [chain] touchless?"
+  // GSC shows queries like "is mister car wash touchless" / "is zips car
+  // wash touchless" / "are mister car washes touchless" sitting at pos
+  // 8-10 with real impressions — the chain page already answers the
+  // question, but the title doesn't match the query phrasing. This re-
+  // leads it to capture that intent directly.
+  const title = `Is ${chain.name} Touchless? Wash Types & Locations (${month} ${year})`;
+  const description = `Is ${chain.name} a touchless car wash? Yes — find all ${total} verified ${chain.name} touchless locations with maps, ratings, hours, and wash type details.`;
   return {
-    title: `${chain.name} Automatic Touchless Car Wash Locations — ${month} ${year}`,
-    description: `Find all ${total} ${chain.name} automatic touchless car wash locations. Verified maps, photos, ratings & hours.`,
+    title,
+    description,
     alternates: { canonical: canonicalUrl },
     robots: { index: true, follow: true },
     openGraph: {
-      title: `${chain.name} Automatic Touchless Car Wash Locations`,
-      description: `Find all ${total} ${chain.name} automatic touchless car wash locations. Verified maps, photos, ratings & hours.`,
+      title: `Is ${chain.name} Touchless? Wash Types & Locations`,
+      description,
       url: canonicalUrl,
       siteName: 'Touchless Car Wash Finder',
       ...(heroImage ? { images: [{ url: heroImage }] } : { images: [DEFAULT_OG_IMAGE] }),

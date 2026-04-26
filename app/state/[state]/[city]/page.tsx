@@ -237,7 +237,13 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
   const month = now.toLocaleString('default', { month: 'long' });
   const year = now.getFullYear();
   const canonicalUrl = `https://touchlesscarwashfinder.com/state/${params.state}/${params.city}`;
-  const title = `Best Touchless & Brushless Car Washes In or Near ${cityName}, ${stateCode} — ${month} ${year}`;
+  // Title keeps the "in or near" framing + a concrete location count
+  // (CTR-positive specificity). Dropped "Best Touchless & Brushless Car
+  // Washes In or Near {city} — {Month} {Year}" (78 chars) because the
+  // year was being truncated in SERPs on most cities. Short-month + count
+  // fits the ~580px budget for typical city names.
+  const monthShort = now.toLocaleString('default', { month: 'short' });
+  const title = `Touchless Car Wash In or Near ${cityName}, ${stateCode} — ${effectiveCount} Locations (${monthShort} ${year})`;
 
   // Noindex pages where even the augmented (in-city + nearby) count is too thin
   // to rank or be useful. Keep canonical so Google knows the URL is intentional.

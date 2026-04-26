@@ -22,15 +22,25 @@ const TOP_STATES = ['CA', 'TX', 'FL', 'NY', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI', 
 export async function generateMetadata(): Promise<Metadata> {
   const count = await getApprovedTouchlessCount();
   const countStr = count > 0 ? count.toLocaleString() + '+' : '3,000+';
+  const now = new Date();
+  const year = now.getFullYear();
+  // Lead with the exact head-term match ("Touchless Car Wash Near Me") and
+  // pack a concrete count + year + verification signal — the elements that
+  // measurably lift CTR on near-me intent. Drop the leading "Automatic":
+  // it narrows the match against ~10K monthly impressions for the broader
+  // "touchless car wash near me" without adding searcher value (the body
+  // copy still covers the automatic / brushless / laser variants).
+  const title = `Touchless Car Wash Near Me — ${countStr} Verified Locations | ${year}`;
+  const description = `Find a touchless car wash near you — ${countStr} verified no-touch, brushless, laser & contactless locations across all 50 states + DC. Ratings, hours, and directions for every one.`;
   return {
-    title: { absolute: `Automatic Touchless Car Wash Near Me — ${countStr} Locations` },
-    description: `Find the nearest automatic touchless car wash in your area — brushless, laser, no-touch & contactless. Browse ${countStr} verified in-bay automatic touchless locations across all 50 states + DC.`,
+    title: { absolute: title },
+    description,
     alternates: {
       canonical: SITE_URL + '/',
     },
     openGraph: {
-      title: `Automatic Touchless Car Wash Near Me — ${countStr} Locations`,
-      description: `Find the nearest automatic touchless car wash in your area — brushless, laser, no-touch & contactless. Browse ${countStr} verified in-bay automatic touchless locations across all 50 states + DC.`,
+      title,
+      description,
       url: SITE_URL + '/',
       siteName: 'Touchless Car Wash Finder',
       images: [
@@ -45,8 +55,8 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     twitter: {
       card: 'summary_large_image',
-      title: `Automatic Touchless Car Wash Near Me — ${countStr} Locations`,
-      description: `Find the nearest automatic touchless car wash in your area — brushless, laser, no-touch & contactless. Browse ${countStr} verified in-bay automatic touchless locations across all 50 states + DC.`,
+      title,
+      description,
       images: ['https://res.cloudinary.com/dret3qhyu/image/upload/v1771409300/ChatGPT_Image_Feb_18_2026_10_07_23_AM_qvq0yj.png'],
     },
   };
