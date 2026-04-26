@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   ThumbsUp, ThumbsDown, MessageSquare, Users, TrendingUp,
   AlertTriangle, CheckCircle, ExternalLink, Calendar, BarChart3,
-  RefreshCw, Trash2,
+  RefreshCw, Trash2, XCircle, Loader2,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { slugify, US_STATES } from '@/lib/constants';
@@ -13,13 +13,14 @@ import { slugify, US_STATES } from '@/lib/constants';
 interface Verification {
   id: string;
   listing_id: string;
-  is_touchless: boolean;
+  is_touchless: boolean; // the user's vote
   comment: string | null;
   created_at: string;
   listing_name: string;
   listing_city: string;
   listing_state: string;
   listing_slug: string;
+  listing_is_touchless: boolean; // the listing's CURRENT status (not the vote)
 }
 
 interface ListingFlag {
@@ -28,6 +29,7 @@ interface ListingFlag {
   listing_city: string;
   listing_state: string;
   listing_slug: string;
+  listing_is_touchless: boolean; // current status — drives the toggle button label
   no_count: number;
   yes_count: number;
   total: number;
@@ -69,12 +71,15 @@ export default function CommunityVerificationsPage() {
   const [filter, setFilter] = useState<'all' | 'yes' | 'no' | 'commented'>('all');
   const [page, setPage] = useState(0);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [toggling, setToggling] = useState<string | null>(null);
   const PAGE_SIZE = 50;
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch verifications joined with listing data
+      // Fetch verifications joined with listing data — pull the listing's
+      // current is_touchless so the admin toggle reflects live status,
+      // not just the user's vote.
       const { data: rawVerifications } = await supabase
         .from('listing_verifications')
         .select(`
@@ -83,7 +88,7 @@ export default function CommunityVerificationsPage() {
           is_touchless,
           comment,
           created_at,
-          listings!inner(name, city, state, slug)
+          listings!inner(name, city, state, slug, is_touchless)
         `)
         .order('created_at', { ascending: false })
         .limit(500);
@@ -91,13 +96,14 @@ export default function CommunityVerificationsPage() {
       if (!rawVerifications) return;
 
       // Flatten the join
+      type JoinedListing = { name: string; city: string; state: string; slug: string; is_touchless: boolean | null };
       const flat: Verification[] = rawVerifications.map((v: {
         id: string;
         listing_id: string;
         is_touchless: boolean;
         comment: string | null;
         created_at: string;
-        listings: { name: string; city: string; state: string; slug: string } | { name: string; city: string; state: string; slug: string }[];
+        listings: JoinedListing | JoinedListing[];
       }) => {
         const l = Array.isArray(v.listings) ? v.listings[0] : v.listings;
         return {
@@ -110,6 +116,7 @@ export default function CommunityVerificationsPage() {
           listing_city: l?.city ?? '',
           listing_state: l?.state ?? '',
           listing_slug: l?.slug ?? '',
+          listing_is_touchless: l?.is_touchless ?? false,
         };
       });
 
@@ -132,6 +139,7 @@ export default function CommunityVerificationsPage() {
             listing_city: v.listing_city,
             listing_state: v.listing_state,
             listing_slug: v.listing_slug,
+            listing_is_touchless: v.listing_is_touchless,
             no_count: 0,
             yes_count: 0,
             total: 0,
@@ -152,6 +160,39 @@ export default function CommunityVerificationsPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  /**
+   * Flip a listing's is_touchless flag and propagate the new value to
+   * every cached row that references it (the flagged-listing card on
+   * the left and any individual reports on the right). Optimistic —
+   * if the API call fails, revert and surface the error.
+   */
+  async function toggleListingStatus(listing_id: string, next: boolean) {
+    setToggling(listing_id);
+    // Optimistic update
+    setFlagged(prev => prev.map(f => f.listing_id === listing_id ? { ...f, listing_is_touchless: next } : f));
+    setVerifications(prev => prev.map(v => v.listing_id === listing_id ? { ...v, listing_is_touchless: next } : v));
+    try {
+      const res = await fetch('/api/admin/listings/toggle-touchless', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listing_id, is_touchless: next }),
+      });
+      if (!res.ok) {
+        // Revert
+        setFlagged(prev => prev.map(f => f.listing_id === listing_id ? { ...f, listing_is_touchless: !next } : f));
+        setVerifications(prev => prev.map(v => v.listing_id === listing_id ? { ...v, listing_is_touchless: !next } : v));
+        const body = await res.json().catch(() => ({}));
+        alert(`Failed to update: ${body.error ?? res.statusText}`);
+      }
+    } catch (err) {
+      setFlagged(prev => prev.map(f => f.listing_id === listing_id ? { ...f, listing_is_touchless: !next } : f));
+      setVerifications(prev => prev.map(v => v.listing_id === listing_id ? { ...v, listing_is_touchless: !next } : v));
+      alert(`Failed to update: ${err}`);
+    } finally {
+      setToggling(null);
+    }
+  }
 
   async function deleteVerification(id: string) {
     setDeleting(id);
@@ -274,6 +315,7 @@ export default function CommunityVerificationsPage() {
                 {flagged.map(f => {
                   const url = buildListingUrl(f.listing_state, f.listing_city, f.listing_slug);
                   const flagPct = f.total > 0 ? Math.round((f.no_count / f.total) * 100) : 0;
+                  const isBusy = toggling === f.listing_id;
                   return (
                     <div key={f.listing_id} className="px-5 py-3">
                       <div className="flex items-start justify-between gap-2">
@@ -296,6 +338,40 @@ export default function CommunityVerificationsPage() {
                           </span>
                           <p className="text-xs text-gray-400 mt-0.5">{f.yes_count} confirmed</p>
                         </div>
+                      </div>
+
+                      {/* Status + toggle */}
+                      <div className="mt-2.5 flex items-center justify-between gap-2">
+                        <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
+                          f.listing_is_touchless
+                            ? 'bg-green-50 text-green-700 border border-green-200'
+                            : 'bg-gray-100 text-gray-600 border border-gray-200'
+                        }`}>
+                          {f.listing_is_touchless
+                            ? <><CheckCircle className="w-3 h-3" /> Touchless</>
+                            : <><XCircle className="w-3 h-3" /> Not touchless</>}
+                        </span>
+                        {f.listing_is_touchless ? (
+                          <button
+                            onClick={() => toggleListingStatus(f.listing_id, false)}
+                            disabled={isBusy}
+                            className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg border border-red-200 text-red-600 bg-white hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            title="Flip this listing's status to Not Touchless"
+                          >
+                            {isBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <ThumbsDown className="w-3 h-3" />}
+                            Mark Not Touchless
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => toggleListingStatus(f.listing_id, true)}
+                            disabled={isBusy}
+                            className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg border border-green-200 text-green-700 bg-white hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            title="Restore this listing to Touchless"
+                          >
+                            {isBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <ThumbsUp className="w-3 h-3" />}
+                            Mark Touchless
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
