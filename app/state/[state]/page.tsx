@@ -133,10 +133,14 @@ export async function generateMetadata({ params }: StatePageProps): Promise<Meta
 
   const metaDescription = stateDesc
     ? stateDesc.substring(0, 155) + (stateDesc.length > 155 ? '...' : '')
-    : `Find the ${totalCount}+ best automatic touchless car washes in ${stateName}. Verified in-bay no-touch, brushless & laser car wash locations near you.`;
+    : `Find a touchless car wash near you in ${stateName} — ${totalCount}+ verified no-touch, brushless & contactless locations with ratings, hours, and directions.`;
 
   const canonicalUrl = `https://touchlesscarwashfinder.com/state/${params.state}`;
-  const title = `Best Automatic Touchless Car Washes in ${stateName} — ${month} ${year}`;
+  // Title leads with "Near Me" intent — GSC shows the bulk of state-page
+  // impressions come from "touchless car wash near me" and variants
+  // (9,921 imp/90d for the head term alone). Page used to rank ~pos 9.8;
+  // adding the explicit intent match should clear the page-1 gap.
+  const title = `Touchless Car Wash Near Me in ${stateName} — ${month} ${year}`;
 
   return {
     title,
@@ -261,10 +265,10 @@ export default async function StatePage({ params }: StatePageProps) {
             <span className="text-white">{stateName}</span>
           </nav>
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
-            Automatic Touchless Car Washes in {stateName}
+            Touchless Car Wash Near Me in {stateName}
           </h1>
           <p className="text-white/70 text-lg">
-            {totalCount} verified automatic touchless car wash{totalCount !== 1 ? 'es' : ''} across {cities.length} {cities.length === 1 ? 'city' : 'cities'}
+            {totalCount} verified touchless, no-touch &amp; brushless car wash{totalCount !== 1 ? 'es' : ''} near you across {cities.length} {cities.length === 1 ? 'city' : 'cities'} in {stateName}
           </p>
         </div>
       </div>
