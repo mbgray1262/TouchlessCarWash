@@ -17,6 +17,7 @@ import VerificationPrompt, { type VerificationStats } from '@/components/Verific
 import { TrackableLink } from '@/components/TrackableLink';
 import { HoursStatusBadge } from '@/components/HoursStatusBadge';
 import { ListingBreadcrumb } from '@/components/ListingBreadcrumb';
+import { RelatedReading } from '@/components/RelatedReading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
@@ -1713,6 +1714,8 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
               </div>
             </div>
           </div>
+
+          <RelatedReading />
 
           {lastVerified && (
             <div className="mt-8 pt-6 border-t border-gray-200 flex items-center gap-2 text-xs text-gray-400">

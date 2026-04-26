@@ -146,8 +146,13 @@ export async function generateMetadata({ params }: BestOfPageProps): Promise<Met
 
   if (count < 5) return { title: 'Not Found' };
 
-  const title = `${count} Best Touchless & Brushless Car Washes in ${metro.displayName}`;
-  const description = `Discover the ${count} best-rated touchless & brushless car washes in ${metro.name}. Ranked by Google ratings, reviews, and verified touchless confirmation.`;
+  const month = new Date().toLocaleString('default', { month: 'long' });
+  // Concrete count + ranking signal + freshness date — three CTR levers
+  // (specificity, authority, recency). Drop "& Brushless" to fit pixel
+  // budget and lead with the count, which lifts CTR more than power
+  // words alone.
+  const title = `${count} Best Touchless Car Washes in ${metro.displayName} — Ranked ${month} ${year}`;
+  const description = `The ${count} top-rated touchless car washes in ${metro.name}, ranked by verified Google reviews, customer ratings, and touchless-evidence confirmation. Updated ${month} ${year}.`;
 
   return {
     title,

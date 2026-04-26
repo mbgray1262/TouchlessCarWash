@@ -8,6 +8,7 @@ import { US_STATES, getStateName, slugify, getStateSlug } from '@/lib/constants'
 import { CityListingsClient } from '@/components/CityListingsClient';
 import { ListingCard } from '@/components/ListingCard';
 import { RedirectBanner } from '@/components/RedirectBanner';
+import { RelatedReading } from '@/components/RelatedReading';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import { getAnyCityCoords, findNearestTouchlessCityPath } from '@/lib/geo-fallback';
 import {
@@ -236,7 +237,13 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
   const month = now.toLocaleString('default', { month: 'long' });
   const year = now.getFullYear();
   const canonicalUrl = `https://touchlesscarwashfinder.com/state/${params.state}/${params.city}`;
-  const title = `Best Touchless & Brushless Car Washes In or Near ${cityName}, ${stateCode} — ${month} ${year}`;
+  // Title keeps the "in or near" framing + a concrete location count
+  // (CTR-positive specificity). Dropped "Best Touchless & Brushless Car
+  // Washes In or Near {city} — {Month} {Year}" (78 chars) because the
+  // year was being truncated in SERPs on most cities. Short-month + count
+  // fits the ~580px budget for typical city names.
+  const monthShort = now.toLocaleString('default', { month: 'short' });
+  const title = `Touchless Car Wash In or Near ${cityName}, ${stateCode} — ${effectiveCount} Locations (${monthShort} ${year})`;
 
   // Noindex pages where even the augmented (in-city + nearby) count is too thin
   // to rank or be useful. Keep canonical so Google knows the URL is intentional.
@@ -629,6 +636,8 @@ export default async function CityPage({ params }: CityPageProps) {
             </div>
           </div>
         )}
+
+        <RelatedReading />
 
         <div className="mt-14 pt-10 border-t border-gray-200">
           <h2 className="text-xl font-bold text-foreground mb-6">Frequently Asked Questions</h2>

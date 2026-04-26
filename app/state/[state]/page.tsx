@@ -7,6 +7,7 @@ import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants';
 import { StateListingsClient } from '@/components/StateListingsClient';
 import { RedirectBanner } from '@/components/RedirectBanner';
+import { RelatedReading } from '@/components/RelatedReading';
 import { getFilters, getStateListingsPaginated } from '@/lib/listing-queries';
 import { FEATURES } from '@/lib/features';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
@@ -433,6 +434,8 @@ export default async function StatePage({ params }: StatePageProps) {
               </div>
             </div>
           )}
+
+          <RelatedReading />
 
         </div>
       </div>
