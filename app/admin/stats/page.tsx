@@ -1,9 +1,15 @@
 import { supabase } from '@/lib/supabase';
 import { AdminNav } from '@/components/AdminNav';
+import { US_STATES } from '@/lib/constants';
 import {
   BarChart3, ShieldCheck, Heart, Star, MessageSquareQuote, Trophy,
   Globe, Phone, Navigation, TrendingUp, Users, MapPin,
 } from 'lucide-react';
+
+// Canonical US state codes (50 states + DC) used to dedupe non-US listings
+// from coverage stats — the listings table contains a few Canadian entries
+// (e.g. Ontario) that shouldn't count toward "States Covered".
+const US_STATE_CODES = new Set(US_STATES.map(s => s.code));
 
 export const revalidate = 0; // always fresh for admin
 
@@ -66,9 +72,16 @@ async function getStats() {
     stateCoverageRes,
   ] = await Promise.all([
     supabase.from('listings').select('id', { count: 'exact', head: true }),
-    supabase.from('listings').select('id', { count: 'exact', head: true }).eq('is_touchless', true),
-    supabase.from('listings').select('id', { count: 'exact', head: true }).eq('is_claimed', true),
-    supabase.from('listings').select('id', { count: 'exact', head: true }).eq('is_featured', true),
+    // Match the homepage / about-page count — only approved touchless listings.
+    // Without is_approved=true the count includes held / pending-enrichment
+    // rows that the public site doesn't show, producing the 4,026 vs 3,971
+    // mismatch reported in the dashboard audit.
+    supabase.from('listings').select('id', { count: 'exact', head: true })
+      .eq('is_touchless', true).eq('is_approved', true),
+    supabase.from('listings').select('id', { count: 'exact', head: true })
+      .eq('is_claimed', true).eq('is_approved', true),
+    supabase.from('listings').select('id', { count: 'exact', head: true })
+      .eq('is_featured', true).eq('is_approved', true),
     supabase.from('review_snippets').select('id', { count: 'exact', head: true }),
     supabase.from('blog_posts').select('id', { count: 'exact', head: true }).eq('status', 'published'),
     supabase.from('best_of_metros').select('id', { count: 'exact', head: true }),
@@ -180,7 +193,12 @@ async function getStats() {
     favoriteEvents: favoriteEventsRes.count ?? 0,
     netFavorites: Math.max(0, netFavorites),
     recentEvents: recentEventsRes.count ?? 0,
-    stateCoverage: Array.isArray(stateCoverageRes.data) ? stateCoverageRes.data.length : 0,
+    // Intersect with the canonical US state list so non-US codes (Canadian
+    // "ON" / "Ontario" rows that slipped into the dataset) don't push this
+    // above 51. RPC returns text[] of distinct states with touchless listings.
+    stateCoverage: Array.isArray(stateCoverageRes.data)
+      ? (stateCoverageRes.data as string[]).filter(code => US_STATE_CODES.has(code)).length
+      : 0,
     topFavoritedListings,
     topEngagedListings,
   };
