@@ -1058,7 +1058,14 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
         <div className="relative bg-[#0F2744]">
           {heroImage ? (
             <>
-              <div className="relative h-80 md:h-[26rem] overflow-hidden">
+              {/* Mobile keeps a fixed 320 tall (16:9 of 375px is only 211 —
+                  too short for the title overlay). md+ switches to true
+                  16:9 (matches the cropper's output ratio) with a 44rem
+                  ceiling so the hero doesn't dominate ultra-wide monitors.
+                  Previously the container was a fixed 416 tall on every
+                  desktop breakpoint, which meant 16:9 hero images were
+                  cropping off ~60% of vertical content on wide displays. */}
+              <div className="relative h-80 md:h-auto md:aspect-[16/9] md:max-h-[44rem] overflow-hidden">
                 <Image
                   src={heroImage}
                   alt={listing.name}
