@@ -1,9 +1,9 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import Script from 'next/script';
 import { Inter } from 'next/font/google';
 import { Toaster } from '@/components/ui/toaster';
 import { PublicShell } from '@/components/PublicShell';
+import { AnalyticsScripts } from '@/components/AnalyticsScripts';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -58,31 +58,9 @@ export default function RootLayout({
         <meta name="impact-site-verification" content="f3b814bc-d87d-473f-b3f3-91951d20170e" />
         <link rel="preconnect" href="https://res.cloudinary.com" />
         <link rel="dns-prefetch" href="https://res.cloudinary.com" />
-        {process.env.NODE_ENV === 'production' && (
-          <>
-            <Script
-              src="https://www.googletagmanager.com/gtag/js?id=G-55HHXHEVFP"
-              strategy="lazyOnload"
-            />
-            <Script id="google-analytics" strategy="lazyOnload">
-              {`
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);}
-                gtag('js', new Date());
-                gtag('config', 'G-55HHXHEVFP');
-              `}
-            </Script>
-            {/* Google AdSense loader — required for AdSense approval
-                verification AND for any AdUnit components to serve ads. */}
-            <Script
-              id="adsbygoogle-init"
-              async
-              strategy="afterInteractive"
-              src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2012332157653110"
-              crossOrigin="anonymous"
-            />
-          </>
-        )}
+        {/* GA + AdSense are wrapped in AnalyticsScripts so they don't load
+            on /admin/* pages — admin sessions were skewing GA totals. */}
+        <AnalyticsScripts />
         {/* Google Maps is loaded on-demand by HeroSection when user interacts with search */}
       </head>
       <body className={inter.className}>
