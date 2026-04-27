@@ -61,10 +61,16 @@ async function getCroppedBlob(
     0, 0, srcW, srcH,
   );
 
+  // JPEG at q=0.92 — hero sources are already JPEG (Google Place photos,
+  // user uploads), so PNG-for-lossless was actually harmful: it ballooned
+  // a 4080×3072 crop from ~1MB to ~12MB and tripped Netlify Functions'
+  // 6MB body limit, returning the generic "Internal Error" the user saw.
+  // q=0.92 is visually indistinguishable from PNG for photographic content.
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) => { if (blob) resolve(blob); else reject(new Error('Canvas is empty')); },
-      'image/png',  // Use PNG for lossless quality — no re-compression artifacts
+      'image/jpeg',
+      0.92,
     );
   });
 }
@@ -122,7 +128,7 @@ export function CropModal({ imageUrl, listingId, uploadType = 'hero', onSave, on
     try {
       const blob = await getCroppedBlob(imgRef.current, completedCrop);
       const formData = new FormData();
-      formData.append('file', blob, 'cropped-hero.png');
+      formData.append('file', blob, 'cropped-hero.jpg');
       formData.append('listingId', listingId);
       formData.append('type', uploadType);
 

@@ -38,6 +38,14 @@ const nextConfig = {
         destination: '/blog/benefits-of-touchless-car-washes',
         permanent: true,
       },
+      // Listing slug renames — keep any pre-existing inbound links working.
+      // (Same pattern can be reused if/when other long auto-generated slugs
+      // get cleaned up; not retroactively renaming all of them per policy.)
+      {
+        source: '/state/massachusetts/rutland/sentry-suds-car-wash-13a-pommogussett-rd-rutland-ma-01543-rutland-massachusetts',
+        destination: '/state/massachusetts/rutland/sentry-suds-car-wash',
+        permanent: true,
+      },
     ];
   },
   images: {
