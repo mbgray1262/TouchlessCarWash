@@ -1,6 +1,6 @@
 import { cache, Suspense } from 'react';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
@@ -199,9 +199,15 @@ export default async function StatePage({ params }: StatePageProps) {
 
   const availableFeatures = featureCountsRaw.filter((f): f is { slug: string; name: string; count: number } => f !== null && f.count >= 3);
 
-  // Return proper 404 for states with no listings — prevents Google soft 404s
+  // State has no approved touchless listings (e.g. DC, where every listing
+  // is non-touchless or unapproved). Mirror the city-page pattern: 308
+  // redirect to the all-states index with a flag so RedirectBanner can
+  // explain to the visitor what happened, rather than hard-404ing.
+  // Middleware tags ?from= URLs as noindex so Google won't index the
+  // redirected URL but will still follow the 308 to consolidate any
+  // remaining authority on /states.
   if (totalCount === 0) {
-    notFound();
+    permanentRedirect(`/states?from=empty-state&orig=${encodeURIComponent(params.state)}`);
   }
 
   // Top cities by listing count (citiesData is already sorted desc by count from the RPC)
