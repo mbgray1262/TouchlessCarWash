@@ -21,11 +21,11 @@ function RedirectBannerInner() {
   const [dismissed, setDismissed] = useState(false);
 
   if (dismissed) return null;
-  const VALID = new Set(['removed-listing', 'empty-city', 'closed-permanently', 'closed-temporarily']);
+  const VALID = new Set(['removed-listing', 'empty-city', 'empty-state', 'closed-permanently', 'closed-temporarily']);
   if (!from || !VALID.has(from)) return null;
 
   const name = orig ? decodeURIComponent(orig).replace(/-/g, ' ') : null;
-  const city = orig
+  const place = orig
     ? decodeURIComponent(orig).replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
     : null;
 
@@ -42,8 +42,12 @@ function RedirectBannerInner() {
       ? name
         ? `The listing you followed (${name}) is no longer in our directory. We couldn't verify it as touchless, or the business has closed. Here's the nearest verified touchless wash.`
         : "The listing you followed is no longer in our directory — we couldn't verify it as touchless, or the business has closed. Here's the nearest verified touchless wash."
-      : city
-        ? `We don't have any verified touchless washes in ${city} yet. Here's the nearest city with verified touchless options.`
+    : from === 'empty-state'
+      ? place
+        ? `We don't have any verified touchless car washes in ${place} yet. Here's the full list of states with verified touchless options.`
+        : "We don't have any verified touchless car washes in that state yet. Here's the full list of states with verified touchless options."
+      : place
+        ? `We don't have any verified touchless washes in ${place} yet. Here's the nearest city with verified touchless options.`
         : "We don't have verified touchless washes in the city you searched yet. Here's the nearest city with verified touchless options.";
 
   return (

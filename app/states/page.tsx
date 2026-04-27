@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/supabase';
 import { US_STATES, getStateSlug } from '@/lib/constants';
+import { RedirectBanner } from '@/components/RedirectBanner';
 import type { Metadata } from 'next';
 
 const SITE_URL = 'https://touchlesscarwashfinder.com';
@@ -101,6 +102,7 @@ export default async function StatesPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
+      <RedirectBanner />
 
       <div className="bg-[#0F2744] py-10">
         <div className="container mx-auto px-4 max-w-6xl">
