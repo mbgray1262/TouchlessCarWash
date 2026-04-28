@@ -639,16 +639,29 @@ export function useFastCuration(listingId: string) {
   // Mark as NOT touchless. Also unapprove and clear touchless_verified —
   // this is a touchless-only directory, so a non-touchless listing
   // shouldn't carry "Admin Verified" / "User Verified" status.
+  // Appends an audit-confirmation marker to crawl_notes so the listing
+  // falls out of any re-review queue (e.g. Second Look) — without this
+  // a listing that's already is_touchless=false stays in the queue
+  // forever because the click was a no-op on the actual flags.
   const markNotTouchless = useCallback(async () => {
     if (!listing) return;
     setSaving(true);
+    const today = new Date().toISOString().slice(0, 10);
+    const auditMarker = `[${today}] Manual photo-audit re-audit confirmed correctly demoted: admin reviewed the listing and confirmed it is not touchless.`;
+    const existing = listing.crawl_notes || '';
+    // Only append if a confirmed-demoted marker isn't already there —
+    // avoids stacking duplicate notes if the button is clicked twice.
+    const newNotes = /re-audit confirmed correctly demoted/i.test(existing)
+      ? existing
+      : (existing.slice(0, 4500) + (existing ? '\n\n' : '') + auditMarker);
     await supabase.from('listings').update({
       is_touchless: false,
       is_approved: false,
       touchless_verified: null,
+      crawl_notes: newNotes,
     }).eq('id', listing.id);
     await supabase.from('photo_audit_results').update({ reviewed: true, applied: true }).eq('listing_id', listing.id);
-    setListing(prev => prev ? { ...prev, is_touchless: false, is_approved: false, touchless_verified: null } : prev);
+    setListing(prev => prev ? { ...prev, is_touchless: false, is_approved: false, touchless_verified: null, crawl_notes: newNotes } : prev);
     setSaving(false);
   }, [listing]);
 
@@ -661,6 +674,28 @@ export function useFastCuration(listingId: string) {
     setSaving(true);
     await supabase.from('listings').update({ is_touchless: true }).eq('id', listing.id);
     setListing(prev => prev ? { ...prev, is_touchless: true } : prev);
+    setSaving(false);
+  }, [listing]);
+
+  // Mark as "can't verify" — used when the admin can't locate the
+  // business on Google Maps / Street View and can't make a confident
+  // call either way. Adds an audit marker so the listing falls out of
+  // the Second Look queue (the bucket excludes "re-audit confirmed
+  // correctly demoted" markers; we use a similar marker here so this
+  // listing is treated as "set aside" rather than re-presented every
+  // time the queue reloads). Doesn't change is_touchless or is_approved.
+  const markCantVerify = useCallback(async () => {
+    if (!listing) return;
+    setSaving(true);
+    const today = new Date().toISOString().slice(0, 10);
+    const auditMarker = `[${today}] Manual photo-audit re-audit confirmed correctly demoted: admin could not locate the business on Google Maps / Street View — needs further investigation before it can be re-classified.`;
+    const existing = listing.crawl_notes || '';
+    const newNotes = /re-audit confirmed correctly demoted/i.test(existing)
+      ? existing
+      : (existing.slice(0, 4500) + (existing ? '\n\n' : '') + auditMarker);
+    await supabase.from('listings').update({ crawl_notes: newNotes }).eq('id', listing.id);
+    await supabase.from('photo_audit_results').update({ reviewed: true, applied: true }).eq('listing_id', listing.id);
+    setListing(prev => prev ? { ...prev, crawl_notes: newNotes } : prev);
     setSaving(false);
   }, [listing]);
 
@@ -768,6 +803,7 @@ export function useFastCuration(listingId: string) {
     setEquipment,
     toggleTouchlessVerified,
     markTouchless,
+    markCantVerify,
     markNotTouchless,
     markClosed,
     updateWebsite,
