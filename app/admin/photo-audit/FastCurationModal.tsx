@@ -26,7 +26,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
     tagPhoto, setAsHero, addToGallery, removeFromGallery, removeHero, skipPhoto,
     addCapture, addUpload, addHeroDirect, replaceUrl, updateWebsite, setFallbackHero,
     saveAll, approveAndNext, classifyEquipment, setEquipment,
-    toggleTouchlessVerified, markNotTouchless, markClosed, deleteListing,
+    toggleTouchlessVerified, markNotTouchless, markTouchless, markClosed, deleteListing,
   } = useFastCuration(listingId);
 
   const [cropPhoto, setCropPhoto] = useState<CandidatePhoto | null>(null);
@@ -743,13 +743,29 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
 
           {/* Footer */}
           <div className="flex items-center gap-3 px-6 py-3 border-t bg-gray-50">
-            <button
-              onClick={async () => { await markNotTouchless(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
-              disabled={saving}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-100 hover:bg-orange-200 text-orange-700 text-sm font-medium disabled:opacity-50"
-            >
-              <Ban className="w-4 h-4" /> Not Touchless
-            </button>
+            {/* Bidirectional touchless toggle — flips both directions so an
+                admin can re-promote a previously-demoted listing when they
+                find clear touchless evidence (e.g. "Touch Free" sign in a
+                photo) without having to leave the photo-audit tool. */}
+            {listing.is_touchless === false ? (
+              <button
+                onClick={async () => { await markTouchless(); onUpdate?.(); }}
+                disabled={saving}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-100 hover:bg-green-200 text-green-700 text-sm font-medium disabled:opacity-50"
+                title="Flip this listing's status to Touchless. Approve & Next will then mark it as approved."
+              >
+                <Check className="w-4 h-4" /> Mark Touchless
+              </button>
+            ) : (
+              <button
+                onClick={async () => { await markNotTouchless(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
+                disabled={saving}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-100 hover:bg-orange-200 text-orange-700 text-sm font-medium disabled:opacity-50"
+                title="Mark Not Touchless. Will also unapprove the listing and clear any verified status."
+              >
+                <Ban className="w-4 h-4" /> Not Touchless
+              </button>
+            )}
             <button
               onClick={async () => { await deleteListing(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
               disabled={saving}

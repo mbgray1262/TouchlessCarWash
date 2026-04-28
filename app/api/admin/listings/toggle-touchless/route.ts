@@ -26,9 +26,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // When flipping to NOT touchless: also unapprove + clear the
+    // touchless_verified pill, since this is a touchless-only directory
+    // and a non-touchless listing shouldn't carry "Admin Verified" /
+    // "User Verified" status. When flipping back to touchless, leave
+    // is_approved + touchless_verified for the admin to set explicitly
+    // (we don't auto-approve on a positive flip, since that's a
+    // separate decision).
+    const update: Record<string, unknown> = { is_touchless };
+    if (is_touchless === false) {
+      update.is_approved = false;
+      update.touchless_verified = null;
+    }
+
     const { error, count } = await supabaseAdmin
       .from('listings')
-      .update({ is_touchless }, { count: 'exact' })
+      .update(update, { count: 'exact' })
       .eq('id', listing_id);
 
     if (error) {

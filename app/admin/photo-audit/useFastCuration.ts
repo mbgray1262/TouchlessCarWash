@@ -632,12 +632,31 @@ export function useFastCuration(listingId: string) {
     setListing(prev => prev ? { ...prev, touchless_verified: newValue } : prev);
   }, [listing]);
 
-  // Mark as not touchless
+  // Mark as NOT touchless. Also unapprove and clear touchless_verified —
+  // this is a touchless-only directory, so a non-touchless listing
+  // shouldn't carry "Admin Verified" / "User Verified" status.
   const markNotTouchless = useCallback(async () => {
     if (!listing) return;
     setSaving(true);
-    await supabase.from('listings').update({ is_touchless: false }).eq('id', listing.id);
+    await supabase.from('listings').update({
+      is_touchless: false,
+      is_approved: false,
+      touchless_verified: null,
+    }).eq('id', listing.id);
     await supabase.from('photo_audit_results').update({ reviewed: true, applied: true }).eq('listing_id', listing.id);
+    setListing(prev => prev ? { ...prev, is_touchless: false, is_approved: false, touchless_verified: null } : prev);
+    setSaving(false);
+  }, [listing]);
+
+  // Mark as touchless — used to flip a previously-demoted listing back
+  // when an admin finds clear touchless evidence (e.g. a "Touch Free" sign
+  // visible in a photo). Doesn't auto-approve — the admin still has to
+  // hit Approve & Next once they're satisfied with the photo set.
+  const markTouchless = useCallback(async () => {
+    if (!listing) return;
+    setSaving(true);
+    await supabase.from('listings').update({ is_touchless: true }).eq('id', listing.id);
+    setListing(prev => prev ? { ...prev, is_touchless: true } : prev);
     setSaving(false);
   }, [listing]);
 
@@ -669,11 +688,18 @@ export function useFastCuration(listingId: string) {
     // Set reviewed_at + photo_audited_at timestamps and is_approved=true.
     // photo_audited_at is what filters listings out of the "Unscanned" tab, so
     // approving without setting it would leave them in the queue forever.
+    // If the listing is currently flagged Not Touchless, also flip
+    // is_touchless=true — clicking Approve on a touchless-only directory
+    // is an implicit assertion that the listing IS a touchless car wash.
+    // (Without this, the previous "Not Touchless" state would persist
+    // even after Approve & Next, which surprised the admin.)
     if (listing) {
       const now = new Date().toISOString();
+      const update: Record<string, unknown> = { reviewed_at: now, photo_audited_at: now, is_approved: true };
+      if (listing.is_touchless === false) update.is_touchless = true;
       await supabase
         .from('listings')
-        .update({ reviewed_at: now, photo_audited_at: now, is_approved: true })
+        .update(update)
         .eq('id', listing.id);
     }
 
@@ -737,6 +763,7 @@ export function useFastCuration(listingId: string) {
     classifyEquipment,
     setEquipment,
     toggleTouchlessVerified,
+    markTouchless,
     markNotTouchless,
     markClosed,
     updateWebsite,
