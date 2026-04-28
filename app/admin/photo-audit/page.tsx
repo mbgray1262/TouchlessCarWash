@@ -104,9 +104,32 @@ function EquipmentRow({ result, onApply, onReject, onUndo, onOpenEditor }: {
           </button>
         )}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button onClick={onOpenEditor} className="text-sm font-medium text-gray-800 truncate hover:text-orange-600 transition-colors text-left">{result.listing_name}</button>
             <ListingLink result={result} />
+            {/* Closed-status pill — surfaces in the held-list view so admins
+                can skip closed locations without opening the modal. Source
+                is set by markClosed() in useFastCuration.ts. */}
+            {(() => {
+              const cs = result.listing_classification_source || '';
+              if (/closed_permanently/i.test(cs)) {
+                return (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-100 text-red-700" title="Permanently closed — skip review">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                    Permanently Closed
+                  </span>
+                );
+              }
+              if (/closed_temporarily/i.test(cs)) {
+                return (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-800" title="Temporarily closed — skip review">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                    Temporarily Closed
+                  </span>
+                );
+              }
+              return null;
+            })()}
           </div>
           <p className="text-xs text-gray-500">{result.listing_city}, {result.listing_state}</p>
           {hasEquipment ? (

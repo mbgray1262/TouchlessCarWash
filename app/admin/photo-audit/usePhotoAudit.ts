@@ -27,6 +27,11 @@ export interface AuditResult {
   listing_state?: string;
   listing_slug?: string;
   listing_parent_chain?: string | null;
+  // Surfaces a Closed pill in the held queue so admins can skip
+  // permanently/temporarily-closed locations without opening the
+  // modal. Set by markClosed() to closed_permanently_admin or
+  // closed_temporarily_admin.
+  listing_classification_source?: string | null;
 }
 
 export interface BatchJob {
@@ -388,7 +393,7 @@ export function usePhotoAudit() {
 
       const { data: heldListings } = await supabase
         .from('listings')
-        .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
+        .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain, classification_source')
         .eq('is_touchless', true).eq('is_approved', false)
         // Prioritize: no hero first (they need the most attention), then oldest-touched
         .order('hero_image', { ascending: true, nullsFirst: true })
@@ -426,6 +431,7 @@ export function usePhotoAudit() {
           google_photos_added: 0,
           google_photos_screened: 0,
           listing_parent_chain: l.parent_chain ?? null,
+          listing_classification_source: (l as { classification_source?: string | null }).classification_source ?? null,
         });
       }
 
