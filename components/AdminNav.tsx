@@ -44,7 +44,11 @@ const navigation: NavEntry[] = [
       // Photo Audit (which has Unscanned / Held / All / No Hero filters + manual
       // curator). Keeping the pages accessible via direct URL for now but
       // removing from the nav so admin has one clear place to do photo work.
-      { href: '/admin/bulk-verify', label: 'Bulk Verify', icon: ShieldCheck },
+      // Bulk Verify also hidden (April 2026) — its keyword-only Name Pre-Scan
+      // and Firecrawl/Claude pipeline are too coarse for current quality
+      // standards (mixed-facility, tunnel-chain blocklist, self-serve URL
+      // suffixes). Photo Audit's Second Look + Tag Whole Chain replace it.
+      // Page kept accessible via direct URL.
       { href: '/admin/touchless-cleanup', label: 'Touchless Cleanup', icon: ShieldCheck },
       { href: '/admin/filters', label: 'Filters', icon: Filter },
     ],
