@@ -411,6 +411,26 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                   const isApproved = listing.is_approved === true;
                   const wasReverted = /\bREVERTED\b/i.test(rawNotes);
                   const isHeld = isReverted === false && isApproved === false;
+                  // Closed status is set by markClosed() in useFastCuration.ts
+                  // (touched via the "Closed" dropdown in the modal footer).
+                  // Surface a clear badge so the held queue can be triaged
+                  // quickly — admins can skip closed locations.
+                  const closedSource = listing.classification_source || '';
+                  const closedPermanent = /closed_permanently/i.test(closedSource);
+                  const closedTemporary = /closed_temporarily/i.test(closedSource);
+                  if (closedPermanent || closedTemporary) {
+                    return (
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium cursor-help ${
+                          closedPermanent ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'
+                        }`}
+                        title={rawNotes || (closedPermanent ? 'Permanently closed — skip review' : 'Temporarily closed — skip review')}
+                      >
+                        <span className={`w-2 h-2 rounded-full ${closedPermanent ? 'bg-red-500' : 'bg-amber-500'}`} />
+                        {closedPermanent ? 'Permanently Closed' : 'Temporarily Closed'}
+                      </span>
+                    );
+                  }
                   if (isReverted) {
                     return (
                       <span

@@ -49,6 +49,10 @@ interface ListingData {
   is_approved: boolean | null;
   is_touchless: boolean | null;
   crawl_notes: string | null;
+  // Set by markClosed() to one of 'closed_permanently_admin' /
+  // 'closed_temporarily_admin' / other classification labels. Read by
+  // FastCurationModal to surface a Closed status badge.
+  classification_source: string | null;
 }
 
 interface SourceCounts {
