@@ -27,6 +27,7 @@ import { streetAddress, hasStreetAddress } from '@/lib/utils';
 import { DEFAULT_OG_IMAGE, ensureHttps, truncateDescription } from '@/lib/seo';
 import { getChainBrandImage } from '@/lib/chain-brand-images';
 import { isThinListing } from '@/lib/listing-quality';
+import { getOfficialStreetViewUrl, buildPlacePageUrl } from '@/lib/streetview-link';
 
 
 import type { Metadata } from 'next';
@@ -1015,6 +1016,21 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     ? new Date(listing.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     : null;
 
+  // Resolve a Street View URL that won't drop the visitor inside an
+  // adjacent business's user-uploaded 360° interior. If Google's own
+  // outdoor pano exists at this address, we link directly to its
+  // pano_id; otherwise we fall back to the listing's Google Maps
+  // place page (which has photos / reviews / a Street View tab the
+  // user can browse manually). See lib/streetview-link.ts for why.
+  const streetViewUrl = (await getOfficialStreetViewUrl(listing.latitude, listing.longitude))
+    ?? buildPlacePageUrl({
+      placeId: listing.google_place_id,
+      address: listing.address,
+      city: listing.city,
+      state: listing.state,
+      zip: listing.zip,
+    });
+
   const ratingStars = listing.rating > 0 ? (
     <span className="flex items-center gap-1.5">
       <StarRating rating={listing.rating} />
@@ -1568,32 +1584,20 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                           View on Google
                         </a>
                       )}
-                      {listing.latitude && listing.longitude ? (
-                        <a
-                          // Always use the `viewpoint` pano format. The place_id + `layer=c&cbll`
-                          // combo sounds safer but Google's nearest-pano picker frequently lands
-                          // on indoor panos captured inside adjacent businesses (e.g. Parma
-                          // LaserWash → drops the viewer inside a random building). The
-                          // `map_action=pano&viewpoint=` form prefers outdoor street-level panos.
-                          href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${listing.latitude},${listing.longitude}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 py-2 rounded-lg transition-colors"
-                        >
-                          <MapPin className="w-3 h-3" />
-                          Street View
-                        </a>
-                      ) : (
-                        <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${streetAddress(listing.address, listing.city, listing.state, listing.zip)}, ${listing.city}, ${listing.state} ${listing.zip}`)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 py-2 rounded-lg transition-colors"
-                        >
-                          <MapPin className="w-3 h-3" />
-                          Open Map
-                        </a>
-                      )}
+                      <a
+                        // streetViewUrl is resolved server-side: pinned to a
+                        // Google-official pano_id when one exists at this
+                        // address, otherwise the place page (with photos,
+                        // reviews, and a Street View tab to browse manually).
+                        // See lib/streetview-link.ts.
+                        href={streetViewUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 py-2 rounded-lg transition-colors"
+                      >
+                        <MapPin className="w-3 h-3" />
+                        {streetViewUrl.includes('map_action=pano') ? 'Street View' : 'View on Map'}
+                      </a>
                     </div>
                   </div>
                 )}
