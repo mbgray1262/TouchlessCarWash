@@ -1080,8 +1080,15 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                   ceiling so the hero doesn't dominate ultra-wide monitors.
                   Previously the container was a fixed 416 tall on every
                   desktop breakpoint, which meant 16:9 hero images were
-                  cropping off ~60% of vertical content on wide displays. */}
-              <div className="relative h-80 md:h-auto md:aspect-[16/9] md:max-h-[44rem] overflow-hidden">
+                  cropping off ~60% of vertical content on wide displays.
+                  `w-full` is critical: without it, on ultrawide displays
+                  the `aspect-[16/9]` + `max-h-[44rem]` pair conflict, and
+                  the browser shrinks WIDTH (not height) to honor 16:9
+                  under the height cap — producing a hero that only fills
+                  ~65% of the screen with dark navy bg leaking through on
+                  the right. Pinning w-full forces the cap to take from
+                  height only, and object-cover handles the crop. */}
+              <div className="relative h-80 w-full md:h-auto md:aspect-[16/9] md:max-h-[44rem] overflow-hidden">
                 <Image
                   src={heroImage}
                   alt={listing.name}
