@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useCallback, useState, useRef } from 'react';
-import { X, ExternalLink, Check, CheckCheck, Ban, Trash2, Sparkles, Loader2, Plus, RefreshCw, Upload } from 'lucide-react';
+import { X, ExternalLink, Check, CheckCheck, Ban, Trash2, Sparkles, Loader2, Plus, RefreshCw, Upload, HelpCircle } from 'lucide-react';
 import { useFastCuration, type CandidatePhoto } from './useFastCuration';
 import { PhotoGrid } from './PhotoGrid';
 import { CropModal } from '../hero-review/CropModal';
@@ -26,7 +26,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
     tagPhoto, setAsHero, addToGallery, removeFromGallery, removeHero, skipPhoto,
     addCapture, addUpload, addHeroDirect, replaceUrl, updateWebsite, setFallbackHero,
     saveAll, approveAndNext, classifyEquipment, setEquipment,
-    toggleTouchlessVerified, markNotTouchless, markTouchless, markClosed, deleteListing,
+    markNotTouchless, markCantVerify, markClosed, deleteListing,
   } = useFastCuration(listingId);
 
   const [cropPhoto, setCropPhoto] = useState<CandidatePhoto | null>(null);
@@ -761,42 +761,35 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
             {/* Equipment section moved into PhotoGrid via equipmentSlot */}
           </div>
 
-          {/* Footer */}
-          <div className="flex items-center gap-3 px-6 py-3 border-t bg-gray-50">
-            {/* Bidirectional touchless toggle — flips both directions so an
-                admin can re-promote a previously-demoted listing when they
-                find clear touchless evidence (e.g. "Touch Free" sign in a
-                photo) without having to leave the photo-audit tool. */}
-            {listing.is_touchless === false ? (
-              <button
-                onClick={async () => { await markTouchless(); onUpdate?.(); }}
-                disabled={saving}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-100 hover:bg-green-200 text-green-700 text-sm font-medium disabled:opacity-50"
-                title="Flip this listing's status to Touchless. Approve & Next will then mark it as approved."
-              >
-                <Check className="w-4 h-4" /> Mark Touchless
-              </button>
-            ) : (
-              <button
-                onClick={async () => { await markNotTouchless(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
-                disabled={saving}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-100 hover:bg-orange-200 text-orange-700 text-sm font-medium disabled:opacity-50"
-                title="Mark Not Touchless. Will also unapprove the listing and clear any verified status."
-              >
-                <Ban className="w-4 h-4" /> Not Touchless
-              </button>
-            )}
+          {/* Footer — refactored for clarity. Three groups, single row:
+              1) Decisions (left)  ❌ Not Touchless / ❓ Can't Verify / 🔒 Closed ▾
+              2) Helpers (middle)  🌐 Website / 📍 Maps / 💬 Reviews
+              3) Primary action (right) ✅ context-adapts: "Mark Touchless &
+                 Approve →" when is_touchless=false, "Approve & Next →"
+                 when is_touchless=true. Same handler either way —
+                 approveAndNext() flips is_touchless when needed.
+              Removed: Save, Save & Next, Verify, Mark Touchless toggle.
+              These were redundant or rarely-used; their work is covered
+              by the primary action (auto-saves + auto-flips) or by
+              clicking the verified pill in the header. */}
+          <div className="flex items-center gap-2 px-6 py-3 border-t bg-gray-50 flex-wrap">
+            {/* === Group 1: decisions === */}
             <button
-              onClick={async () => { await deleteListing(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
+              onClick={async () => { await markNotTouchless(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
               disabled={saving}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 text-sm font-medium disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-100 hover:bg-orange-200 text-orange-700 text-sm font-medium disabled:opacity-50"
+              title="Confirm this listing is not touchless. Removes it from the Second Look queue."
             >
-              <Trash2 className="w-4 h-4" /> Delete
+              <Ban className="w-4 h-4" /> Not Touchless
             </button>
-
-            {/* Closed — click-driven dropdown with Permanent / Temporary.
-                Permanent: business is gone for good; 301 redirect to nearest city.
-                Temporary: business is currently closed (renovation, season); same redirect. */}
+            <button
+              onClick={async () => { await markCantVerify(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium disabled:opacity-50"
+              title="Can't locate the business on Google Maps / Street View. Sets it aside for later — won't reappear in the Second Look queue."
+            >
+              <HelpCircle className="w-4 h-4" /> Can't Verify
+            </button>
             <div className="relative" ref={closedMenuRef}>
               <button
                 onClick={() => setClosedMenuOpen(o => !o)}
@@ -804,7 +797,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                 aria-haspopup="menu"
                 aria-expanded={closedMenuOpen}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-sm font-medium disabled:opacity-50 border border-red-200"
-                title="Mark this location as closed. Unapproves the listing so its URL redirects to the nearest city with a 'closed' banner."
+                title="Mark this location as closed. Unapproves and redirects the URL to the nearest city."
               >
                 <Ban className="w-4 h-4" /> Closed ▾
               </button>
@@ -841,27 +834,27 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
               )}
             </div>
 
+            {/* === Spacer === */}
             <div className="flex-1" />
 
+            {/* === Group 2: helpers === */}
             <div className="relative group">
               <button
                 onClick={() => listing.website ? window.open(listing.website, '_blank') : null}
-                className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm ${
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs ${
                   listing.website
-                    ? 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    ? 'bg-white hover:bg-gray-100 text-gray-600 border border-gray-200'
                     : 'bg-gray-50 text-gray-400 border border-dashed border-gray-300'
                 }`}
+                title={listing.website || 'No website on file'}
               >
-                {listing.website ? 'Website' : 'No Website'}
+                🌐 {listing.website ? 'Website' : 'No site'}
               </button>
-              {/* Edit/Delete dropdown on hover */}
               <div className="absolute bottom-full left-0 mb-1 hidden group-hover:flex gap-1 bg-white border rounded-lg shadow-lg p-1 z-10">
                 <button
                   onClick={() => {
                     const newUrl = prompt('Enter website URL (or leave empty to remove):', listing.website || '');
-                    if (newUrl !== null) {
-                      updateWebsite(newUrl.trim() || null);
-                    }
+                    if (newUrl !== null) updateWebsite(newUrl.trim() || null);
                   }}
                   className="px-2 py-1 text-xs rounded bg-blue-50 hover:bg-blue-100 text-blue-700 whitespace-nowrap"
                 >
@@ -869,9 +862,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                 </button>
                 {listing.website && (
                   <button
-                    onClick={() => {
-                      if (confirm('Remove website URL?')) updateWebsite(null);
-                    }}
+                    onClick={() => { if (confirm('Remove website URL?')) updateWebsite(null); }}
                     className="px-2 py-1 text-xs rounded bg-red-50 hover:bg-red-100 text-red-700 whitespace-nowrap"
                   >
                     🗑 Remove
@@ -882,83 +873,85 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
             {listing.google_place_id && (
               <button
                 onClick={() => window.open(`https://www.google.com/maps/place/?q=place_id:${listing.google_place_id}`, '_blank')}
-                className="flex items-center gap-1 px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white hover:bg-gray-100 text-gray-600 border border-gray-200 text-xs"
+                title="Open the business on Google Maps"
               >
-                Google Maps
+                📍 Maps
               </button>
             )}
             <button
               onClick={() => {
                 if (listing.google_place_id) {
-                  // Open directly to reviews tab via place_id (exact match, no ambiguity)
                   window.open(`https://www.google.com/maps/place/?q=place_id:${listing.google_place_id}&hl=en#reviews`, '_blank');
                 } else {
-                  // Include full street address so Google doesn't pick the nearest unrelated business
                   const addrParts = [listing.address, listing.city, listing.state, listing.zip].filter(Boolean).join(', ');
                   const query = encodeURIComponent(`${listing.name} ${addrParts}`);
                   window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
                 }
               }}
-              className="flex items-center gap-1 px-3 py-2 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 text-sm"
-              title={listing.google_place_id ? 'Open exact Google listing reviews' : 'No Google place_id — searching by address (may show nearest match if business not on Maps)'}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white hover:bg-gray-100 text-gray-600 border border-gray-200 text-xs"
+              title={listing.google_place_id ? 'Open Google reviews for this exact listing' : 'No Google place_id — will search by address (may not match exactly)'}
             >
-              Reviews{!listing.google_place_id ? ' ⚠' : ''}
+              💬 Reviews{!listing.google_place_id ? ' ⚠' : ''}
             </button>
             <button
-              onClick={toggleTouchlessVerified}
-              className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                listing.touchless_verified === 'admin'
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-              }`}
-              title={listing.touchless_verified === 'admin' ? 'Click to un-verify' : 'Mark as admin verified touchless'}
+              onClick={async () => { if (confirm('Permanently delete this listing? This cannot be undone.')) { await deleteListing(); onUpdate?.(); if (onNext) onNext(); else onClose(); } }}
+              disabled={saving}
+              className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-white hover:bg-red-50 text-gray-400 hover:text-red-600 border border-gray-200 hover:border-red-200 text-xs disabled:opacity-50"
+              title="Delete this listing entirely (rare — use only for spam / non-businesses)"
             >
-              <Check className="w-4 h-4" />
-              {listing.touchless_verified === 'admin' ? 'Verified' : 'Verify'}
+              <Trash2 className="w-3.5 h-3.5" />
             </button>
 
+            {/* Vertical separator before nav/primary group */}
+            <span className="w-px h-6 bg-gray-300 mx-1" />
+
+            {/* === Navigation === */}
             {onPrev && (
               <button
                 onClick={async () => { await saveAll(); onUpdate?.(); onPrev(); }}
                 disabled={saving}
-                className="flex items-center gap-1 px-3 py-2.5 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium disabled:opacity-50 transition-colors"
+                className="flex items-center gap-1 px-2.5 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm disabled:opacity-50"
+                title="Save edits and go to previous listing"
               >
-                ← Prev
+                ←
               </button>
             )}
             {onNext && (
               <button
                 onClick={async () => { await saveAll(); onUpdate?.(); onNext(); }}
                 disabled={saving}
-                className="flex items-center gap-1 px-3 py-2.5 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium disabled:opacity-50 transition-colors"
-                title="Save and go to next"
+                className="flex items-center gap-1 px-3 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium disabled:opacity-50"
+                title="Save edits and skip to next listing without making a touchless decision"
               >
-                Next →
+                Skip →
               </button>
             )}
-            <button
-              onClick={handleSaveOnly}
-              disabled={saving}
-              className="flex items-center gap-1 px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium shadow-sm disabled:opacity-50 transition-colors"
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-              {saving ? 'Saving...' : 'Save'}
-            </button>
-            <button
-              onClick={handleSaveAndNext}
-              disabled={saving}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-semibold shadow-sm disabled:opacity-50 transition-colors"
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-              {saving ? 'Saving...' : 'Save & Next →'}
-            </button>
+
+            {/* === Primary action === Context-adapts: when listing is
+                Not Touchless, this is the "make this touchless and approve
+                in one click" path. When already Touchless, it's the
+                standard approve-photos-and-publish path. */}
             <button
               onClick={handleApproveAndNext}
               disabled={saving}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold shadow-sm disabled:opacity-50 transition-colors"
+              className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold shadow-sm disabled:opacity-50 transition-colors ${
+                listing.is_touchless === false
+                  ? 'bg-green-600 hover:bg-green-700 text-white'
+                  : 'bg-violet-600 hover:bg-violet-700 text-white'
+              }`}
+              title={
+                listing.is_touchless === false
+                  ? 'Mark this listing as Touchless, approve it for the public site, and advance to the next listing.'
+                  : 'Approve this listing for the public site and advance to the next listing.'
+              }
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCheck className="w-4 h-4" />}
-              {saving ? 'Saving...' : 'Approve & Next →'}
+              {saving
+                ? 'Saving...'
+                : listing.is_touchless === false
+                  ? 'Mark Touchless & Approve →'
+                  : 'Approve & Next →'}
             </button>
           </div>
         </div>
