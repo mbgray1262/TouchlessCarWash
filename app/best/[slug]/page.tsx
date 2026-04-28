@@ -1,5 +1,5 @@
 import { cache } from 'react';
-import { notFound } from 'next/navigation';
+import { permanentRedirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Star, MapPin, Phone, Award, CheckCircle, ChevronRight, Trophy, MessageSquareQuote, Sparkles } from 'lucide-react';
@@ -219,14 +219,19 @@ function getRankColor(rank: number): string {
 
 export default async function BestOfMetroPage({ params }: BestOfPageProps) {
   const metro = getMetroBySlug(params.slug);
-  if (!metro) notFound();
+  // Unknown metro slug → 308 to /best index instead of hard 404.
+  if (!metro) permanentRedirect('/best?from=unknown-metro');
 
   const allListings = await getMetroListings(metro);
-  // Minimum 3 listings to make a meaningful "best-of" page. Below that, 404.
-  // Bumped from 5 → 3 so small metros (e.g. Grants Pass, which has 4) get
-  // indexable pages. Lifting too low risks Google flagging thin content, so
-  // 3 is the floor.
-  if (allListings.length < 3) notFound();
+  // Minimum 3 listings to make a meaningful "best-of" page. Below that we
+  // 308 to the metro's primary state hub (or /best index as fallback) —
+  // gives Google a clean redirect signal instead of a 404 for thin metros.
+  if (allListings.length < 3) {
+    // Send to the metro's primary state hub if available; else /best index.
+    const primaryState = metro.states?.[0];
+    const stateSlug = primaryState ? getStateSlug(primaryState) : null;
+    permanentRedirect(stateSlug ? `/state/${stateSlug}?from=thin-metro` : '/best?from=thin-metro');
+  }
 
   const listingIds = allListings.map((l) => l.id);
   const touchlessReviewCounts = await getTouchlessReviewCounts(listingIds);

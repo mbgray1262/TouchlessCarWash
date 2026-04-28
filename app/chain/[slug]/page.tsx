@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { permanentRedirect } from 'next/navigation';
 import { ChevronRight, MapPin } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
@@ -83,10 +83,17 @@ export async function generateMetadata({ params }: ChainPageProps): Promise<Meta
 
 export default async function ChainPage({ params }: ChainPageProps) {
   const chain = getChainBySlug(params.slug);
-  if (!chain) notFound();
+  // Unknown chain slug → 308 to /chains (the chain index). Avoids hard 404
+  // for any old/typo URLs Google may have indexed; preserves any link equity.
+  if (!chain) permanentRedirect('/chains?from=unknown-chain');
 
   const listings = await getChainListings(chain.name);
-  if (listings.length === 0) notFound();
+  // Chain exists in the registry but has 0 active touchless listings (every
+  // location was either reverted, demoted, or deleted). 308 to /chains so
+  // Google sees a clean redirect instead of a 404 — matters for AdSense
+  // crawl-health signals and for old GSC-indexed URLs that pre-date the
+  // mass chain noindex on April 20.
+  if (listings.length === 0) permanentRedirect('/chains?from=empty-chain');
 
   const heroImage = getChainHeroImage(chain.name);
 
