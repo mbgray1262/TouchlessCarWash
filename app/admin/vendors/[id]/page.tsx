@@ -319,14 +319,42 @@ export default function VendorDetailPage() {
     const next = listing.is_touchless === true ? false : listing.is_touchless === false ? null : true;
     setTogglingTouchless(listing.id);
     try {
+      // The listing detail page redirects to the city hub whenever
+      // `!is_touchless || !is_approved`, so flipping is_touchless alone
+      // isn't enough to make a listing reachable again. Sync is_approved
+      // (and clear touchless_verified when reverting) so the admin's
+      // intent on this page actually publishes/unpublishes the listing.
+      const update: Record<string, unknown> = { is_touchless: next };
+      if (next === true) {
+        // Admin explicitly marked this Touchless on the Vendors page →
+        // publish it. (Keep any existing touchless_verified pill.)
+        update.is_approved = true;
+      } else {
+        // Not Touchless or Unknown → unpublish + clear verified pill.
+        update.is_approved = false;
+        update.touchless_verified = null;
+      }
       const { error } = await supabase
         .from('listings')
-        .update({ is_touchless: next })
+        .update(update)
         .eq('id', listing.id);
       if (error) throw error;
       setListings((prev) => prev.map((l) => l.id === listing.id ? { ...l, is_touchless: next } : l));
       const label = next === true ? 'Touchless' : next === false ? 'Not Touchless' : 'Unknown';
       toast({ title: 'Updated', description: `${listing.name} set to ${label}` });
+
+      // Purge Netlify CDN cache for the listing's detail page so the
+      // change shows up immediately when the admin clicks through.
+      // Best-effort — failures are silent.
+      const stateSlugForPath = (listing.state || '').toLowerCase().replace(/\s+/g, '-');
+      const citySlugForPath = (listing.city || '').toLowerCase().replace(/\s+/g, '-');
+      if (listing.slug && stateSlugForPath && citySlugForPath) {
+        fetch('/api/revalidate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: `/state/${stateSlugForPath}/${citySlugForPath}/${listing.slug}` }),
+        }).catch(() => {});
+      }
     } catch (err) {
       toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to update', variant: 'destructive' });
     } finally {
