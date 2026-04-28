@@ -76,7 +76,7 @@ export interface LowResListing {
   hero_image_source: string | null;
 }
 
-export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup' | 'no_hero' | 'low_res' | 'held' | 'unscanned';
+export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup' | 'no_hero' | 'low_res' | 'held' | 'unscanned' | 'second_look';
 
 const POLL_INTERVAL = 3000; // 3 seconds — fast enough to show per-listing progress
 const PAGE_SIZE = 25;
@@ -120,13 +120,14 @@ export function usePhotoAudit() {
   const [noHeroCount, setNoHeroCount] = useState(0);
   const [filteredTotal, setFilteredTotal] = useState(0);
   const [heldCount, setHeldCount] = useState(0);
+  const [secondLookCount, setSecondLookCount] = useState(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const continuingRef = useRef(false);
 
   const [noHeroUnprocessed, setNoHeroUnprocessed] = useState(0);
 
   const loadQueueStats = useCallback(async () => {
-    const [totalRes, auditedRes, noHeroRes, noHeroUnprocessedRes, heldRes] = await Promise.all([
+    const [totalRes, auditedRes, noHeroRes, noHeroUnprocessedRes, heldRes, secondLookRes] = await Promise.all([
       // Total = ALL touchless listings (including chain brand locations with null hero_image)
       supabase.from('listings').select('id', { count: 'exact', head: true })
         .eq('is_touchless', true),
@@ -141,6 +142,14 @@ export function usePhotoAudit() {
       // Held = touchless + not approved (admin review queue)
       supabase.from('listings').select('id', { count: 'exact', head: true })
         .eq('is_touchless', true).eq('is_approved', false),
+      // Second Look = independent (non-chain) listings reverted by the
+      // mass-restore that didn't have strong enough touchless signals to
+      // re-promote automatically. Excludes ones already audit-confirmed
+      // demoted in the Apr 27 / 28 audit passes — those are settled.
+      supabase.from('listings').select('id', { count: 'exact', head: true })
+        .eq('is_touchless', false).eq('is_approved', false).is('parent_chain', null)
+        .ilike('crawl_notes', '%mass-restore%')
+        .not('crawl_notes', 'ilike', '%re-audit confirmed correctly demoted%'),
     ]);
 
     const total = totalRes.count ?? 0;
@@ -148,6 +157,7 @@ export function usePhotoAudit() {
     setNoHeroCount(noHeroRes.count ?? 0);
     setNoHeroUnprocessed(noHeroUnprocessedRes.count ?? 0);
     setHeldCount(heldRes.count ?? 0);
+    setSecondLookCount(secondLookRes.count ?? 0);
     setQueueStats({
       totalUntagged: total,
       alreadyAudited: audited,
@@ -437,6 +447,73 @@ export function usePhotoAudit() {
 
       setResults(allResults);
       setFilteredTotal(totalHeld ?? 0);
+      setLoading(false);
+      return;
+    }
+
+    // "second_look" filter: independent (non-chain) listings reverted by
+    // the Apr 19 mass-restore that didn't have strong enough touchless
+    // signals to re-promote automatically (and weren't already audit-
+    // confirmed as correctly demoted). Manual review queue — admin
+    // grinds through these to find missed touchless listings.
+    if (filter === 'second_look') {
+      const { count: totalSecondLook } = await supabase
+        .from('listings')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_touchless', false)
+        .eq('is_approved', false)
+        .is('parent_chain', null)
+        .ilike('crawl_notes', '%mass-restore%')
+        .not('crawl_notes', 'ilike', '%re-audit confirmed correctly demoted%');
+
+      // Order: prioritize listings with the most customer evidence first
+      // (rating + reviews → more likely to be a real, trafficked business
+      // worth re-evaluating). Listings with zero data sink to the bottom.
+      const { data: rows } = await supabase
+        .from('listings')
+        .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain, classification_source, rating, review_count, touchless_evidence')
+        .eq('is_touchless', false)
+        .eq('is_approved', false)
+        .is('parent_chain', null)
+        .ilike('crawl_notes', '%mass-restore%')
+        .not('crawl_notes', 'ilike', '%re-audit confirmed correctly demoted%')
+        .order('review_count', { ascending: false, nullsFirst: false })
+        .order('rating', { ascending: false, nullsFirst: false })
+        .range(offset, offset + PAGE_SIZE - 1);
+
+      const allResults: AuditResult[] = [];
+      for (const l of rows ?? []) {
+        const hasHero = !!l.hero_image;
+        const hasGallery = (l.photos ?? []).length > 0;
+        const quality = hasHero ? 'has_hero_needs_approval' : (hasGallery ? 'has_candidates' : 'missing');
+        allResults.push({
+          id: `secondlook-${l.id}`,
+          listing_id: l.id,
+          listing_name: l.name,
+          listing_city: l.city,
+          listing_state: l.state,
+          listing_hero: l.hero_image,
+          hero_quality: quality,
+          equipment_brand: l.equipment_brand,
+          equipment_model: l.equipment_model,
+          equipment_confidence: null,
+          equipment_source_photo: null,
+          suggested_hero_url: null,
+          suggested_hero_reason: l.touchless_evidence ?? 'No evidence on file — verify manually',
+          photos_to_remove: [],
+          reviewed: false,
+          applied: false,
+          created_at: '',
+          raw_response: null,
+          google_photos_added: 0,
+          google_photos_screened: 0,
+          listing_parent_chain: null,
+          listing_classification_source: (l as { classification_source?: string | null }).classification_source ?? null,
+        });
+      }
+
+      setResults(allResults);
+      setFilteredTotal(totalSecondLook ?? 0);
       setLoading(false);
       return;
     }
@@ -874,6 +951,7 @@ export function usePhotoAudit() {
     noHeroCount,
     noHeroUnprocessed,
     heldCount,
+    secondLookCount,
     // No Hero tab sub-filter ('all' | 'non_chain' | 'chain_only')
     noHeroSubFilter,
     setNoHeroSubFilter: (sub: 'all' | 'non_chain' | 'chain_only') => {
