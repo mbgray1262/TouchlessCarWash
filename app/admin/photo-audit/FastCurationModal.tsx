@@ -312,9 +312,16 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
         return;
       }
       alert(`Tagged ${execResult.updated} listings as Not Touchless.`);
+      // Trigger the page-level reload, then CLOSE the modal rather than
+      // advancing via onNext. onNext walks the in-memory results array,
+      // which still contains all the chain siblings we just tagged in
+      // the DB — clicking Next here would land on another listing of
+      // the same chain. Closing forces the admin back to the freshly-
+      // reloaded queue list, where they can click into the next real
+      // candidate. (Single-listing actions like markNotTouchless can
+      // still safely use onNext because only one row is removed.)
       onUpdate?.();
-      if (onNext) onNext();
-      else onClose();
+      onClose();
     } catch (err) {
       alert(`Error: ${err instanceof Error ? err.message : String(err)}`);
     }
