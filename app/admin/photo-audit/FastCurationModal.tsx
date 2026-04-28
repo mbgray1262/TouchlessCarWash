@@ -252,6 +252,59 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
     await approveAndNext(onUpdate, onNext, onClose);
   };
 
+  /**
+   * Bulk-tag every listing sharing this business name as Not Touchless.
+   * Two-phase: ask the server how many would be affected, surface a
+   * confirm() with the count and a sample, then execute. Useful when
+   * the admin discovers an entire chain isn't touchless and wants to
+   * clear it from the Second Look queue in one click.
+   */
+  const handleTagChainNotTouchless = async () => {
+    if (!listing) return;
+    try {
+      // Phase 1: preview
+      const previewRes = await fetch('/api/admin/listings/tag-chain-not-touchless', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: listing.name, confirm: false }),
+      });
+      const preview = await previewRes.json();
+      if (!previewRes.ok) {
+        alert(`Could not preview: ${preview.error ?? previewRes.statusText}`);
+        return;
+      }
+      const count = preview.match_count ?? 0;
+      if (count === 0) {
+        alert('No matching listings found for this name.');
+        return;
+      }
+      const sampleStr = (preview.sample ?? []).map((s: string) => `  • ${s}`).join('\n');
+      const confirmMsg =
+        `Tag ALL ${count} listings named "${listing.name}" as Not Touchless?\n\n` +
+        `Sample:\n${sampleStr}${count > 5 ? `\n  …and ${count - 5} more` : ''}\n\n` +
+        `Each listing will be set is_touchless=false, is_approved=false, and removed from the Second Look queue.`;
+      if (!confirm(confirmMsg)) return;
+
+      // Phase 2: execute
+      const execRes = await fetch('/api/admin/listings/tag-chain-not-touchless', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: listing.name, confirm: true, source_listing_id: listing.id }),
+      });
+      const execResult = await execRes.json();
+      if (!execRes.ok) {
+        alert(`Bulk-tag failed: ${execResult.error ?? execRes.statusText}`);
+        return;
+      }
+      alert(`Tagged ${execResult.updated} listings as Not Touchless.`);
+      onUpdate?.();
+      if (onNext) onNext();
+      else onClose();
+    } catch (err) {
+      alert(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  };
+
   const handleCrop = (photo: CandidatePhoto) => {
     setCropPhoto(photo);
   };
@@ -781,6 +834,14 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
               title="Confirm this listing is not touchless. Removes it from the Second Look queue."
             >
               <Ban className="w-4 h-4" /> Not Touchless
+            </button>
+            <button
+              onClick={handleTagChainNotTouchless}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 text-sm font-medium disabled:opacity-50 border border-orange-200"
+              title={`Tag every listing named "${listing.name}" as Not Touchless — for when an entire chain is confirmed not touchless. Shows a count + sample before applying.`}
+            >
+              <Ban className="w-4 h-4" /> Tag Whole Chain
             </button>
             <button
               onClick={async () => { await markCantVerify(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
