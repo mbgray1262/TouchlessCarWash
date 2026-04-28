@@ -253,11 +253,15 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
   };
 
   /**
-   * Bulk-tag every listing sharing this business name as Not Touchless.
-   * Two-phase: ask the server how many would be affected, surface a
-   * confirm() with the count and a sample, then execute. Useful when
-   * the admin discovers an entire chain isn't touchless and wants to
-   * clear it from the Second Look queue in one click.
+   * Bulk-tag every listing sharing this business name (or chain prefix)
+   * as Not Touchless. Two-phase: ask the server for a count + variant
+   * breakdown, surface a confirm() showing what will be affected, then
+   * execute. Useful when the admin discovers an entire chain isn't
+   * touchless and wants to clear it from the Second Look queue.
+   *
+   * The server detects the "Chain - Location" pattern and matches by
+   * prefix when applicable, so a click on "El Car Wash - Hialeah
+   * Gardens" finds all 89 "El Car Wash - X" variants.
    */
   const handleTagChainNotTouchless = async () => {
     if (!listing) return;
@@ -273,15 +277,26 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
         alert(`Could not preview: ${preview.error ?? previewRes.statusText}`);
         return;
       }
-      const count = preview.match_count ?? 0;
+      const count: number = preview.match_count ?? 0;
       if (count === 0) {
         alert('No matching listings found for this name.');
         return;
       }
-      const sampleStr = (preview.sample ?? []).map((s: string) => `  • ${s}`).join('\n');
+      const mode = preview.match_mode === 'prefix' ? 'starting with' : 'exactly named';
+      const base = preview.base ?? listing.name;
+      // Build a breakdown string showing the top variants and counts.
+      type Variant = { name: string; count: number; sample_location: string };
+      const variants: Variant[] = preview.variants ?? [];
+      const breakdown = variants
+        .slice(0, 10)
+        .map(v => `  • ${v.name}${v.count > 1 ? ` (×${v.count})` : ''} — ${v.sample_location}`)
+        .join('\n');
+      const more = (preview.variant_count ?? variants.length) > 10
+        ? `\n  …and ${(preview.variant_count ?? variants.length) - 10} more variant${(preview.variant_count ?? 0) - 10 > 1 ? 's' : ''}`
+        : '';
       const confirmMsg =
-        `Tag ALL ${count} listings named "${listing.name}" as Not Touchless?\n\n` +
-        `Sample:\n${sampleStr}${count > 5 ? `\n  …and ${count - 5} more` : ''}\n\n` +
+        `Tag ALL ${count} listings ${mode} "${base}" as Not Touchless?\n\n` +
+        `Variants found:\n${breakdown}${more}\n\n` +
         `Each listing will be set is_touchless=false, is_approved=false, and removed from the Second Look queue.`;
       if (!confirm(confirmMsg)) return;
 

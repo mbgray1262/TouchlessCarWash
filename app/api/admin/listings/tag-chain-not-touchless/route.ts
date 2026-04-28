@@ -22,12 +22,17 @@ const supabaseAdmin = createClient(
  *         the Second Look queue going forward (matches the existing
  *         "re-audit confirmed correctly demoted" filter).
  *
- * Match logic: case-insensitive exact match on the trimmed `name` field.
- * Variations like "Joe's Wash" vs "Joe's Wash, LLC" must be handled in
- * separate passes (the preview shows the count so admin can decide).
- *
- * Only touches listings that are NOT already is_touchless=false (skips
- * the ones already correctly demoted).
+ * Match logic:
+ *   - If the input name contains a " - " separator (i.e. follows the
+ *     "Chain Name - Location" pattern that's common in our data, e.g.
+ *     "El Car Wash - Hialeah Gardens", "Blue Tide Car Wash - Touchless",
+ *     "Mister Car Wash - Tucson"), the BASE chain name is extracted and
+ *     the search becomes a case-insensitive prefix match on that base.
+ *     This catches the 89 "El Car Wash - X" variants in one shot.
+ *   - Otherwise (no separator), falls back to exact case-insensitive
+ *     match on the full name.
+ * The preview returns counts grouped by exact name so the admin can see
+ * exactly which variants will be tagged before confirming.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -43,13 +48,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'name too short — refusing to bulk-tag' }, { status: 400 });
     }
 
-    // Find all listings with this exact name (case-insensitive) that are
-    // NOT already correctly tagged as not-touchless. PostgREST ilike with
-    // exact value (no wildcards) is effectively case-insensitive equality.
+    // Detect "Chain Name - Location" pattern. If present, match the chain
+    // PREFIX (so "El Car Wash - Hialeah Gardens" finds all 89 "El Car Wash
+    // - X" variants). Permissive about spacing around the dash to handle
+    // typos like "El Car Wash- Sunrise" (missing leading space).
+    const dashMatch = rawName.match(/^(.+?)\s*[-–—]\s+\S/);
+    const baseName = dashMatch && dashMatch[1].trim().length >= 3 ? dashMatch[1].trim() : null;
+    const usePrefix = baseName !== null;
+    const searchTerm = usePrefix ? baseName : rawName;
+    if (usePrefix && (searchTerm?.length ?? 0) < 4) {
+      // "Mr - X" style — base too short to be a useful prefix; bail.
+      return NextResponse.json({ error: 'extracted chain prefix too short' }, { status: 400 });
+    }
+
+    // Find matching listings. Prefix mode escapes any %/_ in the base
+    // before appending the wildcard so a name with a stray underscore
+    // can't blow up the LIKE pattern.
+    const escapedTerm = (searchTerm ?? '').replace(/[%_]/g, (m: string) => '\\' + m);
+    const ilikePattern = usePrefix ? `${escapedTerm}%` : escapedTerm;
     const { data: matches, error: searchErr } = await supabaseAdmin
       .from('listings')
       .select('id, name, city, state, is_touchless, is_approved')
-      .ilike('name', rawName);
+      .ilike('name', ilikePattern);
 
     if (searchErr) {
       console.error('tag-chain-not-touchless search error:', searchErr);
@@ -63,12 +83,28 @@ export async function POST(req: NextRequest) {
     const targets = all;
 
     if (!confirm) {
-      // Preview mode — return count + a small sample for the admin to eyeball
-      const sample = targets.slice(0, 5).map(t => `${t.name} — ${t.city}, ${t.state}`);
+      // Preview mode. Group by exact name so the admin can see how many
+      // distinct variants exist (e.g. "El Car Wash - Hialeah Gardens"
+      // vs "El Car Wash - Doral" both roll up to the "El Car Wash" base
+      // — the admin gets a clear count of how many unique storefronts).
+      const byName = new Map<string, { count: number; sampleLocs: string[] }>();
+      for (const t of targets) {
+        const entry = byName.get(t.name) ?? { count: 0, sampleLocs: [] };
+        entry.count++;
+        if (entry.sampleLocs.length < 1) entry.sampleLocs.push(`${t.city}, ${t.state}`);
+        byName.set(t.name, entry);
+      }
+      const variants = Array.from(byName.entries())
+        .sort((a, b) => b[1].count - a[1].count)
+        .map(([name, info]) => ({ name, count: info.count, sample_location: info.sampleLocs[0] }));
+
       return NextResponse.json({
         preview: true,
+        match_mode: usePrefix ? 'prefix' : 'exact',
+        base: searchTerm,
         match_count: targets.length,
-        sample,
+        variant_count: byName.size,
+        variants: variants.slice(0, 20),
         already_not_touchless: targets.filter(t => t.is_touchless === false).length,
       });
     }
@@ -80,7 +116,8 @@ export async function POST(req: NextRequest) {
 
     const today = new Date().toISOString().slice(0, 10);
     const sourceNote = sourceId ? ` (admin reviewed listing ${sourceId} and identified the entire chain)` : '';
-    const auditMarker = `[${today}] Manual photo-audit re-audit confirmed correctly demoted: bulk-tagged as part of a non-touchless chain — entire "${rawName}" chain confirmed not touchless${sourceNote}.`;
+    const chainLabel = usePrefix ? searchTerm : rawName;
+    const auditMarker = `[${today}] Manual photo-audit re-audit confirmed correctly demoted: bulk-tagged as part of a non-touchless chain — entire "${chainLabel}" chain confirmed not touchless${sourceNote}.`;
 
     // Pull current crawl_notes for each so we can append (don't clobber).
     // Fetch in chunks for safety on large chains.
