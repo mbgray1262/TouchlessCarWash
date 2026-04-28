@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Search, CheckCircle2, XCircle, Clock, AlertCircle, Loader2, ExternalLink, Sparkles, Images, Star, Camera, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, Pencil, Building2, Link2, TriangleAlert, Bookmark, MapPin, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Search, CheckCircle2, XCircle, Clock, AlertCircle, Loader2, ExternalLink, Sparkles, Images, Star, Camera, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, Pencil, Building2, Link2, TriangleAlert, Bookmark, MapPin, Plus, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
+import { getStateSlug, slugify } from '@/lib/constants';
 import PhotoGalleryModal from '@/components/PhotoGalleryModal';
 import BatchVerifyModal, { BatchVerifyResult } from '@/components/BatchVerifyModal';
 import EditListingModal, { EditableListing } from '@/components/EditListingModal';
@@ -44,6 +45,8 @@ interface Listing {
   parent_chain: string | null;
   location_page_url: string | null;
   vendor_id: number | null;
+  slug: string | null;
+  is_approved: boolean | null;
 }
 
 interface VendorOption {
@@ -1427,6 +1430,29 @@ export default function AdminListingsPage() {
                       </div>
 
                       <div className="shrink-0 flex flex-col gap-2">
+                        {listing.slug && (
+                          (() => {
+                            const isLive = listing.is_touchless === true && listing.is_approved === true;
+                            const url = `/state/${getStateSlug(listing.state)}/${slugify(listing.city)}/${listing.slug}`;
+                            return (
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title={isLive ? 'Open the public listing page in a new tab' : 'Listing is not currently live — clicking will redirect to the city hub. (Requires is_touchless=true AND is_approved=true.)'}
+                                className={`inline-flex items-center justify-center text-sm font-medium rounded-md border h-9 px-3 transition-colors ${
+                                  isLive
+                                    ? 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
+                                    : 'border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100'
+                                }`}
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                View
+                                {!isLive && <span className="ml-1 text-xs opacity-75">(unpublished)</span>}
+                              </a>
+                            );
+                          })()
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
