@@ -1,6 +1,21 @@
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { AdminNav } from '@/components/AdminNav';
 import { US_STATES } from '@/lib/constants';
+
+// Stats page is admin-only and server-rendered. We use the service-role
+// client because:
+//   1. listing_events has RLS that allows anon INSERTs but NO anon SELECTs,
+//      so the default (anon) supabase client silently returns 0 rows for
+//      every engagement query — that's why this page used to show all
+//      zeroes for Total Actions / Directions / Phone Clicks / etc. even
+//      after /api/track was wired up correctly.
+//   2. service-role bypasses RLS and is server-only (never reaches the
+//      browser), matching the pattern in /app/about/page.tsx and
+//      /app/admin/suggested-edits/page.tsx.
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+);
 import {
   BarChart3, ShieldCheck, Heart, Star, MessageSquareQuote, Trophy,
   Globe, Phone, Navigation, TrendingUp, Users, MapPin,
@@ -56,7 +71,7 @@ async function getStats() {
     featuredListingsRes,
     reviewSnippetsRes,
     blogPostsRes,
-    bestOfMetrosRes,
+    bestOfMetrosRes,        // distinct metros that actually have rankings
     bestOfRankingsRes,
     suggestedEditsRes,
     pendingEditsRes,
@@ -84,7 +99,10 @@ async function getStats() {
       .eq('is_featured', true).eq('is_approved', true),
     supabase.from('review_snippets').select('id', { count: 'exact', head: true }),
     supabase.from('blog_posts').select('id', { count: 'exact', head: true }).eq('status', 'published'),
-    supabase.from('best_of_metros').select('id', { count: 'exact', head: true }),
+    // "Best Of Metros" used to query a non-existent best_of_metros table,
+    // hence the perma-zero. Real source: distinct metro_slug values in
+    // best_of_rankings (the table actually populated by the ranking RPC).
+    supabase.from('best_of_rankings').select('metro_slug'),
     supabase.from('best_of_rankings').select('id', { count: 'exact', head: true }),
     supabase.from('suggested_edits').select('id', { count: 'exact', head: true }),
     supabase.from('suggested_edits').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
@@ -183,7 +201,7 @@ async function getStats() {
     featuredListings: featuredListingsRes.count ?? 0,
     reviewSnippets: reviewSnippetsRes.count ?? 0,
     blogPosts: blogPostsRes.count ?? 0,
-    bestOfMetros: bestOfMetrosRes.count ?? 0,
+    bestOfMetros: new Set(((bestOfMetrosRes.data ?? []) as { metro_slug: string }[]).map(r => r.metro_slug)).size,
     bestOfRankings: bestOfRankingsRes.count ?? 0,
     suggestedEdits: suggestedEditsRes.count ?? 0,
     pendingEdits: pendingEditsRes.count ?? 0,
