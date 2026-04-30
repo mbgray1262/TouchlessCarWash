@@ -1,0 +1,116 @@
+name: Production Health Check
+
+# Pings every top-nav landing page on touchlesscarwashfinder.com every 15 min.
+# If any page returns non-200 OR an empty body OR a stuck 304-without-body
+# (the Netlify Durable Cache poisoning class of bug we hit on /best and
+# /blog April 30 2026), the workflow:
+#
+#   1. Calls /api/revalidate to purge that URL from the Netlify CDN
+#   2. Waits 10s + re-checks
+#   3. If still broken, fails loudly so GitHub emails the repo owner
+#
+# That means cache poisoning auto-recovers within ~15 minutes of happening,
+# and the repo owner is paged only if recovery actually fails.
+
+on:
+  schedule:
+    # Every 15 minutes
+    - cron: '*/15 * * * *'
+  workflow_dispatch: {}  # also allow manual run from the Actions tab
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probe production pages
+        run: |
+          set -eu
+
+          BASE="https://touchlesscarwashfinder.com"
+          # Top-nav targets + a few critical sub-routes. A page is "broken"
+          # if it returns non-2xx OR has a body smaller than 1 KB (top-nav
+          # pages are always at least ~50 KB; anything tiny is a 304-without
+          # -body or an error stub).
+          PATHS=(
+            "/"
+            "/best"
+            "/blog"
+            "/chains"
+            "/states"
+            "/features"
+            "/equipment"
+            "/about"
+          )
+
+          BROKEN=()
+
+          for path in "${PATHS[@]}"; do
+            url="${BASE}${path}"
+            # Cache-busting query so we hit the CDN as a fresh client would,
+            # not a re-validation chain.
+            full="${url}?_health=$(date +%s%N)"
+            tmp=$(mktemp)
+            code=$(curl --max-time 30 -sL -A "Mozilla/5.0 (HealthCheck)" \
+              -H "Cache-Control: no-cache" \
+              -o "$tmp" -w "%{http_code}" "$full" || echo "000")
+            size=$(wc -c < "$tmp" | tr -d ' ')
+            rm -f "$tmp"
+
+            if [ "$code" != "200" ] || [ "$size" -lt 1024 ]; then
+              echo "::warning::BROKEN $path -> code=$code size=$size"
+              BROKEN+=("$path")
+            else
+              echo "OK $path -> code=$code size=$size"
+            fi
+          done
+
+          if [ "${#BROKEN[@]}" -eq 0 ]; then
+            echo "All pages healthy."
+            exit 0
+          fi
+
+          echo ""
+          echo "Attempting auto-recovery via /api/revalidate..."
+          for path in "${BROKEN[@]}"; do
+            echo "Purging $path..."
+            curl --max-time 30 -s -X POST "${BASE}/api/revalidate" \
+              -H "Content-Type: application/json" \
+              -d "{\"path\":\"$path\"}" || true
+            echo ""
+          done
+
+          echo ""
+          echo "Waiting 15s for cache to settle..."
+          sleep 15
+
+          echo ""
+          echo "Re-checking..."
+          STILL_BROKEN=()
+          for path in "${BROKEN[@]}"; do
+            url="${BASE}${path}?_recheck=$(date +%s%N)"
+            tmp=$(mktemp)
+            code=$(curl --max-time 30 -sL -A "Mozilla/5.0 (HealthCheck)" \
+              -H "Cache-Control: no-cache" \
+              -o "$tmp" -w "%{http_code}" "$url" || echo "000")
+            size=$(wc -c < "$tmp" | tr -d ' ')
+            rm -f "$tmp"
+
+            if [ "$code" != "200" ] || [ "$size" -lt 1024 ]; then
+              echo "::error::STILL BROKEN after purge: $path -> code=$code size=$size"
+              STILL_BROKEN+=("$path")
+            else
+              echo "RECOVERED $path -> code=$code size=$size"
+            fi
+          done
+
+          if [ "${#STILL_BROKEN[@]}" -gt 0 ]; then
+            echo ""
+            echo "::error::Auto-recovery failed for: ${STILL_BROKEN[*]}"
+            echo "Manual investigation needed. The workflow failure email"
+            echo "GitHub sends to the repo owner is the alert."
+            exit 1
+          fi
+
+          echo ""
+          echo "All previously broken pages auto-recovered."
