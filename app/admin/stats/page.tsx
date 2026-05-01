@@ -1,21 +1,13 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
 import { AdminNav } from '@/components/AdminNav';
 import { US_STATES } from '@/lib/constants';
 
-// Stats page is admin-only and server-rendered. We use the service-role
-// client because:
-//   1. listing_events has RLS that allows anon INSERTs but NO anon SELECTs,
-//      so the default (anon) supabase client silently returns 0 rows for
-//      every engagement query — that's why this page used to show all
-//      zeroes for Total Actions / Directions / Phone Clicks / etc. even
-//      after /api/track was wired up correctly.
-//   2. service-role bypasses RLS and is server-only (never reaches the
-//      browser), matching the pattern in /app/about/page.tsx and
-//      /app/admin/suggested-edits/page.tsx.
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-);
+// listing_events has RLS that allows anon INSERTs (so /api/track works) but
+// blocks anon SELECTs (so individual click data stays private). We expose
+// AGGREGATES — counts only — through SECURITY DEFINER RPCs added in the
+// 20260501000000_fix_listing_events_rls migration. This means the stats
+// page can count clicks without seeing raw events, and we don't depend on
+// SUPABASE_SERVICE_ROLE_KEY being set on the Netlify side.
 import {
   BarChart3, ShieldCheck, Heart, Star, MessageSquareQuote, Trophy,
   Globe, Phone, Navigation, TrendingUp, Users, MapPin,
@@ -75,16 +67,19 @@ async function getStats() {
     bestOfRankingsRes,
     suggestedEditsRes,
     pendingEditsRes,
-    // Event counts by type
-    directionEventsRes,
-    phoneEventsRes,
-    websiteEventsRes,
-    favoriteEventsRes,
-    unfavoriteEventsRes,
-    // Recent events (last 7 days)
+    // Engagement aggregates — single RPC call that returns counts grouped
+    // by event_type. Bypasses the anon-SELECT block on listing_events
+    // because the RPC is SECURITY DEFINER (returns aggregates only, no raw
+    // rows). Replaces six individual count queries that all returned 0.
+    eventCountsRes,
+    // Last-7-days RPC. Same SECURITY DEFINER pattern.
     recentEventsRes,
     // State coverage
     stateCoverageRes,
+    // Top favorited + most engaged via SECURITY DEFINER RPC (returns
+    // listing_id + count tuples; we resolve names below).
+    topFavoritedIdsRes,
+    topEngagedIdsRes,
   ] = await Promise.all([
     supabase.from('listings').select('id', { count: 'exact', head: true }),
     // Match the homepage / about-page count — only approved touchless listings.
@@ -106,90 +101,66 @@ async function getStats() {
     supabase.from('best_of_rankings').select('id', { count: 'exact', head: true }),
     supabase.from('suggested_edits').select('id', { count: 'exact', head: true }),
     supabase.from('suggested_edits').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-    // Event counts
-    supabase.from('listing_events').select('id', { count: 'exact', head: true }).eq('event_type', 'directions'),
-    supabase.from('listing_events').select('id', { count: 'exact', head: true }).eq('event_type', 'phone'),
-    supabase.from('listing_events').select('id', { count: 'exact', head: true }).eq('event_type', 'website'),
-    supabase.from('listing_events').select('id', { count: 'exact', head: true }).eq('event_type', 'favorite'),
-    supabase.from('listing_events').select('id', { count: 'exact', head: true }).eq('event_type', 'unfavorite'),
-    // Recent events (last 7 days)
-    supabase.from('listing_events').select('id', { count: 'exact', head: true })
-      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
-    // State coverage
+    supabase.rpc('listing_event_counts'),
+    supabase.rpc('listing_events_recent_count', { p_days: 7 }),
     supabase.rpc('states_with_touchless_listings'),
+    supabase.rpc('listing_event_top', { p_event_types: ['favorite'], p_limit: 5 }),
+    supabase.rpc('listing_event_top', { p_event_types: ['directions', 'phone', 'website'], p_limit: 5 }),
   ]);
 
-  // Top favorited listings
-  const { data: topFavoritedRaw } = await supabase
-    .from('listing_events')
-    .select('listing_id')
-    .eq('event_type', 'favorite')
-    .order('created_at', { ascending: false })
-    .limit(1000);
-
-  // Count favorites per listing
-  const favCounts: Record<string, number> = {};
-  for (const row of topFavoritedRaw ?? []) {
-    favCounts[row.listing_id] = (favCounts[row.listing_id] ?? 0) + 1;
+  // Tally engagement counts from the RPC result.
+  type EventCountRow = { event_type: string; count: number };
+  const eventCountMap: Record<string, number> = {};
+  for (const row of (eventCountsRes.data ?? []) as EventCountRow[]) {
+    eventCountMap[row.event_type] = Number(row.count) ?? 0;
   }
-  const topFavoritedIds = Object.entries(favCounts)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5);
+  const directionEventsRes = { count: eventCountMap.directions ?? 0 };
+  const phoneEventsRes = { count: eventCountMap.phone ?? 0 };
+  const websiteEventsRes = { count: eventCountMap.website ?? 0 };
+  const favoriteEventsRes = { count: eventCountMap.favorite ?? 0 };
+  const unfavoriteEventsRes = { count: eventCountMap.unfavorite ?? 0 };
 
-  // Fetch listing names for top favorited
-  let topFavoritedListings: { id: string; name: string; city: string; state: string; count: number }[] = [];
-  if (topFavoritedIds.length > 0) {
+  // Top favorited / top engaged: the RPC returned (listing_id, count) tuples.
+  // Resolve listing names in a single batched query.
+  type TopRow = { listing_id: string; count: number };
+  const topFavoritedTuples = (topFavoritedIdsRes.data ?? []) as TopRow[];
+  const topEngagedTuples = (topEngagedIdsRes.data ?? []) as TopRow[];
+  const allTopIds = Array.from(new Set([
+    ...topFavoritedTuples.map(t => t.listing_id),
+    ...topEngagedTuples.map(t => t.listing_id),
+  ]));
+
+  let listingsById: Map<string, { name: string; city: string; state: string }> = new Map();
+  if (allTopIds.length > 0) {
     const { data: listingData } = await supabase
       .from('listings')
       .select('id, name, city, state')
-      .in('id', topFavoritedIds.map(([id]) => id));
-
-    topFavoritedListings = topFavoritedIds.map(([id, count]) => {
-      const listing = listingData?.find(l => l.id === id);
-      return {
-        id,
-        name: listing?.name ?? 'Unknown',
-        city: listing?.city ?? '',
-        state: listing?.state ?? '',
-        count,
-      };
-    });
+      .in('id', allTopIds);
+    for (const l of listingData ?? []) {
+      listingsById.set(l.id, { name: l.name, city: l.city, state: l.state });
+    }
   }
 
-  // Top engaged listings (most total events)
-  const { data: topEngagedRaw } = await supabase
-    .from('listing_events')
-    .select('listing_id')
-    .in('event_type', ['directions', 'phone', 'website'])
-    .order('created_at', { ascending: false })
-    .limit(2000);
-
-  const engageCounts: Record<string, number> = {};
-  for (const row of topEngagedRaw ?? []) {
-    engageCounts[row.listing_id] = (engageCounts[row.listing_id] ?? 0) + 1;
-  }
-  const topEngagedIds = Object.entries(engageCounts)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5);
-
-  let topEngagedListings: { id: string; name: string; city: string; state: string; count: number }[] = [];
-  if (topEngagedIds.length > 0) {
-    const { data: listingData } = await supabase
-      .from('listings')
-      .select('id, name, city, state')
-      .in('id', topEngagedIds.map(([id]) => id));
-
-    topEngagedListings = topEngagedIds.map(([id, count]) => {
-      const listing = listingData?.find(l => l.id === id);
-      return {
-        id,
-        name: listing?.name ?? 'Unknown',
-        city: listing?.city ?? '',
-        state: listing?.state ?? '',
-        count,
-      };
-    });
-  }
+  const topFavoritedListings = topFavoritedTuples.map(t => {
+    const l = listingsById.get(t.listing_id);
+    return {
+      id: t.listing_id,
+      name: l?.name ?? 'Unknown',
+      city: l?.city ?? '',
+      state: l?.state ?? '',
+      count: Number(t.count),
+    };
+  });
+  const topEngagedListings = topEngagedTuples.map(t => {
+    const l = listingsById.get(t.listing_id);
+    return {
+      id: t.listing_id,
+      name: l?.name ?? 'Unknown',
+      city: l?.city ?? '',
+      state: l?.state ?? '',
+      count: Number(t.count),
+    };
+  });
 
   // Net favorites = favorite events - unfavorite events
   const netFavorites = (favoriteEventsRes.count ?? 0) - (unfavoriteEventsRes.count ?? 0);
@@ -210,7 +181,7 @@ async function getStats() {
     websiteEvents: websiteEventsRes.count ?? 0,
     favoriteEvents: favoriteEventsRes.count ?? 0,
     netFavorites: Math.max(0, netFavorites),
-    recentEvents: recentEventsRes.count ?? 0,
+    recentEvents: Number(recentEventsRes.data ?? 0),
     // Intersect with the canonical US state list so non-US codes (Canadian
     // "ON" / "Ontario" rows that slipped into the dataset) don't push this
     // above 51. RPC returns text[] of distinct states with touchless listings.
