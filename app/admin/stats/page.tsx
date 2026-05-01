@@ -1,5 +1,4 @@
 import { supabase } from '@/lib/supabase';
-import { AdminNav } from '@/components/AdminNav';
 import { US_STATES } from '@/lib/constants';
 
 // listing_events has RLS that allows anon INSERTs (so /api/track works) but
@@ -197,10 +196,9 @@ export default async function AdminStatsPage() {
   const stats = await getStats();
   const totalEngagement = stats.directionEvents + stats.phoneEvents + stats.websiteEvents;
 
+  // AdminNav is already rendered by app/admin/layout.tsx — don't double it.
   return (
     <div className="min-h-screen bg-gray-50">
-      <AdminNav />
-
       <div className="container mx-auto px-4 max-w-7xl py-10">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-[#0F2744] flex items-center gap-2">
