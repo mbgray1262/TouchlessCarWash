@@ -95,7 +95,10 @@ CRITICAL RULES (the directory has been flagged for low-quality content; these ru
 
 Output ONLY the description text — no preamble, no explanation, no surrounding quotes.`;
 
-async function generateDescriptionWithClaude(listing: ListingData, apiKey: string): Promise<string> {
+// Builds the per-listing user-message body shared by Gemini and Claude.
+// The static rules (banned phrases, format, etc.) live in SYSTEM_PROMPT;
+// this function builds only the dynamic, per-listing portion.
+function buildUserMessage(listing: ListingData): string {
   const parts: string[] = [];
 
   parts.push(`Business name: ${listing.name}`);
@@ -267,19 +270,54 @@ async function generateDescriptionWithClaude(listing: ListingData, apiKey: strin
 
   // Per-listing user message: target word count + the business data block.
   // Everything in here varies between calls; the static rules live in
-  // SYSTEM_PROMPT above so they can hit the prompt cache.
-  const userMessage = `Target length: ${targetWords} words.
+  // SYSTEM_PROMPT so they can hit the prompt cache (Claude path).
+  return `Target length: ${targetWords} words.
 
 Business data:
 ${context}
 
 Write the description now. Remember: every sentence must contain a fact specific to THIS business.`;
+}
 
-  // Switched from Gemini to Anthropic Claude on May 2 2026 — the Gemini API
-  // key was reported as leaked by Google and revoked, silently breaking every
-  // description generation since. Claude Haiku 4.5 is the equivalent
-  // price/performance tier ($1/$5 per 1M tokens) and the existing edge
-  // functions already use ANTHROPIC_API_KEY, so no new secret to provision.
+// Gemini 2.5 Flash — free tier, primary provider. We use systemInstruction
+// to send SYSTEM_PROMPT once per request (Gemini doesn't currently expose a
+// prompt cache the way Anthropic does, but separating system from user
+// keeps the call structurally identical to the Claude path). thinkingBudget
+// is forced to 0 because thinking-mode would consume the maxOutputTokens
+// budget before the visible response, truncating descriptions mid-sentence.
+async function generateDescriptionWithGemini(listing: ListingData, apiKey: string): Promise<string> {
+  const userMessage = buildUserMessage(listing);
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents: [{ role: 'user', parts: [{ text: userMessage }] }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 2048,
+          topP: 0.9,
+          thinkingConfig: { thinkingBudget: 0 },
+        },
+      }),
+    }
+  );
+
+  if (!res.ok) throw new Error(`Gemini error ${res.status}: ${await res.text()}`);
+  const data = await res.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+  return text.trim();
+}
+
+// Claude Haiku 4.5 — paid fallback. Used only if Gemini is unavailable
+// (no key, key revoked, transient API error). Same prompt shape; Claude
+// uses an explicit system block with cache_control for prompt caching.
+async function generateDescriptionWithClaude(listing: ListingData, apiKey: string): Promise<string> {
+  const userMessage = buildUserMessage(listing);
+
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -289,11 +327,7 @@ Write the description now. Remember: every sentence must contain a fact specific
     },
     body: JSON.stringify({
       model: 'claude-haiku-4-5',
-      max_tokens: 1024, // ~260 words = ~350 tokens; 1024 leaves headroom
-      // System prompt is a typed array so we can attach cache_control. The
-      // rules block is identical across thousands of calls — once it grows
-      // past the model's cache minimum (4096 tokens for Haiku 4.5) every
-      // subsequent call pays ~0.1× input cost on the rules.
+      max_tokens: 1024,
       system: [{
         type: 'text',
         text: SYSTEM_PROMPT,
@@ -307,10 +341,36 @@ Write the description now. Remember: every sentence must contain a fact specific
   if (!res.ok) throw new Error(`Claude API error ${res.status}: ${await res.text()}`);
   const data = await res.json() as {
     content?: Array<{ type: string; text?: string }>;
-    usage?: { cache_read_input_tokens?: number; cache_creation_input_tokens?: number };
   };
   const text = data.content?.find(b => b.type === 'text')?.text ?? '';
   return text.trim();
+}
+
+// Orchestrator: try Gemini first (free), fall back to Claude (paid) if
+// Gemini fails for any reason — auth (leaked-key revocation, like the May 2
+// 2026 incident), quota, or transient network. This means a future Google
+// key revocation will no longer silently break the entire site; we just
+// pay Claude rates until the key is replaced.
+async function generateDescription(
+  listing: ListingData,
+  geminiKey: string,
+  anthropicKey: string,
+): Promise<{ description: string; provider: 'gemini' | 'claude' }> {
+  if (geminiKey) {
+    try {
+      const description = await generateDescriptionWithGemini(listing, geminiKey);
+      if (description && description.length > 20) {
+        return { description, provider: 'gemini' };
+      }
+    } catch (err) {
+      console.error(`[gemini] failed for ${listing.id}: ${(err as Error).message}. Falling back to Claude.`);
+    }
+  }
+  if (!anthropicKey) {
+    throw new Error('Both GEMINI_API_KEY and ANTHROPIC_API_KEY are missing');
+  }
+  const description = await generateDescriptionWithClaude(listing, anthropicKey);
+  return { description, provider: 'claude' };
 }
 
 Deno.serve(async (req: Request) => {
@@ -321,10 +381,12 @@ Deno.serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    // Anthropic Claude (Haiku 4.5) replaces Gemini 2.5 Flash as of May 2 2026
-    // after Google revoked the leaked Gemini key. Same env var convention
-    // as the other edge functions (extract-rich-data, classify-one, etc.).
+    // Two-provider setup (May 2026): Gemini 2.5 Flash is the primary
+    // provider (free tier covers our volume); Claude Haiku 4.5 is the
+    // automatic fallback if Gemini ever fails (leaked-key revocation,
+    // quota, transient errors). Either key alone is sufficient.
     const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY') ?? await getSecret(supabaseUrl, serviceKey, 'ANTHROPIC_API_KEY');
+    const geminiKey = Deno.env.get('GEMINI_API_KEY') ?? await getSecret(supabaseUrl, serviceKey, 'GEMINI_API_KEY');
 
     const supabase = createClient(supabaseUrl, serviceKey);
     const body = await req.json().catch(() => ({}));
@@ -355,8 +417,8 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === 'start') {
-      if (!anthropicKey) {
-        return Response.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500, headers: corsHeaders });
+      if (!geminiKey && !anthropicKey) {
+        return Response.json({ error: 'Neither GEMINI_API_KEY nor ANTHROPIC_API_KEY is configured' }, { status: 500, headers: corsHeaders });
       }
 
       const limit: number = body.limit ?? 0;
@@ -425,8 +487,8 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === 'process_batch') {
-      if (!anthropicKey) {
-        return Response.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500, headers: corsHeaders });
+      if (!geminiKey && !anthropicKey) {
+        return Response.json({ error: 'Neither GEMINI_API_KEY nor ANTHROPIC_API_KEY is configured' }, { status: 500, headers: corsHeaders });
       }
 
       const jobId = body.job_id;
@@ -491,13 +553,18 @@ Deno.serve(async (req: Request) => {
             .limit(5);
           const listingWithSnippets = { ...listing, review_snippets: snippets ?? [] };
 
-          const description = await generateDescriptionWithClaude(listingWithSnippets as ListingData, anthropicKey);
+          const { description, provider } = await generateDescription(
+            listingWithSnippets as ListingData,
+            geminiKey,
+            anthropicKey,
+          );
           if (description && description.length > 20) {
             await supabase.from('listings').update({
               description,
               description_generated_at: new Date().toISOString(),
             }).eq('id', task.listing_id);
             success = true;
+            console.log(`[${provider}] generated for ${task.listing_id} (${description.length} chars)`);
           }
         }
       } catch (e) {
