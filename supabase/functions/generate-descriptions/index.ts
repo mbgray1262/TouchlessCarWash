@@ -47,7 +47,55 @@ interface ListingData {
   review_snippets?: Array<{ review_text: string; rating: number | null; sentiment: string | null }>;
 }
 
-async function generateDescriptionWithGemini(listing: ListingData, apiKey: string): Promise<string> {
+// Static rule block extracted as a system prompt. Kept byte-identical across
+// every call so it can be served from Anthropic's prompt cache (cache_control
+// below). Note: cache activates only when the prefix exceeds the model's
+// minimum cacheable length — 4096 tokens for Haiku 4.5. The current rules
+// are ~870 tokens, so the cache_control marker is a no-op until the prompt
+// grows past that threshold (e.g. when we add few-shot examples). Marker is
+// left in place so caching kicks in automatically once we cross the line.
+const SYSTEM_PROMPT = `You are writing a description for one specific car wash business on a directory site. The directory has thousands of listings, and your job is to make THIS page distinctly different from every other listing — by grounding every claim in the specific facts about THIS business.
+
+CRITICAL RULES (the directory has been flagged for low-quality content; these rules exist because past descriptions read as templated and got the site rejected from Google AdSense):
+
+1. EVERY sentence must contain at least one fact that comes specifically from the data block provided in the user message. If a sentence could appear unchanged on a different car wash's page, delete it.
+
+2. If a tagline is provided, quote it verbatim in double quotes with attribution. Do NOT paraphrase taglines.
+
+3. Use specific named details whenever they exist:
+   - Named wash packages (e.g., "the Ultimate Shine package at $19.99")
+   - Named membership plans (e.g., "the All-Weather Unlimited tier at $34.99/month")
+   - Specific equipment models (e.g., "PDQ LaserWash 360")
+   - Specific amenities by name (e.g., "free vacuums", "soft towels", "vending machines")
+   - Specific service types from the website's own language
+
+4. BANNED PHRASES — these are generic and will trigger duplicate-content detection. Do not use them or any close variant:
+   - "gentle on your vehicle" / "protects your paint"
+   - "state-of-the-art" / "cutting-edge" / "advanced technology"
+   - "look no further" / "best in town" / "top choice"
+   - "trusted" / "reliable" / "convenient choice"
+   - "whether you're a local or just passing through"
+   - "beyond the car wash" / "more than just a car wash"
+   - "in just minutes" / "in no time"
+   - "your vehicle will thank you" / "leave looking like new"
+
+5. NEVER invent facts. If the data doesn't say it, don't say it. No assumptions about what the business "probably" offers.
+
+6. Length target: follow the word count specified in the user message. Do not pad with filler to hit the upper bound — shorter is fine if data is limited. Quality > length.
+
+7. Format: 1-3 paragraphs of plain text. No headings. No bullet lists. No emojis.
+
+8. Tone: factual and informative, like a knowledgeable local writing a quick guide. Not promotional. Not sycophantic.
+
+9. Naturally include the business name, city, and state once each (for SEO), but do not stuff keywords.
+
+9a. CHAIN LOCATIONS: when the business is part of a named chain (parent_chain is set), the shared corporate website content will be the same across every location of that chain. You MUST lean heavily on the per-location customer review snippets, address, hours, and any location-specific amenities to differentiate this page from sibling locations. If you have review snippets, paraphrase specific observations customers made about THIS location (e.g. "several customers mention the free vacuums work consistently" or "reviewers highlight the 24-hour availability for late-shift drivers"). Do NOT lean primarily on the corporate tagline, founding year, or franchise-wide claims — those appear on every sibling page and are exactly the "scaled content" signal we are trying to avoid.
+
+10. End with a concrete call to action grounded in real data — e.g., the actual phone number, the actual hours, or "visit during the open hours listed below." Do NOT end with generic exhortations like "stop by today!"
+
+Output ONLY the description text — no preamble, no explanation, no surrounding quotes.`;
+
+async function generateDescriptionWithClaude(listing: ListingData, apiKey: string): Promise<string> {
   const parts: string[] = [];
 
   parts.push(`Business name: ${listing.name}`);
@@ -217,79 +265,51 @@ async function generateDescriptionWithGemini(listing: ListingData, apiKey: strin
 
   const targetWords = isVeryRich ? '180-260' : isRich ? '130-200' : '70-120';
 
-  const prompt = `You are writing a description for one specific car wash business on a directory site. The directory has thousands of listings, and your job is to make THIS page distinctly different from every other listing — by grounding every claim in the specific facts about THIS business.
-
-CRITICAL RULES (the directory has been flagged for low-quality content; these rules exist because past descriptions read as templated and got the site rejected from Google AdSense):
-
-1. EVERY sentence must contain at least one fact that comes specifically from the data block below. If a sentence could appear unchanged on a different car wash's page, delete it.
-
-2. If a tagline is provided, quote it verbatim in double quotes with attribution. Do NOT paraphrase taglines.
-
-3. Use specific named details whenever they exist:
-   - Named wash packages (e.g., "the Ultimate Shine package at $19.99")
-   - Named membership plans (e.g., "the All-Weather Unlimited tier at $34.99/month")
-   - Specific equipment models (e.g., "PDQ LaserWash 360")
-   - Specific amenities by name (e.g., "free vacuums", "soft towels", "vending machines")
-   - Specific service types from the website's own language
-
-4. BANNED PHRASES — these are generic and will trigger duplicate-content detection. Do not use them or any close variant:
-   - "gentle on your vehicle" / "protects your paint"
-   - "state-of-the-art" / "cutting-edge" / "advanced technology"
-   - "look no further" / "best in town" / "top choice"
-   - "trusted" / "reliable" / "convenient choice"
-   - "whether you're a local or just passing through"
-   - "beyond the car wash" / "more than just a car wash"
-   - "in just minutes" / "in no time"
-   - "your vehicle will thank you" / "leave looking like new"
-
-5. NEVER invent facts. If the data doesn't say it, don't say it. No assumptions about what the business "probably" offers.
-
-6. Length target: ${targetWords} words. Do not pad with filler to hit the upper bound — shorter is fine if data is limited. Quality > length.
-
-7. Format: 1-3 paragraphs of plain text. No headings. No bullet lists. No emojis.
-
-8. Tone: factual and informative, like a knowledgeable local writing a quick guide. Not promotional. Not sycophantic.
-
-9. Naturally include the business name, city, and state once each (for SEO), but do not stuff keywords.
-
-9a. CHAIN LOCATIONS: when the business is part of a named chain (parent_chain is set), the shared corporate website content will be the same across every location of that chain. You MUST lean heavily on the per-location customer review snippets, address, hours, and any location-specific amenities to differentiate this page from sibling locations. If you have review snippets, paraphrase specific observations customers made about THIS location (e.g. "several customers mention the free vacuums work consistently" or "reviewers highlight the 24-hour availability for late-shift drivers"). Do NOT lean primarily on the corporate tagline, founding year, or franchise-wide claims — those appear on every sibling page and are exactly the "scaled content" signal we are trying to avoid.
-
-10. End with a concrete call to action grounded in real data — e.g., the actual phone number, the actual hours, or "visit during the open hours listed below." Do NOT end with generic exhortations like "stop by today!"
+  // Per-listing user message: target word count + the business data block.
+  // Everything in here varies between calls; the static rules live in
+  // SYSTEM_PROMPT above so they can hit the prompt cache.
+  const userMessage = `Target length: ${targetWords} words.
 
 Business data:
 ${context}
 
 Write the description now. Remember: every sentence must contain a fact specific to THIS business.`;
 
-  // Gemini 2.5 Flash — free tier for directory-scale use.
-  //
-  // IMPORTANT: Gemini 2.5 Flash has "thinking" enabled by default, which
-  // consumes output tokens internally before generating the visible
-  // response. With the previous maxOutputTokens=800, thinking would
-  // consume 400-600 tokens and the actual description would truncate at
-  // ~120 chars mid-sentence. Fix: disable thinking entirely via
-  // thinkingBudget=0 AND raise the output budget so the 180-260 word
-  // target has plenty of headroom.
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 2048,
-          topP: 0.9,
-          thinkingConfig: { thinkingBudget: 0 },
-        },
-      }),
-    }
-  );
+  // Switched from Gemini to Anthropic Claude on May 2 2026 — the Gemini API
+  // key was reported as leaked by Google and revoked, silently breaking every
+  // description generation since. Claude Haiku 4.5 is the equivalent
+  // price/performance tier ($1/$5 per 1M tokens) and the existing edge
+  // functions already use ANTHROPIC_API_KEY, so no new secret to provision.
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5',
+      max_tokens: 1024, // ~260 words = ~350 tokens; 1024 leaves headroom
+      // System prompt is a typed array so we can attach cache_control. The
+      // rules block is identical across thousands of calls — once it grows
+      // past the model's cache minimum (4096 tokens for Haiku 4.5) every
+      // subsequent call pays ~0.1× input cost on the rules.
+      system: [{
+        type: 'text',
+        text: SYSTEM_PROMPT,
+        cache_control: { type: 'ephemeral' },
+      }],
+      messages: [{ role: 'user', content: userMessage }],
+      temperature: 0.7,
+    }),
+  });
 
-  if (!res.ok) throw new Error(`Gemini error ${res.status}: ${await res.text()}`);
-  const data = await res.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+  if (!res.ok) throw new Error(`Claude API error ${res.status}: ${await res.text()}`);
+  const data = await res.json() as {
+    content?: Array<{ type: string; text?: string }>;
+    usage?: { cache_read_input_tokens?: number; cache_creation_input_tokens?: number };
+  };
+  const text = data.content?.find(b => b.type === 'text')?.text ?? '';
   return text.trim();
 }
 
@@ -301,7 +321,10 @@ Deno.serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const geminiKey = Deno.env.get('GEMINI_API_KEY') ?? await getSecret(supabaseUrl, serviceKey, 'GEMINI_API_KEY');
+    // Anthropic Claude (Haiku 4.5) replaces Gemini 2.5 Flash as of May 2 2026
+    // after Google revoked the leaked Gemini key. Same env var convention
+    // as the other edge functions (extract-rich-data, classify-one, etc.).
+    const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY') ?? await getSecret(supabaseUrl, serviceKey, 'ANTHROPIC_API_KEY');
 
     const supabase = createClient(supabaseUrl, serviceKey);
     const body = await req.json().catch(() => ({}));
@@ -332,8 +355,8 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === 'start') {
-      if (!geminiKey) {
-        return Response.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500, headers: corsHeaders });
+      if (!anthropicKey) {
+        return Response.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500, headers: corsHeaders });
       }
 
       const limit: number = body.limit ?? 0;
@@ -402,8 +425,8 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === 'process_batch') {
-      if (!geminiKey) {
-        return Response.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500, headers: corsHeaders });
+      if (!anthropicKey) {
+        return Response.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500, headers: corsHeaders });
       }
 
       const jobId = body.job_id;
@@ -468,7 +491,7 @@ Deno.serve(async (req: Request) => {
             .limit(5);
           const listingWithSnippets = { ...listing, review_snippets: snippets ?? [] };
 
-          const description = await generateDescriptionWithGemini(listingWithSnippets as ListingData, geminiKey);
+          const description = await generateDescriptionWithClaude(listingWithSnippets as ListingData, anthropicKey);
           if (description && description.length > 20) {
             await supabase.from('listings').update({
               description,
