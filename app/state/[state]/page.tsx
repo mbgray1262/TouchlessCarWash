@@ -15,7 +15,7 @@ import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import type { Metadata } from 'next';
 
 // ISR — regenerate every hour. Now actually works because we removed searchParams!
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic'; // see /state/.../slug for context — Netlify CDN cache (netlify.toml) handles edge perf; force-dynamic prevents the Next.js ISR etag-based 304-without-body bug that kept breaking /blog and /best on the CDN.
 
 interface StatePageProps {
   params: {

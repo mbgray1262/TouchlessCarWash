@@ -4,7 +4,7 @@ import { ProductsBanner } from '@/components/ProductsBanner';
 import { supabase, type BlogPost } from '@/lib/supabase';
 import type { Metadata } from 'next';
 
-export const revalidate = 60; // Refresh data every 60 seconds
+export const dynamic = 'force-dynamic'; // see /state/.../slug for context — Netlify CDN cache (netlify.toml) handles edge perf; force-dynamic prevents the Next.js ISR etag-based 304-without-body bug that kept breaking /blog and /best on the CDN.
 
 export const metadata: Metadata = {
   title: 'Touchless Car Wash Guides & Tips',

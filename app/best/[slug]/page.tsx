@@ -16,7 +16,7 @@ import { DEFAULT_OG_IMAGE, ensureHttps } from '@/lib/seo';
 import type { Metadata } from 'next';
 
 // Revalidate every 5 minutes — keeps rankings and snippets fresh without hammering the DB
-export const revalidate = 300;
+export const dynamic = 'force-dynamic'; // see /state/.../slug for context — Netlify CDN cache (netlify.toml) handles edge perf; force-dynamic prevents the Next.js ISR etag-based 304-without-body bug that kept breaking /blog and /best on the CDN.
 
 interface BestOfPageProps {
   params: { slug: string };

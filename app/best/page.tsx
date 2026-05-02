@@ -5,7 +5,7 @@ import { METRO_AREAS, boundingBox, haversineDistance, getMetrosByRegion, type Me
 import type { Metadata } from 'next';
 
 // Revalidate every 24 hours — pre-rendered but refreshes daily for new metros/counts
-export const revalidate = 3600; // 1 hour
+export const dynamic = 'force-dynamic'; // see /state/.../slug for context — Netlify CDN cache (netlify.toml) handles edge perf; force-dynamic prevents the Next.js ISR etag-based 304-without-body bug that kept breaking /blog and /best on the CDN.
 
 export const metadata: Metadata = {
   title: 'Best Touchless & Brushless Car Washes by Metro Area',
