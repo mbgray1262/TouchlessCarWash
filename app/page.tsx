@@ -15,7 +15,7 @@ import type { Metadata } from 'next';
 const SITE_URL = 'https://touchlesscarwashfinder.com';
 
 // Re-fetch data every hour so counts stay fresh without redeploying
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic'; // see /state/.../slug for context — Netlify CDN cache (netlify.toml) handles edge perf; force-dynamic prevents the Next.js ISR etag-based 304-without-body bug that kept breaking /blog and /best on the CDN.
 
 const TOP_STATES = ['CA', 'TX', 'FL', 'NY', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI', 'AZ', 'WA'];
 

@@ -13,7 +13,7 @@ import {
 } from "@/lib/equipment-data";
 import { slugify, US_STATES } from "@/lib/constants";
 
-export const revalidate = 3600; // 1 hour
+export const dynamic = 'force-dynamic'; // see /state/.../slug for context — Netlify CDN cache (netlify.toml) handles edge perf; force-dynamic prevents the Next.js ISR etag-based 304-without-body bug that kept breaking /blog and /best on the CDN.
 
 function getStateName(code: string): string {
   const state = US_STATES.find((s) => s.code === code);

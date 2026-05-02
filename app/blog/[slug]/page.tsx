@@ -11,7 +11,7 @@ import { getTakeaways } from '@/lib/blog-takeaways';
 import { getHowTo } from '@/lib/blog-howto-steps';
 import type { Metadata } from 'next';
 
-export const revalidate = 3600; // Revalidate dynamic blog content hourly
+export const dynamic = 'force-dynamic'; // see /state/.../slug for context — Netlify CDN cache (netlify.toml) handles edge perf; force-dynamic prevents the Next.js ISR etag-based 304-without-body bug that kept breaking /blog and /best on the CDN.
 
 interface BlogPostPageProps {
   params: {
