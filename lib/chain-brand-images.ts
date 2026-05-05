@@ -248,6 +248,14 @@ export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/ff0e4e33-6ac2-43d8-9413-6c5a98a36c15/gallery_bp_0_1771873869284.jpg',
   ],
 
+  // ScrubaDub — 3 NH/MA locations with touchless laser wash bays.
+  // Salem NH exterior, Shrewsbury MA exterior, Worcester MA hero crop.
+  'ScrubaDub': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/fb4afd5f-8b0c-494e-9860-fe61ef8c53f6/google-1777054719526.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/5719711a-644c-4af7-828a-f846d31ce187/google-1777054727379.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/ff8554f7-2b40-4c68-9282-baca3184265a/hero-cropped-1777054851644.jpg',
+  ],
+
   // Jurassic Car Wash — 4 TX locations. Austin Google photo REMOVED (it showed
   // spinning blue brushes — critical policy violation). Using 3 brush-free
   // Potranco location photos.
