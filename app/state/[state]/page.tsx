@@ -137,11 +137,7 @@ export async function generateMetadata({ params }: StatePageProps): Promise<Meta
     : `Find a touchless car wash near you in ${stateName} — ${totalCount}+ verified no-touch, brushless & contactless locations with ratings, hours, and directions.`;
 
   const canonicalUrl = `https://touchlesscarwashfinder.com/state/${params.state}`;
-  // Title leads with "Near Me" intent — GSC shows the bulk of state-page
-  // impressions come from "touchless car wash near me" and variants
-  // (9,921 imp/90d for the head term alone). Page used to rank ~pos 9.8;
-  // adding the explicit intent match should clear the page-1 gap.
-  const title = `Touchless Car Wash Near Me in ${stateName} — ${month} ${year}`;
+  const title = `Touchless Car Wash Near Me in ${stateName} — ${totalCount}+ Verified Locations (${year})`;
 
   return {
     title,
