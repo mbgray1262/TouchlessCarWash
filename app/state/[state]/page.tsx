@@ -441,6 +441,33 @@ export default async function StatePage({ params }: StatePageProps) {
             </div>
           )}
 
+          {/* State-statistics callout — only show for states above the
+              MIN_LOCATIONS_FOR_STATE_STATS_PAGE threshold (10). totalCount
+              is the approved touchless count for this state, so we mirror
+              the threshold the /statistics page uses to redirect-to-master. */}
+          {totalCount >= 10 && (
+            <div className="mt-10">
+              <Link
+                href={`/state/${params.state}/statistics`}
+                className="block bg-white rounded-2xl border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all p-6 group"
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">Industry data</p>
+                    <h3 className="text-lg font-bold text-[#0F2744] mb-1 group-hover:text-blue-700 transition-colors">
+                      Touchless Car Wash Statistics in {stateName}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Average ratings, 24-hour availability, top chains, customer sentiment, and city distribution —
+                      computed live from {totalCount.toLocaleString()} verified locations.
+                    </p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-700 group-hover:translate-x-1 transition-all flex-shrink-0" />
+                </div>
+              </Link>
+            </div>
+          )}
+
           <RelatedReading />
 
         </div>

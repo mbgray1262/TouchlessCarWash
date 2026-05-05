@@ -160,6 +160,15 @@ export async function GET() {
     if (!existingCity || ts > existingCity) cityLastmod.set(cityKey, ts);
   }
 
+  // Per-state location counts — feeds both the directory page sitemap entry
+  // (always included) and the per-state statistics page sitemap entry (only
+  // included when the state has ≥10 approved touchless locations, matching
+  // the page's redirect-to-master-stats threshold for sparse states).
+  const stateLocationCount = new Map<string, number>();
+  for (const l of listings) {
+    stateLocationCount.set(l.state, (stateLocationCount.get(l.state) ?? 0) + 1);
+  }
+
   const stateUrls = Array.from(stateSet).map((code) => {
     const lastmod = stateLastmod.get(code) ?? now;
     return `  <url>
@@ -169,6 +178,23 @@ export async function GET() {
     <priority>0.8</priority>
   </url>`;
   });
+
+  // /state/[state]/statistics — only for states with ≥10 approved touchless
+  // listings. Sparse states (HI, DC) 308-redirect this URL to the master
+  // /blog/touchless-car-wash-statistics post; advertising those redirects
+  // in the sitemap would waste crawl budget.
+  const STATE_STATS_MIN_LOCATIONS = 10;
+  const stateStatsUrls = Array.from(stateSet)
+    .filter((code) => (stateLocationCount.get(code) ?? 0) >= STATE_STATS_MIN_LOCATIONS)
+    .map((code) => {
+      const lastmod = stateLastmod.get(code) ?? now;
+      return `  <url>
+    <loc>${baseUrl}/state/${getStateSlug(code)}/statistics</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`;
+    });
 
   // Only include cities whose page will be indexable. The city page noindexes
   // when (in-city + nearby-within-radius) < INDEXABLE_MIN_EFFECTIVE, so the
@@ -460,6 +486,7 @@ ${featureStateUrls.join('\n')}
 ${equipmentUrls.join('\n')}
 ${chainUrls.join('\n')}
 ${stateUrls.join('\n')}
+${stateStatsUrls.join('\n')}
 ${cityUrls.join('\n')}
 ${listingUrls.join('\n')}
 ${blogUrls.join('\n')}
