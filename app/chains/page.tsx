@@ -34,27 +34,44 @@ type ChainWithStats = {
   heroImage: string | null;
 };
 
-async function getChainStats(): Promise<ChainWithStats[]> {
-  const results: ChainWithStats[] = [];
+const MIN_CHAIN_LISTINGS = 3;
 
-  for (const chain of CHAINS) {
+async function getChainStats(): Promise<ChainWithStats[]> {
+  // Single paginated query — replaces the previous N-per-chain approach.
+  // Only counts approved touchless listings so the page auto-updates as
+  // listings are added or removed, and chains below the threshold disappear.
+  const chainMap: Record<string, { count: number; states: Set<string> }> = {};
+  const BATCH = 1000;
+  let offset = 0;
+  while (true) {
     const { data } = await supabase
       .from('listings')
-      .select('state')
-      .eq('parent_chain', chain.name)
-      .eq('is_touchless', true);
+      .select('parent_chain, state')
+      .eq('is_touchless', true)
+      .eq('is_approved', true)
+      .not('parent_chain', 'is', null)
+      .range(offset, offset + BATCH - 1);
+    if (!data || data.length === 0) break;
+    for (const row of data) {
+      if (!row.parent_chain) continue;
+      if (!chainMap[row.parent_chain]) chainMap[row.parent_chain] = { count: 0, states: new Set() };
+      chainMap[row.parent_chain].count++;
+      chainMap[row.parent_chain].states.add(row.state);
+    }
+    if (data.length < BATCH) break;
+    offset += BATCH;
+  }
 
-    if (!data || data.length === 0) continue;
-
-    const stateSet = new Set(data.map(r => r.state));
-    const states = Array.from(stateSet).sort();
-
+  const results: ChainWithStats[] = [];
+  for (const chain of CHAINS) {
+    const stats = chainMap[chain.name];
+    if (!stats || stats.count < MIN_CHAIN_LISTINGS) continue;
     results.push({
       name: chain.name,
       slug: chain.slug,
-      description: renderChainDescription(chain.description, data.length),
-      count: data.length,
-      states,
+      description: renderChainDescription(chain.description, stats.count),
+      count: stats.count,
+      states: Array.from(stats.states).sort(),
       heroImage: getChainHeroImage(chain.name),
     });
   }
