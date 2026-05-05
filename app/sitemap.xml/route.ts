@@ -257,7 +257,7 @@ export async function GET() {
   </url>`;
     });
 
-  const listingUrls = (listings || []).map((listing) => {
+  const listingUrls = (listings || []).filter((listing) => listing.city?.trim()).map((listing) => {
     const stateSlug = getStateSlug(listing.state);
     const citySlug = slugify(listing.city);
     return `  <url>
