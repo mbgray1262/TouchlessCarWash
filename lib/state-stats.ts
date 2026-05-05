@@ -49,29 +49,40 @@ export interface StateStats {
 
 const TWENTY_FOUR_HOUR_MARKERS = ['24 hours', '24/7', 'open 24', '12:00 AM – 12:00 AM', '12:00 AM - 12:00 AM'];
 
-function isTwentyFourHour(hours: Record<string, string> | null): boolean {
-  if (!hours) return false;
-  const days = Object.values(hours);
+// Hours can be stored in multiple shapes across listings:
+//   - {monday: "12:00 AM – 12:00 AM"}     // string per day (most common)
+//   - {monday: ["12:00 AM", "12:00 AM"]}   // array of segments
+//   - {monday: {open: "00:00", close: "24:00"}} // object per day (legacy)
+//   - {monday: null}                       // explicit closed
+// We only handle the string shape for the 24-hour check; everything else
+// counts as "not 24-hour" rather than throwing. Defensive typeof guards
+// matter because production hit a TypeError when one Record entry was an
+// object — the server-rendered route returned Next.js's NotFound UI for
+// every state stats page.
+function isTwentyFourHour(hours: unknown): boolean {
+  if (!hours || typeof hours !== 'object') return false;
+  const days = Object.values(hours as Record<string, unknown>);
   if (days.length === 0) return false;
-  // All days must contain a 24-hour marker
+  // All days must be strings AND contain a 24-hour marker
   return days.every(h => {
-    const lower = (h ?? '').toLowerCase();
+    if (typeof h !== 'string') return false;
+    const lower = h.toLowerCase();
     return TWENTY_FOUR_HOUR_MARKERS.some(m => lower.includes(m.toLowerCase()));
   });
 }
 
-function hasFreeVacuum(amenities: string[] | null): boolean {
-  if (!amenities) return false;
-  return amenities.some(a => /\bfree\s*vacuum/i.test(a) || /\bvacuum.*free/i.test(a));
+function hasFreeVacuum(amenities: unknown): boolean {
+  if (!Array.isArray(amenities)) return false;
+  return amenities.some(a => typeof a === 'string' && (/\bfree\s*vacuum/i.test(a) || /\bvacuum.*free/i.test(a)));
 }
 
 function hasUnlimitedMembership(
-  amenities: string[] | null,
-  packages: Array<{ name?: string }> | null,
+  amenities: unknown,
+  packages: unknown,
 ): boolean {
   const checkText = (s: string) => /unlimited|membership|wash club|monthly plan/i.test(s);
-  if (amenities?.some(a => checkText(a))) return true;
-  if (packages?.some(p => p.name && checkText(p.name))) return true;
+  if (Array.isArray(amenities) && amenities.some(a => typeof a === 'string' && checkText(a))) return true;
+  if (Array.isArray(packages) && packages.some(p => p && typeof p === 'object' && typeof (p as { name?: unknown }).name === 'string' && checkText((p as { name: string }).name))) return true;
   return false;
 }
 
