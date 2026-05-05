@@ -9,6 +9,7 @@ import { generateTop10ChainsContent } from '@/lib/dynamic-blog-top10';
 import { generateSubscriptionsContent } from '@/lib/dynamic-blog-subscriptions';
 import { getTakeaways } from '@/lib/blog-takeaways';
 import { getHowTo } from '@/lib/blog-howto-steps';
+import { getBlogDatasetJsonLd } from '@/lib/blog-dataset-schema';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic'; // see /state/.../slug for context — Netlify CDN cache (netlify.toml) handles edge perf; force-dynamic prevents the Next.js ISR etag-based 304-without-body bug that kept breaking /blog and /best on the CDN.
@@ -86,6 +87,20 @@ function formatDate(dateStr: string | null): string {
   });
 }
 
+// Slugify heading text for anchor IDs. Lower-cased, alphanumeric+hyphen only,
+// collapsed dashes. AI tools and citation tools rely on these to deep-link to
+// specific statistics — without IDs, "Touchless Car Wash Finder reports X%"
+// citations end up linking to the page root and lose their context.
+function slugifyHeading(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/&[a-z]+;/g, ' ')
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
 function renderMarkdown(md: string): string {
   let html = md
     .replace(/&/g, '&amp;')
@@ -148,16 +163,20 @@ function renderMarkdown(md: string): string {
 
     if (/^#{4}\s/.test(line)) {
       closeList(); closeBlockquote();
-      out.push(`<h4 class="text-lg font-semibold text-[#0F2744] mt-6 mb-2">${line.replace(/^#{4}\s/, '')}</h4>`);
+      const text = line.replace(/^#{4}\s/, '');
+      out.push(`<h4 id="${slugifyHeading(text)}" class="text-lg font-semibold text-[#0F2744] mt-6 mb-2 scroll-mt-20">${text}</h4>`);
     } else if (/^#{3}\s/.test(line)) {
       closeList(); closeBlockquote();
-      out.push(`<h3 class="text-xl font-bold text-[#0F2744] mt-8 mb-3">${line.replace(/^#{3}\s/, '')}</h3>`);
+      const text = line.replace(/^#{3}\s/, '');
+      out.push(`<h3 id="${slugifyHeading(text)}" class="text-xl font-bold text-[#0F2744] mt-8 mb-3 scroll-mt-20">${text}</h3>`);
     } else if (/^#{2}\s/.test(line)) {
       closeList(); closeBlockquote();
-      out.push(`<h2 class="text-2xl font-bold text-[#0F2744] mt-10 mb-4">${line.replace(/^#{2}\s/, '')}</h2>`);
+      const text = line.replace(/^#{2}\s/, '');
+      out.push(`<h2 id="${slugifyHeading(text)}" class="text-2xl font-bold text-[#0F2744] mt-10 mb-4 scroll-mt-20">${text}</h2>`);
     } else if (/^#{1}\s/.test(line)) {
       closeList(); closeBlockquote();
-      out.push(`<h2 class="text-2xl font-bold text-[#0F2744] mt-10 mb-4">${line.replace(/^#\s/, '')}</h2>`);
+      const text = line.replace(/^#\s/, '');
+      out.push(`<h2 id="${slugifyHeading(text)}" class="text-2xl font-bold text-[#0F2744] mt-10 mb-4 scroll-mt-20">${text}</h2>`);
     } else if (/^&gt;\s/.test(line)) {
       closeList();
       if (!inBlockquote) { out.push('<blockquote class="border-l-4 border-blue-300 pl-4 italic text-gray-600 my-4">'); inBlockquote = true; }
@@ -314,6 +333,19 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
       }
     : null;
 
+  // Dataset JSON-LD — only present on posts that publish original statistical
+  // research (currently just the touchless statistics post). Tells Google
+  // Dataset Search and AI scrapers that the page is a citable source of
+  // structured data, so they link to specific anchored stats instead of
+  // pattern-matching to unrelated city pages.
+  const datasetJsonLd = getBlogDatasetJsonLd({
+    slug: post.slug,
+    title: post.title,
+    description: post.meta_description || post.excerpt || '',
+    datePublished: post.published_at ?? new Date().toISOString(),
+    dateModified: post.updated_at ?? post.published_at ?? new Date().toISOString(),
+  });
+
   return (
     <div className="min-h-screen">
       <script
@@ -328,6 +360,12 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(howToJsonLd) }}
+        />
+      )}
+      {datasetJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(datasetJsonLd) }}
         />
       )}
 
