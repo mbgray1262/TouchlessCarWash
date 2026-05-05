@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { CHAINS } from '@/lib/chains';
 import { getChainSubscriptionDisplay } from '@/lib/chain-subscriptions';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
+import { US_STATES, getStateName, getStateSlug } from '@/lib/constants';
 import type { Metadata } from 'next';
 
 export const revalidate = 3600;
@@ -331,6 +332,26 @@ export default async function UnlimitedHubPage() {
               <h3 className="font-semibold text-[#0F2744] mb-2">Is touchless really safer for my paint than a tunnel?</h3>
               <p className="text-gray-700 text-sm leading-relaxed">Yes, especially for new paint, ceramic coatings, matte finishes, or cars you plan to keep long-term. Soft-touch tunnel cloth picks up grit from earlier cars and can cause swirl marks over many washes. Touchless eliminates that risk entirely — the only thing that ever touches your vehicle is water and soap.</p>
             </div>
+          </div>
+        </div>
+
+        {/* Browse by state */}
+        <div className="mb-10">
+          <h2 className="text-2xl font-bold text-foreground mb-2">Find unlimited touchless plans by state</h2>
+          <p className="text-gray-600 text-sm mb-5">
+            Select your state to see every location with a monthly membership or unlimited plan.
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {US_STATES.filter(s => totalStateSet.has(s.code)).map(s => (
+              <Link
+                key={s.code}
+                href={`/unlimited-touchless-car-wash/${getStateSlug(s.code)}`}
+                className="group block bg-white border border-gray-200 rounded-xl p-3 text-center hover:border-blue-400 hover:shadow-md transition-all"
+              >
+                <div className="text-xl font-bold text-[#0F2744] mb-0.5 group-hover:text-blue-600 transition-colors">{s.code}</div>
+                <div className="text-xs text-gray-600">{getStateName(s.code)}</div>
+              </Link>
+            ))}
           </div>
         </div>
 
