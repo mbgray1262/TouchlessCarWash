@@ -98,6 +98,33 @@ const BLOCKED_USER_AGENTS = [
 ];
 
 export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // ── Permanent redirects for known dead URL patterns ──────────────────────
+
+  // 1. Double-slash listing URLs: /state/XX//slug (city segment missing).
+  //    These were generated for Kwik-Trip and other chain listings whose city
+  //    field was blank. Google crawled ~84 of them. Redirect to the state hub.
+  if (/^\/state\/[^/]+\/\//.test(pathname)) {
+    const stateSegment = pathname.split('/')[2];
+    return NextResponse.redirect(
+      new URL(`/state/${stateSegment}`, request.url),
+      { status: 308 },
+    );
+  }
+
+  // 2. /features/self-serve-bays/[state] — old feature that no longer exists.
+  //    Google has ~38 of these indexed. Redirect to the open-24-hours feature
+  //    hub which is the closest relevant replacement.
+  if (pathname.startsWith('/features/self-serve-bays')) {
+    return NextResponse.redirect(
+      new URL('/features/open-24-hours', request.url),
+      { status: 308 },
+    );
+  }
+
+  // ── Bot filtering ─────────────────────────────────────────────────────────
+
   const ua = request.headers.get('user-agent') || '';
   const uaLower = ua.toLowerCase();
   const isAllowedSearchBot = ALWAYS_ALLOW_BOT_UAS.some(
@@ -118,7 +145,7 @@ export function middleware(request: NextRequest) {
   }
 
   const response = NextResponse.next();
-  response.headers.set('x-pathname', request.nextUrl.pathname);
+  response.headers.set('x-pathname', pathname);
 
   // URLs that carry our redirect-banner flags (removed-listing, empty-city,
   // closed-permanently, closed-temporarily) are destination variants of the

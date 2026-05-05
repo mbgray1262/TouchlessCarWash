@@ -268,7 +268,10 @@ export default async function CityPage({ params }: CityPageProps) {
 
   const stateName = getStateName(stateCode!);
   const cityName = await resolveCityName(stateCode!, params.city);
-  if (!cityName) notFound();
+  // City has zero listings in the DB (fully deleted, not just de-approved).
+  // Redirect to the state hub instead of hard 404 — preserves link equity
+  // and resolves the cascade where listing-page redirects land on a dead city.
+  if (!cityName) permanentRedirect(`/state/${params.state}`);
 
   // Fetch all base data in a single parallel stage — no waterfalls
   const [allListings, nearbyCities, descTemplate, allFilters] = await Promise.all([
