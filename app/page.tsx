@@ -62,7 +62,8 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-const faqItems = [
+// schemaAnswer is plain text for JSON-LD FAQPage schema; answer may be JSX for rendering.
+const faqItems: { question: string; answer: React.ReactNode; schemaAnswer?: string }[] = [
   {
     question: 'What is a touchless, no touch, or contactless car wash?',
     answer: 'A touchless car wash — also called a no touch car wash, contactless car wash, touch-free, or laser car wash — is an automated drive-through or in-bay wash that uses high-pressure water jets and specialized detergents to clean your vehicle without any physical contact from brushes, cloth, or foam pads. Because nothing touches your car\'s surface, this brushless wash method eliminates the risk of scratches, swirl marks, and paint damage.',
@@ -93,6 +94,7 @@ const faqItems = [
   },
   {
     question: 'What products should I use after a touchless car wash?',
+    schemaAnswer: 'After a touchless wash, a quick spray wax or detailer helps protect your paint and repel water until your next visit. For drying, a high-quality microfiber towel prevents water spots without scratching. See our full car care product recommendations at touchlesscarwashfinder.com/blog/recommended-products.',
     answer: (
       <>
         After a touchless wash, a quick spray wax or detailer helps protect your paint and repel water until your next visit. For drying, a high-quality microfiber towel prevents water spots without scratching. See our full{' '}
@@ -180,7 +182,7 @@ export default async function Home() {
       name: item.question,
       acceptedAnswer: {
         '@type': 'Answer',
-        text: item.answer,
+        text: item.schemaAnswer ?? item.answer,
       },
     })),
   };
