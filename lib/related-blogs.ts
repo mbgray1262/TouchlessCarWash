@@ -49,4 +49,12 @@ export const RELATED_BLOGS: RelatedBlog[] = [
     title: 'Best Touchless Car Wash Subscriptions in 2026',
     blurb: 'Unlimited plans from major chains, ranked by value.',
   },
+  {
+    // Surfaces our original statistics research from every state and city
+    // page so internal PageRank flows in. Without this link, the stats post
+    // was orphaned at the /blog index and AI scrapers couldn't find it.
+    slug: 'touchless-car-wash-statistics',
+    title: 'Touchless Car Wash Statistics 2026',
+    blurb: '54 data points on market size, growth, and original research from 4,300+ verified locations.',
+  },
 ];

@@ -1,0 +1,178 @@
+/**
+ * Dataset JSON-LD for blog posts that publish original statistical research.
+ *
+ * Why this exists: AI content tools and Google's Dataset Search index pages
+ * with @type: Dataset markup as authoritative data sources. Without this,
+ * AI scrapers fall back to pattern-matching whatever URL on our domain
+ * looks vaguely related to a stat they want to cite — which is exactly
+ * how Pine Country Windows ended up linking a fabricated "market review"
+ * citation to /state/kansas/wichita instead of to our real statistics page.
+ *
+ * Adding Dataset markup with each headline statistic as a PropertyValue
+ * gives those scrapers a structured, citable data point. Anchor IDs on
+ * the in-page headings (added in app/blog/[slug]/page.tsx) let them
+ * deep-link to the specific section.
+ *
+ * Returns null for any slug we don't have an explicit Dataset definition
+ * for — most blog posts are commentary, not data, and shouldn't claim
+ * Dataset status.
+ */
+
+const SITE_URL = 'https://touchlesscarwashfinder.com';
+const ORG_NAME = 'Touchless Car Wash Finder';
+
+interface DatasetInput {
+  slug: string;
+  title: string;
+  description: string;
+  datePublished: string;
+  dateModified: string;
+}
+
+export function getBlogDatasetJsonLd(input: DatasetInput): Record<string, unknown> | null {
+  if (input.slug !== 'touchless-car-wash-statistics') return null;
+
+  const url = `${SITE_URL}/blog/${input.slug}`;
+
+  // variableMeasured uses PropertyValue. Each entry is one headline statistic
+  // from the article, anchored to the in-page heading via `url`. AI tools
+  // and Google's Dataset Search consume these as canonical data points.
+  // Numbers as `value`; units as `unitText`. Sources stay in the prose.
+  const variableMeasured = [
+    {
+      '@type': 'PropertyValue',
+      name: 'Verified touchless car wash locations in the US',
+      value: 4383,
+      unitText: 'locations',
+      url: `${url}#original-data-touchless-car-wash-locations-across-america`,
+    },
+    {
+      '@type': 'PropertyValue',
+      name: 'Average Google rating across verified touchless car washes',
+      value: 3.86,
+      unitText: 'stars (out of 5)',
+      url: `${url}#original-data-touchless-car-wash-locations-across-america`,
+    },
+    {
+      '@type': 'PropertyValue',
+      name: 'Percentage of touchless car washes operating 24 hours daily',
+      value: 51,
+      unitText: '%',
+      url: `${url}#original-data-touchless-car-wash-locations-across-america`,
+    },
+    {
+      '@type': 'PropertyValue',
+      name: 'Touchless car washes offering free vacuum stations',
+      value: 41,
+      unitText: '%',
+      url: `${url}#amenities-at-touchless-car-washes`,
+    },
+    {
+      '@type': 'PropertyValue',
+      name: 'Touchless car washes offering unlimited wash memberships',
+      value: 35,
+      unitText: '%',
+      url: `${url}#amenities-at-touchless-car-washes`,
+    },
+    {
+      '@type': 'PropertyValue',
+      name: 'Touchless car wash locations operated by recognized chains',
+      value: 12,
+      unitText: '%',
+      url: `${url}#chain-vs-independent-touchless-car-washes`,
+    },
+    {
+      '@type': 'PropertyValue',
+      name: 'Total Google reviews aggregated across verified touchless car washes',
+      value: 694750,
+      unitText: 'reviews',
+      url: `${url}#original-data-touchless-car-wash-locations-across-america`,
+    },
+    {
+      '@type': 'PropertyValue',
+      name: 'Touchless car washes with predominantly positive customer sentiment',
+      value: 43,
+      unitText: '%',
+      url: `${url}#how-customers-feel-about-touchless-car-washes-sentiment-analysis`,
+    },
+    {
+      '@type': 'PropertyValue',
+      name: 'US touchless automatic car wash system market size',
+      value: 1.38,
+      unitText: 'billion USD',
+      url: `${url}#touchless-car-wash-market-statistics`,
+    },
+    {
+      '@type': 'PropertyValue',
+      name: 'Touchless car wash market projected CAGR through 2033',
+      value: 9,
+      unitText: '%',
+      url: `${url}#touchless-car-wash-market-statistics`,
+    },
+    {
+      '@type': 'PropertyValue',
+      name: 'Consumers who prefer touchless or soft-touch washing over brush systems',
+      value: 48,
+      unitText: '%',
+      url: `${url}#touchless-car-wash-market-statistics`,
+    },
+    {
+      '@type': 'PropertyValue',
+      name: 'Top state by touchless car wash count: California',
+      value: 433,
+      unitText: 'locations',
+      url: `${url}#top-10-states-by-touchless-car-wash-locations`,
+    },
+  ];
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Dataset',
+    name: input.title,
+    description: input.description,
+    url,
+    sameAs: url,
+    license: 'https://creativecommons.org/licenses/by/4.0/',
+    isAccessibleForFree: true,
+    datePublished: input.datePublished,
+    dateModified: input.dateModified,
+    keywords: [
+      'touchless car wash',
+      'car wash statistics',
+      'car wash market',
+      'touchless car wash market size',
+      'touchless car wash growth',
+      'car wash industry data',
+      'US car wash statistics',
+    ],
+    creator: {
+      '@type': 'Organization',
+      name: ORG_NAME,
+      url: SITE_URL,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: ORG_NAME,
+      url: SITE_URL,
+    },
+    spatialCoverage: {
+      '@type': 'Place',
+      name: 'United States',
+    },
+    temporalCoverage: '2024-01-01/2026-04-12',
+    measurementTechnique: [
+      'Aggregation of operator-confirmed chain location lists',
+      'Natural-language analysis of Google review snippets for touchless/brushless mentions',
+      'Website content extraction and verification',
+      'Community submissions',
+    ],
+    variableMeasured,
+    distribution: [
+      {
+        '@type': 'DataDownload',
+        encodingFormat: 'text/html',
+        contentUrl: url,
+      },
+    ],
+  };
+}

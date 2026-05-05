@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ProductsBanner } from '@/components/ProductsBanner';
-import { Star, MapPin, CheckCircle, TrendingUp, Search, Eye, Sparkles, Droplet } from 'lucide-react';
+import { Star, MapPin, CheckCircle, TrendingUp, Search, Eye, Sparkles, Droplet, ArrowRight } from 'lucide-react';
 import HeroSection from '@/components/HeroSection';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -415,6 +415,34 @@ export default async function Home() {
               </details>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Industry-statistics callout — internal link to the touchless stats
+          blog post. Without this, the post had zero links from high-PageRank
+          pages on our own site, so AI scrapers and citation tools (e.g.
+          Pine Country Windows' AI-generated content) couldn't find the
+          canonical statistics page and ended up linking unrelated city
+          pages instead. */}
+      <section className="py-10 px-4 bg-gray-50 border-y border-gray-200">
+        <div className="container mx-auto max-w-3xl">
+          <Link
+            href="/blog/touchless-car-wash-statistics"
+            className="block bg-white rounded-xl border border-gray-200 hover:border-[#22C55E] hover:shadow-md transition-all p-6 group"
+          >
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-[#22C55E] uppercase tracking-wide mb-1">Industry research</p>
+                <h3 className="text-lg font-bold text-[#0F2744] mb-1 group-hover:text-[#22C55E] transition-colors">
+                  Touchless Car Wash Statistics 2026
+                </h3>
+                <p className="text-sm text-gray-600">
+                  54 data points on market size, growth, consumer trends, and original first-party data from 4,300+ verified locations.
+                </p>
+              </div>
+              <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-[#22C55E] group-hover:translate-x-1 transition-all flex-shrink-0" />
+            </div>
+          </Link>
         </div>
       </section>
 
