@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { permanentRedirect } from 'next/navigation';
 import { ChevronRight, MapPin, Star, Clock, Sparkles, Building2, TrendingUp, Users, BookOpen } from 'lucide-react';
-import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants';
+import { US_STATES, getStateName, slugify } from '@/lib/constants';
 import { getStateStats } from '@/lib/state-stats';
 import type { Metadata } from 'next';
 
@@ -21,9 +21,9 @@ function getStateCode(stateSlug: string): string | null {
   return state ? state.code : null;
 }
 
-export function generateStaticParams() {
-  return US_STATES.map((s) => ({ state: slugify(s.name) }));
-}
+// No generateStaticParams: combining it with dynamic='force-dynamic' causes
+// Next.js to error at request time on some routes. Pages render on demand;
+// Netlify CDN caches via netlify.toml's s-maxage rules.
 
 export async function generateMetadata({ params }: StatePageProps): Promise<Metadata> {
   const stateCode = getStateCode(params.state);
