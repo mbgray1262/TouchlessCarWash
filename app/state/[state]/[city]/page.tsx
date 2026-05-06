@@ -13,6 +13,7 @@ import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import { getAnyCityCoords, findNearestTouchlessCityPath } from '@/lib/geo-fallback';
 import {
   getStateListingsForAugment,
+  getListingCardsByIds,
   pickAnchorFromListings,
   selectNearby,
   NEARBY_RADIUS_MILES,
@@ -112,9 +113,18 @@ const getNearbyForCity = cache(
   ): Promise<Array<Listing & { _distance: number }>> => {
     const anchor = pickAnchorFromListings(inCity);
     if (!anchor) return [];
-    const stateListings = await getStateListingsForAugment(stateCode);
+    // Stage 1: slim proximity scan (id/city/lat/lng only — fast even for TX ~3000 rows)
+    const slimListings = await getStateListingsForAugment(stateCode);
     const exclude = new Set(inCity.map((l) => l.id));
-    return selectNearby(stateListings, anchor, cityName, exclude) as Array<Listing & { _distance: number }>;
+    const proximityResults = selectNearby(slimListings, anchor, cityName, exclude);
+    if (proximityResults.length === 0) return [];
+    // Stage 2: fetch full card data for only the selected ~8 nearby listings
+    const nearbyIds = proximityResults.map((p) => p.id);
+    const fullListings = await getListingCardsByIds(nearbyIds);
+    const distanceMap = new Map(proximityResults.map((p) => [p.id, p._distance]));
+    return fullListings
+      .map((l) => ({ ...l, _distance: distanceMap.get(l.id) ?? 0 }))
+      .sort((a, b) => a._distance - b._distance);
   },
 );
 
