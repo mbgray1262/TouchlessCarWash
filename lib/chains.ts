@@ -21,6 +21,11 @@ export const CHAINS: Chain[] = [
     description: 'Power Market operates {count} touchless car wash locations at gas stations across California, Oregon, and Nevada. Part of the H&S Energy Group, all Power Market car washes use Istobal touchless equipment for a safe, scratch-free wash.',
   },
   {
+    name: 'Circle K',
+    slug: 'circle-k',
+    description: 'Circle K is one of the largest convenience store chains in the world, with Touch Free touchless car washes at {count} verified locations across 13 states — from Arizona and California to Florida, Illinois, Texas, and the upper Midwest. Circle K car wash kiosks offer a "Touch Free" option for a high-pressure, brushless, scratch-free automatic wash.',
+  },
+  {
     name: 'Holiday Stationstores',
     slug: 'holiday-stationstores',
     description: 'Holiday Stationstores, now part of the Circle K family, offers Touch Free car washes at {count} locations across the upper Midwest. Their touchless bays provide a convenient, brushless wash alongside fuel and convenience store services.',
