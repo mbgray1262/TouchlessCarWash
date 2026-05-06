@@ -186,6 +186,27 @@ export default async function BestOfIndexPage() {
         </div>
       </section>
 
+      {/* Chain rankings promo */}
+      <section className="py-12 px-4 bg-gray-50 border-t border-gray-200">
+        <div className="container mx-auto max-w-5xl">
+          <div className="bg-[#0F2744] rounded-2xl p-8 flex flex-col md:flex-row items-start md:items-center gap-6">
+            <div className="text-5xl">🏆</div>
+            <div className="flex-1">
+              <h2 className="text-white font-bold text-2xl mb-2">2026 Chain Rankings</h2>
+              <p className="text-blue-200 leading-relaxed">
+                Which touchless car wash chains come out on top? See our national Top 10 plus regional awards — Most Locations, Highest Rated, Widest Coverage, and Hidden Gem — across the Midwest, Pacific, Northeast, Southeast, and Mountain/Southwest.
+              </p>
+            </div>
+            <Link
+              href="/best/chains"
+              className="flex-shrink-0 bg-[#22C55E] hover:bg-[#16A34A] text-white font-bold px-7 py-3 rounded-xl transition-colors whitespace-nowrap"
+            >
+              View Chain Rankings →
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="py-16 px-4 bg-[#0F2744]">
         <div className="container mx-auto max-w-2xl text-center">
