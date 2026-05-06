@@ -15,6 +15,16 @@ import { cache } from 'react';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from './supabase';
 import { haversineDistance } from './metro-areas';
 
+// Slim row type used for the proximity scan — only the fields needed to
+// compute haversine distance and filter by city.  Full card data is fetched
+// afterwards for only the handful of selected nearby listings.
+export type ProximityListing = {
+  id: string;
+  city: string;
+  latitude: number | null;
+  longitude: number | null;
+};
+
 export const NEARBY_RADIUS_MILES = 25;
 export const NEARBY_LIMIT = 8;
 export const INDEXABLE_MIN_EFFECTIVE = 3;
@@ -67,26 +77,38 @@ export function selectNearby<T extends NearbyCandidate & { id: string }>(
 }
 
 /**
- * Per-request cached fetch of all approved touchless listings in a state
- * with the columns needed to render listing cards plus lat/lng for the
- * distance filter. Uses LISTING_CARD_COLUMNS + lat/lng so nearby cards
- * render identically to in-city cards.
- *
- * Capped at 2000 rows — the largest state (TX) has ~3000 touchless
- * listings, so this caps at the most common metro radius without
- * paging through everything.
+ * Per-request cached fetch of slim proximity rows for all approved touchless
+ * listings in a state. Only selects id/city/lat/lng — the minimum needed to
+ * run the haversine distance filter. Full card data is fetched separately
+ * via getListingCardsByIds() for only the selected nearby listings (~8 rows),
+ * keeping this query fast even for large states like TX (~3000 listings).
  */
 export const getStateListingsForAugment = cache(
-  async (stateCode: string): Promise<Array<Listing & { latitude: number | null; longitude: number | null }>> => {
+  async (stateCode: string): Promise<ProximityListing[]> => {
     const { data } = await supabase
       .from('listings')
-      .select(`${LISTING_CARD_COLUMNS}, latitude, longitude`)
+      .select('id, city, latitude, longitude')
       .eq('is_touchless', true)
       .eq('is_approved', true)
       .eq('state', stateCode)
       .not('latitude', 'is', null)
       .not('longitude', 'is', null)
       .limit(2000);
-    return (data as Array<Listing & { latitude: number | null; longitude: number | null }>) ?? [];
+    return (data as ProximityListing[]) ?? [];
   },
 );
+
+/**
+ * Fetch full listing card data for a specific set of IDs.  Called after
+ * proximity filtering so we only transfer ~8 full rows instead of ~2000.
+ */
+export async function getListingCardsByIds(
+  ids: string[],
+): Promise<Array<Listing & { latitude: number | null; longitude: number | null }>> {
+  if (ids.length === 0) return [];
+  const { data } = await supabase
+    .from('listings')
+    .select(`${LISTING_CARD_COLUMNS}, latitude, longitude`)
+    .in('id', ids);
+  return (data as Array<Listing & { latitude: number | null; longitude: number | null }>) ?? [];
+}
