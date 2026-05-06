@@ -114,8 +114,8 @@ export async function generateMetadata({ params }: StatePageProps): Promise<Meta
 
   const stateName = getStateName(stateCode);
   const now = new Date();
-  const month = now.toLocaleString('default', { month: 'long' });
   const year = now.getFullYear();
+  const monthShort = now.toLocaleString('default', { month: 'short' });
 
   const [totalCount, descTemplate, citiesData] = await Promise.all([
     getStateListingCount(stateCode),
@@ -132,12 +132,15 @@ export async function generateMetadata({ params }: StatePageProps): Promise<Meta
     topCityCount: citiesData[0]?.count,
   });
 
+  const topCitySnippet = citiesData[0]?.city
+    ? ` including ${citiesData[0].city}`
+    : '';
   const metaDescription = stateDesc
     ? stateDesc.substring(0, 155) + (stateDesc.length > 155 ? '...' : '')
-    : `Find a touchless car wash near you in ${stateName} — ${totalCount}+ verified no-touch, brushless & contactless locations with ratings, hours, and directions.`;
+    : `Find ${totalCount}+ verified touchless car washes near you in ${stateName} — no-touch, brushless locations across ${citiesData.length} cities${topCitySnippet}. Ratings, hours & directions.`;
 
   const canonicalUrl = `https://touchlesscarwashfinder.com/state/${params.state}`;
-  const title = `Touchless Car Wash Near Me in ${stateName} — ${totalCount}+ Verified Locations (${year})`;
+  const title = `Best Touchless Car Wash Near Me in ${stateName} — ${totalCount}+ Locations (${monthShort} ${year})`;
 
   return {
     title,
