@@ -26,6 +26,16 @@ package = "@netlify/plugin-nextjs"
 # always has a fresh body cached and never has to forward 304s without
 # content. purgeCache() in /api/revalidate clears these on demand.
 [[headers]]
+  for = "/best/chains"
+  [headers.values]
+    Netlify-CDN-Cache-Control = "public, s-maxage=300, stale-while-revalidate=86400, durable"
+
+[[headers]]
+  for = "/best/chains/*"
+  [headers.values]
+    Netlify-CDN-Cache-Control = "public, s-maxage=300, stale-while-revalidate=86400, durable"
+
+[[headers]]
   for = "/best"
   [headers.values]
     Netlify-CDN-Cache-Control = "public, s-maxage=300, stale-while-revalidate=86400, durable"
