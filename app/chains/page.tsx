@@ -130,6 +130,21 @@ export default async function ChainsPage() {
           </p>
         </div>
 
+        {/* Chain rankings promo */}
+        <div className="bg-[#0F2744] rounded-xl p-6 mb-8 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="text-3xl">🏆</div>
+          <div className="flex-1">
+            <h2 className="text-white font-bold text-lg mb-1">2026 Chain Rankings — Which chains come out on top?</h2>
+            <p className="text-blue-200 text-sm">See our national Top 10 and regional awards for Most Locations, Highest Rated, Widest Coverage, and Hidden Gem.</p>
+          </div>
+          <Link
+            href="/best/chains"
+            className="flex-shrink-0 bg-[#22C55E] hover:bg-[#16A34A] text-white font-semibold px-5 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap"
+          >
+            View Rankings →
+          </Link>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {chains.map((chain) => (
             <Link key={chain.slug} href={`/chain/${chain.slug}`}>
