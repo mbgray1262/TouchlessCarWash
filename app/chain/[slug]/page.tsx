@@ -256,8 +256,23 @@ export default async function ChainPage({ params }: ChainPageProps) {
           </div>
         ))}
 
+        {/* Chain rankings promo */}
+        <div className="mt-12 mb-8 bg-[#0F2744] rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="text-3xl">🏆</div>
+          <div className="flex-1">
+            <p className="text-white font-bold text-lg mb-1">See How {chain.name} Ranks</p>
+            <p className="text-blue-200 text-sm">Compare {chain.name} against other touchless car wash chains — national Top 10 and regional awards for {new Date().getFullYear()}.</p>
+          </div>
+          <Link
+            href="/best/chains"
+            className="flex-shrink-0 bg-[#22C55E] hover:bg-[#16A34A] text-white font-semibold px-5 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap"
+          >
+            View Chain Rankings →
+          </Link>
+        </div>
+
         {/* Other Chains */}
-        <div className="mt-12 mb-8">
+        <div className="mt-0 mb-8">
           <h2 className="text-2xl font-bold text-foreground mb-4">Other Touchless Car Wash Chains</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {otherChains.map((c) => (
