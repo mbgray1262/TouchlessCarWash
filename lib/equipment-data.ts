@@ -350,6 +350,22 @@ export const EQUIPMENT_BRAND_DATA: EquipmentBrandData[] = [
     seoTitle: 'Futura Touchless Car Wash Locations',
     seoDescription: 'Find touchless car washes using Futura equipment. Futura manufactures touchless automatic in-bay wash systems.',
   },
+  {
+    slug: 'pro_equipment',
+    label: 'Pro Equipment',
+    description: 'Pro Equipment Company, Inc. is an American manufacturer of touchless in-bay automatic car wash systems, best known for their Navigator line of fully automatic, brushless wash systems. The Navigator is engineered around a philosophy of mechanical simplicity — its low moving-part count translates directly into high uptime and low maintenance costs, making it a practical choice for independent operators and regional chains alike. Pro Equipment systems deliver a genuine touchless clean using high-pressure water jets and staged chemical application, with no brushes or friction contact at any point in the wash cycle.',
+    features: [
+      'Fully automatic touchless operation — no brushes, no friction contact',
+      'Minimal moving parts design for reduced maintenance and maximum uptime',
+      'High-pressure water jets with precision chemical staging',
+      'In-bay gantry design compatible with standard single-bay installations',
+      'Built for unattended 24/7 operation',
+    ],
+    seoTitle: 'Pro Equipment Navigator Touchless Car Wash Locations',
+    seoDescription: 'Find touchless car washes using Pro Equipment Navigator systems. Pro Equipment manufactures reliable, low-maintenance touchless in-bay automatic car wash systems.',
+    website: 'https://www.procarwashequipment.com',
+    // slug uses underscore (pro_equipment) to match DB convention for multi-word brands
+  },
 ];
 
 export const EQUIPMENT_MODEL_DATA: EquipmentModelData[] = [
@@ -615,6 +631,24 @@ export const EQUIPMENT_MODEL_DATA: EquipmentModelData[] = [
 
   // Futura models
   { slug: 'revolution', name: 'Revolution', brandSlug: 'futura', description: 'The Futura Revolution is a touchless in-bay automatic car wash system that uses high-pressure water jets and staged chemical application to clean vehicles without any physical contact.', seoTitle: 'Futura Revolution Car Wash Locations', seoDescription: 'Find touchless car washes using the Futura Revolution automatic wash system.' },
+
+  // Pro Equipment models
+  {
+    slug: 'navigator-2000',
+    name: 'Navigator 2000',
+    brandSlug: 'pro_equipment',
+    description: 'The Pro Equipment Navigator 2000 is a fully automatic touchless in-bay car wash system built around a low-moving-part philosophy that keeps maintenance demands minimal and uptime high. Using high-pressure water jets and a staged chemical process, the Navigator 2000 delivers a thorough brushless clean without any physical contact with the vehicle. Its straightforward gantry design fits standard single-bay installations and is engineered for unattended, around-the-clock operation.',
+    keyFeatures: [
+      'Fully touchless — no brushes or friction contact at any stage',
+      'Minimal moving parts for high reliability and low maintenance costs',
+      'High-pressure wash jets with multi-stage chemical application',
+      'Gantry-style in-bay design fits standard bay dimensions',
+      'Built for continuous unattended operation',
+    ],
+    bestFor: 'Independent operators and regional chains prioritizing reliability and low maintenance overhead',
+    seoTitle: 'Pro Equipment Navigator 2000 Car Wash Locations',
+    seoDescription: 'Find touchless car washes using the Pro Equipment Navigator 2000. The Navigator 2000 is a fully automatic, brushless in-bay wash system known for its reliability and minimal maintenance.',
+  },
 ];
 
 // --- Helper functions ---
