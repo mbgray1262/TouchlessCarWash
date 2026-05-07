@@ -529,7 +529,7 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
                 const rank = idx + 1;
                 const snippet = reviewSnippets.get(listing.id);
                 const touchlessCount = touchlessReviewCounts.get(listing.id) ?? 0;
-                const rawCardImage = listing.hero_image ?? listing.google_photo_url ?? null;
+                const rawCardImage = listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
                 const cardImage = rawCardImage ? ensureHttps(rawCardImage) : null;
                 const rawCardLogo = listing.logo_photo ?? listing.google_logo_url ?? null;
                 const cardLogo = rawCardLogo ? ensureHttps(rawCardLogo) : null;
