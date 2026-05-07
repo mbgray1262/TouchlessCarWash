@@ -69,7 +69,7 @@ async function getStats() {
       { label: 'Verified Locations', value: `${totalListings.toLocaleString()}+`, icon: MapPin },
       { label: 'States + DC', value: '50', icon: CheckCircle },
       { label: 'Customer Reviews', value: `${roundedReviews.toLocaleString()}+`, icon: Star },
-      { label: 'Hours Listings Updated', value: 'Weekly', icon: Clock },
+      { label: 'Always Free to Use', value: '100%', icon: Clock },
     ],
   };
 }
