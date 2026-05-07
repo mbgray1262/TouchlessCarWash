@@ -18,12 +18,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!chain) return { title: 'Badge Not Found' };
 
   const claims = await getChainBadgeClaims(slug);
-  if (!claims.national && claims.regional.length === 0) return { title: 'Badge Not Found' };
+  // Allow page for national top-10 (consolation) AND regional top-3
+  const hasAnyClaim = claims.national !== null || claims.nationalRank !== null || claims.regional.length > 0;
+  if (!hasAnyClaim) return { title: 'Badge Not Found' };
 
   const topClaim = claims.national ?? claims.regional[0];
-  const ordinal = topClaim.rank === 1 ? '1st' : topClaim.rank === 2 ? '2nd' : '3rd';
-  const title = `${chain.name} — #${topClaim.rank} Best Touchless Car Wash Chain in ${topClaim.scopeName} | Claim Your Badge`;
-  const description = `${chain.name} is ranked ${ordinal} Best Touchless Car Wash Chain in ${topClaim.scopeName}. Claim your free award badge and display it on your website.`;
+  const rankLabel = topClaim
+    ? (topClaim.rank <= 3
+        ? (topClaim.rank === 1 ? '1st' : topClaim.rank === 2 ? '2nd' : '3rd')
+        : 'Top 10')
+    : (claims.nationalRank ? 'Top 10' : '');
+  const scopeName = topClaim ? topClaim.scopeName : 'America';
+  const title = `${chain.name} — ${rankLabel} Best Touchless Car Wash Chain in ${scopeName} | Claim Your Badge`;
+  const description = `${chain.name} is ranked ${rankLabel} Best Touchless Car Wash Chain in ${scopeName}. Claim your free award badge and display it on your website.`;
 
   return {
     title,
@@ -47,17 +54,28 @@ export default async function ChainBadgeClaimPage({ params }: Props) {
     getNationalChainRankings(),
   ]);
 
-  if (!claims.national && claims.regional.length === 0) notFound();
+  // Allow page for: national top-3, national top-10 consolation, or regional top-3
+  const hasAnyClaim = claims.national !== null || claims.nationalRank !== null || claims.regional.length > 0;
+  if (!hasAnyClaim) notFound();
 
   const ranked = nationalChains.find(c => c.slug === slug);
-  const topClaim = claims.national ?? claims.regional[0];
+  const chainUrl = `${SITE_URL}/chain/${slug}`;
   const year = new Date().getFullYear();
 
-  // All claimable badges: national first, then regional
-  const allClaims = [
-    ...(claims.national ? [claims.national] : []),
-    ...claims.regional,
+  // Top-3 claims get positional badge sections (national first, then regional)
+  const positionalClaims = [
+    ...(claims.national ? [{ ...claims.national, scopeParam: 'national', isNational: true }] : []),
+    ...claims.regional.map(r => ({ ...r, scopeParam: r.regionSlug, isNational: false })),
   ];
+
+  // National Top 10 consolation (rank 4–10, not already covered by national top-3)
+  const hasTop10Consolation = claims.nationalRank !== null && claims.nationalRank > 3 && claims.nationalRank <= 10;
+
+  const topDisplay = positionalClaims[0] ?? (hasTop10Consolation
+    ? { rank: claims.nationalRank!, scopeName: 'America', isNational: true }
+    : null);
+
+  if (!topDisplay) notFound();
 
   return (
     <main className="min-h-screen bg-white">
@@ -75,16 +93,27 @@ export default async function ChainBadgeClaimPage({ params }: Props) {
             Congratulations, {chain.name}!
           </h1>
           <p className="text-xl text-blue-100 mb-6">
-            You&apos;re ranked{' '}
-            <span className="font-bold text-yellow-400">#{topClaim.rank}</span>{' '}
-            Best Touchless Car Wash Chain in{' '}
-            <span className="font-bold text-white">{topClaim.scopeName}</span>
+            {topDisplay.rank <= 3 ? (
+              <>
+                You&apos;re ranked{' '}
+                <span className="font-bold text-yellow-400">#{topDisplay.rank}</span>{' '}
+                Best Touchless Car Wash Chain in{' '}
+                <span className="font-bold text-white">{topDisplay.scopeName}</span>
+              </>
+            ) : (
+              <>
+                You&apos;re in the{' '}
+                <span className="font-bold text-yellow-400">Top 10</span>{' '}
+                Best Touchless Car Wash Chains in{' '}
+                <span className="font-bold text-white">America</span>
+              </>
+            )}
           </p>
 
-          {/* All ranking positions */}
-          {allClaims.length > 1 && (
+          {/* All top-3 ranking positions */}
+          {positionalClaims.length > 1 && (
             <div className="flex flex-wrap items-center justify-center gap-2">
-              {allClaims.map(claim => (
+              {positionalClaims.map(claim => (
                 <Link
                   key={claim.scopeUrl}
                   href={claim.scopeUrl}
@@ -118,34 +147,55 @@ export default async function ChainBadgeClaimPage({ params }: Props) {
         </div>
       </section>
 
-      {/* One badge section per claim */}
-      {allClaims.map((claim, i) => {
-        const badgeApiUrl = `${SITE_URL}/api/badge/chain?rank=${claim.rank}&scope=${encodeURIComponent(claim.scopeName)}`;
-        const chainUrl = `${SITE_URL}/chain/${slug}`;
-        const isNational = claim.scopeName === 'America';
-        return (
-          <section key={claim.scopeUrl} className={`py-14 px-4 ${i % 2 === 1 ? 'bg-gray-50' : 'bg-white'}`}>
-            <div className="container mx-auto max-w-3xl">
-              <h2 className="text-2xl font-bold text-[#0F2744] mb-1">
-                {ordinalLabel(claim.rank)} in {claim.scopeName}
-              </h2>
-              <p className="text-gray-500 text-sm mb-6">
-                <Link href={claim.scopeUrl} className="text-blue-600 hover:underline">
-                  {isNational ? 'National Chain Rankings' : `${claim.scopeName} Regional Rankings`}
-                </Link>
-              </p>
-              <ChainBadgeClaimClient
-                rank={claim.rank}
-                scopeName={claim.scopeName}
-                badgeApiUrl={badgeApiUrl}
-                chainUrl={chainUrl}
-                chainName={chain.name}
-                year={year}
-              />
-            </div>
-          </section>
-        );
-      })}
+      {/* One badge section per positional claim (#1/#2/#3) */}
+      {positionalClaims.map((claim, i) => (
+        <section key={claim.scopeUrl} className={`py-14 px-4 ${i % 2 === 1 ? 'bg-gray-50' : 'bg-white'}`}>
+          <div className="container mx-auto max-w-3xl">
+            <h2 className="text-2xl font-bold text-[#0F2744] mb-1">
+              {ordinalLabel(claim.rank)} in {claim.scopeName}
+            </h2>
+            <p className="text-gray-500 text-sm mb-6">
+              <Link href={claim.scopeUrl} className="text-blue-600 hover:underline">
+                {claim.isNational ? 'National Chain Rankings' : `${claim.scopeName} Regional Rankings`}
+              </Link>
+            </p>
+            <ChainBadgeClaimClient
+              rank={claim.rank}
+              scopeName={claim.scopeName}
+              scopeParam={claim.scopeParam}
+              chainSlug={slug}
+              chainUrl={chainUrl}
+              chainName={chain.name}
+              year={year}
+            />
+          </div>
+        </section>
+      ))}
+
+      {/* Top 10 consolation badge section (rank 4–10, national only) */}
+      {hasTop10Consolation && (
+        <section className={`py-14 px-4 ${positionalClaims.length % 2 === 1 ? 'bg-gray-50' : 'bg-white'}`}>
+          <div className="container mx-auto max-w-3xl">
+            <h2 className="text-2xl font-bold text-[#0F2744] mb-1">
+              Top 10 in America
+            </h2>
+            <p className="text-gray-500 text-sm mb-6">
+              <Link href={`${SITE_URL}/best/chains`} className="text-blue-600 hover:underline">
+                National Chain Rankings
+              </Link>
+            </p>
+            <ChainBadgeClaimClient
+              rank={claims.nationalRank!}
+              scopeName="America"
+              scopeParam="national"
+              chainSlug={slug}
+              chainUrl={chainUrl}
+              chainName={chain.name}
+              year={year}
+            />
+          </div>
+        </section>
+      )}
 
       {/* Why display */}
       <section className="py-14 px-4 bg-[#0F2744]">

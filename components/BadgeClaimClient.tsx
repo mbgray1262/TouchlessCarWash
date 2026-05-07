@@ -25,10 +25,11 @@ export function BadgeClaimClient({
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [copied, setCopied] = useState(false);
 
+  const rankLabel = rank <= 3 ? `#${rank}` : 'Top 10';
   const prodBadgeUrl = `https://touchlesscarwashfinder.com/api/badge/${listingSlug}?theme=${theme}`;
   const previewBadgeUrl = `/api/badge/${listingSlug}?theme=${theme}`;
-  const altText = `#${rank} Best Touchless Car Wash in ${metroName} (${year}) - Touchless Car Wash Finder`;
-  const title = `${listingName} - #${rank} Best Touchless Car Wash in ${metroName} (${year})`;
+  const altText = `${rankLabel} Best Touchless Car Wash in ${metroName} (${year}) - Touchless Car Wash Finder`;
+  const title = `${listingName} - ${rankLabel} Best Touchless Car Wash in ${metroName} (${year})`;
 
   const embedCode = `<a href="${listingUrl}" target="_blank" rel="noopener" title="${title}"><img src="${prodBadgeUrl}" alt="${altText}" width="320" height="96" style="border:0;max-width:100%;height:auto;" /></a>`;
 

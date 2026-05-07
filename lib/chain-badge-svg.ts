@@ -15,6 +15,13 @@ export interface ChainBadgeSvgOptions {
   size: 'standard' | 'compact';
 }
 
+export interface Top10ChainBadgeSvgOptions {
+  scopeName: string;   // "America" (national only for consolation)
+  year: number;
+  theme: 'light' | 'dark';
+  size: 'standard' | 'compact';
+}
+
 /* ------------------------------------------------------------------ */
 /*  Lucide icon paths                                                 */
 /* ------------------------------------------------------------------ */
@@ -72,6 +79,53 @@ function renderDroplet(x: number, y: number, size: number, color: string, sw = 2
 /* ------------------------------------------------------------------ */
 /*  Public API                                                        */
 /* ------------------------------------------------------------------ */
+
+/** Top 10 consolation badge for chains ranked 4–10 nationally */
+export function generateTop10ChainBadgeSvg(options: Top10ChainBadgeSvgOptions): string {
+  const { scopeName, year, theme, size } = options;
+  const isCompact = size === 'compact';
+  const w = isCompact ? 220 : 320;
+  const h = isCompact ? 72 : 96;
+
+  const bg = theme === 'dark' ? '#0F2744' : '#FFFFFF';
+  const textPrimary = theme === 'dark' ? '#FFFFFF' : '#0F2744';
+  const textSecondary = theme === 'dark' ? '#94A3B8' : '#6B7280';
+  const borderColor = theme === 'dark' ? '#1E3A5F' : '#E2E8F0';
+  const brandColor = '#22C55E';
+  const accentColor = '#0891B2'; // teal — distinct from gold/silver/bronze
+  const isDark = theme === 'dark';
+  const scope = escapeXml(scopeName);
+  const pillAlpha = isDark ? 0.12 : 0.08;
+  const wmAlpha = isDark ? 0.06 : 0.04;
+
+  if (isCompact) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none">
+  <defs><clipPath id="card"><rect width="${w}" height="${h}" rx="8"/></clipPath></defs>
+  <rect width="${w}" height="${h}" rx="8" fill="${bg}" stroke="${borderColor}" stroke-width="1"/>
+  <rect x="0" y="0" width="3" height="${h}" fill="${accentColor}" clip-path="url(#card)"/>
+  <rect x="12" y="8" width="56" height="20" rx="4" fill="${accentColor}" opacity="${pillAlpha}"/>
+  ${renderTrophy(14, 10, 16, accentColor, 2.5)}
+  <text x="33" y="23" font-family="${FONT_STACK}" font-size="9" font-weight="800" fill="${accentColor}">Top 10</text>
+  <text x="12" y="42" font-family="${FONT_STACK}" font-size="11" font-weight="700" fill="${textPrimary}">Best Touchless Car Wash Chain</text>
+  <text x="12" y="55" font-family="${FONT_STACK}" font-size="9" fill="${textSecondary}">${scope} · ${year}</text>
+  <text x="12" y="67" font-family="${FONT_STACK}" font-size="8" font-weight="500" fill="${brandColor}">touchlesscarwashfinder.com</text>
+</svg>`;
+  }
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none">
+  <defs><clipPath id="card"><rect width="${w}" height="${h}" rx="10"/></clipPath></defs>
+  <rect width="${w}" height="${h}" rx="10" fill="${bg}" stroke="${borderColor}" stroke-width="1"/>
+  <rect x="0" y="0" width="4" height="${h}" fill="${accentColor}" clip-path="url(#card)"/>
+  ${renderDroplet(w - 58, 24, 48, textPrimary, 1.5, wmAlpha)}
+  <rect x="16" y="18" width="78" height="24" rx="5" fill="${accentColor}" opacity="${pillAlpha}"/>
+  ${renderTrophy(19, 20, 20, accentColor)}
+  <text x="43" y="35" font-family="${FONT_STACK}" font-size="12" font-weight="800" fill="${accentColor}">Top 10</text>
+  <text x="100" y="35" font-family="${FONT_STACK}" font-size="13" font-weight="700" fill="${textPrimary}" letter-spacing="0.2">Best Touchless Car Wash Chain</text>
+  <text x="16" y="58" font-family="${FONT_STACK}" font-size="11" fill="${textSecondary}">${scope} · ${year}</text>
+  ${renderDroplet(16, 68, 10, brandColor, 2.5)}
+  <text x="30" y="77" font-family="${FONT_STACK}" font-size="10" font-weight="500" fill="${brandColor}">touchlesscarwashfinder.com</text>
+</svg>`;
+}
 
 export function generateChainBadgeSvg(options: ChainBadgeSvgOptions): string {
   const { rank, scopeName, year, theme, size } = options;

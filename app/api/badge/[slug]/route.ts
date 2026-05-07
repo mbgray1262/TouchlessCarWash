@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { generateBadgeSvg, type BadgeSvgOptions } from '@/lib/badge-svg';
+import { generateBadgeSvg, generateTop10BadgeSvg } from '@/lib/badge-svg';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,10 +14,8 @@ export async function GET(
   const { slug } = await params;
   const { searchParams } = new URL(request.url);
 
-  const theme =
-    searchParams.get('theme') === 'dark' ? 'dark' : 'light';
-  const size =
-    searchParams.get('size') === 'compact' ? 'compact' : 'standard';
+  const theme = searchParams.get('theme') === 'dark' ? 'dark' : 'light';
+  const size = searchParams.get('size') === 'compact' ? 'compact' : 'standard';
 
   // 1. Fetch listing by slug
   const { data: listing } = await supabase
@@ -30,7 +28,7 @@ export async function GET(
     return new NextResponse('Listing not found', { status: 404 });
   }
 
-  // 2. Fetch ranking (best rank first)
+  // 2. Fetch best ranking (lowest rank number = best position)
   const { data: rankings } = await supabase
     .from('best_of_rankings')
     .select('metro_slug, metro_name, rank')
@@ -43,16 +41,21 @@ export async function GET(
   }
 
   const ranking = rankings[0];
+
+  // Rank > 10 → no badge (too far down the list to be meaningful)
+  if (ranking.rank > 10) {
+    return new NextResponse('Listing rank is outside top 10', { status: 404 });
+  }
+
   const year = new Date().getFullYear();
 
-  // 3. Generate SVG
-  const svg = generateBadgeSvg({
-    rank: ranking.rank,
-    metroName: ranking.metro_name,
-    year,
-    theme,
-    size,
-  } as BadgeSvgOptions);
+  // 3. Generate appropriate SVG
+  //    Rank 1–3 → gold/silver/bronze positional badge
+  //    Rank 4–10 → teal "Top 10" consolation badge
+  const svg =
+    ranking.rank <= 3
+      ? generateBadgeSvg({ rank: ranking.rank, metroName: ranking.metro_name, year, theme, size })
+      : generateTop10BadgeSvg({ metroName: ranking.metro_name, year, theme, size });
 
   // 4. Return SVG with caching + CORS headers
   return new NextResponse(svg, {

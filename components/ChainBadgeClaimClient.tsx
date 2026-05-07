@@ -7,9 +7,10 @@ import { Check, Copy, Sun, Moon } from 'lucide-react';
 
 interface ChainBadgeClaimClientProps {
   rank: number;
-  scopeName: string;    // e.g. "America" or "Midwest"
-  badgeApiUrl: string;  // base URL without theme param
-  chainUrl: string;     // link target on click-through
+  scopeName: string;   // display name e.g. "America" or "Midwest"
+  scopeParam: string;  // URL param e.g. "national" or "midwest"
+  chainSlug: string;   // for slug-based badge API — badge always reflects current rank
+  chainUrl: string;    // link target on click-through
   chainName: string;
   year: number;
 }
@@ -17,7 +18,8 @@ interface ChainBadgeClaimClientProps {
 export function ChainBadgeClaimClient({
   rank,
   scopeName,
-  badgeApiUrl,
+  scopeParam,
+  chainSlug,
   chainUrl,
   chainName,
   year,
@@ -25,11 +27,13 @@ export function ChainBadgeClaimClient({
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [copied, setCopied] = useState(false);
 
-  const ordinal = rank === 1 ? '1st' : rank === 2 ? '2nd' : '3rd';
-  const prodBadgeUrl = `${badgeApiUrl}&theme=${theme}`;
-  const previewBadgeUrl = badgeApiUrl.replace('https://touchlesscarwashfinder.com', '') + `&theme=${theme}`;
-  const altText = `#${rank} Best Touchless Car Wash Chain in ${scopeName} (${year}) — Touchless Car Wash Finder`;
-  const title = `${chainName} — ${ordinal} Best Touchless Car Wash Chain in ${scopeName} (${year})`;
+  const isTop10 = rank > 3;
+  const rankLabel = isTop10 ? 'Top 10' : rank === 1 ? '1st' : rank === 2 ? '2nd' : '3rd';
+  const badgeBase = `https://touchlesscarwashfinder.com/api/badge/chain/${chainSlug}?scope=${scopeParam}`;
+  const prodBadgeUrl = `${badgeBase}&theme=${theme}`;
+  const previewBadgeUrl = `/api/badge/chain/${chainSlug}?scope=${scopeParam}&theme=${theme}`;
+  const altText = `${rankLabel} Best Touchless Car Wash Chain in ${scopeName} (${year}) — Touchless Car Wash Finder`;
+  const title = `${chainName} — ${rankLabel} Best Touchless Car Wash Chain in ${scopeName} (${year})`;
 
   const embedCode = `<a href="${chainUrl}" target="_blank" rel="noopener" title="${title}">\n  <img src="${prodBadgeUrl}" alt="${altText}" width="320" height="96" style="border:0;max-width:100%;height:auto;">\n</a>`;
 

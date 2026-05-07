@@ -268,18 +268,27 @@ export async function getRegionalChainRankings(regionSlug: ChainRegionSlug): Pro
 /**
  * Returns all the positional badge claims for a given chain slug.
  * Used by /badge/chain/[slug] to show every rank the chain has earned.
- * A claim covers national rank and any regional ranks (top 3 only).
+ *
+ * - `national`: top-3 national claim (used for floating "Claim Badge" button on chain pages)
+ * - `nationalRank`: rank 1–10 (used for consolation Top 10 badge on claim page)
+ * - `regional`: top-3 regional claims (positional badges only, no consolation for regional)
  */
 export async function getChainBadgeClaims(chainSlug: string): Promise<{
   national: { rank: number; scopeName: string; scopeUrl: string } | null;
+  nationalRank: number | null;
   regional: { rank: number; scopeName: string; scopeUrl: string; regionSlug: string }[];
 }> {
   const SITE_URL = 'https://touchlesscarwashfinder.com';
   const nationalChains = await getNationalChainRankings();
   const nationalIdx = nationalChains.findIndex(c => c.slug === chainSlug);
+
+  // national: top 3 only — used for the floating "Claim Badge" CTA on chain pages
   const national = nationalIdx !== -1 && nationalIdx < 3
     ? { rank: nationalIdx + 1, scopeName: 'America', scopeUrl: `${SITE_URL}/best/chains` }
     : null;
+
+  // nationalRank: 1–10 — used to decide badge type on claim page (positional vs Top 10)
+  const nationalRank = nationalIdx !== -1 ? nationalIdx + 1 : null;
 
   const regional: { rank: number; scopeName: string; scopeUrl: string; regionSlug: string }[] = [];
   for (const region of CHAIN_REGIONS) {
@@ -295,5 +304,5 @@ export async function getChainBadgeClaims(chainSlug: string): Promise<{
     }
   }
 
-  return { national, regional };
+  return { national, nationalRank, regional };
 }
