@@ -70,12 +70,17 @@ export function getRegionBySlug(slug: string): ChainRegion | null {
   return CHAIN_REGIONS.find(r => r.slug === slug) ?? null;
 }
 
-// ── Award definitions ─────────────────────────────────────────────────
+// ── Informational label definitions ──────────────────────────────────
+//
+// These labels appear as chips on ranking cards to surface objective
+// data at a glance. They are NOT claimable as badge images — chain
+// award badges are positional (#1 / #2 / #3) just like the city
+// Best Of badges. Hidden Gem was removed as too subjective.
 
-export type AwardCategory = 'most-locations' | 'highest-rated' | 'widest-coverage' | 'hidden-gem';
+export type LabelCategory = 'most-locations' | 'highest-rated' | 'widest-coverage';
 
-export interface Award {
-  category: AwardCategory;
+export interface ChainLabel {
+  category: LabelCategory;
   label: string;
   emoji: string;
   description: string;
@@ -83,12 +88,12 @@ export interface Award {
   textColor: string;
 }
 
-export const AWARDS: Record<AwardCategory, Award> = {
+export const CHAIN_LABELS: Record<LabelCategory, ChainLabel> = {
   'most-locations': {
     category: 'most-locations',
     label: 'Most Locations',
     emoji: '🏆',
-    description: 'Most verified touchless car wash locations in the region',
+    description: 'Most verified touchless car wash locations',
     color: 'bg-yellow-50 border-yellow-300',
     textColor: 'text-yellow-800',
   },
@@ -96,7 +101,7 @@ export const AWARDS: Record<AwardCategory, Award> = {
     category: 'highest-rated',
     label: 'Highest Rated',
     emoji: '⭐',
-    description: 'Best average Google rating across all locations in the region',
+    description: 'Best average Google rating (min 10 locations)',
     color: 'bg-blue-50 border-blue-300',
     textColor: 'text-blue-800',
   },
@@ -104,19 +109,16 @@ export const AWARDS: Record<AwardCategory, Award> = {
     category: 'widest-coverage',
     label: 'Widest Coverage',
     emoji: '📍',
-    description: 'Touchless locations in the most states in the region',
+    description: 'Touchless locations across the most states',
     color: 'bg-green-50 border-green-300',
     textColor: 'text-green-800',
   },
-  'hidden-gem': {
-    category: 'hidden-gem',
-    label: 'Hidden Gem',
-    emoji: '💎',
-    description: 'Highest-rated smaller chain — exceptional quality, growing footprint',
-    color: 'bg-purple-50 border-purple-300',
-    textColor: 'text-purple-800',
-  },
 };
+
+// Keep AWARDS as an alias so existing imports don't break immediately
+/** @deprecated use CHAIN_LABELS */
+export const AWARDS = CHAIN_LABELS as unknown as Record<string, ChainLabel>;
+export type AwardCategory = LabelCategory;
 
 // ── Ranked chain type ─────────────────────────────────────────────────
 
@@ -129,9 +131,12 @@ export interface RankedChain {
   statesPresent: string[];  // states within the relevant region (or all states for national)
   heroImage: string | null;
   description: string;
-  awards: AwardCategory[];  // a chain can hold multiple awards (e.g. Most Locations + Highest Rated)
-  /** @deprecated use awards[0] — kept for backwards compat during migration */
-  award: AwardCategory | null;
+  /** Informational labels shown on cards (not claimable badges — those are positional) */
+  labels: LabelCategory[];
+  /** @deprecated use labels — kept for backwards compat */
+  awards: LabelCategory[];
+  /** @deprecated use labels[0] */
+  award: LabelCategory | null;
 }
 
 // ── Data fetching helpers ─────────────────────────────────────────────
@@ -193,6 +198,7 @@ function buildRankedList(
       statesPresent: Array.from(stats.states).sort(),
       heroImage: getChainHeroImage(chain.name),
       description: chain.description.replace(/\{count\}/g, String(stats.count)),
+      labels: [],
       awards: [],
       award: null,
     });
@@ -201,45 +207,41 @@ function buildRankedList(
   return limit ? results.slice(0, limit) : results;
 }
 
-function assignAwards(chains: RankedChain[]): void {
+/**
+ * Assigns informational labels to chains based on objective data.
+ * Labels appear as chips on ranking cards but are NOT claimable badges.
+ * Claimable badges are positional (#1/#2/#3) — see /api/badge/chain.
+ * Each label goes to exactly one chain; a chain can hold at most one label.
+ */
+function assignLabels(chains: RankedChain[]): void {
   if (chains.length === 0) return;
+  const labelled = new Set<string>();
 
-  // 1. Most Locations → chain with the highest location count (always #1 in the sorted list)
-  chains[0].awards.push('most-locations');
+  // Most Locations → highest count (always #1 in the sorted list)
+  chains[0].labels = ['most-locations'];
+  chains[0].awards = ['most-locations'];
   chains[0].award = 'most-locations';
+  labelled.add(chains[0].name);
 
-  // 2. Highest Rated → the chain with the absolute best avg rating (min 10 locations for
-  //    statistical significance). A chain can hold this alongside Most Locations — that's
-  //    accurate and tells a stronger story than hiding it behind an exclusion rule.
+  // Highest Rated → absolute best avg rating, min 10 locations for statistical significance
   const byRating = [...chains]
-    .filter(c => c.avgRating != null && c.locationCount >= 10)
+    .filter(c => c.avgRating != null && c.locationCount >= 10 && !labelled.has(c.name))
     .sort((a, b) => (b.avgRating ?? 0) - (a.avgRating ?? 0));
   if (byRating[0]) {
-    if (!byRating[0].awards.includes('highest-rated')) {
-      byRating[0].awards.push('highest-rated');
-    }
-    // Keep legacy field pointing to first award for backwards compat
-    if (!byRating[0].award) byRating[0].award = 'highest-rated';
+    byRating[0].labels = ['highest-rated'];
+    byRating[0].awards = ['highest-rated'];
+    byRating[0].award = 'highest-rated';
+    labelled.add(byRating[0].name);
   }
 
-  // 3. Widest Coverage → most states, skipping chains that already hold 2 awards
+  // Widest Coverage → most states, not already labelled
   const byCoverage = [...chains]
-    .filter(c => c.awards.length < 2 && c.statesPresent.length > 1)
+    .filter(c => !labelled.has(c.name) && c.statesPresent.length > 1)
     .sort((a, b) => b.statesPresent.length - a.statesPresent.length);
   if (byCoverage[0]) {
-    byCoverage[0].awards.push('widest-coverage');
-    if (!byCoverage[0].award) byCoverage[0].award = 'widest-coverage';
-  }
-
-  // 4. Hidden Gem → highest-rated SMALL chain (≤ 40 locations, ≥ 4.0 avg rating).
-  //    The goal is to surface a genuinely regional/boutique chain that punches above
-  //    its weight in quality. Chains with ≥ 2 awards already are excluded.
-  const hiddenGemCandidates = [...chains]
-    .filter(c => c.locationCount <= 40 && (c.avgRating ?? 0) >= 4.0 && c.awards.length < 2)
-    .sort((a, b) => (b.avgRating ?? 0) - (a.avgRating ?? 0));
-  if (hiddenGemCandidates[0]) {
-    hiddenGemCandidates[0].awards.push('hidden-gem');
-    if (!hiddenGemCandidates[0].award) hiddenGemCandidates[0].award = 'hidden-gem';
+    byCoverage[0].labels = ['widest-coverage'];
+    byCoverage[0].awards = ['widest-coverage'];
+    byCoverage[0].award = 'widest-coverage';
   }
 }
 
@@ -249,7 +251,7 @@ export async function getNationalChainRankings(): Promise<RankedChain[]> {
   const rows = await fetchChainRows();
   const map = aggregateRows(rows);
   const chains = buildRankedList(map, 5, 10);
-  assignAwards(chains);
+  assignLabels(chains);
   return chains;
 }
 
@@ -259,6 +261,39 @@ export async function getRegionalChainRankings(regionSlug: ChainRegionSlug): Pro
   const rows = await fetchChainRows(region.states);
   const map = aggregateRows(rows);
   const chains = buildRankedList(map, 3);
-  assignAwards(chains);
+  assignLabels(chains);
   return chains;
+}
+
+/**
+ * Returns all the positional badge claims for a given chain slug.
+ * Used by /badge/chain/[slug] to show every rank the chain has earned.
+ * A claim covers national rank and any regional ranks (top 3 only).
+ */
+export async function getChainBadgeClaims(chainSlug: string): Promise<{
+  national: { rank: number; scopeName: string; scopeUrl: string } | null;
+  regional: { rank: number; scopeName: string; scopeUrl: string; regionSlug: string }[];
+}> {
+  const SITE_URL = 'https://touchlesscarwashfinder.com';
+  const nationalChains = await getNationalChainRankings();
+  const nationalIdx = nationalChains.findIndex(c => c.slug === chainSlug);
+  const national = nationalIdx !== -1 && nationalIdx < 3
+    ? { rank: nationalIdx + 1, scopeName: 'America', scopeUrl: `${SITE_URL}/best/chains` }
+    : null;
+
+  const regional: { rank: number; scopeName: string; scopeUrl: string; regionSlug: string }[] = [];
+  for (const region of CHAIN_REGIONS) {
+    const regionChains = await getRegionalChainRankings(region.slug);
+    const idx = regionChains.findIndex(c => c.slug === chainSlug);
+    if (idx !== -1 && idx < 3) {
+      regional.push({
+        rank: idx + 1,
+        scopeName: region.shortName,
+        scopeUrl: `${SITE_URL}/best/chains/${region.slug}`,
+        regionSlug: region.slug,
+      });
+    }
+  }
+
+  return { national, regional };
 }

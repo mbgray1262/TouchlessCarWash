@@ -5,10 +5,10 @@ import {
   getRegionBySlug,
   getRegionalChainRankings,
   CHAIN_REGIONS,
-  AWARDS,
+  CHAIN_LABELS,
   type ChainRegionSlug,
   type RankedChain,
-  type AwardCategory,
+  type LabelCategory,
 } from '@/lib/chain-rankings';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import type { Metadata } from 'next';
@@ -53,16 +53,17 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
-function AwardBadge({ category }: { category: AwardCategory }) {
-  const award = AWARDS[category];
+function LabelChip({ category }: { category: LabelCategory }) {
+  const lbl = CHAIN_LABELS[category];
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${award.color} ${award.textColor}`}>
-      {award.emoji} {award.label}
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${lbl.color} ${lbl.textColor}`}>
+      {lbl.emoji} {lbl.label}
     </span>
   );
 }
 
 function ChainCard({ chain, rank }: { chain: RankedChain; rank: number }) {
+  const canClaimBadge = rank <= 3;
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md hover:border-blue-200 transition-all">
       <div className="relative h-36 bg-gradient-to-br from-[#0F2744] to-[#1a3a5c] overflow-hidden">
@@ -76,9 +77,9 @@ function ChainCard({ chain, rank }: { chain: RankedChain; rank: number }) {
         <div className="absolute top-3 left-3 w-8 h-8 rounded-full bg-white/95 flex items-center justify-center shadow">
           <span className="text-sm font-black text-[#0F2744]">#{rank}</span>
         </div>
-        {chain.awards.length > 0 && (
-          <div className="absolute top-3 right-3 flex flex-col gap-1 items-end">
-            {chain.awards.map(a => <AwardBadge key={a} category={a} />)}
+        {chain.labels.length > 0 && (
+          <div className="absolute top-3 right-3">
+            <LabelChip category={chain.labels[0]} />
           </div>
         )}
       </div>
@@ -101,28 +102,30 @@ function ChainCard({ chain, rank }: { chain: RankedChain; rank: number }) {
           ))}
         </div>
         <p className="text-xs text-gray-500 mb-3 line-clamp-2">{chain.description}</p>
-        <Link
-          href={`/chain/${chain.slug}`}
-          className="text-sm font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1"
-        >
-          View all locations <ChevronRight className="w-3.5 h-3.5" />
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link
+            href={`/chain/${chain.slug}`}
+            className="text-sm font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1"
+          >
+            View all locations <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+          {canClaimBadge && (
+            <Link
+              href={`/badge/chain/${chain.slug}`}
+              className="text-xs font-semibold text-yellow-700 bg-yellow-50 border border-yellow-200 hover:bg-yellow-100 px-2 py-1 rounded-full flex items-center gap-1 transition-colors"
+            >
+              <Trophy className="w-3 h-3" /> Claim Badge
+            </Link>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-function BadgeEmbedSection({ chains, regionSlug }: { chains: RankedChain[]; regionSlug: string }) {
-  const awardWinners = chains.filter(c => c.awards.length > 0);
-  if (awardWinners.length === 0) return null;
-
-  const entries: { chain: RankedChain; awardCategory: AwardCategory }[] = [];
-  for (const chain of awardWinners) {
-    for (const awardCategory of chain.awards) {
-      entries.push({ chain, awardCategory });
-    }
-  }
-
+function BadgeClaimSection({ chains }: { chains: RankedChain[] }) {
+  const top3 = chains.slice(0, 3);
+  if (top3.length === 0) return null;
   return (
     <section className="mt-16 pt-12 border-t border-gray-200">
       <div className="flex items-center gap-3 mb-2">
@@ -130,30 +133,25 @@ function BadgeEmbedSection({ chains, regionSlug }: { chains: RankedChain[]; regi
         <h2 className="text-2xl font-bold text-gray-900">Claim Your Award Badge</h2>
       </div>
       <p className="text-gray-600 mb-8 max-w-2xl">
-        Are you one of the chains featured above? Display your {YEAR} award badge on your website — free to use, links back to your ranking.
+        Are you ranked in the top 3 for this region? Claim your free {YEAR} ranking badge with a live preview and one-click embed code.
       </p>
-      <div className="grid sm:grid-cols-2 gap-6">
-        {entries.map(({ chain, awardCategory }) => {
-          const award = AWARDS[awardCategory];
-          const badgeUrl = `${SITE_URL}/badges/${awardCategory}-${YEAR}.svg`;
-          const linkUrl = `${SITE_URL}/best/chains/${regionSlug}`;
-          const embedCode = `<a href="${linkUrl}" title="${chain.name} — ${award.label} ${YEAR} | Touchless Car Wash Finder">\n  <img src="${badgeUrl}" alt="${chain.name} — ${award.label} ${YEAR}" width="240" height="100">\n</a>`;
-          return (
-            <div key={`${chain.name}-${awardCategory}`} className="bg-gray-50 border border-gray-200 rounded-xl p-5">
-              <div className="flex items-start gap-4 mb-4">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={badgeUrl} alt={`${award.label} badge`} width={160} height={67} className="rounded flex-shrink-0" />
-                <div>
-                  <p className="font-bold text-gray-900">{chain.name}</p>
-                  <p className="text-sm text-gray-600">{award.emoji} {award.label} — {YEAR}</p>
-                  <p className="text-xs text-gray-500 mt-1">{award.description}</p>
-                </div>
-              </div>
-              <p className="text-xs font-semibold text-gray-700 mb-1 uppercase tracking-wide">Embed Code</p>
-              <pre className="text-xs bg-white border border-gray-200 rounded p-3 overflow-x-auto text-gray-600 whitespace-pre-wrap break-all">{embedCode}</pre>
+      <div className="grid sm:grid-cols-3 gap-4">
+        {top3.map((chain, i) => (
+          <Link
+            key={chain.slug}
+            href={`/badge/chain/${chain.slug}`}
+            className="group flex items-center gap-3 p-4 bg-gray-50 border border-gray-200 rounded-xl hover:border-yellow-300 hover:bg-yellow-50 transition-all"
+          >
+            <div className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center flex-shrink-0 shadow-sm">
+              <span className="text-sm font-black text-[#0F2744]">#{i + 1}</span>
             </div>
-          );
-        })}
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-gray-900 text-sm truncate group-hover:text-yellow-800">{chain.name}</p>
+              <p className="text-xs text-gray-500">Claim badge →</p>
+            </div>
+            <Trophy className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+          </Link>
+        ))}
       </div>
     </section>
   );
@@ -242,22 +240,22 @@ export default async function RegionalChainRankingsPage({ params }: Props) {
           </div>
         )}
 
-        {/* Award legend */}
-        {chains.some(c => c.awards.length > 0) && (
+        {/* Informational label legend */}
+        {chains.some(c => c.labels.length > 0) && (
           <div className="mt-8 p-5 bg-gray-50 border border-gray-200 rounded-xl">
             <p className="text-sm font-semibold text-gray-700 mb-3">Award Categories</p>
             <div className="flex flex-wrap gap-3">
-              {Object.values(AWARDS).map(award => (
-                <span key={award.category} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${award.color} ${award.textColor}`}>
-                  {award.emoji} <strong>{award.label}</strong> — {award.description}
+              {Object.values(CHAIN_LABELS).map(lbl => (
+                <span key={lbl.category} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${lbl.color} ${lbl.textColor}`}>
+                  {lbl.emoji} <strong>{lbl.label}</strong> — {lbl.description}
                 </span>
               ))}
             </div>
           </div>
         )}
 
-        {/* Badge embed section */}
-        <BadgeEmbedSection chains={chains} regionSlug={region.slug} />
+        {/* Badge claim section — top 3 can claim positional badges */}
+        <BadgeClaimSection chains={chains} />
 
         {/* Other regions */}
         <section className="mt-16 pt-12 border-t border-gray-200">

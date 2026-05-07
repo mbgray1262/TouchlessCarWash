@@ -6,7 +6,7 @@ import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { getStateName, getStateSlug, slugify } from '@/lib/constants';
 import { CHAINS, getChainBySlug, renderChainDescription } from '@/lib/chains';
 import { getChainHeroImage } from '@/lib/chain-brand-images';
-import { getNationalChainRankings, AWARDS } from '@/lib/chain-rankings';
+import { getChainBadgeClaims } from '@/lib/chain-rankings';
 import { ListingCard } from '@/components/ListingCard';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import type { Metadata } from 'next';
@@ -96,10 +96,10 @@ export default async function ChainPage({ params }: ChainPageProps) {
   // mass chain noindex on April 20.
   if (listings.length === 0) permanentRedirect('/chains?from=empty-chain');
 
-  // Check if this chain has a national award (for the "Claim Your Badge" CTA)
-  const nationalRankings = await getNationalChainRankings();
-  const rankedChain = nationalRankings.find(c => c.slug === params.slug);
-  const chainAward = rankedChain?.awards[0] ?? null; // primary award for button label
+  // Check if this chain has any top-3 claim (national or regional) for the "Claim Your Badge" CTA
+  const claims = await getChainBadgeClaims(params.slug);
+  const hasAnyClaim = claims.national !== null || claims.regional.length > 0;
+  const topClaim = claims.national ?? claims.regional[0] ?? null;
 
   const heroImage = getChainHeroImage(chain.name);
 
@@ -211,15 +211,15 @@ export default async function ChainPage({ params }: ChainPageProps) {
         </div>
       </div>
 
-      {/* Floating "Claim Your Badge" button — only for award-winning chains */}
-      {chainAward && (
+      {/* Floating "Claim Your Badge" button — top 3 nationally or regionally */}
+      {hasAnyClaim && topClaim && (
         <div className="fixed bottom-6 right-6 z-50">
           <Link
             href={`/badge/chain/${params.slug}`}
             className="flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-[#0F2744] font-bold px-4 py-3 rounded-full shadow-lg transition-colors text-sm whitespace-nowrap"
           >
             <Trophy className="w-4 h-4" />
-            {AWARDS[chainAward].emoji} Claim Your Badge
+            #{topClaim.rank} in {topClaim.scopeName} — Claim Badge
           </Link>
         </div>
       )}
