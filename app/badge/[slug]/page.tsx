@@ -51,7 +51,8 @@ const getRankings = cache(async (listingId: string) => {
     .select('metro_slug, metro_name, rank, score')
     .eq('listing_id', listingId)
     .order('rank', { ascending: true });
-  return (data || []) as BestOfRanking[];
+  // Only include rankings within top 10 — rank > 10 has no badge
+  return ((data || []) as BestOfRanking[]).filter(r => r.rank <= 10);
 });
 
 // ── SEO Metadata ─────────────────────────────────────────────────────────
@@ -69,8 +70,9 @@ export async function generateMetadata({
   if (rankings.length === 0) return { title: 'Badge Not Found' };
 
   const top = rankings[0];
-  const title = `${listing.name} \u2014 #${top.rank} Best Touchless Car Wash in ${top.metro_name} | Claim Your Badge`;
-  const description = `${listing.name} is ranked #${top.rank} Best Touchless Car Wash in ${top.metro_name}. Claim your free award badge and display it on your website.`;
+  const rankLabel = top.rank <= 3 ? `#${top.rank}` : 'Top 10';
+  const title = `${listing.name} \u2014 ${rankLabel} Best Touchless Car Wash in ${top.metro_name} | Claim Your Badge`;
+  const description = `${listing.name} is ranked ${rankLabel} Best Touchless Car Wash in ${top.metro_name}. Claim your free award badge and display it on your website.`;
 
   return {
     title,
@@ -139,12 +141,21 @@ export default async function BadgeClaimPage({
           </h1>
 
           <p className="text-xl text-blue-100">
-            You&apos;re ranked{' '}
-            <span className="font-bold text-yellow-400">
-              #{top.rank}
-            </span>{' '}
-            Best Touchless Car Wash in{' '}
-            <span className="font-bold text-white">{top.metro_name}</span>
+            {top.rank <= 3 ? (
+              <>
+                You&apos;re ranked{' '}
+                <span className="font-bold text-yellow-400">#{top.rank}</span>{' '}
+                Best Touchless Car Wash in{' '}
+                <span className="font-bold text-white">{top.metro_name}</span>
+              </>
+            ) : (
+              <>
+                You&apos;re in the{' '}
+                <span className="font-bold text-yellow-400">Top 10</span>{' '}
+                Best Touchless Car Washes in{' '}
+                <span className="font-bold text-white">{top.metro_name}</span>
+              </>
+            )}
           </p>
 
           {rankings.length > 1 && (
@@ -167,11 +178,12 @@ export default async function BadgeClaimPage({
       <section className="py-14 px-4">
         <div className="container mx-auto max-w-3xl">
           <h2 className="text-2xl font-bold text-[#0F2744] mb-2">
-            Your Award Badge
+            {top.rank <= 3 ? 'Your Award Badge' : 'Your Top 10 Badge'}
           </h2>
           <p className="text-gray-600 mb-8">
-            Display this badge on your website to let customers know you&apos;re
-            a top-rated touchless car wash. It&apos;s completely free.
+            {top.rank <= 3
+              ? "Display this badge on your website to let customers know you're a top-rated touchless car wash. It's completely free."
+              : `Display this badge on your website to show customers you're one of the top 10 touchless car washes in ${top.metro_name}. It's completely free.`}
           </p>
 
           <BadgeClaimClient
