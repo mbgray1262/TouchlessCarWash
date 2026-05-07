@@ -1,11 +1,12 @@
 import Link from 'next/link';
 import { permanentRedirect } from 'next/navigation';
-import { ChevronRight, MapPin } from 'lucide-react';
+import { ChevronRight, MapPin, Trophy } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { getStateName, getStateSlug, slugify } from '@/lib/constants';
 import { CHAINS, getChainBySlug, renderChainDescription } from '@/lib/chains';
 import { getChainHeroImage } from '@/lib/chain-brand-images';
+import { getNationalChainRankings, AWARDS } from '@/lib/chain-rankings';
 import { ListingCard } from '@/components/ListingCard';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import type { Metadata } from 'next';
@@ -94,6 +95,11 @@ export default async function ChainPage({ params }: ChainPageProps) {
   // crawl-health signals and for old GSC-indexed URLs that pre-date the
   // mass chain noindex on April 20.
   if (listings.length === 0) permanentRedirect('/chains?from=empty-chain');
+
+  // Check if this chain has a national award (for the "Claim Your Badge" CTA)
+  const nationalRankings = await getNationalChainRankings();
+  const rankedChain = nationalRankings.find(c => c.slug === params.slug);
+  const chainAward = rankedChain?.award ?? null;
 
   const heroImage = getChainHeroImage(chain.name);
 
@@ -204,6 +210,19 @@ export default async function ChainPage({ params }: ChainPageProps) {
           </p>
         </div>
       </div>
+
+      {/* Floating "Claim Your Badge" button — only for award-winning chains */}
+      {chainAward && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <Link
+            href={`/badge/chain/${params.slug}`}
+            className="flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-[#0F2744] font-bold px-4 py-3 rounded-full shadow-lg transition-colors text-sm whitespace-nowrap"
+          >
+            <Trophy className="w-4 h-4" />
+            {AWARDS[chainAward].emoji} Claim Your Badge
+          </Link>
+        </div>
+      )}
 
       <div className="container mx-auto px-4 max-w-6xl py-8">
         {/* Description */}
