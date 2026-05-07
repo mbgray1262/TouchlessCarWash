@@ -129,6 +129,8 @@ export interface RankedChain {
   statesPresent: string[];  // states within the relevant region (or all states for national)
   heroImage: string | null;
   description: string;
+  awards: AwardCategory[];  // a chain can hold multiple awards (e.g. Most Locations + Highest Rated)
+  /** @deprecated use awards[0] — kept for backwards compat during migration */
   award: AwardCategory | null;
 }
 
@@ -191,6 +193,7 @@ function buildRankedList(
       statesPresent: Array.from(stats.states).sort(),
       heroImage: getChainHeroImage(chain.name),
       description: chain.description.replace(/\{count\}/g, String(stats.count)),
+      awards: [],
       award: null,
     });
   }
@@ -200,35 +203,43 @@ function buildRankedList(
 
 function assignAwards(chains: RankedChain[]): void {
   if (chains.length === 0) return;
-  const awarded = new Set<string>();
 
-  // Most Locations → highest count
+  // 1. Most Locations → chain with the highest location count (always #1 in the sorted list)
+  chains[0].awards.push('most-locations');
   chains[0].award = 'most-locations';
-  awarded.add(chains[0].name);
 
-  // Highest Rated → best avg rating, not already awarded (min 3 locations)
+  // 2. Highest Rated → the chain with the absolute best avg rating (min 10 locations for
+  //    statistical significance). A chain can hold this alongside Most Locations — that's
+  //    accurate and tells a stronger story than hiding it behind an exclusion rule.
   const byRating = [...chains]
-    .filter(c => c.avgRating != null && c.locationCount >= 3 && !awarded.has(c.name))
+    .filter(c => c.avgRating != null && c.locationCount >= 10)
     .sort((a, b) => (b.avgRating ?? 0) - (a.avgRating ?? 0));
-  if (byRating[0]) { byRating[0].award = 'highest-rated'; awarded.add(byRating[0].name); }
-
-  // Widest Coverage → most states, not already awarded
-  const byCoverage = [...chains]
-    .filter(c => !awarded.has(c.name))
-    .sort((a, b) => b.statesPresent.length - a.statesPresent.length);
-  if (byCoverage[0] && byCoverage[0].statesPresent.length > 1) {
-    byCoverage[0].award = 'widest-coverage';
-    awarded.add(byCoverage[0].name);
+  if (byRating[0]) {
+    if (!byRating[0].awards.includes('highest-rated')) {
+      byRating[0].awards.push('highest-rated');
+    }
+    // Keep legacy field pointing to first award for backwards compat
+    if (!byRating[0].award) byRating[0].award = 'highest-rated';
   }
 
-  // Hidden Gem → highest rated among smaller chains (below median count), not awarded
-  const counts = chains.map(c => c.locationCount).sort((a, b) => a - b);
-  const medianCount = counts[Math.floor(counts.length / 2)] ?? 10;
+  // 3. Widest Coverage → most states, skipping chains that already hold 2 awards
+  const byCoverage = [...chains]
+    .filter(c => c.awards.length < 2 && c.statesPresent.length > 1)
+    .sort((a, b) => b.statesPresent.length - a.statesPresent.length);
+  if (byCoverage[0]) {
+    byCoverage[0].awards.push('widest-coverage');
+    if (!byCoverage[0].award) byCoverage[0].award = 'widest-coverage';
+  }
+
+  // 4. Hidden Gem → highest-rated SMALL chain (≤ 40 locations, ≥ 4.0 avg rating).
+  //    The goal is to surface a genuinely regional/boutique chain that punches above
+  //    its weight in quality. Chains with ≥ 2 awards already are excluded.
   const hiddenGemCandidates = [...chains]
-    .filter(c => c.locationCount <= medianCount && c.avgRating != null && !awarded.has(c.name))
+    .filter(c => c.locationCount <= 40 && (c.avgRating ?? 0) >= 4.0 && c.awards.length < 2)
     .sort((a, b) => (b.avgRating ?? 0) - (a.avgRating ?? 0));
   if (hiddenGemCandidates[0]) {
-    hiddenGemCandidates[0].award = 'hidden-gem';
+    hiddenGemCandidates[0].awards.push('hidden-gem');
+    if (!hiddenGemCandidates[0].award) hiddenGemCandidates[0].award = 'hidden-gem';
   }
 }
 
