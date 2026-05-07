@@ -20,9 +20,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const chains = await getNationalChainRankings();
   const ranked = chains.find(c => c.slug === slug);
-  if (!ranked?.award) return { title: 'Badge Not Found' };
+  if (!ranked || ranked.awards.length === 0) return { title: 'Badge Not Found' };
 
-  const award = AWARDS[ranked.award];
+  const award = AWARDS[ranked.awards[0]];
   const title = `${chain.name} — ${award.emoji} ${award.label} ${YEAR} | Claim Your Badge`;
   const description = `${chain.name} earned the ${award.label} award in the ${YEAR} Touchless Car Wash Chain Rankings. Claim your free award badge and display it on your website.`;
 
@@ -41,10 +41,12 @@ export default async function ChainBadgeClaimPage({ params }: Props) {
 
   const chains = await getNationalChainRankings();
   const ranked = chains.find(c => c.slug === slug);
-  if (!ranked?.award) notFound();
+  if (!ranked || ranked.awards.length === 0) notFound();
 
-  const award = AWARDS[ranked.award];
-  const badgeSvgUrl = `${SITE_URL}/badges/${ranked.award}-${YEAR}.svg`;
+  // Primary award drives the page headline; all awards get badge + embed code below
+  const primaryAwardCategory = ranked.awards[0];
+  const award = AWARDS[primaryAwardCategory];
+  const badgeSvgUrl = `${SITE_URL}/badges/${primaryAwardCategory}-${YEAR}.svg`;
   const chainUrl = `${SITE_URL}/chain/${slug}`;
 
   return (

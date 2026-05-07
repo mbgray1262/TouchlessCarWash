@@ -99,7 +99,7 @@ export default async function ChainPage({ params }: ChainPageProps) {
   // Check if this chain has a national award (for the "Claim Your Badge" CTA)
   const nationalRankings = await getNationalChainRankings();
   const rankedChain = nationalRankings.find(c => c.slug === params.slug);
-  const chainAward = rankedChain?.award ?? null;
+  const chainAward = rankedChain?.awards[0] ?? null; // primary award for button label
 
   const heroImage = getChainHeroImage(chain.name);
 

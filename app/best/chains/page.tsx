@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Trophy, MapPin, Star, ChevronRight, Award } from 'lucide-react';
-import { getNationalChainRankings, CHAIN_REGIONS, AWARDS, type RankedChain } from '@/lib/chain-rankings';
+import { getNationalChainRankings, CHAIN_REGIONS, AWARDS, type RankedChain, type AwardCategory } from '@/lib/chain-rankings';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import type { Metadata } from 'next';
 
@@ -32,7 +32,7 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
-function AwardBadge({ category }: { category: NonNullable<RankedChain['award']> }) {
+function AwardBadge({ category }: { category: AwardCategory }) {
   const award = AWARDS[category];
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${award.color} ${award.textColor}`}>
@@ -57,10 +57,10 @@ function ChainCard({ chain, rank }: { chain: RankedChain; rank: number }) {
         <div className="absolute top-3 left-3 w-8 h-8 rounded-full bg-white/95 flex items-center justify-center shadow">
           <span className="text-sm font-black text-[#0F2744]">#{rank}</span>
         </div>
-        {/* Award ribbon */}
-        {chain.award && (
-          <div className="absolute top-3 right-3">
-            <AwardBadge category={chain.award} />
+        {/* Award ribbon(s) — a chain can hold multiple awards */}
+        {chain.awards.length > 0 && (
+          <div className="absolute top-3 right-3 flex flex-col gap-1 items-end">
+            {chain.awards.map(a => <AwardBadge key={a} category={a} />)}
           </div>
         )}
       </div>
@@ -100,8 +100,16 @@ function ChainCard({ chain, rank }: { chain: RankedChain; rank: number }) {
 }
 
 function BadgeEmbedSection({ chains, scope }: { chains: RankedChain[]; scope: string }) {
-  const awardWinners = chains.filter(c => c.award !== null);
+  const awardWinners = chains.filter(c => c.awards.length > 0);
   if (awardWinners.length === 0) return null;
+
+  // Flatten to one card per award (a chain with 2 awards gets 2 cards)
+  const entries: { chain: RankedChain; awardCategory: AwardCategory }[] = [];
+  for (const chain of awardWinners) {
+    for (const awardCategory of chain.awards) {
+      entries.push({ chain, awardCategory });
+    }
+  }
 
   return (
     <section className="mt-16 pt-12 border-t border-gray-200">
@@ -110,18 +118,18 @@ function BadgeEmbedSection({ chains, scope }: { chains: RankedChain[]; scope: st
         <h2 className="text-2xl font-bold text-gray-900">Claim Your Award Badge</h2>
       </div>
       <p className="text-gray-600 mb-8 max-w-2xl">
-        Are you one of the chains featured above? Display your {YEAR} award badge on your website — it's free and links back to your ranking page.
+        Are you one of the chains featured above? Display your {YEAR} award badge on your website — it&apos;s free and links back to your ranking page.
       </p>
       <div className="grid sm:grid-cols-2 gap-6">
-        {awardWinners.map(chain => {
-          if (!chain.award) return null;
-          const award = AWARDS[chain.award];
-          const badgeUrl = `${SITE_URL}/badges/${chain.award}-${YEAR}.svg`;
+        {entries.map(({ chain, awardCategory }) => {
+          const award = AWARDS[awardCategory];
+          const badgeUrl = `${SITE_URL}/badges/${awardCategory}-${YEAR}.svg`;
           const linkUrl = `${SITE_URL}${scope}`;
           const embedCode = `<a href="${linkUrl}" title="${chain.name} — ${award.label} ${YEAR} | Touchless Car Wash Finder">\n  <img src="${badgeUrl}" alt="${chain.name} — ${award.label} ${YEAR}" width="240" height="100">\n</a>`;
           return (
-            <div key={chain.name} className="bg-gray-50 border border-gray-200 rounded-xl p-5">
+            <div key={`${chain.name}-${awardCategory}`} className="bg-gray-50 border border-gray-200 rounded-xl p-5">
               <div className="flex items-start gap-4 mb-4">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={badgeUrl} alt={`${award.label} badge`} width={160} height={67} className="rounded flex-shrink-0" />
                 <div>
                   <p className="font-bold text-gray-900">{chain.name}</p>
