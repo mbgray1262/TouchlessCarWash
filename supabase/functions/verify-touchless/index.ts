@@ -50,6 +50,7 @@ const TOUCHLESS_KEYWORDS = [
 // These phrases contain touchless-related words but do NOT indicate touchless washing:
 // - "contactless" almost always means contactless PAYMENT (tap-to-pay, NFC)
 // - "touchless drying/dry/dryer/blower" refers to air-drying equipment, not wash type
+// - "touchless entry/check-in/payment/billing" refers to LPR check-in / tap-to-pay, not wash type
 const FALSE_POSITIVE_KEYWORDS = ['contactless'];
 
 // Phrases where "touchless/touch-free" refers to DRYING, not washing
@@ -57,6 +58,21 @@ const DRYING_FALSE_POSITIVE_PHRASES = [
   'touchless dry', 'touchless drying', 'touchless dryer', 'touchless blower',
   'touchless air dry', 'touch-free dry', 'touch-free drying', 'touch-free dryer',
   'touch free dry', 'touch free drying', 'touch free dryer',
+];
+
+// Phrases where "touchless/contactless" refers to ENTRY / CHECK-IN / PAYMENT systems
+// (license plate recognition, tap-to-pay), NOT the wash mechanism. Many friction
+// soft-cloth tunnels (e.g. The Wash Club, Glide Xpress) market "touchless entry"
+// while still scrubbing with cloth/foam.
+const ENTRY_PAYMENT_FALSE_POSITIVE_PHRASES = [
+  'touchless entry', 'touch-free entry', 'touch free entry',
+  'touchless check-in', 'touchless checkin', 'touchless check in',
+  'touchless payment', 'touchless pay', 'touchless billing',
+  'touchless ordering', 'touchless checkout',
+  'contactless entry', 'contactless check-in', 'contactless checkin',
+  'license plate recognition', 'license-plate recognition',
+  'lpr entry', 'lpr gate',
+  'non-marring', 'non marring',  // soft-touch marketing language
 ];
 
 // Phrases that confirm actual touchless WASH services (not just drying)
@@ -82,9 +98,18 @@ function scanForKeywords(text: string): {
   notTouchlessHits: string[];
   falsePositiveHits: string[];
   dryingOnlyFalsePositive: boolean;
+  entryOnlyFalsePositive: boolean;
 } {
   const lower = text.toLowerCase();
-  const touchlessHits = TOUCHLESS_KEYWORDS.filter((kw) => lower.includes(kw));
+
+  // Strip entry/payment false-positive phrases BEFORE scanning for touchless keywords,
+  // so phrases like "TOUCHLESS ENTRY" don't get counted as touchless wash evidence.
+  let stripped = lower;
+  for (const p of ENTRY_PAYMENT_FALSE_POSITIVE_PHRASES) {
+    stripped = stripped.split(p).join(' ');
+  }
+
+  const touchlessHits = TOUCHLESS_KEYWORDS.filter((kw) => stripped.includes(kw));
   const notTouchlessHits = NOT_TOUCHLESS_KEYWORDS.filter((kw) =>
     lower.includes(kw),
   );
@@ -96,10 +121,22 @@ function scanForKeywords(text: string): {
   // If the text mentions touchless/touch-free drying but NOT touchless washing,
   // the word "touchless" likely refers to the drying system, not the wash itself.
   const hasDryingPhrase = DRYING_FALSE_POSITIVE_PHRASES.some((p) => lower.includes(p));
-  const hasWashConfirmation = TOUCHLESS_WASH_CONFIRMATION.some((p) => lower.includes(p));
+  const hasWashConfirmation = TOUCHLESS_WASH_CONFIRMATION.some((p) => stripped.includes(p));
   const dryingOnlyFalsePositive = hasDryingPhrase && !hasWashConfirmation;
 
-  return { touchlessHits, notTouchlessHits, falsePositiveHits, dryingOnlyFalsePositive };
+  // Detect "touchless entry/payment" false positive:
+  // If the only touchless mention is in the entry/payment context (LPR, tap-to-pay),
+  // and there's no real touchless WASH confirmation, this is a friction-tunnel false positive.
+  const hasEntryPhrase = ENTRY_PAYMENT_FALSE_POSITIVE_PHRASES.some((p) => lower.includes(p));
+  const entryOnlyFalsePositive = hasEntryPhrase && !hasWashConfirmation;
+
+  return {
+    touchlessHits,
+    notTouchlessHits,
+    falsePositiveHits,
+    dryingOnlyFalsePositive,
+    entryOnlyFalsePositive,
+  };
 }
 
 // ── Gather all evidence for a listing ─────────────────────────────────────
@@ -181,7 +218,13 @@ function gatherEvidence(listing: ListingRow): {
   }
 
   // Quick keyword scan across ALL text
-  const { touchlessHits, notTouchlessHits, falsePositiveHits, dryingOnlyFalsePositive } = scanForKeywords(allText);
+  const {
+    touchlessHits,
+    notTouchlessHits,
+    falsePositiveHits,
+    dryingOnlyFalsePositive,
+    entryOnlyFalsePositive,
+  } = scanForKeywords(allText);
 
   if (touchlessHits.length > 0) {
     evidence.push(`Touchless keywords found: ${touchlessHits.join(', ')}`);
@@ -195,11 +238,19 @@ function gatherEvidence(listing: ListingRow): {
   if (dryingOnlyFalsePositive) {
     evidence.push(`CRITICAL WARNING — "touchless/touch-free" appears ONLY in the context of DRYING (e.g. "touchless drying system", "touch-free dry"). This does NOT indicate touchless washing — many soft-cloth/brush washes use touchless air dryers. Do NOT classify as touchless unless there is separate evidence of touchless WASHING.`);
   }
+  if (entryOnlyFalsePositive) {
+    evidence.push(`CRITICAL WARNING — "touchless/contactless" appears ONLY in the context of ENTRY, CHECK-IN, or PAYMENT (e.g. "touchless entry", "license plate recognition", "contactless entry", "non-marring"). This refers to the LPR/tap-to-pay system, NOT the wash mechanism. Many friction soft-cloth tunnels (e.g. The Wash Club, Glide Xpress) advertise "touchless entry" while still scrubbing with cloth/foam. Do NOT classify as touchless unless there is separate evidence of touchless WASHING.`);
+  }
 
   // Quick verdict for obvious cases (skip AI)
   let quickVerdict: 'touchless' | 'not_touchless' | null = null;
-  // If touchless only refers to drying, do NOT quick-approve — send to AI for careful analysis
-  if (touchlessHits.length >= 2 && notTouchlessHits.length === 0 && !dryingOnlyFalsePositive) {
+  // If touchless only refers to drying or entry/payment, do NOT quick-approve — send to AI for careful analysis
+  if (
+    touchlessHits.length >= 2 &&
+    notTouchlessHits.length === 0 &&
+    !dryingOnlyFalsePositive &&
+    !entryOnlyFalsePositive
+  ) {
     quickVerdict = 'touchless';
   } else if (
     notTouchlessHits.length >= 2 &&
@@ -223,7 +274,9 @@ async function verifyWithAI(
 IMPORTANT FALSE POSITIVES TO WATCH FOR:
 1. The word "contactless" almost always refers to CONTACTLESS PAYMENT (tap-to-pay, NFC), NOT touchless car washing.
 2. "Touchless drying", "touch-free dry", "touchless blower", "touchless air dry" refer to the DRYING system, NOT the wash itself. Many soft-cloth/brush car washes use touchless air dryers. If "touchless" ONLY appears in the context of drying equipment, this is NOT a touchless car wash.
-Do NOT treat either of these as evidence of touchless wash services.
+3. "Touchless entry", "touchless check-in", "touchless payment", "touchless billing", "contactless entry", "license plate recognition", "LPR" refer to the ENTRY / CHECK-IN / BILLING system (cameras read your plate, gate opens automatically, account auto-charged), NOT the wash mechanism. Many FRICTION soft-cloth tunnels — including The Wash Club, Glide Xpress, and many ICA/IGL/IWA chain washes — heavily market "touchless entry" while their actual wash uses cloth, foam pads, or rotating brushes. If "touchless"/"contactless" appears ONLY in the context of entry/check-in/payment, this is NOT a touchless car wash.
+4. "Non-marring" is soft-touch tunnel marketing language — it means the cloth/foam is gentle on paint, NOT that the wash is touchless.
+Do NOT treat any of these as evidence of touchless wash services. You MUST find separate evidence of the actual WASH being touchless (e.g. "touchless wash", "touch-free wash", "brushless wash", "laser wash", "no brushes touch your car", "high-pressure water only", a touchless equipment brand like PDQ LaserWash / Washworld Razor / Mark VII / Istobal).
 
 IMPORTANT CONTEXT: This business appeared in Google Places search results when someone searched for "touchless car wash" in ${listing.city}, ${listing.state}. This is a meaningful signal — Google returns relevant results, and many car washes offer touchless wash as one of several options even if "touchless" isn't in their name.
 
