@@ -31,6 +31,7 @@ async function getChainListings(chainName: string): Promise<Listing[]> {
       .select(LISTING_CARD_COLUMNS)
       .eq('parent_chain', chainName)
       .eq('is_touchless', true)
+      .eq('is_approved', true)
       .order('state')
       .order('city')
       .order('rating', { ascending: false })
@@ -50,7 +51,8 @@ export async function generateMetadata({ params }: ChainPageProps): Promise<Meta
     .from('listings')
     .select('*', { count: 'exact', head: true })
     .eq('parent_chain', chain.name)
-    .eq('is_touchless', true);
+    .eq('is_touchless', true)
+    .eq('is_approved', true);
 
   const total = count || 0;
   const now = new Date();
@@ -67,11 +69,19 @@ export async function generateMetadata({ params }: ChainPageProps): Promise<Meta
   // leads it to capture that intent directly.
   const title = `Is ${chain.name} Touchless? Wash Types & Locations (${month} ${year})`;
   const description = `Is ${chain.name} a touchless car wash? Yes — find all ${total} verified ${chain.name} touchless locations with maps, ratings, hours, and wash type details.`;
+
+  // Thin chain hubs (very few approved touchless locations) get noindexed.
+  // The chain template's content is mostly a list of locations — when there
+  // are only a handful, the page looks too similar to the individual location
+  // pages and Google flags it as "Duplicate without user-selected canonical".
+  // Threshold tuned so chains with at least 5 indexed locations stay indexed.
+  const thinChain = total < 5;
+
   return {
     title,
     description,
     alternates: { canonical: canonicalUrl },
-    robots: { index: true, follow: true },
+    robots: thinChain ? { index: false, follow: true } : { index: true, follow: true },
     openGraph: {
       title: `Is ${chain.name} Touchless? Wash Types & Locations`,
       description,

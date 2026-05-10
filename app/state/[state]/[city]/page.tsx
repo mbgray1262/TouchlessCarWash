@@ -250,9 +250,14 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
   const monthShort = now.toLocaleString('default', { month: 'short' });
   const title = `Best Touchless Car Wash in ${cityName}, ${stateCode} — ${effectiveCount} Verified Locations (${monthShort} ${year})`;
 
-  // Noindex pages where even the augmented (in-city + nearby) count is too thin
-  // to rank or be useful. Keep canonical so Google knows the URL is intentional.
-  const thinPage = effectiveCount < INDEXABLE_MIN_EFFECTIVE;
+  // Noindex when:
+  //   1. There are NO in-city approved touchless listings (page is just a
+  //      shell pointing to nearby cities — Google flags this as a duplicate
+  //      of the nearby city pages that already list those same listings), OR
+  //   2. The augmented (in-city + nearby) count is too thin to rank or be
+  //      useful at all.
+  // Keep canonical so Google knows the URL is intentional.
+  const thinPage = listings.length === 0 || effectiveCount < INDEXABLE_MIN_EFFECTIVE;
 
   return {
     title,

@@ -61,15 +61,21 @@ export async function generateMetadata({ params }: FeatureStatePageProps): Promi
   const match = (data as { state: string; count: number }[] | null)?.find((r) => r.state === stateCode);
   const count = match ? Number(match.count) : 0;
 
+  // Canonical points at the master state hub — this page is a filtered view of
+  // /state/<state> (only listings with this feature) and Google was flagging
+  // it as a "Duplicate without user-selected canonical" of /state/<state>.
+  // Pointing the canonical at the master resolves the ambiguity. The page
+  // still renders for users navigating from internal feature filters.
+  const canonical = `${SITE_URL}/state/${params.state}`;
   return {
     title: feature.stateSeoTitle(stateName, count),
     description: feature.stateSeoDescription(stateName, count),
     ...(count < 3 ? { robots: { index: false, follow: true } } : {}),
-    alternates: { canonical: `${SITE_URL}/features/${feature.slug}/${params.state}` },
+    alternates: { canonical },
     openGraph: {
       title: feature.stateSeoTitle(stateName, count),
       description: feature.stateSeoDescription(stateName, count),
-      url: `${SITE_URL}/features/${feature.slug}/${params.state}`,
+      url: canonical,
       siteName: 'Touchless Car Wash Finder',
       type: 'website',
       images: [DEFAULT_OG_IMAGE],
