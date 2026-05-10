@@ -59,7 +59,11 @@ export async function generateMetadata({
   const year = new Date().getFullYear();
   const title = `24 Hour Touchless Car Wash in ${stateName} — Open Now (${year})`;
   const description = `Find touchless car washes open 24 hours a day in ${stateName}. Fully automated, brushless, no-contact — available any time of day or night. Verified hours and directions.`;
-  const canonical = `${SITE_URL}/24-hour-touchless-car-wash/${params.state}`;
+  // Canonical points at the master state hub — this page is a filtered view of
+  // /state/<state> (only 24h listings) and Google was flagging it as a
+  // "Duplicate without user-selected canonical" of /state/<state>. Pointing the
+  // canonical at the master resolves the ambiguity.
+  const canonical = `${SITE_URL}/state/${params.state}`;
   return {
     title,
     description,

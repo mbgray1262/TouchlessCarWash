@@ -242,6 +242,18 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   const listing = await getListing(params.slug);
   if (!listing) return { title: 'Listing Not Found', robots: { index: false, follow: false } };
 
+  // Listing exists but was reverted (not touchless) or never approved.
+  // The page render path 308-redirects to /state/<state>/<city>; this is
+  // the metadata path Google might still use if it caches the URL during
+  // a re-crawl window. Make sure that cached metadata says noindex so the
+  // URL drops out of "Duplicate without user-selected canonical" reports.
+  if (!listing.is_touchless || !listing.is_approved) {
+    return {
+      title: 'Listing Not Available',
+      robots: { index: false, follow: true },
+    };
+  }
+
   const stateCode = getStateCode(params.state);
   const stateName = stateCode ? getStateName(stateCode) : listing.state;
   const topAmenities = (listing.amenities || []).slice(0, 3).join(', ');
