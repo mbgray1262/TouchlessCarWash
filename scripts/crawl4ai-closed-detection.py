@@ -26,11 +26,14 @@ LOG_FILE = os.path.join(SCRIPT_DIR, 'crawl4ai-closed-detection.log')
 
 LIMIT = 0
 SKIP = 0
+UNSCANNED_ONLY = False
 for arg in sys.argv[1:]:
     if arg.startswith('--limit='):
         LIMIT = int(arg.split('=')[1])
     elif arg.startswith('--skip='):
         SKIP = int(arg.split('=')[1])
+    elif arg == '--unscanned-only':
+        UNSCANNED_ONLY = True
 
 
 def log(msg):
@@ -95,15 +98,19 @@ async def main():
     log('=' * 60)
 
     # Load all approved touchless listings with a place_id.
-    # Paginate.
+    # When --unscanned-only is set, restrict to listings whose business_status
+    # is still null (i.e., never scanned). Useful for incremental runs as
+    # newly-promoted listings flow in.
     rows = []
     offset = 0
+    unscanned_filter = '&business_status=is.null' if UNSCANNED_ONLY else ''
     while True:
         page = sb_req('GET',
             '/rest/v1/listings?select=id,name,city,state,google_place_id,business_status'
             '&is_touchless=eq.true'
             '&is_approved=eq.true'
             '&google_place_id=not.is.null'
+            f'{unscanned_filter}'
             f'&limit=1000&offset={offset}')
         if not page: break
         rows.extend(page)
