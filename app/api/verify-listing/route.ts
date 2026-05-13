@@ -69,6 +69,47 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to save verification' }, { status: 500 });
     }
 
+    // Auto-hide rule: when 2+ "not touchless" flags from distinct IPs land
+    // on the same listing within 90 days, unapprove it pending admin review.
+    // Two independent strangers reporting the same problem is a strong
+    // enough signal to pull the listing from public view.
+    if (!is_touchless) {
+      const flagWindow = new Date();
+      flagWindow.setDate(flagWindow.getDate() - 90);
+
+      const { data: flagRows } = await supabaseAdmin
+        .from('listing_verifications')
+        .select('ip_address')
+        .eq('listing_id', listing_id)
+        .eq('is_touchless', false)
+        .gte('created_at', flagWindow.toISOString());
+
+      const distinctIps = new Set((flagRows ?? []).map(r => r.ip_address)).size;
+
+      if (distinctIps >= 2) {
+        const { data: listingRow } = await supabaseAdmin
+          .from('listings')
+          .select('is_approved, business_status')
+          .eq('id', listing_id)
+          .maybeSingle();
+
+        const alreadyHandled =
+          listingRow?.is_approved === false ||
+          listingRow?.business_status === 'REMOVED_BY_ADMIN' ||
+          listingRow?.business_status === 'CLOSED_PERMANENTLY';
+
+        if (!alreadyHandled) {
+          await supabaseAdmin
+            .from('listings')
+            .update({
+              is_approved: false,
+              crawl_notes: `[AUTO_HIDDEN ${new Date().toISOString()}] ${distinctIps} community flags within 90 days; pending admin review`,
+            })
+            .eq('id', listing_id);
+        }
+      }
+    }
+
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error('verify-listing error:', err);

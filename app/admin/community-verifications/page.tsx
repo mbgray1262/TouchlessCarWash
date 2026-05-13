@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   ThumbsUp, ThumbsDown, MessageSquare, Users, TrendingUp,
   AlertTriangle, CheckCircle, ExternalLink, Calendar, BarChart3,
-  RefreshCw, Trash2, XCircle, Loader2,
+  RefreshCw, Trash2, XCircle, Loader2, Ban, ShieldCheck, RotateCcw,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { slugify, US_STATES } from '@/lib/constants';
@@ -21,6 +21,8 @@ interface Verification {
   listing_state: string;
   listing_slug: string;
   listing_is_touchless: boolean; // the listing's CURRENT status (not the vote)
+  listing_business_status: string | null;
+  listing_is_approved: boolean;
 }
 
 interface ListingFlag {
@@ -30,6 +32,8 @@ interface ListingFlag {
   listing_state: string;
   listing_slug: string;
   listing_is_touchless: boolean; // current status — drives the toggle button label
+  listing_business_status: string | null;
+  listing_is_approved: boolean;
   no_count: number;
   yes_count: number;
   total: number;
@@ -72,6 +76,7 @@ export default function CommunityVerificationsPage() {
   const [page, setPage] = useState(0);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
+  const [acting, setActing] = useState<string | null>(null);
   const PAGE_SIZE = 50;
 
   const load = useCallback(async () => {
@@ -88,7 +93,7 @@ export default function CommunityVerificationsPage() {
           is_touchless,
           comment,
           created_at,
-          listings!inner(name, city, state, slug, is_touchless)
+          listings!inner(name, city, state, slug, is_touchless, business_status, is_approved)
         `)
         .order('created_at', { ascending: false })
         .limit(500);
@@ -96,7 +101,12 @@ export default function CommunityVerificationsPage() {
       if (!rawVerifications) return;
 
       // Flatten the join
-      type JoinedListing = { name: string; city: string; state: string; slug: string; is_touchless: boolean | null };
+      type JoinedListing = {
+        name: string; city: string; state: string; slug: string;
+        is_touchless: boolean | null;
+        business_status: string | null;
+        is_approved: boolean | null;
+      };
       const flat: Verification[] = rawVerifications.map((v: {
         id: string;
         listing_id: string;
@@ -117,6 +127,8 @@ export default function CommunityVerificationsPage() {
           listing_state: l?.state ?? '',
           listing_slug: l?.slug ?? '',
           listing_is_touchless: l?.is_touchless ?? false,
+          listing_business_status: l?.business_status ?? null,
+          listing_is_approved: l?.is_approved ?? true,
         };
       });
 
@@ -140,6 +152,8 @@ export default function CommunityVerificationsPage() {
             listing_state: v.listing_state,
             listing_slug: v.listing_slug,
             listing_is_touchless: v.listing_is_touchless,
+            listing_business_status: v.listing_business_status,
+            listing_is_approved: v.listing_is_approved,
             no_count: 0,
             yes_count: 0,
             total: 0,
@@ -191,6 +205,93 @@ export default function CommunityVerificationsPage() {
       alert(`Failed to update: ${err}`);
     } finally {
       setToggling(null);
+    }
+  }
+
+  /**
+   * Hard-remove a listing reported as "no car wash here" by the community.
+   * Soft-delete via the API (sets business_status='REMOVED_BY_ADMIN' +
+   * is_approved=false). The flagged-listing card and any reports in the
+   * right-hand feed update in place to show the new state.
+   */
+  async function removeListing(listing_id: string, listing_name: string) {
+    const reason = window.prompt(
+      `Remove "${listing_name}"?\n\nThis hides it from the public site immediately. Optional reason for the audit log:`,
+      'Reported as not a car wash by community',
+    );
+    if (reason === null) return; // cancelled
+    setActing(listing_id);
+    try {
+      const res = await fetch('/api/admin/listings/remove', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listing_id, reason: reason.trim() || undefined }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        alert(`Failed to remove: ${body.error ?? res.statusText}`);
+        return;
+      }
+      // Reflect new state without a full reload
+      setFlagged(prev => prev.map(f => f.listing_id === listing_id
+        ? { ...f, listing_is_touchless: false, listing_is_approved: false, listing_business_status: 'REMOVED_BY_ADMIN' }
+        : f));
+      setVerifications(prev => prev.map(v => v.listing_id === listing_id
+        ? { ...v, listing_is_touchless: false, listing_is_approved: false, listing_business_status: 'REMOVED_BY_ADMIN' }
+        : v));
+    } finally {
+      setActing(null);
+    }
+  }
+
+  async function restoreListing(listing_id: string) {
+    if (!window.confirm('Restore this listing to the public site?')) return;
+    setActing(listing_id);
+    try {
+      const res = await fetch('/api/admin/listings/restore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listing_id }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        alert(`Failed to restore: ${body.error ?? res.statusText}`);
+        return;
+      }
+      setFlagged(prev => prev.map(f => f.listing_id === listing_id
+        ? { ...f, listing_is_touchless: true, listing_is_approved: true, listing_business_status: 'OPERATIONAL' }
+        : f));
+      setVerifications(prev => prev.map(v => v.listing_id === listing_id
+        ? { ...v, listing_is_touchless: true, listing_is_approved: true, listing_business_status: 'OPERATIONAL' }
+        : v));
+    } finally {
+      setActing(null);
+    }
+  }
+
+  /**
+   * Wipe the negative verifications for a listing — used when the admin
+   * decides the flag was wrong. Positive votes are preserved.
+   */
+  async function dismissFlags(listing_id: string) {
+    if (!window.confirm('Dismiss all "not touchless" flags for this listing? Positive votes are kept.')) return;
+    setActing(listing_id);
+    try {
+      const res = await fetch('/api/admin/listings/dismiss-flags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listing_id }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        alert(`Failed to dismiss: ${body.error ?? res.statusText}`);
+        return;
+      }
+      // Drop the dismissed negative votes from local state
+      setVerifications(prev => prev.filter(v => !(v.listing_id === listing_id && !v.is_touchless)));
+      setFlagged(prev => prev.filter(f => f.listing_id !== listing_id));
+    } finally {
+      setActing(null);
     }
   }
 
@@ -315,7 +416,9 @@ export default function CommunityVerificationsPage() {
                 {flagged.map(f => {
                   const url = buildListingUrl(f.listing_state, f.listing_city, f.listing_slug);
                   const flagPct = f.total > 0 ? Math.round((f.no_count / f.total) * 100) : 0;
-                  const isBusy = toggling === f.listing_id;
+                  const isBusy = toggling === f.listing_id || acting === f.listing_id;
+                  const isRemoved = f.listing_business_status === 'REMOVED_BY_ADMIN'
+                    || f.listing_business_status === 'CLOSED_PERMANENTLY';
                   return (
                     <div key={f.listing_id} className="px-5 py-3">
                       <div className="flex items-start justify-between gap-2">
@@ -340,37 +443,77 @@ export default function CommunityVerificationsPage() {
                         </div>
                       </div>
 
-                      {/* Status + toggle */}
-                      <div className="mt-2.5 flex items-center justify-between gap-2">
+                      {/* Status pill */}
+                      <div className="mt-2.5">
                         <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
-                          f.listing_is_touchless
-                            ? 'bg-green-50 text-green-700 border border-green-200'
-                            : 'bg-gray-100 text-gray-600 border border-gray-200'
+                          isRemoved
+                            ? 'bg-red-50 text-red-700 border border-red-200'
+                            : f.listing_is_touchless && f.listing_is_approved
+                              ? 'bg-green-50 text-green-700 border border-green-200'
+                              : 'bg-gray-100 text-gray-600 border border-gray-200'
                         }`}>
-                          {f.listing_is_touchless
-                            ? <><CheckCircle className="w-3 h-3" /> Touchless</>
-                            : <><XCircle className="w-3 h-3" /> Not touchless</>}
+                          {isRemoved
+                            ? <><Ban className="w-3 h-3" /> Removed</>
+                            : f.listing_is_touchless && f.listing_is_approved
+                              ? <><CheckCircle className="w-3 h-3" /> Touchless</>
+                              : <><XCircle className="w-3 h-3" /> Hidden / Not touchless</>}
                         </span>
-                        {f.listing_is_touchless ? (
+                      </div>
+
+                      {/* Actions */}
+                      <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                        {isRemoved ? (
                           <button
-                            onClick={() => toggleListingStatus(f.listing_id, false)}
+                            onClick={() => restoreListing(f.listing_id)}
                             disabled={isBusy}
-                            className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg border border-red-200 text-red-600 bg-white hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            title="Flip this listing's status to Not Touchless"
+                            className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg border border-blue-200 text-blue-700 bg-white hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            title="Restore this listing to the public site"
                           >
-                            {isBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <ThumbsDown className="w-3 h-3" />}
-                            Mark Not Touchless
+                            {isBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
+                            Restore
                           </button>
                         ) : (
-                          <button
-                            onClick={() => toggleListingStatus(f.listing_id, true)}
-                            disabled={isBusy}
-                            className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg border border-green-200 text-green-700 bg-white hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            title="Restore this listing to Touchless"
-                          >
-                            {isBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <ThumbsUp className="w-3 h-3" />}
-                            Mark Touchless
-                          </button>
+                          <>
+                            <button
+                              onClick={() => removeListing(f.listing_id, f.listing_name)}
+                              disabled={isBusy}
+                              className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                              title="Hide this listing from the public site"
+                            >
+                              {isBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Ban className="w-3 h-3" />}
+                              Remove
+                            </button>
+                            <button
+                              onClick={() => dismissFlags(f.listing_id)}
+                              disabled={isBusy}
+                              className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                              title="Clear the negative flags — listing stays as-is"
+                            >
+                              {isBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
+                              Dismiss
+                            </button>
+                            {f.listing_is_touchless ? (
+                              <button
+                                onClick={() => toggleListingStatus(f.listing_id, false)}
+                                disabled={isBusy}
+                                className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg border border-amber-200 text-amber-700 bg-white hover:bg-amber-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                title="Flip this listing's status to Not Touchless (kept on site as not-touchless)"
+                              >
+                                {isBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <ThumbsDown className="w-3 h-3" />}
+                                Not Touchless
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => toggleListingStatus(f.listing_id, true)}
+                                disabled={isBusy}
+                                className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg border border-green-200 text-green-700 bg-white hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                title="Restore this listing to Touchless"
+                              >
+                                {isBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <ThumbsUp className="w-3 h-3" />}
+                                Mark Touchless
+                              </button>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
