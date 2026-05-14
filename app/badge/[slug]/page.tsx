@@ -1,5 +1,5 @@
 import { cache } from 'react';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import Link from 'next/link';
 import { Trophy, Star, MapPin, ExternalLink, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -112,10 +112,21 @@ export default async function BadgeClaimPage({
 }) {
   const { slug } = await params;
   const listing = await getListingBySlug(slug);
-  if (!listing) notFound();
+  // Listing was deleted from the DB entirely — redirect to the chain
+  // index instead of 404. Indexed badge URLs for removed listings get a
+  // clean signal rather than dragging down site-wide quality metrics.
+  if (!listing) permanentRedirect('/chains');
 
   const rankings = await getRankings(listing.id);
-  if (rankings.length === 0) notFound();
+  // Listing exists but has no current Best Of rankings (rolled out of
+  // the top 10 in its metro, or never qualified). Redirect to the
+  // listing's own detail page — that page handles its own redirect
+  // cascade if the listing is now reverted/closed/removed.
+  if (rankings.length === 0) {
+    permanentRedirect(
+      `/state/${getStateSlug(listing.state)}/${slugify(listing.city) || 'unknown'}/${listing.slug}`,
+    );
+  }
 
   const top = rankings[0];
   const year = new Date().getFullYear();

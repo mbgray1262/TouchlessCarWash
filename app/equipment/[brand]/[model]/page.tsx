@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/lib/supabase";
 import {
@@ -80,8 +80,16 @@ export default async function ModelDetailPage({ params }: Props) {
   const brand = getBrandBySlug(brandSlug);
   const model = getModelBySlug(brandSlug, modelSlug);
 
-  if (!brand || !model) {
-    notFound();
+  // Equipment canonicalization collapsed many brand/model pairs (96→85
+  // pairs) — old indexed URLs for retired models now 404 here. Redirect
+  // to a useful page instead so the indexed URLs drop out of "Not
+  // indexed" cleanly: brand page if the brand still exists, else the
+  // equipment index.
+  if (!brand) {
+    permanentRedirect('/equipment');
+  }
+  if (!model) {
+    permanentRedirect(`/equipment/${brandSlug}`);
   }
 
   const [listingCount, listings] = await Promise.all([
