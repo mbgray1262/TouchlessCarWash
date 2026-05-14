@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { notFound, redirect } from 'next/navigation';
+import { notFound, redirect, permanentRedirect } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/supabase';
@@ -86,7 +86,13 @@ export async function generateMetadata({ params }: FeatureStatePageProps): Promi
 export default async function FeatureStatePage({ params, searchParams }: FeatureStatePageProps) {
   const feature = getFeatureBySlug(params.slug);
   const stateCode = getStateCode(params.state);
-  if (!feature || !stateCode) notFound();
+  // Unknown feature slug (e.g. retired filter like "self-serve-bays") →
+  // 308 to /features index instead of 404. Old indexed URLs get a clean
+  // redirect signal so Google drops them from the not-indexed bucket.
+  if (!feature) permanentRedirect('/features');
+  // Unknown state code while feature exists → 308 to the parent feature
+  // page so the URL still resolves to something useful.
+  if (!stateCode) permanentRedirect(`/features/${feature.slug}`);
 
   const stateName = getStateName(stateCode);
   const currentPage = Math.max(1, parseInt(searchParams.page ?? '1', 10) || 1);

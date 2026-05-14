@@ -155,12 +155,18 @@ export default async function ChainPage({ params }: ChainPageProps) {
     ],
   };
 
+  // ItemList enumerates locations for SEO — filter out listings with
+  // empty city so we don't emit /state/<state>//<slug> URLs (Google sees
+  // those as 404s). Same defensive filter the sitemap already applies.
+  const itemListLocations = listings
+    .filter((l) => l.city?.trim())
+    .slice(0, 50);
   const itemListJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
     name: `${chain.name} Touchless Car Wash Locations`,
-    numberOfItems: totalCount,
-    itemListElement: listings.slice(0, 50).map((l, i) => ({
+    numberOfItems: itemListLocations.length,
+    itemListElement: itemListLocations.map((l, i) => ({
       '@type': 'ListItem',
       position: i + 1,
       item: {
