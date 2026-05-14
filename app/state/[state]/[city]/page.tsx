@@ -246,7 +246,10 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
   const now = new Date();
   const month = now.toLocaleString('default', { month: 'long' });
   const year = now.getFullYear();
-  const canonicalUrl = `https://touchlesscarwashfinder.com/state/${params.state}/${params.city}`;
+  // Use slugify(cityName) so the canonical URL never contains an apostrophe
+  // even when params.city does (e.g. /coeur-d'alene → /coeur-dalene). Stops
+  // GSC "Duplicate, Google chose different canonical than user" warnings.
+  const canonicalUrl = `https://touchlesscarwashfinder.com/state/${params.state}/${slugify(cityName) || params.city}`;
   const monthShort = now.toLocaleString('default', { month: 'short' });
   const title = `Best Touchless Car Wash in ${cityName}, ${stateCode} — ${effectiveCount} Verified Locations (${monthShort} ${year})`;
 
@@ -280,6 +283,19 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
 export default async function CityPage({ params }: CityPageProps) {
   const stateCode = getStateCode(params.state);
   if (!stateCode) notFound();
+
+  // URL canonicalization (BEFORE resolveCityName): if the requested city
+  // slug contains characters that slugify() would normalize away (literal
+  // apostrophes, uppercase, spaces, etc.), 308 to the canonical slug.
+  // Without this, resolveCityName won't match the apostrophe form because
+  // slugify(db_city) produces "coeur-d-alene" while params.city would be
+  // "coeur-d'alene", and we'd 404→/state redirect instead of preserving
+  // the page. Fixes GSC "Duplicate, Google chose different canonical"
+  // warnings on apostrophe cities.
+  const normalizedCitySlug = slugify(params.city);
+  if (normalizedCitySlug && normalizedCitySlug !== params.city) {
+    permanentRedirect(`/state/${params.state}/${normalizedCitySlug}`);
+  }
 
   const stateName = getStateName(stateCode!);
   const cityName = await resolveCityName(stateCode!, params.city);

@@ -258,7 +258,11 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   const stateName = stateCode ? getStateName(stateCode) : listing.state;
   const topAmenities = (listing.amenities || []).slice(0, 3).join(', ');
   const amenityPart = topAmenities ? ` Touch-free, brushless car wash offering ${topAmenities}.` : '';
-  const canonicalUrl = `${SITE_URL}/state/${params.state}/${params.city}/${params.slug}`;
+  // Canonical city slug uses slugify() to strip apostrophes & other non-
+  // alphanumeric chars, so Google never sees /coeur-d'alene/... and
+  // /coeur-dalene/... as competing URLs for the same listing.
+  const canonicalCitySlug = slugify(listing.city) || params.city;
+  const canonicalUrl = `${SITE_URL}/state/${params.state}/${canonicalCitySlug}/${params.slug}`;
   // Location-specific admin-curated photos ALWAYS beat the generic chain brand image.
   // The brand image is only the fallback when we don't have a human-verified hero.
   // ('chain-brand-auto', 'google-auto', 'streetview-auto', etc. are machine-assigned and
@@ -966,6 +970,16 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     permanentRedirect(`/${flag}`);
   }
 
+  // Canonical-slug redirect: if the requested URL uses a non-canonical
+  // city slug (e.g. /coeur-d'alene/... when slugify() would produce
+  // /coeur-dalene/...), 308 to the canonical path so Google never indexes
+  // both spellings. Fixes recurring GSC "Duplicate, Google chose
+  // different canonical than user" warnings on cities with apostrophes.
+  const canonicalCitySlug = slugify(listing.city);
+  if (canonicalCitySlug && canonicalCitySlug !== params.city) {
+    permanentRedirect(`/state/${params.state}/${canonicalCitySlug}/${params.slug}`);
+  }
+
   const [nearbyListings, reviewSnippets, rankings, chainResult, verificationStats] = await Promise.all([
     getNearbyListings(listing),
     getReviewSnippets(listing.id),
@@ -1010,14 +1024,18 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
   // to use the user's local timezone instead of the server's UTC time
   const heroDescription = buildHeroDescription(listing);
 
-  const canonicalUrl = `${SITE_URL}/state/${params.state}/${params.city}/${params.slug}`;
+  // The canonical-slug redirect above guarantees params.city is already
+  // canonical, but recompute slugify(listing.city) here for clarity and
+  // to keep this string the single source of truth for the canonical URL.
+  const canonicalCitySlugRender = slugify(listing.city) || params.city;
+  const canonicalUrl = `${SITE_URL}/state/${params.state}/${canonicalCitySlugRender}/${params.slug}`;
 
   const localBusinessSchema = buildLocalBusinessSchema(listing, canonicalUrl, hours, reviewSnippets, rankings);
   const breadcrumbItems = [
     { name: 'Home', url: SITE_URL },
     { name: 'States', url: `${SITE_URL}/states` },
     { name: stateName, url: `${SITE_URL}/state/${params.state}` },
-    { name: cityName, url: `${SITE_URL}/state/${params.state}/${params.city}` },
+    { name: cityName, url: `${SITE_URL}/state/${params.state}/${canonicalCitySlugRender}` },
     { name: listing.name, url: canonicalUrl },
   ];
   const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbItems);
