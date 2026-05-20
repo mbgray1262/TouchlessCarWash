@@ -163,8 +163,13 @@ export function ProductCard({
       href={href}
       target="_blank"
       rel="noopener noreferrer sponsored nofollow"
-      className="group flex flex-col h-full rounded-xl border border-gray-200 bg-white overflow-hidden hover:border-[#22C55E] hover:shadow-md transition-all"
+      className="group relative flex flex-col h-full rounded-xl border border-gray-200 bg-white overflow-hidden hover:border-[#22C55E] hover:shadow-md transition-all"
     >
+      {product.editorPick && (
+        <span className="absolute top-3 left-3 z-10 inline-flex items-center gap-1 rounded-full bg-[#22C55E] text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 shadow-sm">
+          &#9733; Editor&rsquo;s Pick
+        </span>
+      )}
       <ImageOrFallback
         product={product}
         size="lg"
