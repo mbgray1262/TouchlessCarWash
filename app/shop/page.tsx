@@ -1,8 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { ShoppingBag, Sparkles, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { ShoppingBag, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { ProductCard } from '@/components/ProductCard';
-import { ProductGrid } from '@/components/ProductGrid';
 import {
   amazonUrl,
   PRODUCTS,
@@ -103,30 +102,8 @@ export default function ShopPage() {
           </div>
         </section>
 
-        {/* Editor's Top Picks */}
-        <section className="bg-gray-50 border-b border-gray-200">
-          <div className="container mx-auto px-4 max-w-6xl py-12">
-            <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="w-5 h-5 text-[#22C55E]" />
-              <h2 className="text-2xl font-bold text-[#0F2744]">
-                Editor's Top Picks
-              </h2>
-            </div>
-            <p className="text-gray-600 mb-6">
-              If you only buy four things, start here.
-            </p>
-            <ProductGrid
-              preset="homepage"
-              variant="card"
-              bg="transparent"
-              title=""
-              subtitle=""
-            />
-          </div>
-        </section>
-
         {/* Category nav */}
-        <section className="border-b border-gray-200 sticky top-16 bg-white z-30">
+        <section className="border-b border-gray-200 sticky top-16 bg-white z-30 shadow-sm">
           <div className="container mx-auto px-4 max-w-6xl py-4 overflow-x-auto">
             <div className="flex items-center gap-2 text-sm font-medium whitespace-nowrap">
               <span className="text-gray-500 mr-2">Jump to:</span>
@@ -148,6 +125,13 @@ export default function ShopPage() {
           {SHOP_SECTIONS.map((section) => {
             const products = productsByCategory(...section.categories);
             if (products.length === 0) return null;
+            // Adaptive grid — no empty trailing slots regardless of count
+            const gridClass =
+              products.length === 1
+                ? 'grid grid-cols-1 max-w-sm gap-4'
+                : products.length === 2
+                  ? 'grid grid-cols-1 sm:grid-cols-2 max-w-3xl gap-4'
+                  : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4';
             return (
               <section key={section.id} id={section.id} className="scroll-mt-32">
                 <h2 className="text-2xl font-bold text-[#0F2744] mb-2">
@@ -156,7 +140,7 @@ export default function ShopPage() {
                 <p className="text-gray-600 mb-6 max-w-3xl">
                   {section.subtitle}
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className={gridClass}>
                   {products.map((p) => (
                     <ProductCard key={p.id} product={p} variant="card" />
                   ))}

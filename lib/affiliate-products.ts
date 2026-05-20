@@ -156,6 +156,7 @@ export const PRODUCTS: Product[] = [
     rating: 4.8,
     positioning:
       'pH-best biodegradable formula. Cult-favorite DIY brand with thick suds and zero scratch risk.',
+    imageUrl: 'https://m.media-amazon.com/images/I/71UQMENo4fL.jpg',
   },
 
   // ───── Snow foam (touchless prewash) ─────
@@ -181,6 +182,7 @@ export const PRODUCTS: Product[] = [
     rating: 4.8,
     positioning:
       '10× concentrated formula. Won’t strip wax or ceramic coatings — pure cling foam.',
+    imageUrl: 'https://m.media-amazon.com/images/I/61psQ+FP3NS.jpg',
   },
 
   // ───── Foam cannons ─────
@@ -194,6 +196,7 @@ export const PRODUCTS: Product[] = [
     rating: 4.8,
     positioning:
       'Italian-made pro standard. The foam cannon serious detailers actually buy.',
+    imageUrl: 'https://m.media-amazon.com/images/I/71Bg1P06mcL._AC_SL1500_.jpg',
   },
   {
     id: 'matcc-foam-cannon',
@@ -205,6 +208,7 @@ export const PRODUCTS: Product[] = [
     rating: 4.5,
     positioning:
       'Budget entry — pairs with any pressure washer. Adjustable foam thickness.',
+    imageUrl: 'https://m.media-amazon.com/images/I/61HNF4D-8xL.jpg',
   },
 
   // ───── Electric pressure washers ─────
@@ -218,6 +222,7 @@ export const PRODUCTS: Product[] = [
     rating: 4.5,
     positioning:
       "Amazon's best-selling electric pressure washer — turn your driveway into a touchless wash bay.",
+    imageUrl: 'https://m.media-amazon.com/images/I/71l9XB9pCSL.jpg',
   },
   {
     id: 'westinghouse-epx3100',
@@ -243,6 +248,7 @@ export const PRODUCTS: Product[] = [
     rating: 4.6,
     positioning:
       'Blows water off your car — zero contact, zero scratch risk. Made in USA.',
+    imageUrl: 'https://m.media-amazon.com/images/I/61x9qFNe6WL._AC_SL1500_.jpg',
   },
 
   // ───── Wheel care (no-touch) ─────
