@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/lib/supabase";
 import { EQUIPMENT_BRAND_DATA, getBrandLabel } from "@/lib/equipment-data";
 import { ProductGrid } from "@/components/ProductGrid";
+import { ProductSpotlight } from "@/components/ProductSpotlight";
 
 export const dynamic = 'force-dynamic'; // see /state/.../slug for context — Netlify CDN cache (netlify.toml) handles edge perf; force-dynamic prevents the Next.js ISR etag-based 304-without-body bug that kept breaking /blog and /best on the CDN.
 
@@ -117,6 +118,14 @@ export default async function EquipmentIndexPage() {
             range of services offered. Browse the brands below to learn more
             about each manufacturer and find car washes that use their systems.
           </p>
+        </div>
+
+        {/* Mid-content product spotlight */}
+        <div className="mb-10">
+          <ProductSpotlight
+            productId="sun-joe-spx3000"
+            eyebrow="DIY at Home"
+          />
         </div>
 
         {/* Brand grid */}

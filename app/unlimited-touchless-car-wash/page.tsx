@@ -8,6 +8,7 @@ import { getChainSubscriptionDisplay } from '@/lib/chain-subscriptions';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import { US_STATES, getStateName, getStateSlug } from '@/lib/constants';
 import { ProductGrid } from '@/components/ProductGrid';
+import { ProductSpotlight } from '@/components/ProductSpotlight';
 import type { Metadata } from 'next';
 
 export const revalidate = 3600;
@@ -300,6 +301,14 @@ export default async function UnlimitedHubPage() {
           <p className="text-sm text-gray-600 italic">
             Exact pricing varies by chain and region. Some chains (Splash, Delta Sonic) offer multi-vehicle family plans at a discount. Nearly all chains let you cancel anytime with no fee.
           </p>
+        </div>
+
+        {/* Mid-content product spotlight */}
+        <div className="mb-10">
+          <ProductSpotlight
+            productId="meguiars-hybrid-ceramic-wax"
+            eyebrow="Make Each Wash Last Longer"
+          />
         </div>
 
         {/* Is it worth it */}

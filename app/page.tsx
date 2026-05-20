@@ -320,6 +320,17 @@ export default async function Home() {
         </section>
       )}
 
+      <section className="py-14 px-4 bg-gray-50 border-y border-gray-200">
+        <div className="container mx-auto max-w-6xl">
+          <ProductGrid
+            preset="homepage"
+            variant="card"
+            bg="transparent"
+            subtitle="Going to a touchless wash? These are the four things our editors actually use to make the wash last longer."
+          />
+        </div>
+      </section>
+
       <section id="browse-states" className="py-16 bg-background">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
@@ -450,16 +461,8 @@ export default async function Home() {
       </section>
 
       <section className="py-10 px-4 bg-gray-50">
-        <div className="container mx-auto max-w-3xl mb-10">
+        <div className="container mx-auto max-w-3xl">
           <ProductsBanner />
-        </div>
-        <div className="container mx-auto max-w-6xl">
-          <ProductGrid
-            preset="homepage"
-            variant="card"
-            bg="transparent"
-            subtitle="Going to a touchless wash? These are the four things our editors actually use to make the wash last longer."
-          />
         </div>
       </section>
 
