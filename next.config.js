@@ -27,6 +27,12 @@ const nextConfig = {
         destination: '/state/:state/:city/:slug',
         permanent: true,
       },
+      // Old blog-based product page → consolidated /shop catalog
+      {
+        source: '/blog/recommended-products',
+        destination: '/shop',
+        permanent: true,
+      },
       // Deleted duplicate blog posts → redirect to surviving articles
       {
         source: '/blog/touchless-vs-automatic-car-wash',

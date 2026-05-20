@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Droplet, Menu, X, Heart } from 'lucide-react';
+import { Droplet, Menu, X, Heart, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
@@ -70,6 +70,10 @@ export function Header() {
             <Link href="/chains" className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors">
               Chains
             </Link>
+            <Link href="/shop" className="inline-flex items-center gap-1.5 text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors">
+              <ShoppingBag className="w-4 h-4" />
+              Shop
+            </Link>
             <Link href="/blog" className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors">
               Blog
             </Link>
@@ -135,6 +139,14 @@ export function Header() {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Chains
+              </Link>
+              <Link
+                href="/shop"
+                className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors flex items-center gap-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <ShoppingBag className="w-4 h-4" />
+                Shop
               </Link>
               <Link
                 href="/blog"

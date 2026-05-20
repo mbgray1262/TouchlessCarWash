@@ -18,7 +18,7 @@ export function ProductsBanner() {
         </p>
       </div>
       <Link
-        href="/blog/recommended-products"
+        href="/shop"
         className="shrink-0 inline-block rounded-xl bg-white text-[#0F2744] font-semibold text-sm px-5 py-2.5 hover:bg-blue-50 transition-colors whitespace-nowrap"
       >
         See Our Top Picks →
