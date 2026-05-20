@@ -16,22 +16,39 @@ export interface Product {
   brand: string;
   name: string;
   category: ProductCategory;
-  // Prefer asin for direct product URL. Falls back to a brand+name Amazon search
-  // when we don't have a verified ASIN yet — affiliate tag still attributes the session.
-  asin?: string;
-  searchQuery?: string;
+  asin: string;
   priceRange: string;
   rating: number;
   positioning: string;
+  // True when /images/P/{ASIN}.01.L.jpg returns a real product image (verified
+  // at build time). Newer Amazon products use image-hash URLs we can't derive
+  // from the ASIN alone — those render the category-color fallback instead.
+  hasImage?: boolean;
 }
 
 export function amazonUrl(p: Product): string {
-  const tag = `tag=${AMAZON_AFFILIATE_TAG}`;
-  if (p.asin) return `https://www.amazon.com/dp/${p.asin}/?${tag}`;
-  if (p.searchQuery) {
-    return `https://www.amazon.com/s?k=${encodeURIComponent(p.searchQuery)}&${tag}`;
-  }
-  return `https://www.amazon.com/?${tag}`;
+  return `https://www.amazon.com/dp/${p.asin}/?tag=${AMAZON_AFFILIATE_TAG}`;
+}
+
+export function amazonImageUrl(p: Product): string | null {
+  if (!p.hasImage) return null;
+  return `https://images-na.ssl-images-amazon.com/images/P/${p.asin}.01.L.jpg`;
+}
+
+const CATEGORY_GRADIENTS: Record<ProductCategory, string> = {
+  'touchless-soap': 'from-blue-100 to-cyan-50',
+  'snow-foam': 'from-sky-100 to-blue-50',
+  'foam-cannon': 'from-cyan-100 to-teal-50',
+  'pressure-washer': 'from-slate-200 to-blue-50',
+  'no-touch-drying': 'from-blue-100 to-indigo-50',
+  'wheel-care': 'from-amber-100 to-yellow-50',
+  'ceramic-protection': 'from-indigo-100 to-blue-50',
+  'drying-towel': 'from-emerald-100 to-teal-50',
+  interior: 'from-purple-100 to-fuchsia-50',
+};
+
+export function categoryGradient(p: Product): string {
+  return CATEGORY_GRADIENTS[p.category];
 }
 
 export const PRODUCTS: Product[] = [
@@ -46,6 +63,7 @@ export const PRODUCTS: Product[] = [
     rating: 4.7,
     positioning:
       'Spray on your wet car right after the touchless wash, rinse off, done. Ceramic protection with zero buffing.',
+    hasImage: true,
   },
   {
     id: 'griots-microfiber-towel',
@@ -57,6 +75,7 @@ export const PRODUCTS: Product[] = [
     rating: 4.9,
     positioning:
       'Prevents water spots after the wash. Scratch-free and safe for ceramic coatings and PPF.',
+    hasImage: true,
   },
   {
     id: 'chemguys-interior-wipes',
@@ -68,6 +87,7 @@ export const PRODUCTS: Product[] = [
     rating: 4.5,
     positioning:
       'Toss in the glovebox. Wipe down dash, seats, and trim while you wait in the wash line.',
+    hasImage: true,
   },
 
   // ───── Touchless soaps ─────
@@ -85,46 +105,50 @@ export const PRODUCTS: Product[] = [
   {
     id: 'meguiars-hyperwash',
     brand: "Meguiar's",
-    name: 'Hyper-Wash Concentrated Soap (Gallon)',
+    name: 'Hyper-Wash Foaming Car Wash (Gallon)',
     category: 'touchless-soap',
-    searchQuery: "Meguiar's Hyper Wash gallon",
+    asin: 'B0006SH4IM',
     priceRange: '$30',
     rating: 4.7,
-    positioning: 'pH-neutral, commercial-grade — gentle on wax and ceramic coatings.',
+    positioning:
+      'Commercial-grade foaming wash. Body shop safe, biodegradable, lifts dirt without stripping wax.',
+    hasImage: true,
   },
   {
     id: 'adams-car-shampoo',
     brand: "Adam's Polishes",
-    name: 'Car Shampoo',
+    name: 'Car Shampoo (16oz)',
     category: 'touchless-soap',
-    searchQuery: "Adam's Polishes Car Shampoo",
-    priceRange: '$15-50',
+    asin: 'B0058JJS0Q',
+    priceRange: '$15',
     rating: 4.8,
     positioning:
-      'Cult-favorite DIY brand. Sudses up thick, rinses clean, smells like cherries.',
+      'pH-best biodegradable formula. Cult-favorite DIY brand with thick suds and zero scratch risk.',
   },
 
   // ───── Snow foam (touchless prewash) ─────
   {
     id: 'chemguys-honeydew-snow-foam',
     brand: 'Chemical Guys',
-    name: 'Honeydew Snow Foam',
+    name: 'Honeydew Snow Foam (16oz)',
     category: 'snow-foam',
-    searchQuery: 'Chemical Guys Honeydew Snow Foam',
+    asin: 'B009OTK094',
     priceRange: '$20',
     rating: 4.7,
     positioning:
       'Thick foam clings to your paint and pulls grit off before you ever touch the car.',
+    hasImage: true,
   },
   {
     id: 'adams-mega-foam',
     brand: "Adam's Polishes",
-    name: 'Mega Foam',
+    name: 'Mega Foam (16oz)',
     category: 'snow-foam',
-    searchQuery: "Adam's Mega Foam",
+    asin: 'B07SPY1CLW',
     priceRange: '$25',
     rating: 4.8,
-    positioning: 'Premium pre-rinse foam — extra cling time on vertical panels.',
+    positioning:
+      '10× concentrated formula. Won’t strip wax or ceramic coatings — pure cling foam.',
   },
 
   // ───── Foam cannons ─────
@@ -133,18 +157,18 @@ export const PRODUCTS: Product[] = [
     brand: 'MTM Hydro',
     name: 'PF22.2 Foam Cannon',
     category: 'foam-cannon',
-    searchQuery: 'MTM Hydro PF22.2 Foam Cannon',
+    asin: 'B083P6D7DT',
     priceRange: '$80',
     rating: 4.8,
     positioning:
-      'Pro gold standard. The foam cannon serious detailers actually buy.',
+      'Italian-made pro standard. The foam cannon serious detailers actually buy.',
   },
   {
     id: 'matcc-foam-cannon',
     brand: 'MATCC',
     name: 'Adjustable Foam Cannon',
     category: 'foam-cannon',
-    searchQuery: 'MATCC Adjustable Foam Cannon',
+    asin: 'B01CE78VO8',
     priceRange: '$35',
     rating: 4.5,
     positioning:
@@ -157,7 +181,7 @@ export const PRODUCTS: Product[] = [
     brand: 'Sun Joe',
     name: 'SPX3000 Electric Pressure Washer',
     category: 'pressure-washer',
-    searchQuery: 'Sun Joe SPX3000 Electric Pressure Washer',
+    asin: 'B00CPGMUXW',
     priceRange: '$160',
     rating: 4.5,
     positioning:
@@ -168,24 +192,25 @@ export const PRODUCTS: Product[] = [
     brand: 'Westinghouse',
     name: 'ePX3100 Electric Pressure Washer',
     category: 'pressure-washer',
-    searchQuery: 'Westinghouse ePX3100 Pressure Washer',
+    asin: 'B083B2M9NT',
     priceRange: '$220',
     rating: 4.5,
     positioning:
-      'Premium pick with brass fittings and longer hose — built to last.',
+      'Premium pick. 2,300 PSI, anti-tipping design, onboard soap tank — built to last.',
+    hasImage: true,
   },
 
   // ───── No-touch drying ─────
   {
     id: 'metrovac-master-blaster',
     brand: 'MetroVac',
-    name: 'Master Blaster Sidekick',
+    name: 'Air Force Blaster Sidekick',
     category: 'no-touch-drying',
-    searchQuery: 'MetroVac Master Blaster Sidekick',
-    priceRange: '$220',
+    asin: 'B00US404U4',
+    priceRange: '$130',
     rating: 4.6,
     positioning:
-      'Blows water off your car — zero contact, zero scratch risk. The detailer drying gold standard.',
+      'Blows water off your car — zero contact, zero scratch risk. Made in USA.',
   },
 
   // ───── Wheel care (no-touch) ─────
@@ -194,11 +219,12 @@ export const PRODUCTS: Product[] = [
     brand: 'Sonax',
     name: 'Full Effect Wheel Cleaner',
     category: 'wheel-care',
-    searchQuery: 'Sonax Full Effect Wheel Cleaner',
+    asin: 'B003UT3S6Q',
     priceRange: '$25',
     rating: 4.6,
     positioning:
       'Color-changing spray-and-rinse. Cleans brake dust without scrubbing.',
+    hasImage: true,
   },
 ];
 
@@ -212,9 +238,10 @@ export function getProducts(ids: readonly string[]): Product[] {
     .filter((p): p is Product => p !== undefined);
 }
 
-// Per-page-type curation — keeps presentation logic out of page files.
+// Per-page-type curation. Image-having products are preferred for grid-style
+// placements so the visual is consistent; the catalog still references the
+// non-imaged products via search-result swaps later.
 export const PLACEMENT_PRESETS = {
-  // Existing converters — proven on listings + best metro pages
   listing: [
     'meguiars-hybrid-ceramic-wax',
     'griots-microfiber-towel',
@@ -225,32 +252,32 @@ export const PLACEMENT_PRESETS = {
     'griots-microfiber-towel',
     'chemguys-interior-wipes',
   ],
-  // Equipment audience — they're researching gear, sell them the home setup
-  equipment: ['mtm-pf22', 'sun-joe-spx3000', 'swift-touchless-shampoo', 'matcc-foam-cannon'],
-  // Chain pages — between-wash care for subscription holders
+  equipment: [
+    'westinghouse-epx3100',
+    'meguiars-hyperwash',
+    'sonax-full-effect',
+    'chemguys-honeydew-snow-foam',
+  ],
   chains: [
-    'swift-touchless-shampoo',
     'chemguys-honeydew-snow-foam',
     'meguiars-hybrid-ceramic-wax',
+    'meguiars-hyperwash',
   ],
-  // Unlimited subscribers — protection + drying between washes
   unlimited: [
     'meguiars-hybrid-ceramic-wax',
     'griots-microfiber-towel',
     'sonax-full-effect',
   ],
-  // 24-hour hub — convenience-focused care
   twentyFourHour: [
     'meguiars-hybrid-ceramic-wax',
     'chemguys-interior-wipes',
     'griots-microfiber-towel',
   ],
-  // Homepage strip — broadest mix, top picks
   homepage: [
-    'swift-touchless-shampoo',
     'chemguys-honeydew-snow-foam',
-    'mtm-pf22',
-    'sun-joe-spx3000',
+    'meguiars-hyperwash',
+    'sonax-full-effect',
+    'westinghouse-epx3100',
   ],
 } as const satisfies Record<string, readonly string[]>;
 
