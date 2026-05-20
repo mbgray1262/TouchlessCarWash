@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { ShoppingBag, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { ProductCard } from '@/components/ProductCard';
 import {
-  amazonUrl,
+  affiliateUrl,
   PRODUCTS,
   SHOP_SECTIONS,
   productsByCategory,
@@ -182,7 +182,7 @@ function buildItemListJsonLd() {
         name: `${p.brand} ${p.name}`,
         brand: { '@type': 'Brand', name: p.brand },
         description: p.positioning,
-        url: amazonUrl(p),
+        url: affiliateUrl(p),
         ...(p.imageUrl ? { image: p.imageUrl } : {}),
         aggregateRating: {
           '@type': 'AggregateRating',

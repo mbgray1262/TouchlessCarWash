@@ -1,7 +1,8 @@
 import {
-  amazonUrl,
+  affiliateUrl,
   amazonImageUrl,
   categoryGradient,
+  vendorLabel,
   type Product,
 } from '@/lib/affiliate-products';
 
@@ -126,7 +127,7 @@ export function ProductCard({
   product: Product;
   variant?: Variant;
 }) {
-  const href = amazonUrl(product);
+  const href = affiliateUrl(product);
 
   if (variant === 'compact') {
     return (
@@ -189,7 +190,7 @@ export function ProductCard({
           {product.positioning}
         </p>
         <span className="inline-flex items-center gap-1 text-sm font-semibold text-[#0F2744] group-hover:text-[#22C55E] transition-colors mt-auto">
-          Shop on Amazon &rarr;
+          Shop on {vendorLabel(product)} &rarr;
         </span>
       </div>
     </a>

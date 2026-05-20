@@ -1,5 +1,12 @@
 export const AMAZON_AFFILIATE_TAG = 'touchlessfind-20';
 
+// Commission Junction publisher + Chemical Guys advertiser link IDs.
+// The link ID is universal across all Chemical Guys products — verified by
+// generating Get Code for multiple products in the CJ portal (link ID
+// 13739068 appeared for every product tested).
+const CJ_PUBLISHER_ID = '101757333';
+const CJ_CHEMGUYS_LINK_ID = '13739068';
+
 export type ProductCategory =
   | 'touchless-soap'
   | 'snow-foam'
@@ -11,31 +18,50 @@ export type ProductCategory =
   | 'drying-towel'
   | 'interior';
 
+export type AffiliateVendor = 'amazon' | 'chemicalguys-cj';
+
 export interface Product {
   id: string;
   brand: string;
   name: string;
   category: ProductCategory;
-  asin: string;
+  vendor?: AffiliateVendor; // defaults to 'amazon' for back-compat
+  // Amazon-only: ASIN powers both the affiliate URL and canonical image lookup
+  asin?: string;
+  // Chemical Guys (CJ) only: canonical chemicalguys.com product URL. The
+  // affiliate-tracked URL is constructed at runtime using the universal
+  // CJ_CHEMGUYS_LINK_ID — no per-product link generation needed.
+  chemicalguysUrl?: string;
   priceRange: string;
   rating: number;
   positioning: string;
-  // True when /images/P/{ASIN}.01.L.jpg returns a real product image (verified
-  // at build time).
+  // True when Amazon's canonical /images/P/{ASIN}.01.L.jpg returns a real image.
   hasImage?: boolean;
-  // Explicit image URL — overrides the canonical pattern. Used for newer
-  // Amazon products whose image hash isn't ASIN-derivable; sourced from
-  // search engine image results (m.media-amazon.com/images/I/{hash}.jpg).
+  // Explicit image URL override. Used for newer Amazon products whose image
+  // hash isn't ASIN-derivable, and for all Chemical Guys products (Shopify
+  // CDN URLs).
   imageUrl?: string;
 }
 
-export function amazonUrl(p: Product): string {
+export function affiliateUrl(p: Product): string {
+  if (p.vendor === 'chemicalguys-cj' && p.chemicalguysUrl) {
+    return `https://www.dpbolvw.net/click-${CJ_PUBLISHER_ID}-${CJ_CHEMGUYS_LINK_ID}?url=${encodeURIComponent(p.chemicalguysUrl)}`;
+  }
   return `https://www.amazon.com/dp/${p.asin}/?tag=${AMAZON_AFFILIATE_TAG}`;
+}
+
+/** Back-compat alias — older callers may still import amazonUrl. */
+export const amazonUrl = affiliateUrl;
+
+export function vendorLabel(p: Product): string {
+  return p.vendor === 'chemicalguys-cj' ? 'Chemical Guys' : 'Amazon';
 }
 
 export function amazonImageUrl(p: Product): string | null {
   if (p.imageUrl) return p.imageUrl;
-  if (p.hasImage) return `https://images-na.ssl-images-amazon.com/images/P/${p.asin}.01.L.jpg`;
+  if (p.hasImage && p.asin) {
+    return `https://images-na.ssl-images-amazon.com/images/P/${p.asin}.01.L.jpg`;
+  }
   return null;
 }
 
@@ -82,16 +108,22 @@ export const PRODUCTS: Product[] = [
     hasImage: true,
   },
   {
-    id: 'chemguys-interior-wipes',
+    // Replaced the Amazon Interior Wipes with the Chemical Guys flagship
+    // liquid Total Interior Cleaner & Protectant (TIC) via CJ direct —
+    // higher commission rate (~8-12% vs Amazon 1-4%) and broader use case.
+    id: 'chemguys-total-interior-cleaner',
     brand: 'Chemical Guys',
-    name: 'Interior Cleaner Wipes',
+    name: 'Total Interior Cleaner & Protectant (16oz)',
     category: 'interior',
-    asin: 'B0B4PR1W7K',
-    priceRange: '$15',
-    rating: 4.5,
+    vendor: 'chemicalguys-cj',
+    chemicalguysUrl:
+      'https://www.chemicalguys.com/products/total-interior-cleaner-and-protectant?variant=45547919147313',
+    priceRange: '$12',
+    rating: 4.7,
     positioning:
-      'Toss in the glovebox. Wipe down dash, seats, and trim while you wait in the wash line.',
-    hasImage: true,
+      'One-bottle solution for dash, seats, trim, plastic, vinyl, leather, and rubber. Clean and protect in a single step.',
+    imageUrl:
+      'https://cdn.shopify.com/s/files/1/0742/8938/1681/files/SPI22016-Front-2000x2000.jpg?v=1699306384',
   },
 
   // ───── Touchless soaps ─────
@@ -146,6 +178,22 @@ export const PRODUCTS: Product[] = [
       'Commercial-grade foaming wash. Body shop safe, biodegradable, lifts dirt without stripping wax.',
     hasImage: true,
   },
+  // Chemical Guys flagship car wash soap via CJ direct.
+  {
+    id: 'chemguys-mr-pink-super-suds',
+    brand: 'Chemical Guys',
+    name: 'Mr. Pink Super Suds Car Wash Soap (1 Gallon)',
+    category: 'touchless-soap',
+    vendor: 'chemicalguys-cj',
+    chemicalguysUrl:
+      'https://www.chemicalguys.com/products/mr-pink-super-suds-superior-surface-cleanser-car-wash-shampoo?variant=45429274345777',
+    priceRange: '$43',
+    rating: 4.8,
+    positioning:
+      "Chemical Guys' #1 car wash shampoo. pH-balanced, foam-cannon ready, touchless-compatible.",
+    imageUrl:
+      'https://cdn.shopify.com/s/files/1/0742/8938/1681/files/CWS_402.jpg?v=1699306447',
+  },
   {
     id: 'adams-car-shampoo',
     brand: "Adam's Polishes",
@@ -161,16 +209,21 @@ export const PRODUCTS: Product[] = [
 
   // ───── Snow foam (touchless prewash) ─────
   {
+    // Swapped from Amazon (16oz) to CJ direct (1 gallon) — higher AOV and
+    // ~3x higher commission rate.
     id: 'chemguys-honeydew-snow-foam',
     brand: 'Chemical Guys',
-    name: 'Honeydew Snow Foam (16oz)',
+    name: 'Honeydew Snow Foam (1 Gallon)',
     category: 'snow-foam',
-    asin: 'B009OTK094',
-    priceRange: '$20',
+    vendor: 'chemicalguys-cj',
+    chemicalguysUrl:
+      'https://www.chemicalguys.com/products/honeydew-snow-foam-extreme-suds-cleansing-wash-shampoo?variant=46294730244401',
+    priceRange: '$40',
     rating: 4.7,
     positioning:
-      'Thick foam clings to your paint and pulls grit off before you ever touch the car.',
-    hasImage: true,
+      'Thick foam clings to your paint and pulls grit off before you ever touch the car. Gallon size lasts months.',
+    imageUrl:
+      'https://cdn.shopify.com/s/files/1/0742/8938/1681/files/CWS_110.jpg?v=1711650256',
   },
   {
     id: 'adams-mega-foam',
@@ -197,6 +250,22 @@ export const PRODUCTS: Product[] = [
     positioning:
       'Italian-made pro standard. The foam cannon serious detailers actually buy.',
     imageUrl: 'https://m.media-amazon.com/images/I/71Bg1P06mcL._AC_SL1500_.jpg',
+  },
+  // Chemical Guys flagship foam cannon via CJ direct.
+  {
+    id: 'chemguys-torq-max-foam-8',
+    brand: 'Chemical Guys',
+    name: 'TORQ Professional Foam Cannon Max Foam 8',
+    category: 'foam-cannon',
+    vendor: 'chemicalguys-cj',
+    chemicalguysUrl:
+      'https://www.chemicalguys.com/products/torq-professional-foam-cannon-max-foam-8?variant=46294461841713',
+    priceRange: '$100',
+    rating: 4.7,
+    positioning:
+      "Chemical Guys' flagship foam cannon. Premium build, adjustable foam thickness, lifetime durability.",
+    imageUrl:
+      'https://cdn.shopify.com/s/files/1/0742/8938/1681/files/0-01-EQP_310-box-product-2000x2000.jpg?v=1699306358',
   },
   {
     id: 'matcc-foam-cannon',
@@ -235,6 +304,23 @@ export const PRODUCTS: Product[] = [
     positioning:
       'Premium pick. 2,300 PSI, anti-tipping design, onboard soap tank — built to last.',
     hasImage: true,
+  },
+
+  // Chemical Guys SiO2 ceramic protection via CJ direct.
+  {
+    id: 'chemguys-hydroslick',
+    brand: 'Chemical Guys',
+    name: 'HydroSlick SiO2 Ceramic Hyperwax (16oz)',
+    category: 'ceramic-protection',
+    vendor: 'chemicalguys-cj',
+    chemicalguysUrl:
+      'https://www.chemicalguys.com/products/hydroslick-intense-gloss-sio2-ceramic-coating-hyperwax?variant=46294741516593',
+    priceRange: '$40',
+    rating: 4.7,
+    positioning:
+      'Spray-on SiO2 ceramic that bonds in minutes. Months of slick, hydrophobic protection between washes.',
+    imageUrl:
+      'https://cdn.shopify.com/s/files/1/0742/8938/1681/files/0-0000001-WAC22916-Front-2000x2000.jpg?v=1699306445',
   },
 
   // ───── No-touch drying ─────
@@ -336,35 +422,36 @@ export const PLACEMENT_PRESETS = {
   listing: [
     'meguiars-hybrid-ceramic-wax',
     'griots-microfiber-towel',
-    'chemguys-interior-wipes',
+    'chemguys-total-interior-cleaner',
   ],
   metroBest: [
     'meguiars-hybrid-ceramic-wax',
     'griots-microfiber-towel',
-    'chemguys-interior-wipes',
+    'chemguys-total-interior-cleaner',
   ],
-  // Homepage — lead with touchless-named products since this is the front
-  // door for visitors searching "touchless car wash". The TOUCHLESS keyword
-  // in card titles is more valuable than image consistency.
+  // Homepage — touchless-named products (front-door SEO match) plus two
+  // Chemical Guys CJ direct products (higher commission rate than Amazon).
   homepage: [
     'swift-touchless-shampoo',
     'optimum-touchless-decon',
     'chemguys-honeydew-snow-foam',
-    'meguiars-hyperwash',
+    'chemguys-mr-pink-super-suds',
   ],
-  // Equipment audience — DIY at home. Push touchless soap + the combo kit.
+  // Equipment audience — DIY at home. TORQ foam cannon (CJ) + pressure
+  // washer + touchless soaps form the full kit.
   equipment: [
     'swift-touchless-shampoo',
-    'wash-chems-pro100-combo',
+    'chemguys-torq-max-foam-8',
     'westinghouse-epx3100',
     'chemguys-honeydew-snow-foam',
   ],
   // Chain subscribers — when their unlimited's closed or they want to
-  // reproduce that touchless experience at home.
+  // reproduce that touchless experience at home. HydroSlick (CJ ceramic)
+  // covers between-wash protection at a higher commission rate.
   chains: [
     'swift-touchless-shampoo',
     'optimum-touchless-decon',
-    'meguiars-hybrid-ceramic-wax',
+    'chemguys-hydroslick',
   ],
   // Unlimited subscribers — between-wash care. Add Optimum for ceramic owners.
   unlimited: [
@@ -375,7 +462,7 @@ export const PLACEMENT_PRESETS = {
   // 24-hour convenience focus — quick interior + drying essentials
   twentyFourHour: [
     'meguiars-hybrid-ceramic-wax',
-    'chemguys-interior-wipes',
+    'chemguys-total-interior-cleaner',
     'griots-microfiber-towel',
   ],
 } as const satisfies Record<string, readonly string[]>;
