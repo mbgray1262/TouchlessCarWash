@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import {
   amazonUrl,
   amazonImageUrl,
@@ -119,7 +120,13 @@ export function ProductSidebar({
           </a>
         ))}
       </div>
-      <p className="text-[10px] text-gray-400 italic mt-3 leading-tight">
+      <Link
+        href="/shop"
+        className="block mt-3 text-xs font-semibold text-[#0F2744] hover:text-[#22C55E] transition-colors"
+      >
+        See our full touchless toolkit &rarr;
+      </Link>
+      <p className="text-[10px] text-gray-400 italic mt-2 leading-tight">
         Amazon affiliate links — we earn from qualifying purchases at no extra cost.
       </p>
     </aside>
