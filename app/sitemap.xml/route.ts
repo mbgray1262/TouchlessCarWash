@@ -80,11 +80,17 @@ export async function GET() {
   }
 
   // Count review_snippets per listing — only needed for CHAIN listings since
-  // non-chain listings don't use the snippet-count signal for indexing. We
-  // fetch just the listing_id column (~cheap) and tally in memory instead of
-  // doing a per-listing count query (would be 1,000+ round trips).
+  // non-chain listings don't use the snippet-count signal for indexing.
+  // Track two counts:
+  //   - snippetCountByListing: touchless-evidence snippets (any rating). The
+  //     "broad-content" path: ≥2 unlocks the listing.
+  //   - positiveTouchlessByListing: touchless-evidence with positive rating
+  //     (null or ≥3 stars). The "quality-content" path: ≥1 unlocks the listing.
+  //     Excludes the edge case of a 1-2 star review that mentions touchless
+  //     in a critique (e.g. "touchless car wash that left scratches").
   const chainListingIds = allListings.filter(l => l.parent_chain).map(l => l.id);
   const snippetCountByListing = new Map<string, number>();
+  const positiveTouchlessByListing = new Map<string, number>();
   const SNIPPET_PAGE = 1000;
   let snipOffset = 0;
   while (chainListingIds.length > 0) {
@@ -98,13 +104,18 @@ export async function GET() {
     while (true) {
       const { data: rows } = await supabase
         .from('review_snippets')
-        .select('listing_id')
+        .select('listing_id, rating')
         .in('listing_id', idChunk)
         .eq('is_touchless_evidence', true)
         .range(rowOffset, rowOffset + SNIPPET_PAGE - 1);
       if (!rows || rows.length === 0) break;
       for (const r of rows) {
         snippetCountByListing.set(r.listing_id, (snippetCountByListing.get(r.listing_id) ?? 0) + 1);
+        const rating = (r as { rating?: number | null }).rating;
+        const isPositive = rating == null || rating >= 3;
+        if (isPositive) {
+          positiveTouchlessByListing.set(r.listing_id, (positiveTouchlessByListing.get(r.listing_id) ?? 0) + 1);
+        }
       }
       if (rows.length < SNIPPET_PAGE) break;
       rowOffset += SNIPPET_PAGE;
@@ -128,6 +139,7 @@ export async function GET() {
       parent_chain: l.parent_chain,
       google_description: l.google_description,
       review_snippet_count: snippetCountByListing.get(l.id) ?? 0,
+      positive_touchless_evidence_count: positiveTouchlessByListing.get(l.id) ?? 0,
     })) return false;
     return true;
   });
