@@ -1,4 +1,12 @@
-import { amazonUrl, getProducts, PLACEMENT_PRESETS, type PlacementPreset } from '@/lib/affiliate-products';
+import {
+  amazonUrl,
+  amazonImageUrl,
+  categoryGradient,
+  getProducts,
+  PLACEMENT_PRESETS,
+  type PlacementPreset,
+  type Product,
+} from '@/lib/affiliate-products';
 
 type Props = {
   preset?: PlacementPreset;
@@ -7,11 +15,30 @@ type Props = {
   className?: string;
 };
 
-/**
- * Sticky right-rail sidebar for listing-page-style layouts.
- * Renders 2 product cards stacked vertically with `lg:sticky` so the unit
- * follows the user as they scroll through the longer main column.
- */
+function Thumb({ product }: { product: Product }) {
+  const imgUrl = amazonImageUrl(product);
+  if (imgUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={imgUrl}
+        alt={`${product.brand} ${product.name}`}
+        loading="lazy"
+        className="w-[72px] h-[72px] object-contain bg-white rounded-md border border-gray-200 shrink-0 p-1"
+      />
+    );
+  }
+  return (
+    <div
+      className={`w-[72px] h-[72px] bg-gradient-to-br ${categoryGradient(product)} flex items-center justify-center rounded-md border border-gray-200 shrink-0 p-1`}
+    >
+      <span className="text-[10px] font-bold text-[#0F2744] uppercase tracking-tight text-center leading-tight">
+        {product.brand}
+      </span>
+    </div>
+  );
+}
+
 export function ProductSidebar({
   preset = 'listing',
   productIds,
@@ -46,23 +73,30 @@ export function ProductSidebar({
             rel="noopener noreferrer sponsored nofollow"
             className="group block rounded-lg border border-gray-100 bg-gray-50 hover:bg-white hover:border-[#22C55E] p-3 transition-all"
           >
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-0.5">
-              {p.brand}
+            <div className="flex gap-3 items-start">
+              <Thumb product={p} />
+              <div className="flex-1 min-w-0">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-0.5">
+                  {p.brand}
+                </div>
+                <div className="font-semibold text-sm text-[#0F2744] leading-snug mb-1">
+                  {p.name}
+                </div>
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="text-yellow-500 font-medium">
+                    &#11088; {p.rating}
+                  </span>
+                  <span className="text-gray-300">·</span>
+                  <span className="text-gray-700 font-medium">
+                    {p.priceRange}
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="font-semibold text-sm text-[#0F2744] leading-snug mb-1.5">
-              {p.name}
-            </div>
-            <div className="flex items-center gap-1.5 text-xs mb-1.5">
-              <span className="text-yellow-500 font-medium">
-                &#11088; {p.rating}
-              </span>
-              <span className="text-gray-300">·</span>
-              <span className="text-gray-700 font-medium">{p.priceRange}</span>
-            </div>
-            <p className="text-xs text-gray-600 leading-snug mb-2 line-clamp-3">
+            <p className="text-xs text-gray-600 leading-snug mt-2 line-clamp-2">
               {p.positioning}
             </p>
-            <span className="inline-flex items-center text-xs font-semibold text-[#0F2744] group-hover:text-[#22C55E] transition-colors">
+            <span className="inline-flex items-center text-xs font-semibold text-[#0F2744] group-hover:text-[#22C55E] transition-colors mt-2">
               Shop on Amazon &rarr;
             </span>
           </a>
