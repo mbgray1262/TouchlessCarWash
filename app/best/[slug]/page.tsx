@@ -13,6 +13,7 @@ import { METRO_CONTENT, buildExpertGuide } from '@/lib/metro-content';
 import { OpenStatusBadge } from '@/components/OpenStatusBadge';
 import LogoImage from '@/components/LogoImage';
 import HeroImageFallback from '@/components/HeroImageFallback';
+import { ProductGrid } from '@/components/ProductGrid';
 import { DEFAULT_OG_IMAGE, ensureHttps } from '@/lib/seo';
 import type { Metadata } from 'next';
 
@@ -821,58 +822,8 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
 
         {/* Affiliate Products */}
         <section className="py-12 px-4 bg-gray-50 border-t border-gray-200">
-          <div className="container mx-auto max-w-3xl">
-            <h2 className="text-xl font-bold text-[#0F2744] mb-1">Quick Car Care After Your Wash</h2>
-            <p className="text-xs text-gray-400 italic mb-6">
-              This section contains affiliate links. As an Amazon Associate we earn from qualifying purchases — at no extra cost to you.
-            </p>
-            <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-start gap-1">
-                <a
-                  href="https://www.amazon.com/dp/B06WVQ6MVR/?tag=touchlessfind-20"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-semibold text-[#0F2744] hover:underline shrink-0"
-                >
-                  Meguiar&apos;s Hybrid Ceramic Wax
-                </a>
-                <span className="text-gray-600 sm:ml-1">
-                  <span className="text-yellow-500">&#11088; 4.7/5</span> — Spray on your wet car right after the touchless wash, rinse off, done. Ceramic protection with zero buffing.
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-start gap-1">
-                <a
-                  href="https://www.amazon.com/dp/B07G7DSF7C/?tag=touchlessfind-20"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-semibold text-[#0F2744] hover:underline shrink-0"
-                >
-                  Griot&apos;s Garage XL Microfiber Drying Towel
-                </a>
-                <span className="text-gray-600 sm:ml-1">
-                  <span className="text-yellow-500">&#11088; 4.9/5</span> — Prevents water spots after the wash. Scratch-free and safe for ceramic coatings and PPF.
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-start gap-1">
-                <a
-                  href="https://www.amazon.com/dp/B0B4PR1W7K/?tag=touchlessfind-20"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-semibold text-[#0F2744] hover:underline shrink-0"
-                >
-                  Chemical Guys Interior Cleaner Wipes
-                </a>
-                <span className="text-gray-600 sm:ml-1">
-                  <span className="text-yellow-500">&#11088; 4.5/5</span> — Toss in the glovebox. Wipe down dash, seats, and trim while you wait in the car wash line.
-                </span>
-              </div>
-            </div>
-            <p className="mt-6 text-sm text-gray-500">
-              See our full{' '}
-              <Link href="/blog/recommended-products" className="text-[#0F2744] font-medium hover:underline">
-                car care product guide →
-              </Link>
-            </p>
+          <div className="container mx-auto max-w-6xl">
+            <ProductGrid preset="metroBest" variant="card" bg="transparent" />
           </div>
         </section>
       </main>

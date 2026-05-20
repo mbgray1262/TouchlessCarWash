@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ProductsBanner } from '@/components/ProductsBanner';
+import { ProductGrid } from '@/components/ProductGrid';
 import { Star, MapPin, CheckCircle, TrendingUp, Search, Eye, Sparkles, Droplet, ArrowRight } from 'lucide-react';
 import HeroSection from '@/components/HeroSection';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -449,8 +450,16 @@ export default async function Home() {
       </section>
 
       <section className="py-10 px-4 bg-gray-50">
-        <div className="container mx-auto max-w-3xl">
+        <div className="container mx-auto max-w-3xl mb-10">
           <ProductsBanner />
+        </div>
+        <div className="container mx-auto max-w-6xl">
+          <ProductGrid
+            preset="homepage"
+            variant="card"
+            bg="transparent"
+            subtitle="Going to a touchless wash? These are the four things our editors actually use to make the wash last longer."
+          />
         </div>
       </section>
 

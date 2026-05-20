@@ -4,6 +4,7 @@ import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/lib/supabase";
 import { EQUIPMENT_BRAND_DATA, getBrandLabel } from "@/lib/equipment-data";
+import { ProductGrid } from "@/components/ProductGrid";
 
 export const dynamic = 'force-dynamic'; // see /state/.../slug for context — Netlify CDN cache (netlify.toml) handles edge perf; force-dynamic prevents the Next.js ISR etag-based 304-without-body bug that kept breaking /blog and /best on the CDN.
 
@@ -157,6 +158,16 @@ export default async function EquipmentIndexPage() {
             );
           })}
         </div>
+
+        {/* Affiliate Products — DIY home touchless setup */}
+        <section className="mb-12">
+          <ProductGrid
+            preset="equipment"
+            variant="card"
+            bg="gray"
+            subtitle="Want to run touchless washes at home between commercial visits? Here's the gear that gets it done."
+          />
+        </section>
 
         {/* FAQ */}
         <section>
