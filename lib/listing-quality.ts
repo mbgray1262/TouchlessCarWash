@@ -51,6 +51,17 @@ export type ListingQualityFields = {
    * have snippets).
    */
   review_snippet_count?: number;
+  /**
+   * Count of review_snippets where is_touchless_evidence = true AND the
+   * star rating is positive (null or >= 3). A single such review is
+   * stronger per-location content than two generic snippets, so it alone
+   * unlocks a chain listing from the scaled-duplicate trap.
+   *
+   * "Positive" rules: rating IS NULL (Google didn't include a rating on
+   * the snippet) OR rating >= 3 (3-5 stars). Excludes the edge case of
+   * a 1-2 star review that happens to mention "touchless" in a critique.
+   */
+  positive_touchless_evidence_count?: number;
 };
 
 /**
@@ -66,8 +77,15 @@ export function isThinListing(listing: ListingQualityFields): boolean {
   // markdown) — we still want to noindex if it has no per-location signals.
   if (listing.parent_chain) {
     const snippetCount = listing.review_snippet_count ?? Infinity;
+    const positiveTouchlessCount = listing.positive_touchless_evidence_count ?? 0;
     const hasGoogleBlurb = !!(listing.google_description && listing.google_description.trim().length > 0);
-    if (snippetCount < 2 && !hasGoogleBlurb) return true;
+    // Two paths to escape thin status:
+    //   (a) ≥2 review snippets of any kind (broad-content path), OR
+    //   (b) ≥1 positive-touchless-evidence review (quality-content path).
+    // Either is unique per-location content that differentiates from the
+    // corporate boilerplate every other chain location shares.
+    const hasContentSignal = snippetCount >= 2 || positiveTouchlessCount >= 1 || hasGoogleBlurb;
+    if (!hasContentSignal) return true;
   }
 
   // Category 1: true ghost listing. Has any content source → index.
