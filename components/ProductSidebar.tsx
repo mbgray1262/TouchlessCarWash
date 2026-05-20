@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import {
-  amazonUrl,
+  affiliateUrl,
   amazonImageUrl,
   categoryGradient,
   getProducts,
+  vendorLabel,
   PLACEMENT_PRESETS,
   type PlacementPreset,
   type Product,
@@ -86,7 +87,7 @@ export function ProductSidebar({
         {products.map((p) => (
           <a
             key={p.id}
-            href={amazonUrl(p)}
+            href={affiliateUrl(p)}
             target="_blank"
             rel="noopener noreferrer sponsored nofollow"
             className="group block rounded-lg border border-gray-100 bg-gray-50 hover:bg-white hover:border-[#22C55E] p-3 transition-all"
@@ -115,7 +116,7 @@ export function ProductSidebar({
               {p.positioning}
             </p>
             <span className="inline-flex items-center text-xs font-semibold text-[#0F2744] group-hover:text-[#22C55E] transition-colors mt-2">
-              Shop on Amazon &rarr;
+              Shop on {vendorLabel(p)} &rarr;
             </span>
           </a>
         ))}

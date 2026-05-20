@@ -1,8 +1,9 @@
 import {
-  amazonUrl,
+  affiliateUrl,
   amazonImageUrl,
   categoryGradient,
   getProduct,
+  vendorLabel,
   type Product,
 } from '@/lib/affiliate-products';
 
@@ -66,7 +67,7 @@ export function ProductSpotlight({
 
   return (
     <a
-      href={amazonUrl(product)}
+      href={affiliateUrl(product)}
       target="_blank"
       rel="noopener noreferrer sponsored nofollow"
       className={[
@@ -104,7 +105,7 @@ export function ProductSpotlight({
         </p>
       </div>
       <span className="shrink-0 inline-flex items-center gap-1 rounded-xl bg-[#0F2744] text-white font-semibold text-sm px-5 py-2.5 group-hover:bg-[#22C55E] transition-colors whitespace-nowrap">
-        Shop on Amazon &rarr;
+        Shop on {vendorLabel(product)} &rarr;
       </span>
     </a>
   );
