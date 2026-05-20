@@ -3,6 +3,7 @@ import { ChevronRight, Building2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/lib/supabase';
 import { CHAINS, renderChainDescription } from '@/lib/chains';
+import { ProductGrid } from '@/components/ProductGrid';
 import { getChainHeroImage } from '@/lib/chain-brand-images';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import type { Metadata } from 'next';
@@ -145,7 +146,7 @@ export default async function ChainsPage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
           {chains.map((chain) => (
             <Link key={chain.slug} href={`/chain/${chain.slug}`}>
               <Card className="hover:shadow-lg hover:border-primary transition-all cursor-pointer h-full overflow-hidden">
@@ -178,6 +179,14 @@ export default async function ChainsPage() {
             </Link>
           ))}
         </div>
+
+        {/* Affiliate Products — between-wash care for chain subscribers */}
+        <ProductGrid
+          preset="chains"
+          variant="card"
+          bg="gray"
+          subtitle="Got a monthly unlimited plan? These pair well with frequent touchless washing."
+        />
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ import { CHAINS } from '@/lib/chains';
 import { getChainSubscriptionDisplay } from '@/lib/chain-subscriptions';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import { US_STATES, getStateName, getStateSlug } from '@/lib/constants';
+import { ProductGrid } from '@/components/ProductGrid';
 import type { Metadata } from 'next';
 
 export const revalidate = 3600;
@@ -353,6 +354,16 @@ export default async function UnlimitedHubPage() {
               </Link>
             ))}
           </div>
+        </div>
+
+        {/* Affiliate Products — between-wash care for subscribers */}
+        <div className="mb-10">
+          <ProductGrid
+            preset="unlimited"
+            variant="card"
+            bg="gray"
+            subtitle="Already washing weekly with your unlimited plan? These extend the results between visits."
+          />
         </div>
 
         {/* CTA */}

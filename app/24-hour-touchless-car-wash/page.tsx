@@ -3,6 +3,7 @@ import { ChevronRight, Clock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { US_STATES, getStateName, getStateSlug } from '@/lib/constants';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
+import { ProductGrid } from '@/components/ProductGrid';
 import type { Metadata } from 'next';
 
 export const revalidate = 3600;
@@ -202,6 +203,16 @@ export default async function TwentyFourHourHub() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Affiliate Products — late-night quick care */}
+        <div className="mb-10">
+          <ProductGrid
+            preset="twentyFourHour"
+            variant="card"
+            bg="gray"
+            subtitle="Quick essentials for late-night washes — toss them in your glovebox."
+          />
         </div>
 
         {/* Cross-link */}
