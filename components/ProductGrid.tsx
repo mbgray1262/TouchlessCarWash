@@ -1,7 +1,9 @@
+import Link from 'next/link';
 import { ProductCard } from './ProductCard';
 import {
   getProducts,
   PLACEMENT_PRESETS,
+  PRODUCTS,
   type PlacementPreset,
   type Product,
 } from '@/lib/affiliate-products';
@@ -72,6 +74,14 @@ export function ProductGrid({
           ))}
         </div>
       )}
+      <div className="mt-5 pt-4 border-t border-gray-200/70 text-sm">
+        <Link
+          href="/shop"
+          className="inline-flex items-center gap-1 text-[#0F2744] hover:text-[#22C55E] font-semibold transition-colors"
+        >
+          Browse all {PRODUCTS.length} touchless picks at our Shop &rarr;
+        </Link>
+      </div>
     </section>
   );
 }
