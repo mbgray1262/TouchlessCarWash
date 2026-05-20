@@ -91,16 +91,41 @@ export const PRODUCTS: Product[] = [
   },
 
   // ───── Touchless soaps ─────
+  // Products with "Touchless" in the name are flagship for this site — even
+  // when their canonical Amazon image URL doesn't resolve, the fallback
+  // styling highlights the keyword to match search intent.
   {
     id: 'swift-touchless-shampoo',
     brand: 'Swift',
     name: 'Touchless Car Wash Shampoo (Gallon)',
     category: 'touchless-soap',
     asin: 'B0B4X7D1ZC',
-    priceRange: '$40-60',
-    rating: 4.6,
+    priceRange: '$40',
+    rating: 4.3,
     positioning:
-      'Concentrated touchless formula — the same chemistry pro touchless tunnels use, but for your driveway.',
+      'No brushing required. Heavy-duty foaming formula — spray, wait 2-3 min, rinse.',
+  },
+  {
+    id: 'optimum-touchless-decon',
+    brand: 'Optimum',
+    name: 'Touchless Decon Car Wash Soap (32oz)',
+    category: 'touchless-soap',
+    asin: 'B0DJFSDB5R',
+    priceRange: '$30',
+    rating: 4.7,
+    positioning:
+      'pH-neutral, ceramic-coating safe. Spray on, rinse off — no contact, no scratch risk.',
+  },
+  {
+    id: 'wash-chems-pro100-combo',
+    brand: 'Wash Chems',
+    name: 'PRO-100 Touchless Soap + Foam Cannon Combo',
+    category: 'touchless-soap',
+    asin: 'B07ZQQGBYB',
+    priceRange: '$50-80',
+    rating: 4.5,
+    positioning:
+      'Commercial-grade soap PLUS the foam cannon. Everything you need for at-home touchless in one box.',
   },
   {
     id: 'meguiars-hyperwash',
@@ -242,6 +267,8 @@ export function getProducts(ids: readonly string[]): Product[] {
 // placements so the visual is consistent; the catalog still references the
 // non-imaged products via search-result swaps later.
 export const PLACEMENT_PRESETS = {
+  // Sticky sidebar — keep the 3 image-having products (sidebar prominence
+  // benefits from real product photos since the unit is small/glanceable)
   listing: [
     'meguiars-hybrid-ceramic-wax',
     'griots-microfiber-towel',
@@ -252,32 +279,40 @@ export const PLACEMENT_PRESETS = {
     'griots-microfiber-towel',
     'chemguys-interior-wipes',
   ],
+  // Homepage — lead with touchless-named products since this is the front
+  // door for visitors searching "touchless car wash". The TOUCHLESS keyword
+  // in card titles is more valuable than image consistency.
+  homepage: [
+    'swift-touchless-shampoo',
+    'optimum-touchless-decon',
+    'chemguys-honeydew-snow-foam',
+    'meguiars-hyperwash',
+  ],
+  // Equipment audience — DIY at home. Push touchless soap + the combo kit.
   equipment: [
+    'swift-touchless-shampoo',
+    'wash-chems-pro100-combo',
     'westinghouse-epx3100',
-    'meguiars-hyperwash',
-    'sonax-full-effect',
     'chemguys-honeydew-snow-foam',
   ],
+  // Chain subscribers — when their unlimited's closed or they want to
+  // reproduce that touchless experience at home.
   chains: [
-    'chemguys-honeydew-snow-foam',
+    'swift-touchless-shampoo',
+    'optimum-touchless-decon',
     'meguiars-hybrid-ceramic-wax',
-    'meguiars-hyperwash',
   ],
+  // Unlimited subscribers — between-wash care. Add Optimum for ceramic owners.
   unlimited: [
+    'optimum-touchless-decon',
     'meguiars-hybrid-ceramic-wax',
     'griots-microfiber-towel',
-    'sonax-full-effect',
   ],
+  // 24-hour convenience focus — quick interior + drying essentials
   twentyFourHour: [
     'meguiars-hybrid-ceramic-wax',
     'chemguys-interior-wipes',
     'griots-microfiber-towel',
-  ],
-  homepage: [
-    'chemguys-honeydew-snow-foam',
-    'meguiars-hyperwash',
-    'sonax-full-effect',
-    'westinghouse-epx3100',
   ],
 } as const satisfies Record<string, readonly string[]>;
 

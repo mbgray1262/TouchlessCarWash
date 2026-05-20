@@ -666,7 +666,7 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
                   </Link>
                   {idx === 2 && (
                     <ProductSpotlight
-                      productId="meguiars-hyperwash"
+                      productId="swift-touchless-shampoo"
                       eyebrow="Editor Pick"
                     />
                   )}
