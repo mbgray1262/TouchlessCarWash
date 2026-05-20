@@ -12,6 +12,11 @@ type Props = {
   className?: string;
 };
 
+function isTouchless(p: Product): boolean {
+  const s = `${p.brand} ${p.name}`.toLowerCase();
+  return s.includes('touchless') || s.includes('touch free');
+}
+
 function SpotlightVisual({ product }: { product: Product }) {
   const imgUrl = amazonImageUrl(product);
   if (imgUrl) {
@@ -23,6 +28,21 @@ function SpotlightVisual({ product }: { product: Product }) {
         loading="lazy"
         className="w-32 h-32 object-contain bg-white rounded-xl border border-gray-200 shrink-0 p-2"
       />
+    );
+  }
+  if (isTouchless(product)) {
+    return (
+      <div className="w-32 h-32 bg-gradient-to-br from-[#0F2744] to-[#22C55E] flex flex-col items-center justify-center rounded-xl border border-gray-200 shrink-0 p-3 text-white text-center">
+        <div className="text-[10px] font-bold text-white/60 uppercase tracking-[0.2em] mb-1">
+          {product.brand}
+        </div>
+        <div className="text-2xl font-black uppercase tracking-tight leading-none">
+          Touchless
+        </div>
+        <div className="text-[10px] font-semibold uppercase tracking-wide text-white/80 mt-1">
+          No-Touch Formula
+        </div>
+      </div>
     );
   }
   return (

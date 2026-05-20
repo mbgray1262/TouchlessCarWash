@@ -15,6 +15,11 @@ type Props = {
   className?: string;
 };
 
+function isTouchless(p: Product): boolean {
+  const s = `${p.brand} ${p.name}`.toLowerCase();
+  return s.includes('touchless') || s.includes('touch free');
+}
+
 function Thumb({ product }: { product: Product }) {
   const imgUrl = amazonImageUrl(product);
   if (imgUrl) {
@@ -26,6 +31,18 @@ function Thumb({ product }: { product: Product }) {
         loading="lazy"
         className="w-[72px] h-[72px] object-contain bg-white rounded-md border border-gray-200 shrink-0 p-1"
       />
+    );
+  }
+  if (isTouchless(product)) {
+    return (
+      <div className="w-[72px] h-[72px] bg-gradient-to-br from-[#0F2744] to-[#22C55E] flex flex-col items-center justify-center rounded-md border border-gray-200 shrink-0 p-1 text-white text-center">
+        <div className="text-[10px] font-black uppercase tracking-tight leading-none">
+          Touchless
+        </div>
+        <div className="text-[8px] font-bold text-white/70 uppercase tracking-wider mt-0.5">
+          {product.brand}
+        </div>
+      </div>
     );
   }
   return (

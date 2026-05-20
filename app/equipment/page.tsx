@@ -123,7 +123,7 @@ export default async function EquipmentIndexPage() {
         {/* Mid-content product spotlight */}
         <div className="mb-10">
           <ProductSpotlight
-            productId="westinghouse-epx3100"
+            productId="swift-touchless-shampoo"
             eyebrow="DIY at Home"
           />
         </div>
