@@ -205,28 +205,20 @@ async function getReviewSnippets(listingId: string): Promise<ReviewSnippet[]> {
 }
 
 /**
- * Counts of touchless-evidence review_snippets for this listing. Used by
- * isThinListing to gate indexing of chain listings. Two counts:
- *   - total: any touchless-evidence snippet (the "broad-content" path).
- *   - positive: touchless-evidence + rating null or ≥3 (the "quality"
- *     path that lets a single solid review unlock a chain listing).
- *
- * We only count touchless-evidence snippets because (a) those are the only
+ * Count of touchless-evidence review_snippets for this listing. Used by
+ * isThinListing to gate indexing of chain listings — ≥1 customer
+ * confirmation that the wash IS touchless unlocks the page. We count
+ * only touchless-evidence snippets because (a) those are the only
  * snippets we display to users, and (b) those are the only snippets the
  * description generator paraphrases from.
  */
-async function getReviewSnippetCounts(listingId: string): Promise<{ total: number; positive: number }> {
-  const { data } = await supabase
+async function getReviewSnippetCount(listingId: string): Promise<number> {
+  const { count } = await supabase
     .from('review_snippets')
-    .select('rating')
+    .select('*', { count: 'exact', head: true })
     .eq('listing_id', listingId)
     .eq('is_touchless_evidence', true);
-  const rows = data ?? [];
-  const positive = rows.filter((r) => {
-    const rating = (r as { rating?: number | null }).rating;
-    return rating == null || rating >= 3;
-  }).length;
-  return { total: rows.length, positive };
+  return count ?? 0;
 }
 
 // ── Best Of Rankings ──────────────────────────────────────────────────
@@ -315,14 +307,10 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   // on city/state hub pages — only the standalone detail page URL is
   // hidden from search results. See lib/listing-quality.ts for the
   // exact criteria.
-  const snippetCounts = listing.parent_chain
-    ? await getReviewSnippetCounts(listing.id)
-    : { total: 0, positive: 0 }; // Only matters for chain listings; non-chain can skip this query.
-  const thin = isThinListing({
-    ...listing,
-    review_snippet_count: snippetCounts.total,
-    positive_touchless_evidence_count: snippetCounts.positive,
-  });
+  const reviewSnippetCount = listing.parent_chain
+    ? await getReviewSnippetCount(listing.id)
+    : 0; // Only matters for chain listings; non-chain can skip this query.
+  const thin = isThinListing({ ...listing, review_snippet_count: reviewSnippetCount });
   const robots = thin ? { index: false, follow: true } : undefined;
 
   return {

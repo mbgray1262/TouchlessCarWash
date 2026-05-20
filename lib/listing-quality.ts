@@ -45,23 +45,18 @@ export type ListingQualityFields = {
   parent_chain?: string | null;
   google_description?: string | null;
   /**
-   * Count of review_snippets rows for this listing. Not stored on the
-   * listings row itself — callers (detail page, sitemap) must provide it.
-   * When omitted, chain listings get the benefit of the doubt (assumed to
-   * have snippets).
+   * Count of TOUCHLESS-EVIDENCE review_snippets rows for this listing. Not
+   * stored on the listings row itself — callers (detail page, sitemap)
+   * must provide it. The classifier (lib/touchless-classifier patterns)
+   * already filters out reviews that DENY the touchless claim ("not
+   * touchless", "claims touchless but", "brushes came down"), so any
+   * snippet with is_touchless_evidence=true is a customer confirming
+   * the wash IS touchless — regardless of star rating.
+   *
+   * When omitted, chain listings get the benefit of the doubt (assumed
+   * to have snippets).
    */
   review_snippet_count?: number;
-  /**
-   * Count of review_snippets where is_touchless_evidence = true AND the
-   * star rating is positive (null or >= 3). A single such review is
-   * stronger per-location content than two generic snippets, so it alone
-   * unlocks a chain listing from the scaled-duplicate trap.
-   *
-   * "Positive" rules: rating IS NULL (Google didn't include a rating on
-   * the snippet) OR rating >= 3 (3-5 stars). Excludes the edge case of
-   * a 1-2 star review that happens to mention "touchless" in a critique.
-   */
-  positive_touchless_evidence_count?: number;
 };
 
 /**
@@ -75,17 +70,15 @@ export function isThinListing(listing: ListingQualityFields): boolean {
   // Category 2: scaled-duplicate chain location. Checked FIRST because a
   // chain listing might well have crawl_snapshot populated (with corporate
   // markdown) — we still want to noindex if it has no per-location signals.
+  // Unlocks on EITHER a Google blurb OR ≥1 touchless-evidence review.
+  // Goal: include every touchless car wash in the directory, including
+  // ones with mixed customer feedback. A single confirmation review is
+  // unique per-location content that differentiates from the corporate
+  // boilerplate every other chain location shares.
   if (listing.parent_chain) {
     const snippetCount = listing.review_snippet_count ?? Infinity;
-    const positiveTouchlessCount = listing.positive_touchless_evidence_count ?? 0;
     const hasGoogleBlurb = !!(listing.google_description && listing.google_description.trim().length > 0);
-    // Two paths to escape thin status:
-    //   (a) ≥2 review snippets of any kind (broad-content path), OR
-    //   (b) ≥1 positive-touchless-evidence review (quality-content path).
-    // Either is unique per-location content that differentiates from the
-    // corporate boilerplate every other chain location shares.
-    const hasContentSignal = snippetCount >= 2 || positiveTouchlessCount >= 1 || hasGoogleBlurb;
-    if (!hasContentSignal) return true;
+    if (snippetCount < 1 && !hasGoogleBlurb) return true;
   }
 
   // Category 1: true ghost listing. Has any content source → index.
