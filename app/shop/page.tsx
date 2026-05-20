@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { ShoppingBag, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { ShoppingBag, ShieldCheck, CheckCircle2, BookOpen, ArrowRight } from 'lucide-react';
 import { ProductCard } from '@/components/ProductCard';
 import {
   affiliateUrl,
@@ -39,6 +39,19 @@ export const metadata: Metadata = {
 // Display titles override the catalog titles so each H2 starts with "Best"
 // (high-value SERP keyword pattern) while the underlying SHOP_SECTIONS keys
 // stay stable for routing/anchors.
+// Per-section link to the matching standalone comparison guide. Surfaced
+// under each category's intro so users and Google can discover them.
+const SECTION_GUIDES: Record<string, { href: string; label: string }> = {
+  'touchless-soaps': {
+    href: '/shop/best-touchless-car-wash-soap',
+    label: 'Read our full Best Touchless Car Wash Soap comparison',
+  },
+  'foam-cannons': {
+    href: '/shop/best-foam-cannon',
+    label: 'Read our full Best Foam Cannon comparison',
+  },
+};
+
 const SECTION_TITLES: Record<string, string> = {
   'touchless-soaps': 'Best Touchless Car Wash Soaps',
   'snow-foam': 'Best Snow Foam & Pre-Rinse',
@@ -266,6 +279,59 @@ export default function ShopPage() {
           </div>
         </section>
 
+        {/* Buying guides — discoverability for /shop/best-* comparison pages */}
+        <section className="bg-gray-50 border-b border-gray-200">
+          <div className="container mx-auto px-4 max-w-6xl py-10">
+            <div className="flex items-center gap-2 mb-2">
+              <BookOpen className="w-5 h-5 text-[#22C55E]" />
+              <h2 className="text-xl font-bold text-[#0F2744]">
+                Buying Guides
+              </h2>
+            </div>
+            <p className="text-sm text-gray-600 mb-5">
+              Side-by-side comparisons of the products in our two biggest categories.
+            </p>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <Link
+                href="/shop/best-touchless-car-wash-soap"
+                className="group flex items-start gap-4 rounded-xl border border-gray-200 bg-white p-5 hover:border-[#22C55E] hover:shadow-md transition-all"
+              >
+                <div className="text-3xl">🧴</div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-[#0F2744] mb-1 leading-snug">
+                    Best Touchless Car Wash Soap {YEAR}
+                  </h3>
+                  <p className="text-sm text-gray-600 leading-snug mb-2">
+                    Swift vs. Mr. Pink vs. Optimum vs. Meguiar&rsquo;s vs.
+                    Adam&rsquo;s — pH, ceramic-safety, foam-cannon fit.
+                  </p>
+                  <span className="inline-flex items-center gap-1 text-sm font-semibold text-[#0F2744] group-hover:text-[#22C55E] transition-colors">
+                    Read comparison <ArrowRight className="w-3.5 h-3.5" />
+                  </span>
+                </div>
+              </Link>
+              <Link
+                href="/shop/best-foam-cannon"
+                className="group flex items-start gap-4 rounded-xl border border-gray-200 bg-white p-5 hover:border-[#22C55E] hover:shadow-md transition-all"
+              >
+                <div className="text-3xl">💨</div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-[#0F2744] mb-1 leading-snug">
+                    Best Foam Cannon for Touchless Washing {YEAR}
+                  </h3>
+                  <p className="text-sm text-gray-600 leading-snug mb-2">
+                    MTM Hydro PF22.2 vs. Chemical Guys TORQ vs. MATCC —
+                    build, warranty, foam thickness.
+                  </p>
+                  <span className="inline-flex items-center gap-1 text-sm font-semibold text-[#0F2744] group-hover:text-[#22C55E] transition-colors">
+                    Read comparison <ArrowRight className="w-3.5 h-3.5" />
+                  </span>
+                </div>
+              </Link>
+            </div>
+          </div>
+        </section>
+
         {/* Category nav */}
         <section className="border-b border-gray-200 sticky top-16 bg-white z-30 shadow-sm">
           <div className="container mx-auto px-4 max-w-6xl py-4 overflow-x-auto">
@@ -291,6 +357,7 @@ export default function ShopPage() {
             if (products.length === 0) return null;
             const heading = SECTION_TITLES[section.id] ?? section.title;
             const intro = SECTION_INTROS[section.id];
+            const guideUrl = SECTION_GUIDES[section.id];
             const gridClass =
               products.length === 1
                 ? 'grid grid-cols-1 max-w-sm gap-4'
@@ -306,8 +373,19 @@ export default function ShopPage() {
                   {section.subtitle}
                 </p>
                 {intro && (
-                  <p className="text-sm text-gray-700 leading-relaxed mb-6 max-w-3xl">
+                  <p className="text-sm text-gray-700 leading-relaxed mb-4 max-w-3xl">
                     {intro}
+                  </p>
+                )}
+                {guideUrl && (
+                  <p className="mb-6">
+                    <Link
+                      href={guideUrl.href}
+                      className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#22C55E] hover:underline"
+                    >
+                      <BookOpen className="w-4 h-4" />
+                      {guideUrl.label} <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
                   </p>
                 )}
                 <div className={gridClass}>
