@@ -41,6 +41,10 @@ export interface Product {
   // hash isn't ASIN-derivable, and for all Chemical Guys products (Shopify
   // CDN URLs).
   imageUrl?: string;
+  // Flagged with the visual "Editor's Pick" badge on /shop. Use sparingly —
+  // 3-5 products max so the signal stays meaningful. Picks should be either
+  // top sellers (proven conversion) or the best fit for our touchless audience.
+  editorPick?: boolean;
 }
 
 export function affiliateUrl(p: Product): string {
@@ -94,6 +98,7 @@ export const PRODUCTS: Product[] = [
     positioning:
       'Spray on your wet car right after the touchless wash, rinse off, done. Ceramic protection with zero buffing.',
     hasImage: true,
+    editorPick: true,
   },
   {
     id: 'griots-microfiber-towel',
@@ -141,6 +146,7 @@ export const PRODUCTS: Product[] = [
     positioning:
       'No brushing required. Heavy-duty foaming formula — spray, wait 2-3 min, rinse.',
     imageUrl: 'https://m.media-amazon.com/images/I/41-gPyz0faL._SL500_.jpg',
+    editorPick: true,
   },
   {
     id: 'optimum-touchless-decon',
@@ -224,6 +230,7 @@ export const PRODUCTS: Product[] = [
       'Thick foam clings to your paint and pulls grit off before you ever touch the car. Gallon size lasts months.',
     imageUrl:
       'https://cdn.shopify.com/s/files/1/0742/8938/1681/files/CWS_110.jpg?v=1711650256',
+    editorPick: true,
   },
   {
     id: 'adams-mega-foam',
@@ -266,6 +273,7 @@ export const PRODUCTS: Product[] = [
       "Chemical Guys' flagship foam cannon. Premium build, adjustable foam thickness, lifetime durability.",
     imageUrl:
       'https://cdn.shopify.com/s/files/1/0742/8938/1681/files/0-01-EQP_310-box-product-2000x2000.jpg?v=1699306358',
+    editorPick: true,
   },
   {
     id: 'matcc-foam-cannon',
