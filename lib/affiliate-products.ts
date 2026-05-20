@@ -270,6 +270,57 @@ export function getProducts(ids: readonly string[]): Product[] {
     .filter((p): p is Product => p !== undefined);
 }
 
+export function productsByCategory(...categories: ProductCategory[]): Product[] {
+  const set = new Set(categories);
+  return PRODUCTS.filter((p) => set.has(p.category));
+}
+
+// Used by the /shop page to organize the catalog into browseable sections.
+export const SHOP_SECTIONS: { id: string; title: string; subtitle: string; categories: ProductCategory[] }[] = [
+  {
+    id: 'touchless-soaps',
+    title: 'Touchless Soaps',
+    subtitle: 'Spray-on, rinse-off shampoos formulated for no-contact washing — the same chemistry pro touchless tunnels use.',
+    categories: ['touchless-soap'],
+  },
+  {
+    id: 'snow-foam',
+    title: 'Snow Foam & Pre-Rinse',
+    subtitle: 'Thick clinging foam that lifts grit off your paint before you ever touch the car.',
+    categories: ['snow-foam'],
+  },
+  {
+    id: 'foam-cannons',
+    title: 'Foam Cannons',
+    subtitle: 'The pressure-washer attachment that turns touchless soap into a thick blanket of suds.',
+    categories: ['foam-cannon'],
+  },
+  {
+    id: 'pressure-washers',
+    title: 'Pressure Washers',
+    subtitle: 'Electric pressure washers that turn your driveway into a touchless wash bay.',
+    categories: ['pressure-washer'],
+  },
+  {
+    id: 'drying',
+    title: 'Drying — Touchless & Microfiber',
+    subtitle: 'Air-blower dryers and ultra-soft microfibers that finish the wash without scratch risk.',
+    categories: ['no-touch-drying', 'drying-towel'],
+  },
+  {
+    id: 'protection',
+    title: 'Ceramic & Wax Protection',
+    subtitle: 'Spray-on protection that makes future touchless washes shed dirt and water faster.',
+    categories: ['ceramic-protection'],
+  },
+  {
+    id: 'wheels-interior',
+    title: 'Wheel & Interior Care',
+    subtitle: 'Spray-and-rinse wheel cleaners and quick interior wipes for between-wash maintenance.',
+    categories: ['wheel-care', 'interior'],
+  },
+];
+
 // Per-page-type curation. Image-having products are preferred for grid-style
 // placements so the visual is consistent; the catalog still references the
 // non-imaged products via search-result swaps later.
