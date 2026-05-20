@@ -21,9 +21,12 @@ export interface Product {
   rating: number;
   positioning: string;
   // True when /images/P/{ASIN}.01.L.jpg returns a real product image (verified
-  // at build time). Newer Amazon products use image-hash URLs we can't derive
-  // from the ASIN alone — those render the category-color fallback instead.
+  // at build time).
   hasImage?: boolean;
+  // Explicit image URL — overrides the canonical pattern. Used for newer
+  // Amazon products whose image hash isn't ASIN-derivable; sourced from
+  // search engine image results (m.media-amazon.com/images/I/{hash}.jpg).
+  imageUrl?: string;
 }
 
 export function amazonUrl(p: Product): string {
@@ -31,8 +34,9 @@ export function amazonUrl(p: Product): string {
 }
 
 export function amazonImageUrl(p: Product): string | null {
-  if (!p.hasImage) return null;
-  return `https://images-na.ssl-images-amazon.com/images/P/${p.asin}.01.L.jpg`;
+  if (p.imageUrl) return p.imageUrl;
+  if (p.hasImage) return `https://images-na.ssl-images-amazon.com/images/P/${p.asin}.01.L.jpg`;
+  return null;
 }
 
 const CATEGORY_GRADIENTS: Record<ProductCategory, string> = {
@@ -104,6 +108,7 @@ export const PRODUCTS: Product[] = [
     rating: 4.3,
     positioning:
       'No brushing required. Heavy-duty foaming formula — spray, wait 2-3 min, rinse.',
+    imageUrl: 'https://m.media-amazon.com/images/I/41-gPyz0faL._SL500_.jpg',
   },
   {
     id: 'optimum-touchless-decon',
@@ -115,6 +120,7 @@ export const PRODUCTS: Product[] = [
     rating: 4.7,
     positioning:
       'pH-neutral, ceramic-coating safe. Spray on, rinse off — no contact, no scratch risk.',
+    imageUrl: 'https://m.media-amazon.com/images/I/31NszMWmPYL.jpg',
   },
   {
     id: 'wash-chems-pro100-combo',
@@ -126,6 +132,7 @@ export const PRODUCTS: Product[] = [
     rating: 4.5,
     positioning:
       'Commercial-grade soap PLUS the foam cannon. Everything you need for at-home touchless in one box.',
+    imageUrl: 'https://m.media-amazon.com/images/I/614S1YBLm5L._AC_.jpg',
   },
   {
     id: 'meguiars-hyperwash',
