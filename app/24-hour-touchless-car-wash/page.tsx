@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { US_STATES, getStateName, getStateSlug } from '@/lib/constants';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import { ProductGrid } from '@/components/ProductGrid';
+import { ProductSpotlight } from '@/components/ProductSpotlight';
 import type { Metadata } from 'next';
 
 export const revalidate = 3600;
@@ -154,6 +155,14 @@ export default async function TwentyFourHourHub() {
           <p className="text-gray-700 leading-relaxed">
             That makes them the go-to option if you work nights, travel early, or just need a wash outside normal business hours. Many are located at 24-hour gas stations (Holiday Stationstores, Kwik Trip, Sheetz) where the surrounding location is lit and monitored around the clock.
           </p>
+        </div>
+
+        {/* Mid-content product spotlight */}
+        <div className="mb-10">
+          <ProductSpotlight
+            productId="chemguys-interior-wipes"
+            eyebrow="Late-Night Essential"
+          />
         </div>
 
         {/* State grid */}

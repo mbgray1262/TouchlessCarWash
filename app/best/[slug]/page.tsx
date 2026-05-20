@@ -1,4 +1,4 @@
-import { cache } from 'react';
+import { cache, Fragment } from 'react';
 import { permanentRedirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -14,6 +14,7 @@ import { OpenStatusBadge } from '@/components/OpenStatusBadge';
 import LogoImage from '@/components/LogoImage';
 import HeroImageFallback from '@/components/HeroImageFallback';
 import { ProductGrid } from '@/components/ProductGrid';
+import { ProductSpotlight } from '@/components/ProductSpotlight';
 import { DEFAULT_OG_IMAGE, ensureHttps } from '@/lib/seo';
 import type { Metadata } from 'next';
 
@@ -537,7 +538,8 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
                 const listingHref = `/state/${getStateSlug(listing.state)}/${slugify(listing.city)}/${listing.slug}`;
 
                 return (
-                  <Link key={listing.id} href={listingHref} className="group block">
+                  <Fragment key={listing.id}>
+                  <Link href={listingHref} className="group block">
                     <article className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-xl hover:border-[#22C55E] transition-all duration-200">
                       <div className="flex flex-col md:flex-row">
                         {/* Rank + Image */}
@@ -662,6 +664,13 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
                       </div>
                     </article>
                   </Link>
+                  {idx === 2 && (
+                    <ProductSpotlight
+                      productId="swift-touchless-shampoo"
+                      eyebrow="Editor Pick"
+                    />
+                  )}
+                  </Fragment>
                 );
               })}
             </div>

@@ -19,6 +19,7 @@ import { HoursStatusBadge } from '@/components/HoursStatusBadge';
 import { ListingBreadcrumb } from '@/components/ListingBreadcrumb';
 import { RelatedReading } from '@/components/RelatedReading';
 import { ProductGrid } from '@/components/ProductGrid';
+import { ProductSidebar } from '@/components/ProductSidebar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
@@ -1686,6 +1687,8 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                   More in {cityName}
                 </Link>
               </Button>
+
+              <ProductSidebar preset="listing" title="Touchless Gear" />
             </div>
           </div>
 
