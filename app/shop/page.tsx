@@ -271,7 +271,7 @@ export default function ShopPage() {
               Guys, Sun Joe, MTM Hydro, Optimum and more.
             </p>
             <p className="text-xs text-white/60 italic mt-4 max-w-3xl">
-              Affiliate disclosure: TouchlessFind earns from qualifying
+              Affiliate disclosure: Touchless Car Wash Finder earns from qualifying
               purchases as an Amazon Associate. Links on this page are
               affiliate links — they don't change your price, but a small
               commission helps us keep the directory free.
