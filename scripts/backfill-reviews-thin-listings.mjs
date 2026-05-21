@@ -49,6 +49,11 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 // ─── args ───
 const LIMIT = parseInt(process.argv.find(a => a.startsWith('--limit='))?.split('=')[1] || '0', 10);
 const DRY_RUN = process.argv.includes('--dry-run');
+// Optional keyword filter passed to SerpAPI's google_maps_reviews `q` param.
+// When set, SerpAPI returns only reviews matching the keyword, dramatically
+// improving hit rate vs. the default sort (which surfaces generic "most
+// helpful" reviews that rarely mention specific features like "touchless").
+const KEYWORD = process.argv.find(a => a.startsWith('--keyword='))?.split('=')[1] || null;
 // SerpAPI plan limit is 1,000 searches/hour. At 4000ms between requests we
 // hit ~900/hour with safety buffer for retries. Earlier 1500ms produced
 // HTTP 429 throttle errors in the final ~100 listings of the first run.
@@ -87,7 +92,13 @@ function classifyReview(text) {
 
 // ─── SerpAPI ───
 async function fetchReviews(placeId) {
-  const url = `https://serpapi.com/search.json?engine=google_maps_reviews&place_id=${encodeURIComponent(placeId)}&api_key=${SERPAPI_KEY}`;
+  // num=20 maxes the page size SerpAPI allows for this engine. The `query`
+  // parameter (NOT `q` — that's the wrong param name on this engine) filters
+  // server-side to reviews matching the keyword. Verified: a Delta Sonic
+  // listing returned 0 reviews on default sort but 10 reviews with
+  // query=touchless, every one explicitly mentioning "touchless".
+  let url = `https://serpapi.com/search.json?engine=google_maps_reviews&place_id=${encodeURIComponent(placeId)}&num=20&api_key=${SERPAPI_KEY}`;
+  if (KEYWORD) url += `&query=${encodeURIComponent(KEYWORD)}`;
   const res = await fetch(url);
   if (res.status === 429) {
     // Hourly throttle — sleep 65 minutes and retry once. SerpAPI's plan
@@ -102,7 +113,16 @@ async function fetchReviews(placeId) {
   }
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
   const data = await res.json();
-  if (data.error) throw new Error(`SerpAPI: ${data.error}`);
+  if (data.error) {
+    // "Google hasn't returned any results for this query" is a definitive
+    // empty response — not a real error. Treat as zero reviews so the
+    // run continues and the error-rate kill switch isn't tripped by listings
+    // that genuinely lack touchless mentions in their reviews.
+    if (/hasn't returned any results|No results found/i.test(data.error)) {
+      return [];
+    }
+    throw new Error(`SerpAPI: ${data.error}`);
+  }
   return data.reviews || [];
 }
 
@@ -141,18 +161,43 @@ async function main() {
     offset += PAGE;
   }
 
-  // Filter chain candidates by current snippet count
+  // Filter chain candidates by current touchless-evidence snippet count.
+  // Skip listings that already have ≥1 touchless-evidence snippet — those
+  // are already non-thin under the current predicate (lib/listing-quality.ts).
+  //
+  // CRITICAL: paginate within each chunk. Supabase's default SELECT cap is
+  // 1000 rows; without pagination, listings with many evidence rows get
+  // silently dropped from the count, causing them to be incorrectly
+  // classified as thin and burning credits re-mining reviews we already
+  // have. Same pattern the sitemap query uses.
   const chainIds = candidates.filter(c => c.parent_chain).map(c => c.id);
-  const snippetCounts = new Map();
-  for (let i = 0; i < chainIds.length; i += 500) {
-    const chunk = chainIds.slice(i, i + 500);
-    const { data: snips } = await sb.from('review_snippets').select('listing_id').in('listing_id', chunk);
-    for (const s of snips || []) snippetCounts.set(s.listing_id, (snippetCounts.get(s.listing_id) ?? 0) + 1);
+  const evidenceCounts = new Map();
+  // Use 50-ID chunks. PostgREST silently drops IDs at long URL lengths;
+  // 500-ID chunks (~18KB URL) were causing some listings to never appear
+  // in the result set, which made them look thin when they weren't.
+  const ID_CHUNK = 50;
+  const SNIPPET_PAGE = 1000;
+  for (let i = 0; i < chainIds.length; i += ID_CHUNK) {
+    const chunk = chainIds.slice(i, i + ID_CHUNK);
+    let rowOffset = 0;
+    while (true) {
+      const { data: snips } = await sb.from('review_snippets')
+        .select('listing_id')
+        .in('listing_id', chunk)
+        .eq('is_touchless_evidence', true)
+        .range(rowOffset, rowOffset + SNIPPET_PAGE - 1);
+      if (!snips || snips.length === 0) break;
+      for (const s of snips) {
+        evidenceCounts.set(s.listing_id, (evidenceCounts.get(s.listing_id) ?? 0) + 1);
+      }
+      if (snips.length < SNIPPET_PAGE) break;
+      rowOffset += SNIPPET_PAGE;
+    }
   }
 
   const targets = candidates.filter(c => {
     if (!c.parent_chain) return true;
-    return (snippetCounts.get(c.id) ?? 0) < 2;
+    return (evidenceCounts.get(c.id) ?? 0) < 1;
   });
 
   // Sort: chains first (real businesses with real Google reviews — high yield).
@@ -169,6 +214,7 @@ async function main() {
   console.log(`Found ${targets.length} thin listings with place_ids`);
   console.log(`  ghosts:  ${targets.filter(t => !t.parent_chain).length}`);
   console.log(`  chains:  ${targets.filter(t => t.parent_chain).length}`);
+  if (KEYWORD) console.log(`  SerpAPI q=${KEYWORD} keyword filter ENABLED`);
 
   if (DRY_RUN) {
     console.log('\nFirst 10:');
@@ -248,8 +294,12 @@ async function main() {
     } catch (e) {
       errors++;
       console.error(`  ! ${l.name.slice(0, 40)}: ${e.message.slice(0, 120)}`);
-      if (errors >= 10 && errors / (i + 1) > 0.4) {
-        console.error('\nToo many consecutive errors — stopping to preserve credits');
+      // Kill switch — only triggers on REAL errors now that "no results"
+      // is handled as an empty response. Be slightly more lenient (50% over
+      // 20 attempts) since the failure modes left are mostly stale place_ids
+      // for a single problematic chain (Kwik Trip), not systemic issues.
+      if (errors >= 20 && errors / (i + 1) > 0.5) {
+        console.error('\nToo many real errors — stopping to preserve credits');
         break;
       }
     }
