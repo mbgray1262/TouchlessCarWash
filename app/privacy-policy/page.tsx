@@ -110,10 +110,9 @@ export default function PrivacyPolicyPage() {
               Site, such as hosting providers, analytics services, and email delivery platforms.
             </li>
             <li>
-              <strong>Advertising partners:</strong> Third-party ad networks (such as Monumetric,
-              Google AdSense, or Mediavine) that may use cookies to serve relevant ads. These
-              partners may collect information about your browsing activity across different
-              websites. See the Monumetric-specific disclosure below.
+              <strong>Advertising partners:</strong> Monumetric, our advertising partner, may use
+              cookies to serve relevant ads. They may collect information about your browsing
+              activity across different websites. See the Monumetric-specific disclosure below.
             </li>
             <li>
               <strong>Legal obligations:</strong> When required by law, subpoena, or other legal
