@@ -110,15 +110,34 @@ export default function PrivacyPolicyPage() {
               Site, such as hosting providers, analytics services, and email delivery platforms.
             </li>
             <li>
-              <strong>Advertising partners:</strong> Third-party ad networks (such as Google
-              AdSense or Mediavine) that may use cookies to serve relevant ads. These partners
-              may collect information about your browsing activity across different websites.
+              <strong>Advertising partners:</strong> Third-party ad networks (such as Monumetric,
+              Google AdSense, or Mediavine) that may use cookies to serve relevant ads. These
+              partners may collect information about your browsing activity across different
+              websites. See the Monumetric-specific disclosure below.
             </li>
             <li>
               <strong>Legal obligations:</strong> When required by law, subpoena, or other legal
               process, or to protect our rights, property, or safety.
             </li>
           </ul>
+
+          <div className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-5">
+            <p className="text-sm text-gray-700 italic">
+              This Site is affiliated with Monumetric (dba for The Blogger Network, LLC) for the
+              purposes of placing advertising on the Site, and Monumetric will collect and use
+              certain data for advertising purposes. To learn more about Monumetric&rsquo;s data
+              usage, click here:{' '}
+              <a
+                href="https://monumetric.com/privacy-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#0F2744] font-medium underline hover:text-[#22C55E]"
+              >
+                Publisher Advertising Privacy
+              </a>
+              .
+            </p>
+          </div>
 
           <h2 className="text-2xl font-bold text-[#0F2744] mt-10 mb-4">4. Cookies and Advertising</h2>
           <p className="text-gray-700">
