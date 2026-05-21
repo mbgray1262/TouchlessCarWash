@@ -87,10 +87,15 @@ export async function GET() {
   const snippetCountByListing = new Map<string, number>();
   const SNIPPET_PAGE = 1000;
   let snipOffset = 0;
+  // CRITICAL: chunk size MUST stay small (50). PostgREST/Supabase silently
+  // drops IDs from the .in() filter when the URL gets long. 500-ID chunks
+  // produced ~18KB URLs and dropped ~543 listings with touchless evidence
+  // out of the sitemap. Verified by comparing chunked-aggregate against
+  // per-listing exact-count queries. Do not raise this number.
+  const ID_CHUNK = 50;
   while (chainListingIds.length > 0) {
-    // in() can handle many IDs but we chunk to stay well under any payload limits
     const chunkStart = snipOffset;
-    const chunkEnd = Math.min(snipOffset + 500, chainListingIds.length);
+    const chunkEnd = Math.min(snipOffset + ID_CHUNK, chainListingIds.length);
     const idChunk = chainListingIds.slice(chunkStart, chunkEnd);
     if (idChunk.length === 0) break;
     // Paginate rows within the chunk — some listings may have 50+ snippets.
