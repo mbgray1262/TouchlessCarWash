@@ -49,18 +49,34 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 // ─── args ───
 const LIMIT = parseInt(process.argv.find(a => a.startsWith('--limit='))?.split('=')[1] || '0', 10);
 const DRY_RUN = process.argv.includes('--dry-run');
-const DELAY_MS = 1500;
+// SerpAPI plan limit is 1,000 searches/hour. At 4000ms between requests we
+// hit ~900/hour with safety buffer for retries. Earlier 1500ms produced
+// HTTP 429 throttle errors in the final ~100 listings of the first run.
+const DELAY_MS = 4000;
 
 // ─── classifier (mirrors scripts/free-review-mine.py) ───
 const TOUCHLESS_POSITIVE = /\btouchless\b|\btouch[\s-]free\b|\btouchfree\b|\bno[\s-]?touch\b|\blaser\s*wash\b|\blaserwash\b|\bbrushless\b|\bbrush[\s-]?free\b/gi;
 const NEGATIVE_CONTEXT = /\b(?:not|isn[’']?t|wasn[’']?t|aren[’']?t|don[’']?t|doesn[’']?t)\s+(?:a\s+|really\s+)?(?:touchless|touch[\s-]?free|touchfree|brushless|laser)/i;
 const STRONG_NEGATIVE = /\bbrushes?\s+(?:touched|came\s+down|scratched|hit|went\s+down)|\bhas\s+brushes|\bhad\s+brushes|\bclaims?\s+(?:to\s+be\s+)?touchless\s+but\b|\bsupposedly\s+touchless\b/i;
 
+/**
+ * Matches the convention in scripts/free-review-mine.py:
+ *   - return null  → review has NO touchless keywords at all → skip insert
+ *   - return { evidence: false, keywords: [...] } → has keywords but
+ *     in negative context (e.g. "not touchless", "claims touchless but") →
+ *     insert with is_touchless_evidence=false to preserve the record
+ *   - return { evidence: true,  keywords: [...] } → positive confirmation
+ *     the wash IS touchless → insert with is_touchless_evidence=true
+ *
+ * Returning null for unrelated reviews keeps the review_snippets table
+ * focused on touchless-related content only — every other script in the
+ * codebase follows this pattern.
+ */
 function classifyReview(text) {
-  if (!text || text.length < 10) return { evidence: false, keywords: [] };
+  if (!text || text.length < 10) return null;
   if (STRONG_NEGATIVE.test(text)) return { evidence: false, keywords: ['negative:brushes-touched'] };
   const positives = [...text.matchAll(TOUCHLESS_POSITIVE)];
-  if (positives.length === 0) return { evidence: false, keywords: [] };
+  if (positives.length === 0) return null;  // not touchless-related — skip
   for (const m of positives) {
     const start = Math.max(0, m.index - 60);
     const end = Math.min(text.length, m.index + m[0].length + 60);
@@ -73,6 +89,17 @@ function classifyReview(text) {
 async function fetchReviews(placeId) {
   const url = `https://serpapi.com/search.json?engine=google_maps_reviews&place_id=${encodeURIComponent(placeId)}&api_key=${SERPAPI_KEY}`;
   const res = await fetch(url);
+  if (res.status === 429) {
+    // Hourly throttle — sleep 65 minutes and retry once. SerpAPI's plan
+    // limit is 1,000 searches/hour; the window resets after 60 min.
+    console.log('  ⏸ HTTP 429 hourly throttle — sleeping 65 minutes...');
+    await new Promise(r => setTimeout(r, 65 * 60 * 1000));
+    const res2 = await fetch(url);
+    if (!res2.ok) throw new Error(`HTTP ${res2.status} after throttle wait`);
+    const data = await res2.json();
+    if (data.error) throw new Error(`SerpAPI: ${data.error}`);
+    return data.reviews || [];
+  }
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
   const data = await res.json();
   if (data.error) throw new Error(`SerpAPI: ${data.error}`);
@@ -169,12 +196,17 @@ async function main() {
       const reviews = await fetchReviews(l.google_place_id);
       if (reviews.length === 0) { noReviews++; continue; }
 
-      // Build snippet rows from reviews (cap to 10 per listing)
+      // Build snippet rows — only touchless-related reviews (positive evidence
+      // or negative-context mentions). Reviews with zero touchless keywords
+      // are skipped entirely (classifier returns null) to keep review_snippets
+      // focused on touchless content. Matches the convention in
+      // scripts/free-review-mine.py and the rest of the codebase.
       const rows = reviews.slice(0, 10)
         .map(r => {
           const text = r.snippet || r.review_text || r.extracted_snippet?.original || '';
           if (!text || text.length < 10) return null;
           const cls = classifyReview(text);
+          if (cls === null) return null;  // not touchless-related — skip
           return {
             listing_id: l.id,
             review_text: text.slice(0, 2000),
