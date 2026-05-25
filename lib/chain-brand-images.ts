@@ -264,6 +264,70 @@ export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/c3989e47-b6ad-444d-ab93-ede366c4a4fd/google-1773764179574.jpg',
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/c3989e47-b6ad-444d-ab93-ede366c4a4fd/google-1773764319901.jpg',
   ],
+
+  // Big-chain backfill 2026-05-25 — chains with >=6 approved listings that
+  // had no brand image. Photos pulled from highest-rated listings per chain
+  // (already curated supabase-hosted heroes — no new sourcing required).
+  'Shell': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/54262d70-49d4-4e57-821f-17f00089b0f3/google-1774990835553.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/b8c1772e-f2df-487f-ad01-fd0bcc2e8200/hero-cropped-1774378247752.png',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/a72aafad-eecb-4244-8fa2-969a3bace271/place_photo_0_1774924000527.jpg',
+  ],
+  'Chevron': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/57465056-762a-43d5-b7b1-0373aca89ce4/place_photo_0_1774923424013.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/899f709e-0010-49c6-be83-d4be495ad980/hero-cropped-1774959734337.png',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/51d8b6ae-0692-4be4-993c-6c39c1250e88/place_photo_0_1774923352214.jpg',
+  ],
+  'Mobil': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/112aad85-aede-4aa9-8211-31643c3add45/place_photo_0_1774922786474.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/769169b4-e59f-483c-aec1-df7d3d711c55/gallery_bp_0_1774913183855.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/55ee860b-6b2b-4ae4-a2bc-24d98618007c/google-1776962902163.jpg',
+  ],
+  'Precision Wash': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/7a665573-ebbc-4a3e-88dc-4c39d826c293/hero-cropped-1774129396222.png',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/0f01c5a3-d189-44e0-aae3-187ce0027f22/gallery_bp_2_1771868427078.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/dc8df2c0-7342-44ce-871d-ba47e779507b/google-1777036926385.jpg',
+  ],
+  'Sunoco': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/55303b4c-477c-4209-98ed-7dc48b2195ae/place_photo_2_1774923394870.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/3d7917c6-b424-48c2-8c35-6870c0df23c0/hero-cropped-1775042439253.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/25292f94-446a-488c-89a3-18491aad02ed/hero-cropped-1775042490132.jpg',
+  ],
+  'Coastal Carolina Car Wash': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/abce74e1-95d6-4950-bcc9-ff8202b1f317/place_photo_0_1774924033671.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/fc70ab36-e1a4-48a3-8d78-d5a15c17abd6/google-1773922451724.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/246ac0a4-f5a8-4b5c-b3b0-ac3f43ea8ba7/hero-cropped-1776861705242.jpg',
+  ],
+  'Hoffman Car Wash': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/7fb90ffc-e5b0-4984-9b83-674c2584037c/hero-cropped-1776935728919.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/488629a5-17b3-4788-8fc9-dd844fedca52/google-1776935803335.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/97f938da-2b18-4bcb-95a3-414028e42a70/google-1776935819478.jpg',
+  ],
+  'Exxon': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/4dd76241-f129-4ebc-a262-b483bc2f09a3/hero-cropped-1776878821138.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/a1186d59-8c20-455a-98ce-f28545c372e8/google-1777295698329.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/45e0665c-61c0-436d-b5c5-f3e92531a153/hero-cropped-1775043534049.jpg',
+  ],
+  'Spritz Car Wash': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/424e4e56-6bfb-46c1-8426-7ddb08ce7c25/web_1_1772830493671.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/a4c9ee11-e379-49ae-a080-952619afc131/hero-cropped-1773689797314.png',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/50389322-bba4-4d18-a06e-f10ab314ab39/hero-cropped-1773690079756.png',
+  ],
+  '76': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/9ff4981f-999f-4173-95a1-616d29640b4a/place_photo_0_1774923948085.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/98568259-7b5a-48aa-ba84-bfb7c84f6f96/hero-cropped-1776609507722.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/86fc90f8-90f2-42ec-bd2f-ce30e02bb883/place_photo_0_1774923799169.jpg',
+  ],
+  'Mr Sparkle Car Wash': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/70192b6c-5b6f-48b5-a897-2931d9c87c8b/hero-cropped-1777023165662.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/828a8aea-5c7c-4452-a665-4ca61e92cb76/hero-cropped-1777023360098.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/ad59ce57-551e-44ca-b8d5-bc5a17cc2c4b/hero-cropped-1777920198753.jpg',
+  ],
+  'Marathon': [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/listings/26c15dbd-9979-42d1-b55e-7da6115b3575/photo_0_1774922962908.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/54ea5ca3-5b1f-47b2-9476-7e5f18bb9374/google-1776961176642.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/b1dbd924-d136-4daa-bf70-aedf3c3c4c2b/hero-cropped-1775043982250.jpg',
+  ],
 };
 
 /**
