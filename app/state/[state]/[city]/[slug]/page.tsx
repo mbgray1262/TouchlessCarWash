@@ -283,13 +283,19 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   const rankings = await getBestOfRankings(listing.id);
   const topRanking = rankings.length > 0 ? rankings[0] : null; // Use the best (lowest) rank
 
-  // Enhanced title for ranked listings: "#1 Best Touchless & Brushless Car Wash in Houston, TX | Name"
+  // Title CTR optimization:
+  //   - Lead with ★ rating prefix when available (proven CTR booster in SERPs)
+  //   - Drop "& Brushless" to make room — keyword is redundant with "Touchless"
+  //   - Ranked listings keep the "#N Best" authority signal
+  const titleRatingPrefix = listing.rating > 0
+    ? `★ ${Number(listing.rating).toFixed(1)} `
+    : '';
   const title = topRanking
-    ? `#${topRanking.rank} Best Touchless & Brushless Car Wash in ${topRanking.metro_name} | ${listing.name}`
-    : `${listing.name} | Touchless & Brushless Car Wash in ${listing.city}, ${listing.state}`;
+    ? `#${topRanking.rank} Best Touchless Car Wash in ${topRanking.metro_name} | ${listing.name}`
+    : `${titleRatingPrefix}${listing.name} | Touchless Car Wash in ${listing.city}, ${listing.state}`;
   const ogTitle = topRanking
-    ? `#${topRanking.rank} Best Touchless & Brushless Car Wash in ${topRanking.metro_name} | ${listing.name}`
-    : `${listing.name} | Touchless & Brushless Car Wash in ${listing.city}, ${stateName}`;
+    ? `#${topRanking.rank} Best Touchless Car Wash in ${topRanking.metro_name} | ${listing.name}`
+    : `${titleRatingPrefix}${listing.name} | Touchless Car Wash in ${listing.city}, ${stateName}`;
 
   // Lead with star rating for CTR — Google often shows this in snippet
   const ratingPrefix = listing.rating > 0

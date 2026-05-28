@@ -251,7 +251,11 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
   // GSC "Duplicate, Google chose different canonical than user" warnings.
   const canonicalUrl = `https://touchlesscarwashfinder.com/state/${params.state}/${slugify(cityName) || params.city}`;
   const monthShort = now.toLocaleString('default', { month: 'short' });
-  const title = `Best Touchless Car Wash in ${cityName}, ${stateCode} — ${effectiveCount} Verified Locations (${monthShort} ${year})`;
+  // Title kept under ~60 chars to avoid Google's SERP truncation, which was
+  // hiding the location count + freshness signals on the previous template
+  // ("Best Touchless Car Wash in San Diego, CA — 47 Verified Locations (May 2026)" = 76 chars).
+  // Adds "Near Me" modifier — top search modifier per GSC (21K imp/mo on "touchless car wash near me").
+  const title = `Touchless Car Wash Near Me in ${cityName}, ${stateCode} — ${effectiveCount} Locations`;
 
   // Noindex when:
   //   1. There are NO in-city approved touchless listings (page is just a
