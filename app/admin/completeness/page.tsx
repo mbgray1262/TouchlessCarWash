@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft, Loader2, Sparkles, RefreshCw, CheckCircle2, ExternalLink, FileText,
@@ -59,6 +59,9 @@ export default function CompletenessPage() {
     setBefore((data as Row[]) ?? []);
     setStatus('idle');
   }, [toast]);
+
+  // Auto-load the first batch so the page isn't an empty screen.
+  useEffect(() => { loadBatch(); }, [loadBatch]);
 
   const refetchAfter = useCallback(async (ids: string[]) => {
     const { data } = await supabase.rpc('completeness_rows', { p_ids: ids });

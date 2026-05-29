@@ -1,10 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
-import { Sparkles, Loader2, CheckCircle2, AlertTriangle, FileText, Image as ImageIcon, Tag, Clock, MapPin, MessageSquare, ArrowRight } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { Toaster } from '@/components/ui/toaster';
+import { CheckCircle2, AlertTriangle, FileText, Image as ImageIcon, Tag, Clock, MapPin, MessageSquare, ArrowRight } from 'lucide-react';
 
 export interface CompletenessStats {
   total: number;
@@ -17,17 +14,9 @@ export interface CompletenessStats {
   incomplete: number;
 }
 
-const BATCH = 25;
-
 export default function CompletenessCard({ stats }: { stats: CompletenessStats }) {
-  const [running, setRunning] = useState(false);
-  const { toast } = useToast();
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  // Rows the free Fix button can resolve. Hero is shown but flagged separately
-  // because it is fixed via the curated Hero Audit tool, not this button.
+  // Hero is shown but flagged separately: it's fixed via the curated Hero Audit
+  // tool, not the free enrichment run.
   const rows = [
     { key: 'missing_description', label: 'AI description', icon: FileText, value: stats.missing_description, autoFix: true },
     { key: 'missing_maps_url', label: 'Google Maps link', icon: MapPin, value: stats.missing_maps_url, autoFix: true },
@@ -37,37 +26,10 @@ export default function CompletenessCard({ stats }: { stats: CompletenessStats }
     { key: 'missing_hero', label: 'No image at all', icon: ImageIcon, value: stats.missing_hero, autoFix: false },
   ];
 
-  async function handleFix() {
-    setRunning(true);
-    try {
-      const res = await fetch(`${supabaseUrl}/functions/v1/enrich-listings`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${anonKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ batch: BATCH }),
-      });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
-      const n = typeof data.candidates === 'number' ? data.candidates : BATCH;
-      toast({
-        title: `Enrichment started for ${n} listing${n !== 1 ? 's' : ''}`,
-        description: 'Pulling Google data, reviews, and descriptions in the background. Refresh in a minute to see the counts drop.',
-      });
-    } catch (err) {
-      toast({
-        title: 'Bulk fix failed',
-        description: err instanceof Error ? err.message : 'Unknown error',
-        variant: 'destructive',
-      });
-    } finally {
-      setRunning(false);
-    }
-  }
-
   const allComplete = stats.incomplete === 0;
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 sm:col-span-2 lg:col-span-3">
-      <Toaster />
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className={`p-2.5 rounded-lg ${allComplete ? 'bg-green-50' : 'bg-amber-50'}`}>
@@ -86,27 +48,14 @@ export default function CompletenessCard({ stats }: { stats: CompletenessStats }
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        {!allComplete && (
           <Link
             href="/admin/completeness"
-            className="inline-flex items-center gap-1.5 text-sm font-medium rounded-lg px-3 py-2 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 transition-colors"
+            className="inline-flex items-center gap-2 text-sm font-medium rounded-lg px-4 py-2 bg-[#0F2744] hover:bg-[#1E3A8A] text-white transition-colors shrink-0"
           >
-            Review &amp; fix <ArrowRight className="w-3.5 h-3.5" />
+            Review &amp; fix listings <ArrowRight className="w-4 h-4" />
           </Link>
-          <button
-            onClick={handleFix}
-            disabled={running || allComplete}
-            className="inline-flex items-center gap-2 text-sm font-medium rounded-lg px-4 py-2 bg-[#0F2744] hover:bg-[#1E3A8A] text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {running ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Enriching...</>
-            ) : allComplete ? (
-              <><CheckCircle2 className="w-4 h-4" /> All complete</>
-            ) : (
-              <><Sparkles className="w-4 h-4" /> Fix next {BATCH} (free)</>
-            )}
-          </button>
-        </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -129,6 +78,12 @@ export default function CompletenessCard({ stats }: { stats: CompletenessStats }
           </div>
         ))}
       </div>
+
+      {!allComplete && (
+        <p className="text-xs text-gray-400 mt-4">
+          Click <span className="font-medium text-gray-500">Review &amp; fix listings</span> to see each listing and watch exactly what gets filled in.
+        </p>
+      )}
     </div>
   );
 }
