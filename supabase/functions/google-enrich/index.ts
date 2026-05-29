@@ -38,6 +38,41 @@ function delay(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+// ── Touchless review classifier ──────────────────────────────────────
+// Mirrors scripts/enrich-listing-gemini.mjs. We pull up to 5 reviews per
+// listing from Google Place Details (free, inside the Maps tier); this flags
+// the ones that are genuine customer confirmations of a touchless/brushless/
+// laser wash, so "one or two touchless snippets if available" surface at $0.
+const TOUCHLESS_POSITIVE =
+  /\btouchless\b|\btouch[\s-]free\b|\btouchfree\b|\bno[\s-]?touch\b|\blaser\s*wash\b|\blaserwash\b|\bbrushless\b|\bbrush[\s-]?free\b/gi;
+const NEGATIVE_CONTEXT =
+  /\b(?:not|isn[’']?t|wasn[’']?t|aren[’']?t|don[’']?t|doesn[’']?t)\s+(?:a\s+|really\s+)?(?:touchless|touch[\s-]?free|touchfree|brushless|laser)/i;
+const STRONG_NEGATIVE =
+  /\bbrushes?\s+(?:touched|came\s+down|scratched|hit|went\s+down)|\bhas\s+brushes|\bhad\s+brushes|\bclaims?\s+(?:to\s+be\s+)?touchless\s+but\b|\bsupposedly\s+touchless\b/i;
+
+function classifyTouchlessReview(
+  text: string,
+): { evidence: boolean; keywords: string[] } | null {
+  if (!text || text.length < 10) return null;
+  if (STRONG_NEGATIVE.test(text)) {
+    return { evidence: false, keywords: ['negative:brushes-touched'] };
+  }
+  const positives = [...text.matchAll(TOUCHLESS_POSITIVE)];
+  if (positives.length === 0) return null;
+  for (const m of positives) {
+    const idx = m.index ?? 0;
+    const start = Math.max(0, idx - 60);
+    const end = Math.min(text.length, idx + m[0].length + 60);
+    if (NEGATIVE_CONTEXT.test(text.slice(start, end))) {
+      return { evidence: false, keywords: ['negative-context'] };
+    }
+  }
+  return {
+    evidence: true,
+    keywords: [...new Set(positives.map((m) => m[0].toLowerCase()))],
+  };
+}
+
 // ── Google Places API v1 types ───────────────────────────────────────
 interface PlaceResult {
   id: string;
@@ -405,20 +440,26 @@ async function enrichListing(
     if (details.reviews && details.reviews.length > 0) {
       const snippets = details.reviews
         .filter((r) => r.text?.text)
-        .map((r) => ({
-          listing_id: listing.id,
-          reviewer_name:
-            r.authorAttribution?.displayName ?? 'Google User',
-          rating: r.rating ?? null,
-          review_text: r.text!.text,
-          review_date:
-            r.relativePublishTimeDescription ?? null,
-          review_id: r.name
-            ? `google_places_${listing.id}_${r.name.replace(/\//g, '_')}`
-            : `google_places_${listing.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-          source: 'google_places_api',
-          is_touchless_evidence: false,
-        }));
+        .map((r) => {
+          const reviewText = r.text!.text;
+          const cls = classifyTouchlessReview(reviewText);
+          return {
+            listing_id: listing.id,
+            reviewer_name:
+              r.authorAttribution?.displayName ?? 'Google User',
+            rating: r.rating ?? null,
+            review_text: reviewText,
+            review_date:
+              r.relativePublishTimeDescription ?? null,
+            review_id: r.name
+              ? `google_places_${listing.id}_${r.name.replace(/\//g, '_')}`
+              : `google_places_${listing.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            source: 'google_places_api',
+            // Flag genuine touchless confirmations; keep keywords for evidence.
+            is_touchless_evidence: cls?.evidence === true,
+            touchless_keywords: cls?.keywords ?? null,
+          };
+        });
 
       if (snippets.length > 0) {
         const { error: snippetErr } = await supabase

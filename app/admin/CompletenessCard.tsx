@@ -33,7 +33,7 @@ export default function CompletenessCard({ stats }: { stats: CompletenessStats }
     { key: 'missing_reviews', label: 'Review snippets', icon: MessageSquare, value: stats.missing_reviews, autoFix: true },
     { key: 'missing_amenities', label: 'Amenities', icon: Tag, value: stats.missing_amenities, autoFix: true },
     { key: 'missing_hours', label: 'Hours', icon: Clock, value: stats.missing_hours, autoFix: true },
-    { key: 'missing_hero', label: 'Hero image', icon: ImageIcon, value: stats.missing_hero, autoFix: false },
+    { key: 'missing_hero', label: 'No image at all', icon: ImageIcon, value: stats.missing_hero, autoFix: false },
   ];
 
   async function handleFix() {
