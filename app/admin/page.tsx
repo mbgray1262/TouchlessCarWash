@@ -1,18 +1,25 @@
 import Link from 'next/link';
 import { List, Building2, FileText, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import ThinListingsCard from './ThinListingsCard';
 
 async function getStats() {
-  const [listingsRes, vendorsRes, blogRes] = await Promise.all([
+  const [listingsRes, vendorsRes, blogRes, thinRes] = await Promise.all([
     supabase.from('listings').select('id', { count: 'exact', head: true }),
     supabase.from('vendors').select('id', { count: 'exact', head: true }),
     supabase.from('blog_posts').select('id', { count: 'exact', head: true }),
+    supabase
+      .from('listings')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_touchless', true)
+      .is('description', null),
   ]);
 
   return {
     listings: listingsRes.count ?? 0,
     vendors: vendorsRes.count ?? 0,
     blog: blogRes.count ?? 0,
+    thin: thinRes.count ?? 0,
   };
 }
 
@@ -81,6 +88,7 @@ export default async function AdminDashboardPage() {
               </Link>
             );
           })}
+          <ThinListingsCard initialCount={stats.thin} />
         </div>
       </div>
     </div>

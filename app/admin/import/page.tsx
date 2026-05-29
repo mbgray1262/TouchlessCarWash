@@ -65,10 +65,38 @@ export default function ImportPage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [duplicateListing, setDuplicateListing] = useState<{ id: string; name: string; slug: string; city: string; state: string; is_touchless: boolean | null; url: string } | null>(null);
   const [showGallery, setShowGallery] = useState(false);
+  const [enrichStatus, setEnrichStatus] = useState<'idle' | 'running' | 'queued' | 'skipped' | 'error'>('idle');
   const { toast } = useToast();
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+  async function autoEnrich(listingId: string, isTouchless: boolean | null) {
+    // Only touchless listings get an AI description; skip the call otherwise.
+    if (isTouchless !== true) {
+      setEnrichStatus('skipped');
+      return;
+    }
+    setEnrichStatus('running');
+    try {
+      const res = await fetch(`${supabaseUrl}/functions/v1/enrich-listings`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${anonKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [listingId] }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+      setEnrichStatus('queued');
+      toast({ title: 'AI description queued', description: 'Enrichment is running in the background.' });
+    } catch (err) {
+      setEnrichStatus('error');
+      toast({
+        title: 'Auto-enrichment failed',
+        description: err instanceof Error ? err.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    }
+  }
 
   async function handleImport() {
     const trimmed = url.trim();
@@ -83,6 +111,7 @@ export default function ImportPage() {
     setErrorMsg('');
     setDuplicateListing(null);
     setShowGallery(false);
+    setEnrichStatus('idle');
 
     try {
       setStep('extracting');
@@ -118,6 +147,7 @@ export default function ImportPage() {
         blocked_photos: data.listing.blocked_photos ?? [],
       });
       setStats(data.stats);
+      autoEnrich(data.listing.id, data.listing.is_touchless ?? null);
     } catch (err) {
       setStep('error');
       setErrorMsg(err instanceof Error ? err.message : 'Unknown error');
@@ -495,6 +525,28 @@ export default function ImportPage() {
                       done={heroSet}
                       label="Hero image selected"
                     />
+                    <div className="flex items-center gap-2 text-sm">
+                      {enrichStatus === 'queued' ? (
+                        <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                      ) : enrichStatus === 'running' ? (
+                        <Loader2 className="w-4 h-4 text-blue-500 animate-spin shrink-0" />
+                      ) : enrichStatus === 'error' ? (
+                        <XCircle className="w-4 h-4 text-red-500 shrink-0" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                      )}
+                      <span className={enrichStatus === 'queued' ? 'text-gray-500 line-through' : 'text-gray-700'}>
+                        {enrichStatus === 'running'
+                          ? 'Generating AI description...'
+                          : enrichStatus === 'queued'
+                            ? 'AI description queued'
+                            : enrichStatus === 'skipped'
+                              ? 'AI description (touchless only)'
+                              : enrichStatus === 'error'
+                                ? 'AI description failed'
+                                : 'AI description'}
+                      </span>
+                    </div>
                     <div className="pt-2">
                       <Button asChild size="sm" className="w-full bg-[#0F2744] hover:bg-[#1E3A8A] text-white">
                         <Link href="/admin/listings">
