@@ -1,25 +1,26 @@
 import Link from 'next/link';
 import { List, Building2, FileText, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import ThinListingsCard from './ThinListingsCard';
+import CompletenessCard, { type CompletenessStats } from './CompletenessCard';
+
+const EMPTY_COMPLETENESS: CompletenessStats = {
+  total: 0, missing_description: 0, missing_hero: 0, missing_amenities: 0,
+  missing_hours: 0, missing_maps_url: 0, missing_reviews: 0, incomplete: 0,
+};
 
 async function getStats() {
-  const [listingsRes, vendorsRes, blogRes, thinRes] = await Promise.all([
+  const [listingsRes, vendorsRes, blogRes, completenessRes] = await Promise.all([
     supabase.from('listings').select('id', { count: 'exact', head: true }),
     supabase.from('vendors').select('id', { count: 'exact', head: true }),
     supabase.from('blog_posts').select('id', { count: 'exact', head: true }),
-    supabase
-      .from('listings')
-      .select('id', { count: 'exact', head: true })
-      .eq('is_touchless', true)
-      .is('description', null),
+    supabase.rpc('listing_completeness_stats'),
   ]);
 
   return {
     listings: listingsRes.count ?? 0,
     vendors: vendorsRes.count ?? 0,
     blog: blogRes.count ?? 0,
-    thin: thinRes.count ?? 0,
+    completeness: (completenessRes.data as CompletenessStats | null) ?? EMPTY_COMPLETENESS,
   };
 }
 
@@ -88,7 +89,7 @@ export default async function AdminDashboardPage() {
               </Link>
             );
           })}
-          <ThinListingsCard initialCount={stats.thin} />
+          <CompletenessCard stats={stats.completeness} />
         </div>
       </div>
     </div>

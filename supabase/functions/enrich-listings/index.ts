@@ -1,23 +1,33 @@
 // Supabase Edge Function: enrich-listings
 //
-// Single entry point that "fills in" thin listings. It is the edge-function
-// port of scripts/enrich-new-candidates.sh — but distilled to the steps that
-// can run on the real `listings` table by id, including UNAPPROVED listings
-// that the Import Hub just created.
+// One entry point that fills in INCOMPLETE listings using only free data
+// sources. It is the edge-function port of scripts/enrich-new-candidates.sh,
+// wired to the functions that work by listing id (so it can enrich the
+// just-imported, still-unapproved listing the Import Hub hands it).
 //
-// Design notes:
-//   - Descriptions are the sensitive part (the site was once flagged by AdSense
-//     for templated content), so we DELEGATE description writing to the
-//     generate-descriptions function, which owns the tuned anti-templating
-//     prompt. We never re-implement that prompt here.
-//   - Amenity + Google passes (backfill-amenities, enrich-from-google) only run
-//     on approved listings and select by `limit`, so they only make sense in
-//     batch mode — they are skipped when specific ids are passed.
+// A complete listing has: description, hero, amenities, hours,
+// google_maps_url, and >=1 review snippet. This function delegates each gap to
+// the cheapest free filler:
+//
+//   - google-enrich   → hours, google_maps_url, rating, photos, AND review
+//                        snippets, all from one Google Place Details call
+//                        ($0 inside the Maps free tier). Works by listing id on
+//                        ANY listing (approved or not). This is our free
+//                        reviews path — no SerpAPI / DataForSEO.
+//   - generate-descriptions → the AI description, via its tuned anti-templating
+//                        prompt (never re-implemented here).
+//   - backfill-amenities    → amenities (limit-based; approved listings only),
+//                        run in batch mode only.
+//
+// Hero images are intentionally NOT auto-assigned here: hero quality is
+// curated (street-view fallbacks can be broken, Google's top photo can be a
+// car close-up). Missing heroes are surfaced on the dashboard card and fixed
+// with the dedicated Hero Audit / Hero Review tools instead.
 //
 // Request body (all optional):
 //   { ids?: string[], batch?: number, regenerate?: boolean, dryRun?: boolean }
 //   - ids:        enrich exactly these listings (used by the Import Hub)
-//   - batch:      when ids omitted, enrich up to N thin listings (bulk-fix button)
+//   - batch:      when ids omitted, enrich up to N incomplete listings
 //   - regenerate: rewrite descriptions even if one already exists
 //   - dryRun:     report what would be enriched without calling anything
 //
@@ -30,6 +40,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
+
+// Listings missing any of these column-based components are "incomplete".
+// (review-snippet gaps overlap heavily with missing google_maps_url, which is
+// included here, so a google-enrich pass also fills most missing reviews.)
+const INCOMPLETE_FILTER =
+  'description.is.null,hero_image.is.null,hours.is.null,google_maps_url.is.null,amenities.is.null,amenities.eq.{}';
+
+interface Candidate {
+  id: string;
+  description: string | null;
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -46,73 +67,77 @@ Deno.serve(async (req: Request) => {
     const regenerate: boolean = body.regenerate ?? false;
     const dryRun: boolean = body.dryRun ?? false;
 
-    // ---- Resolve which listings need a description ----
-    // Only touchless listings get descriptions (matches generate-descriptions).
-    let targetIds: string[];
+    const invoke = (fn: string, payload: unknown) =>
+      fetch(`${supabaseUrl}/functions/v1/${fn}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${anonKey}` },
+        body: JSON.stringify(payload),
+      })
+        .then((r) => r.json())
+        .catch((e) => ({ error: String(e) }));
+
+    // ---- Resolve candidate listings (touchless only) ----
+    let candidates: Candidate[];
     if (explicitIds) {
-      let q = supabase
+      const { data, error } = await supabase
         .from('listings')
-        .select('id')
+        .select('id, description')
         .in('id', explicitIds)
         .eq('is_touchless', true);
-      if (!regenerate) q = q.is('description', null);
-      const { data, error } = await q;
       if (error) throw error;
-      targetIds = (data ?? []).map((r: { id: string }) => r.id);
+      candidates = (data ?? []) as Candidate[];
     } else {
-      let q = supabase
+      const { data, error } = await supabase
         .from('listings')
-        .select('id')
+        .select('id, description')
         .eq('is_touchless', true)
-        .order('review_count', { ascending: false })
+        .or(INCOMPLETE_FILTER)
+        .order('google_maps_url', { nullsFirst: true })
         .limit(batch);
-      if (!regenerate) q = q.is('description', null);
-      const { data, error } = await q;
       if (error) throw error;
-      targetIds = (data ?? []).map((r: { id: string }) => r.id);
+      candidates = (data ?? []) as Candidate[];
     }
+
+    const allIds = candidates.map((c) => c.id);
+    // Only (re)generate descriptions where actually missing, unless regenerate.
+    const descIds = regenerate
+      ? allIds
+      : candidates.filter((c) => !c.description || c.description.trim() === '').map((c) => c.id);
 
     if (dryRun) {
       return Response.json(
-        { dryRun: true, mode: explicitIds ? 'ids' : 'batch', wouldEnrich: targetIds.length, ids: targetIds },
+        { dryRun: true, mode: explicitIds ? 'ids' : 'batch', candidates: allIds.length, needDescription: descIds.length, ids: allIds },
         { headers: corsHeaders },
       );
     }
 
     const result: Record<string, unknown> = {
       mode: explicitIds ? 'ids' : 'batch',
-      targeted: targetIds.length,
+      candidates: allIds.length,
     };
 
-    // ---- 1. Descriptions (delegated to the tuned generator) ----
-    if (targetIds.length > 0) {
-      const descRes = await fetch(`${supabaseUrl}/functions/v1/generate-descriptions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${anonKey}` },
-        body: JSON.stringify({ action: 'start', listing_ids: targetIds, regenerate }),
+    if (allIds.length === 0) {
+      result.message = 'No incomplete touchless listings matched';
+      return Response.json(result, { headers: corsHeaders });
+    }
+
+    // ---- 1. Google Place Details: hours, maps_url, photos, rating, reviews (FREE) ----
+    result.google = await invoke('google-enrich', { action: 'enrich_batch', listing_ids: allIds });
+
+    // ---- 2. AI descriptions (delegated to the tuned generator) ----
+    if (descIds.length > 0) {
+      result.descriptions = await invoke('generate-descriptions', {
+        action: 'start',
+        listing_ids: descIds,
+        regenerate,
       });
-      result.descriptions = await descRes.json().catch(() => ({ error: 'non-json response' }));
     } else {
       result.descriptions = { message: 'No listings missing a description' };
     }
 
-    // ---- 2. Batch-only passes: amenities + Google data (approved listings only) ----
-    // These select by limit internally and require is_approved=true, so they are
-    // only meaningful for a broad bulk sweep, not a single just-imported listing.
+    // ---- 3. Amenities (batch sweep only; limit-based, approved listings) ----
     if (!explicitIds) {
-      const amenitiesRes = await fetch(`${supabaseUrl}/functions/v1/backfill-amenities`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${anonKey}` },
-        body: JSON.stringify({ limit: batch }),
-      });
-      result.amenities = await amenitiesRes.json().catch(() => ({ error: 'non-json response' }));
-
-      const googleRes = await fetch(`${supabaseUrl}/functions/v1/enrich-from-google`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${anonKey}` },
-        body: JSON.stringify({ limit: batch, mode: 'incomplete' }),
-      });
-      result.google = await googleRes.json().catch(() => ({ error: 'non-json response' }));
+      result.amenities = await invoke('backfill-amenities', { limit: batch });
     }
 
     return Response.json(result, { headers: corsHeaders });
