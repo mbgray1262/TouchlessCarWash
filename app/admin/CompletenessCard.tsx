@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Sparkles, Loader2, CheckCircle2, AlertTriangle, FileText, Image as ImageIcon, Tag, Clock, MapPin, MessageSquare } from 'lucide-react';
+import Link from 'next/link';
+import { Sparkles, Loader2, CheckCircle2, AlertTriangle, FileText, Image as ImageIcon, Tag, Clock, MapPin, MessageSquare, ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 
@@ -85,19 +86,27 @@ export default function CompletenessCard({ stats }: { stats: CompletenessStats }
             </p>
           </div>
         </div>
-        <button
-          onClick={handleFix}
-          disabled={running || allComplete}
-          className="inline-flex items-center gap-2 text-sm font-medium rounded-lg px-4 py-2 bg-[#0F2744] hover:bg-[#1E3A8A] text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-        >
-          {running ? (
-            <><Loader2 className="w-4 h-4 animate-spin" /> Enriching...</>
-          ) : allComplete ? (
-            <><CheckCircle2 className="w-4 h-4" /> All complete</>
-          ) : (
-            <><Sparkles className="w-4 h-4" /> Fix next {BATCH} (free)</>
-          )}
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link
+            href="/admin/completeness"
+            className="inline-flex items-center gap-1.5 text-sm font-medium rounded-lg px-3 py-2 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 transition-colors"
+          >
+            Review &amp; fix <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+          <button
+            onClick={handleFix}
+            disabled={running || allComplete}
+            className="inline-flex items-center gap-2 text-sm font-medium rounded-lg px-4 py-2 bg-[#0F2744] hover:bg-[#1E3A8A] text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {running ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Enriching...</>
+            ) : allComplete ? (
+              <><CheckCircle2 className="w-4 h-4" /> All complete</>
+            ) : (
+              <><Sparkles className="w-4 h-4" /> Fix next {BATCH} (free)</>
+            )}
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">

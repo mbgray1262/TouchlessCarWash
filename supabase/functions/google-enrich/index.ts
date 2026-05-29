@@ -286,14 +286,57 @@ async function enrichListing(
   listing: Listing,
   apiKey: string,
   force: boolean,
+  fillMissing = false,
 ): Promise<{
   id: string;
   status: 'ok' | 'no_match' | 'error';
   detail: string;
 }> {
   try {
-    // Skip if already has google_place_id and not forcing
-    if (listing.google_place_id && !force) {
+    // Determine the Google Place id. Reuse the one we already have; otherwise
+    // text-search to find it. With neither force nor fillMissing, a listing
+    // that already has a place_id is left untouched (the cheap default path).
+    // fillMissing re-fetches details for an existing place_id and fills ONLY
+    // empty fields (reviews, google_maps_url, hours, photos) without clobbering
+    // anything already set — unlike force, which overwrites.
+    let placeId = listing.google_place_id;
+
+    if (!placeId) {
+      // Step 1: Text search to find the Google Place
+      const query = `${listing.name} ${listing.address} ${listing.city} ${listing.state}`;
+      const results = await textSearch(apiKey, query);
+
+      if (results.length === 0) {
+        return { id: listing.id, status: 'no_match', detail: 'no results' };
+      }
+
+      // Find best match by address
+      let bestMatch = results.find((r) => addressMatch(listing, r.formattedAddress));
+      if (!bestMatch) {
+        // Fall back to first result if name matches
+        const nameLower = listing.name.toLowerCase();
+        bestMatch = results.find(
+          (r) =>
+            r.displayName?.text?.toLowerCase().includes(nameLower) ||
+            nameLower.includes(r.displayName?.text?.toLowerCase() ?? '___'),
+        );
+      }
+      if (!bestMatch) {
+        // Last resort: use first result if it contains the city
+        const cityLower = listing.city.toLowerCase();
+        bestMatch = results.find((r) =>
+          r.formattedAddress?.toLowerCase().includes(cityLower),
+        );
+      }
+      if (!bestMatch) {
+        return {
+          id: listing.id,
+          status: 'no_match',
+          detail: `no address match in ${results.length} results`,
+        };
+      }
+      placeId = bestMatch.id;
+    } else if (!force && !fillMissing) {
       return {
         id: listing.id,
         status: 'ok',
@@ -301,42 +344,8 @@ async function enrichListing(
       };
     }
 
-    // Step 1: Text search to find the Google Place
-    const query = `${listing.name} ${listing.address} ${listing.city} ${listing.state}`;
-    const results = await textSearch(apiKey, query);
-
-    if (results.length === 0) {
-      return { id: listing.id, status: 'no_match', detail: 'no results' };
-    }
-
-    // Find best match by address
-    let bestMatch = results.find((r) => addressMatch(listing, r.formattedAddress));
-    if (!bestMatch) {
-      // Fall back to first result if name matches
-      const nameLower = listing.name.toLowerCase();
-      bestMatch = results.find(
-        (r) =>
-          r.displayName?.text?.toLowerCase().includes(nameLower) ||
-          nameLower.includes(r.displayName?.text?.toLowerCase() ?? '___'),
-      );
-    }
-    if (!bestMatch) {
-      // Last resort: use first result if it contains the city
-      const cityLower = listing.city.toLowerCase();
-      bestMatch = results.find((r) =>
-        r.formattedAddress?.toLowerCase().includes(cityLower),
-      );
-    }
-    if (!bestMatch) {
-      return {
-        id: listing.id,
-        status: 'no_match',
-        detail: `no address match in ${results.length} results`,
-      };
-    }
-
     // Step 2: Get full place details
-    const details = await getPlaceDetails(apiKey, bestMatch.id);
+    const details = await getPlaceDetails(apiKey, placeId);
     if (!details) {
       return {
         id: listing.id,
@@ -545,6 +554,9 @@ Deno.serve(async (req: Request) => {
     if (action === 'enrich_batch') {
       const listingIds: string[] = body.listing_ids ?? [];
       const force: boolean = body.force === true;
+      // fill_missing: re-fetch details for listings that already have a
+      // place_id and fill ONLY their empty fields (reviews, maps_url, hours).
+      const fillMissing: boolean = body.fill_missing === true;
       const batchPaceMs: number = body.pace_ms ?? 250;
 
       if (!listingIds.length) {
@@ -577,6 +589,7 @@ Deno.serve(async (req: Request) => {
           listing,
           googleApiKey,
           force,
+          fillMissing,
         );
         results.push(result);
         console.log(
@@ -606,6 +619,7 @@ Deno.serve(async (req: Request) => {
               action: 'enrich_batch',
               listing_ids: remainingIds,
               force,
+              fill_missing: fillMissing,
               pace_ms: batchPaceMs,
             }),
           }),

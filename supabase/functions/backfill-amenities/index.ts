@@ -57,14 +57,26 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, serviceKey);
   const body = await req.json().catch(() => ({}));
   const limit: number = Math.min(Math.max(1, body.limit ?? 50), 200);
+  const listingIds: string[] | undefined =
+    Array.isArray(body.listing_ids) && body.listing_ids.length > 0 ? body.listing_ids : undefined;
 
-  const { data: listings, error } = await supabase
+  // Base query: touchless listings with a place_id but no amenities yet.
+  // When specific ids are passed (per-listing fix from enrich-listings), target
+  // those and drop the is_approved requirement so just-imported listings work.
+  let query = supabase
     .from('listings')
     .select('id,name,google_place_id,parent_chain')
-    .eq('is_touchless', true).eq('is_approved', true)
+    .eq('is_touchless', true)
     .not('google_place_id', 'is', null)
-    .or('amenities.is.null,amenities.eq.{}')
-    .limit(limit);
+    .or('amenities.is.null,amenities.eq.{}');
+
+  if (listingIds) {
+    query = query.in('id', listingIds);
+  } else {
+    query = query.eq('is_approved', true).limit(limit);
+  }
+
+  const { data: listings, error } = await query;
   if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: corsHeaders });
 
   let populated = 0, skipped = 0;

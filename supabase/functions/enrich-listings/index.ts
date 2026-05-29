@@ -58,8 +58,15 @@ Deno.serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, serviceKey);
+
+    // The functions gateway authenticates with a JWT. This project uses the new
+    // sb_secret_/sb_publishable_ API key format in the env, which createClient
+    // accepts but the gateway rejects ("Invalid JWT"). So for function-to-
+    // function calls we forward the CALLER's Authorization header — the browser
+    // always invokes us with a valid JWT anon key.
+    const authHeader = req.headers.get('Authorization') ?? `Bearer ${serviceKey}`;
+    const apiKeyHeader = req.headers.get('apikey') ?? serviceKey;
 
     const body = await req.json().catch(() => ({}));
     const explicitIds: string[] | undefined = Array.isArray(body.ids) && body.ids.length > 0 ? body.ids : undefined;
@@ -70,7 +77,7 @@ Deno.serve(async (req: Request) => {
     const invoke = (fn: string, payload: unknown) =>
       fetch(`${supabaseUrl}/functions/v1/${fn}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${anonKey}` },
+        headers: { 'Content-Type': 'application/json', Authorization: authHeader, apikey: apiKeyHeader },
         body: JSON.stringify(payload),
       })
         .then((r) => r.json())
@@ -122,7 +129,10 @@ Deno.serve(async (req: Request) => {
     }
 
     // ---- 1. Google Place Details: hours, maps_url, photos, rating, reviews (FREE) ----
-    result.google = await invoke('google-enrich', { action: 'enrich_batch', listing_ids: allIds });
+    // fill_missing re-fetches details for listings that already have a place_id
+    // (most of them) and fills only their empty fields — without this, google-enrich
+    // skips anything that already has a place_id and nothing gets filled.
+    result.google = await invoke('google-enrich', { action: 'enrich_batch', listing_ids: allIds, fill_missing: true });
 
     // ---- 2. AI descriptions (delegated to the tuned generator) ----
     if (descIds.length > 0) {
@@ -135,10 +145,12 @@ Deno.serve(async (req: Request) => {
       result.descriptions = { message: 'No listings missing a description' };
     }
 
-    // ---- 3. Amenities (batch sweep only; limit-based, approved listings) ----
-    if (!explicitIds) {
-      result.amenities = await invoke('backfill-amenities', { limit: batch });
-    }
+    // ---- 3. Amenities ----
+    // In ids mode, target exactly those listings (place_id required). In batch
+    // mode, run the limit-based sweep over approved listings.
+    result.amenities = explicitIds
+      ? await invoke('backfill-amenities', { listing_ids: allIds })
+      : await invoke('backfill-amenities', { limit: batch });
 
     return Response.json(result, { headers: corsHeaders });
   } catch (e) {
