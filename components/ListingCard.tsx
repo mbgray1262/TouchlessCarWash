@@ -70,7 +70,10 @@ export function ListingCard({ listing, href, showVerifiedBadge = false, distance
   const isHumanHero = listing.hero_image_source
     ? HUMAN_HERO_SOURCES.has(listing.hero_image_source)
     : false;
-  const chainBrandImage = listing.touchless_verified === 'chain' && !isHumanHero
+  // Match the detail page: use a chain brand image for ANY mapped parent_chain
+  // (not just touchless_verified==='chain'), so user_review-verified chain
+  // locations don't show a blank placeholder on browse cards.
+  const chainBrandImage = !isHumanHero
     ? getChainBrandImage(listing.parent_chain, listing.id)
     : null;
   // Don't use street_view_url as card image — often returns 403 and looks broken
