@@ -502,7 +502,7 @@ export default function PhotoAuditPage() {
               { key: 'equipment' as ViewFilter, label: `Equipment (${stats.equipment_total})` },
               { key: 'heroes' as ViewFilter, label: `Poor Heroes (${stats.heroes_total})` },
               { key: 'cleanup' as ViewFilter, label: `Cleanup (${stats.cleanup_total})` },
-              { key: 'no_hero' as ViewFilter, label: `No Hero (${viewFilter === 'no_hero' ? filteredTotal : noHeroCount})` },
+              { key: 'no_hero' as ViewFilter, label: `No hero picked (${viewFilter === 'no_hero' ? filteredTotal : noHeroCount})` },
               { key: 'low_res' as ViewFilter, label: `Low Res${stats.low_res_total > 0 ? ` (${stats.low_res_total})` : ''}` },
               { key: 'held' as ViewFilter, label: `Held (${viewFilter === 'held' ? filteredTotal : heldCount})` },
               { key: 'second_look' as ViewFilter, label: `Second Look (${viewFilter === 'second_look' ? filteredTotal : secondLookCount})` },

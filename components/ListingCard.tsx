@@ -13,7 +13,7 @@ import LogoImage from '@/components/LogoImage';
 import HeroImageFallback from '@/components/HeroImageFallback';
 import { OpenStatusBadge } from '@/components/OpenStatusBadge';
 import { ensureHttps } from '@/lib/seo';
-import { getChainBrandImage } from '@/lib/chain-brand-images';
+import { getDisplayImage } from '@/lib/listing-image';
 
 /** Hostnames configured in next.config.js remotePatterns — safe for next/image optimization. */
 const OPTIMIZED_HOSTS = new Set([
@@ -59,25 +59,10 @@ export function ListingCard({ listing, href, showVerifiedBadge = false, distance
     /automatic|tunnel|self.serve|express/i.test(a)
   );
 
-  // For chain listings, prefer brand photo ONLY when no real facility photo exists.
-  // A real location photo (uploaded, AI-screened Google photo, or curated street view)
-  // always beats a generic chain brand image. Matches the detail-page policy in
-  // app/state/[state]/[city]/[slug]/page.tsx.
-  const HUMAN_HERO_SOURCES = new Set([
-    'manual', 'gallery', 'upload', 'crop', 'paste',
-    'text-verified-pick', 'google-ai', 'streetview-ai',
-  ]);
-  const isHumanHero = listing.hero_image_source
-    ? HUMAN_HERO_SOURCES.has(listing.hero_image_source)
-    : false;
-  // Match the detail page: use a chain brand image for ANY mapped parent_chain
-  // (not just touchless_verified==='chain'), so user_review-verified chain
-  // locations don't show a blank placeholder on browse cards.
-  const chainBrandImage = !isHumanHero
-    ? getChainBrandImage(listing.parent_chain, listing.id)
-    : null;
-  // Don't use street_view_url as card image — often returns 403 and looks broken
-  const rawCardImage = chainBrandImage ?? listing.hero_image ?? listing.google_photo_url ?? null;
+  // Shared image-resolution logic (chain brand → hero → google photo → street
+  // view). allowStreetView:false on cards — street view URLs often 403 and look
+  // broken at thumbnail size.
+  const rawCardImage = getDisplayImage(listing, { allowStreetView: false });
   const cardImage = rawCardImage ? ensureHttps(rawCardImage) : null;
   const rawCardLogo = listing.logo_photo ?? listing.google_logo_url ?? null;
   const cardLogo = rawCardLogo ? ensureHttps(rawCardLogo) : null;

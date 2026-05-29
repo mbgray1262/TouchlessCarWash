@@ -28,6 +28,7 @@ import { getAnyCityCoords, findNearestTouchlessCityPath } from '@/lib/geo-fallba
 import { streetAddress, hasStreetAddress } from '@/lib/utils';
 import { DEFAULT_OG_IMAGE, ensureHttps, truncateDescription } from '@/lib/seo';
 import { getChainBrandImage } from '@/lib/chain-brand-images';
+import { getDisplayImage } from '@/lib/listing-image';
 import { isThinListing } from '@/lib/listing-quality';
 import { getOfficialStreetViewUrl, buildPlacePageUrl } from '@/lib/streetview-link';
 
@@ -269,11 +270,7 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   // The brand image is only the fallback when we don't have a human-verified hero.
   // ('chain-brand-auto', 'google-auto', 'streetview-auto', etc. are machine-assigned and
   //  should be replaced by brand image for chain locations.)
-  const HUMAN_SOURCES = new Set(['manual', 'gallery', 'upload', 'crop', 'paste', 'text-verified-pick', 'google-ai', 'streetview-ai']);
-  const isHumanCurated = listing.hero_image_source ? HUMAN_SOURCES.has(listing.hero_image_source) : false;
-  const chainBrandImageMeta = !isHumanCurated
-    ? getChainBrandImage(listing.parent_chain, listing.id) : null;
-  const rawHeroImage = chainBrandImageMeta ?? listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
+  const rawHeroImage = getDisplayImage(listing, { allowStreetView: true });
   const heroImage = rawHeroImage ? ensureHttps(rawHeroImage) : null;
   const ogImages = heroImage
     ? [{ url: heroImage, width: 1200, height: 630, alt: listing.name }]
@@ -1001,12 +998,8 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
   const cityName = listing.city;
   const todayKey = getTodayKey();
 
-  // Location-specific admin-curated photos ALWAYS beat the generic chain brand image.
-  const HUMAN_HERO_SOURCES = new Set(['manual', 'gallery', 'upload', 'crop', 'paste', 'text-verified-pick', 'google-ai', 'streetview-ai']);
-  const isHumanHero = listing.hero_image_source ? HUMAN_HERO_SOURCES.has(listing.hero_image_source) : false;
-  const chainBrandImage = !isHumanHero
-    ? getChainBrandImage(listing.parent_chain, listing.id) : null;
-  const heroImage = chainBrandImage ?? listing.hero_image ?? listing.google_photo_url ?? listing.street_view_url ?? null;
+  // Shared resolution: chain brand → hero → google photo → street view.
+  const heroImage = getDisplayImage(listing, { allowStreetView: true });
   const logoImage = listing.logo_photo ?? listing.google_logo_url ?? null;
   const heroFocalPoint = listing.hero_focal_point ?? 'center';
   const heroObjectPosition = heroFocalPoint === 'top' ? 'center 20%' : heroFocalPoint === 'bottom' ? 'center 80%' : 'center';
