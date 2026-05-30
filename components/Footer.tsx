@@ -125,6 +125,11 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/shop" className="text-white/70 hover:text-[#22C55E] transition-colors py-1.5 inline-block">
+                  Shop Touchless Gear
+                </Link>
+              </li>
+              <li>
                 <Link href="/features" className="text-white/70 hover:text-[#22C55E] transition-colors py-1.5 inline-block">
                   Features
                 </Link>

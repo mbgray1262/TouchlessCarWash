@@ -652,6 +652,16 @@ export default async function CityPage({ params }: CityPageProps) {
           </Button>
         </div>
 
+        <p className="mt-8 text-center text-sm text-gray-500">
+          Prefer to wash at home?{' '}
+          <Link
+            href="/shop/touchless-car-wash-at-home"
+            className="text-[#22C55E] font-medium hover:underline"
+          >
+            See our touchless car wash gear &amp; how-to guide &rarr;
+          </Link>
+        </p>
+
         {nearbyCities.length > 0 && (
           <div className="mt-14 pt-10 border-t border-gray-200">
             <h2 className="text-xl font-bold text-foreground mb-4">Nearby Cities in {stateName}</h2>
