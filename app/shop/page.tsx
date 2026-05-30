@@ -46,11 +46,67 @@ const SECTION_GUIDES: Record<string, { href: string; label: string }> = {
     href: '/shop/best-touchless-car-wash-soap',
     label: 'Read our full Best Touchless Car Wash Soap comparison',
   },
+  'snow-foam': {
+    href: '/shop/best-snow-foam',
+    label: 'Read our full Best Snow Foam comparison',
+  },
   'foam-cannons': {
     href: '/shop/best-foam-cannon',
     label: 'Read our full Best Foam Cannon comparison',
   },
+  'pressure-washers': {
+    href: '/shop/best-pressure-washer-for-cars',
+    label: 'Read our full Best Pressure Washer comparison',
+  },
+  drying: {
+    href: '/shop/best-car-drying-towel',
+    label: 'Read: How to Dry Your Car Without Scratches',
+  },
+  protection: {
+    href: '/shop/best-ceramic-coating-spray',
+    label: 'Read our full Best Ceramic Coating Spray comparison',
+  },
 };
+
+// Buying-guide cards surfaced at the top of /shop for discovery + link equity.
+const GUIDE_CARDS: { href: string; emoji: string; title: string; blurb: string }[] = [
+  {
+    href: '/shop/best-touchless-car-wash-soap',
+    emoji: '🧴',
+    title: `Best Touchless Car Wash Soap ${YEAR}`,
+    blurb: 'Swift vs. Mr. Pink vs. Optimum vs. Meguiar’s vs. Adam’s — pH, ceramic-safety, foam-cannon fit.',
+  },
+  {
+    href: '/shop/best-foam-cannon',
+    emoji: '💨',
+    title: `Best Foam Cannon ${YEAR}`,
+    blurb: 'MTM Hydro PF22.2 vs. Chemical Guys TORQ vs. MATCC — build, warranty, foam thickness.',
+  },
+  {
+    href: '/shop/best-pressure-washer-for-cars',
+    emoji: '🔫',
+    title: `Best Pressure Washer for Cars ${YEAR}`,
+    blurb: 'Sun Joe SPX3000 vs. Westinghouse ePX3100 — PSI, water flow, and paint safety.',
+  },
+  {
+    href: '/shop/best-snow-foam',
+    emoji: '🫧',
+    title: `Best Snow Foam ${YEAR}`,
+    blurb: 'Chemical Guys Honeydew vs. Adam’s Mega Foam — cling, dilution, cost per wash.',
+  },
+  {
+    href: '/shop/best-car-drying-towel',
+    emoji: '💧',
+    title: 'How to Dry Your Car Without Scratches',
+    blurb: 'The best no-contact air blower and safest microfiber towel for a swirl-free finish.',
+  },
+  {
+    href: '/shop/best-ceramic-coating-spray',
+    emoji: '✨',
+    title: `Best Ceramic Coating Spray ${YEAR}`,
+    blurb: 'Meguiar’s Hybrid Ceramic vs. Chemical Guys HydroSlick — ease, durability, gloss.',
+  },
+];
 
 const SECTION_TITLES: Record<string, string> = {
   'touchless-soaps': 'Best Touchless Car Wash Soaps',
@@ -289,45 +345,47 @@ export default function ShopPage() {
               </h2>
             </div>
             <p className="text-sm text-gray-600 mb-5">
-              Side-by-side comparisons of the products in our two biggest categories.
+              Side-by-side comparisons and how-to guides for every step of a
+              no-contact wash.
             </p>
+
+            {/* Pillar guide — full-width feature */}
+            <Link
+              href="/shop/touchless-car-wash-at-home"
+              className="group flex items-start gap-4 rounded-xl border-2 border-[#22C55E]/40 bg-white p-5 mb-4 hover:border-[#22C55E] hover:shadow-md transition-all"
+            >
+              <div className="text-3xl">🚗</div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-[#0F2744] mb-1 leading-snug">
+                  Start here: How to Touchless Wash Your Car at Home {YEAR}
+                </h3>
+                <p className="text-sm text-gray-600 leading-snug mb-2">
+                  The complete no-contact kit and step-by-step routine — from snow
+                  foam to ceramic protection, with every tool you need.
+                </p>
+                <span className="inline-flex items-center gap-1 text-sm font-semibold text-[#0F2744] group-hover:text-[#22C55E] transition-colors">
+                  Read the full guide <ArrowRight className="w-3.5 h-3.5" />
+                </span>
+              </div>
+            </Link>
+
             <div className="grid sm:grid-cols-2 gap-4">
-              <Link
-                href="/shop/best-touchless-car-wash-soap"
-                className="group flex items-start gap-4 rounded-xl border border-gray-200 bg-white p-5 hover:border-[#22C55E] hover:shadow-md transition-all"
-              >
-                <div className="text-3xl">🧴</div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-[#0F2744] mb-1 leading-snug">
-                    Best Touchless Car Wash Soap {YEAR}
-                  </h3>
-                  <p className="text-sm text-gray-600 leading-snug mb-2">
-                    Swift vs. Mr. Pink vs. Optimum vs. Meguiar&rsquo;s vs.
-                    Adam&rsquo;s — pH, ceramic-safety, foam-cannon fit.
-                  </p>
-                  <span className="inline-flex items-center gap-1 text-sm font-semibold text-[#0F2744] group-hover:text-[#22C55E] transition-colors">
-                    Read comparison <ArrowRight className="w-3.5 h-3.5" />
-                  </span>
-                </div>
-              </Link>
-              <Link
-                href="/shop/best-foam-cannon"
-                className="group flex items-start gap-4 rounded-xl border border-gray-200 bg-white p-5 hover:border-[#22C55E] hover:shadow-md transition-all"
-              >
-                <div className="text-3xl">💨</div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-[#0F2744] mb-1 leading-snug">
-                    Best Foam Cannon for Touchless Washing {YEAR}
-                  </h3>
-                  <p className="text-sm text-gray-600 leading-snug mb-2">
-                    MTM Hydro PF22.2 vs. Chemical Guys TORQ vs. MATCC —
-                    build, warranty, foam thickness.
-                  </p>
-                  <span className="inline-flex items-center gap-1 text-sm font-semibold text-[#0F2744] group-hover:text-[#22C55E] transition-colors">
-                    Read comparison <ArrowRight className="w-3.5 h-3.5" />
-                  </span>
-                </div>
-              </Link>
+              {GUIDE_CARDS.map((g) => (
+                <Link
+                  key={g.href}
+                  href={g.href}
+                  className="group flex items-start gap-4 rounded-xl border border-gray-200 bg-white p-5 hover:border-[#22C55E] hover:shadow-md transition-all"
+                >
+                  <div className="text-3xl">{g.emoji}</div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-[#0F2744] mb-1 leading-snug">{g.title}</h3>
+                    <p className="text-sm text-gray-600 leading-snug mb-2">{g.blurb}</p>
+                    <span className="inline-flex items-center gap-1 text-sm font-semibold text-[#0F2744] group-hover:text-[#22C55E] transition-colors">
+                      Read comparison <ArrowRight className="w-3.5 h-3.5" />
+                    </span>
+                  </div>
+                </Link>
+              ))}
             </div>
           </div>
         </section>
