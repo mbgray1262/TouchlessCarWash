@@ -9,6 +9,7 @@ const CJ_CHEMGUYS_LINK_ID = '13739068';
 
 export type ProductCategory =
   | 'touchless-soap'
+  | 'rinseless'
   | 'snow-foam'
   | 'foam-cannon'
   | 'pressure-washer'
@@ -71,6 +72,7 @@ export function amazonImageUrl(p: Product): string | null {
 
 const CATEGORY_GRADIENTS: Record<ProductCategory, string> = {
   'touchless-soap': 'from-blue-100 to-cyan-50',
+  rinseless: 'from-teal-100 to-emerald-50',
   'snow-foam': 'from-sky-100 to-blue-50',
   'foam-cannon': 'from-cyan-100 to-teal-50',
   'pressure-washer': 'from-slate-200 to-blue-50',
@@ -211,6 +213,23 @@ export const PRODUCTS: Product[] = [
     positioning:
       'pH-best biodegradable formula. Cult-favorite DIY brand with thick suds and zero scratch risk.',
     imageUrl: 'https://m.media-amazon.com/images/I/71UQMENo4fL.jpg',
+  },
+
+  // ───── Rinseless / waterless (no hose, no pressure washer) ─────
+  // For the "no driveway" audience — apartments, condos, garages, winter.
+  // ONR is the category-defining rinseless wash and ceramic-coating safe.
+  {
+    id: 'optimum-no-rinse',
+    brand: 'Optimum',
+    name: 'No Rinse Wash & Shine (32 oz)',
+    category: 'rinseless',
+    asin: 'B00D8DR0AO',
+    priceRange: '$16',
+    rating: 4.7,
+    positioning:
+      'Wash your car with no hose and no pressure washer — just two buckets. ONR’s polymers wrap around dirt so you wipe it off without scratching. The go-to for apartments, garages, and winter washing.',
+    hasImage: true,
+    editorPick: true,
   },
 
   // ───── Snow foam (touchless prewash) ─────
@@ -382,6 +401,12 @@ export const SHOP_SECTIONS: { id: string; title: string; subtitle: string; categ
     title: 'Touchless Soaps',
     subtitle: 'Spray-on, rinse-off shampoos formulated for no-contact washing — the same chemistry pro touchless tunnels use.',
     categories: ['touchless-soap'],
+  },
+  {
+    id: 'rinseless',
+    title: 'No Driveway? No Problem',
+    subtitle: 'Rinseless and waterless washes let you clean your car with no hose and no pressure washer — ideal for apartments, condos, garages, and winter.',
+    categories: ['rinseless'],
   },
   {
     id: 'snow-foam',

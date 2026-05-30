@@ -20,7 +20,7 @@ const PAGE_URL = `${SITE_URL}${PAGE_PATH}`;
 const YEAR = new Date().getFullYear();
 
 const TITLE = `Best Touchless Car Wash Products ${YEAR}: Soaps, Foam Cannons & Gear`;
-const DESCRIPTION = `Our editors' picks for the best touchless car wash products of ${YEAR} — Swift, Meguiar's, Adam's, Chemical Guys, Sun Joe, MTM Hydro, Optimum and more. 16 tested products across 7 categories with no-contact washing in mind.`;
+const DESCRIPTION = `Our editors' picks for the best touchless car wash products of ${YEAR} — Swift, Meguiar's, Adam's, Chemical Guys, Sun Joe, MTM Hydro, Optimum and more. 20 tested products across 8 categories, including rinseless washes for when you have no driveway.`;
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -110,6 +110,7 @@ const GUIDE_CARDS: { href: string; emoji: string; title: string; blurb: string }
 
 const SECTION_TITLES: Record<string, string> = {
   'touchless-soaps': 'Best Touchless Car Wash Soaps',
+  rinseless: 'No Driveway? No Problem — Rinseless & Waterless Washing',
   'snow-foam': 'Best Snow Foam & Pre-Rinse',
   'foam-cannons': 'Best Foam Cannons for Touchless Washing',
   'pressure-washers': 'Best Electric Pressure Washers for Car Washing',
@@ -139,6 +140,19 @@ const SECTION_INTROS: Record<string, ReactNode> = {
       </Link>
       , look for pH-neutral formulas that won't strip protection. Concentrates
       stretch further per ounce.
+    </>
+  ),
+  rinseless: (
+    <>
+      No hose? No pressure washer? You can still wash touchless. A rinseless
+      wash like Optimum No Rinse uses polymers that encapsulate dirt so you wipe
+      it away without dragging grit across the paint — no rinsing required. It&rsquo;s
+      the answer for apartment and condo dwellers, anyone under HOA water
+      restrictions, and winter washing in the garage. Still want a full bay?{' '}
+      <Link href="/" className="text-[#22C55E] hover:underline font-medium">
+        Find a touchless wash near you
+      </Link>
+      .
     </>
   ),
   'snow-foam': (
