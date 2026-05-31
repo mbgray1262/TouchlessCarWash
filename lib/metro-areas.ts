@@ -196,6 +196,21 @@ export const METRO_AREAS: MetroArea[] = [
   { name: 'Fort Collins', displayName: 'Fort Collins, CO', slug: 'fort-collins', lat: 40.5853, lng: -105.0844, radiusMiles: 20, states: ['CO'], region: 'West' },
   { name: 'Billings', displayName: 'Billings, MT', slug: 'billings', lat: 45.7833, lng: -108.5007, radiusMiles: 20, states: ['MT'], region: 'West' },
   { name: 'Bend', displayName: 'Bend, OR', slug: 'bend', lat: 44.0582, lng: -121.3153, radiusMiles: 20, states: ['OR'], region: 'West' },
+
+  // Added May 31 2026 after a few hundred new approved listings revealed new
+  // touchless clusters (5+ approved listings within radius, not covered by any
+  // existing metro). Verified via scripts/verify-proposed-metros-2026-05.mjs.
+  { name: 'Rochester', displayName: 'Rochester, MN', slug: 'rochester-mn', lat: 44.0121, lng: -92.4802, radiusMiles: 20, states: ['MN'], region: 'Midwest' },
+  { name: 'Eau Claire', displayName: 'Eau Claire, WI', slug: 'eau-claire', lat: 44.8113, lng: -91.4985, radiusMiles: 20, states: ['WI'], region: 'Midwest' },
+  { name: 'Fargo', displayName: 'Fargo, ND', slug: 'fargo', lat: 46.8772, lng: -96.7898, radiusMiles: 20, states: ['ND', 'MN'], region: 'Midwest' },
+  { name: 'Duluth', displayName: 'Duluth, MN', slug: 'duluth', lat: 46.7867, lng: -92.1005, radiusMiles: 20, states: ['MN', 'WI'], region: 'Midwest' },
+  { name: 'Owatonna', displayName: 'Owatonna, MN', slug: 'owatonna', lat: 44.0840, lng: -93.2261, radiusMiles: 20, states: ['MN'], region: 'Midwest' },
+  { name: 'Rapid City', displayName: 'Rapid City, SD', slug: 'rapid-city', lat: 44.0805, lng: -103.2310, radiusMiles: 20, states: ['SD'], region: 'Midwest' },
+  { name: 'Morgantown', displayName: 'Morgantown, WV', slug: 'morgantown', lat: 39.6295, lng: -79.9559, radiusMiles: 20, states: ['WV'], region: 'Southeast' },
+  { name: 'Winston-Salem', displayName: 'Winston-Salem, NC', slug: 'winston-salem', lat: 36.0999, lng: -80.2442, radiusMiles: 20, states: ['NC'], region: 'Southeast' },
+  { name: 'Asheville', displayName: 'Asheville, NC', slug: 'asheville', lat: 35.5951, lng: -82.5515, radiusMiles: 20, states: ['NC'], region: 'Southeast' },
+  { name: 'Watertown', displayName: 'Watertown, NY', slug: 'watertown-ny', lat: 43.9748, lng: -75.9108, radiusMiles: 20, states: ['NY'], region: 'Northeast' },
+  { name: 'Kalispell', displayName: 'Kalispell, MT', slug: 'kalispell', lat: 48.1958, lng: -114.3128, radiusMiles: 20, states: ['MT'], region: 'West' },
 ];
 
 // ── Lookup helpers ─────────────────────────────────────────────────────
