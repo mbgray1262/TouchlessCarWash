@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,8 +7,8 @@ import { getStateSlug, slugify, US_STATES } from '@/lib/constants';
 import { ListingCard } from '@/components/ListingCard';
 import { Pagination, PAGE_SIZE } from '@/components/Pagination';
 import { SearchFilters } from '@/components/SearchFilters';
-import { METRO_AREAS, haversineDistance, boundingBox } from '@/lib/metro-areas';
-import { MapPin, Map, Trophy, Search } from 'lucide-react';
+import { METRO_AREAS, haversineDistance, boundingBox, getMetroBySlug, type MetroArea } from '@/lib/metro-areas';
+import { MapPin, Map as MapIcon, Trophy, Search, ArrowRight } from 'lucide-react';
 import type { Metadata } from 'next';
 
 interface Filter {
@@ -371,6 +372,75 @@ function getSuggestedMetros(stateCode: string | null): { name: string; displayNa
   return [...combined, ...extras].slice(0, 6).map(pick);
 }
 
+/**
+ * Resolve the metro area a search maps to, so we can cross-link the matching
+ * /best/[metro] page and surface "#N Best" badges on top-ranked results.
+ *
+ * Resolution order:
+ *   1. Exact slug match on the query (e.g. "seattle" → seattle metro)
+ *   2. Nearest metro whose radius covers the resolved lat/lng (proximity search)
+ */
+function resolveSearchMetro(
+  query: string,
+  lat?: number | null,
+  lng?: number | null,
+): MetroArea | undefined {
+  const bySlug = query ? getMetroBySlug(slugify(query)) : undefined;
+  if (bySlug) return bySlug;
+
+  if (lat == null || lng == null || isNaN(lat) || isNaN(lng)) return undefined;
+  let best: MetroArea | undefined;
+  let bestDist = Infinity;
+  for (const m of METRO_AREAS) {
+    const d = haversineDistance(lat, lng, m.lat, m.lng);
+    if (d <= m.radiusMiles && d < bestDist) {
+      best = m;
+      bestDist = d;
+    }
+  }
+  return best;
+}
+
+/**
+ * Fetch the persisted Best-Of ranks for a metro, keyed by listing_id. This is
+ * the same table that powers the "#N Best in [Metro]" badge on detail pages, so
+ * the search results stay consistent with the /best/[metro] page. Returns an
+ * empty map if the metro has no published ranking yet (used to gate the CTA).
+ */
+async function getMetroRankMap(metroSlug: string): Promise<Map<string, number>> {
+  const { data } = await supabase
+    .from('best_of_rankings')
+    .select('listing_id, rank')
+    .eq('metro_slug', metroSlug)
+    .order('rank', { ascending: true });
+
+  const map = new Map<string, number>();
+  for (const row of data ?? []) {
+    map.set(row.listing_id as string, row.rank as number);
+  }
+  return map;
+}
+
+/**
+ * Cheap count of approved touchless listings inside a metro's bounding box.
+ * Gates the Best-Of banner/CTA: we only cross-link a /best/[metro] page when it
+ * clears the same 3-listing minimum the best-of page itself requires, so we
+ * never funnel users to a thin page that 308-redirects away.
+ */
+async function getMetroListingCount(metro: MetroArea): Promise<number> {
+  const box = boundingBox(metro.lat, metro.lng, metro.radiusMiles);
+  const { count } = await supabase
+    .from('listings')
+    .select('id', { count: 'exact', head: true })
+    .eq('is_touchless', true)
+    .eq('is_approved', true)
+    .gte('latitude', box.minLat)
+    .lte('latitude', box.maxLat)
+    .gte('longitude', box.minLng)
+    .lte('longitude', box.maxLng);
+  return count ?? 0;
+}
+
 function buildBaseHref(query: string, activeFilterSlugs: string[], lat?: number | null, lng?: number | null): string {
   const params = new URLSearchParams();
   if (query) params.set('q', query);
@@ -469,6 +539,19 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   const baseHref = buildBaseHref(query, activeFilterSlugs, resolvedLat, resolvedLng);
 
+  // Steer users toward top-tier listings and the matching /best/[metro] page.
+  // Banner/CTA show whenever the search maps to a metro with a real best-of page
+  // (>=3 listings). Trophy badges are best-effort from the persisted rankings
+  // (same source as the detail-page "#N Best in [Metro]" badge), so they stay
+  // consistent and simply don't appear for metros not yet synced.
+  const searchMetro = listings.length > 0
+    ? resolveSearchMetro(query, resolvedLat, resolvedLng)
+    : undefined;
+  const [metroRanks, metroListingCount] = searchMetro
+    ? await Promise.all([getMetroRankMap(searchMetro.slug), getMetroListingCount(searchMetro)])
+    : [new Map<string, number>(), 0];
+  const hasBestOf = searchMetro != null && metroListingCount >= 3;
+
   const jsonLd = hasSearch && listings.length > 0
     ? {
         '@context': 'https://schema.org',
@@ -530,9 +613,48 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           <NoResultsSection query={query} activeFilterSlugs={activeFilterSlugs} isProximitySearch={resolvedProximity} lat={resolvedLat} lng={resolvedLng} />
         ) : (
           <>
+            {hasBestOf && searchMetro && (
+              <Link
+                href={`/best/${searchMetro.slug}`}
+                className="group mb-6 flex items-center gap-4 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-white p-5 hover:border-amber-400 hover:shadow-md transition-all"
+              >
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-100">
+                  <Trophy className="h-6 w-6 text-amber-500" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-bold text-[#0F2744]">
+                    See the Top-Ranked Touchless Car Washes in {searchMetro.name}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Our editor-ranked list, scored by ratings, reviews &amp; verified touchless evidence.
+                  </p>
+                </div>
+                <span className="hidden shrink-0 items-center gap-1 rounded-xl bg-[#0F2744] px-4 py-2 text-sm font-semibold text-white group-hover:bg-amber-500 transition-colors sm:inline-flex">
+                  View Rankings
+                  <ArrowRight className="h-4 w-4" />
+                </span>
+              </Link>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {paginatedListings.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} distance={listing.distanceMiles} />
+              {paginatedListings.map((listing, idx) => (
+                <Fragment key={listing.id}>
+                  <ListingCard
+                    listing={listing}
+                    distance={listing.distanceMiles}
+                    rank={metroRanks.get(listing.id)}
+                  />
+                  {/* Inline funnel after the first row (page 1 only) */}
+                  {hasBestOf && searchMetro && page === 1 && idx === 2 && listings.length > 3 && (
+                    <Link
+                      href={`/best/${searchMetro.slug}`}
+                      className="col-span-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-amber-300 bg-amber-50/50 px-5 py-3 text-sm font-semibold text-[#0F2744] hover:bg-amber-50 hover:border-amber-400 transition-colors"
+                    >
+                      <Trophy className="h-4 w-4 text-amber-500" />
+                      See the full ranked list &mdash; Best Touchless Car Washes in {searchMetro.name}
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  )}
+                </Fragment>
               ))}
             </div>
             <Pagination
@@ -603,7 +725,7 @@ function NoResultsSection({
             )}
             <Button variant={stateInfo ? 'outline' : 'default'} asChild>
               <Link href="/states">
-                <Map className="w-4 h-4 mr-1.5" />
+                <MapIcon className="w-4 h-4 mr-1.5" />
                 Browse All States
               </Link>
             </Button>
