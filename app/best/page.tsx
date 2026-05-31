@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Trophy, MapPin, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { METRO_AREAS, boundingBox, haversineDistance, getMetrosByRegion, type MetroArea, type MetroRegion } from '@/lib/metro-areas';
+import { isDislikedTouchless } from '@/lib/touchless-quality';
 import type { Metadata } from 'next';
 
 // Revalidate every 24 hours — pre-rendered but refreshes daily for new metros/counts
@@ -26,26 +27,51 @@ export const metadata: Metadata = {
 type MetroWithCount = MetroArea & { listingCount: number };
 
 async function getQualifyingMetros(): Promise<MetroWithCount[]> {
-  // Fetch ALL touchless listings with coordinates — must paginate since Supabase caps at 1000 rows per request
+  // Fetch ALL approved touchless listings with coordinates — must paginate since Supabase caps at 1000 rows per request
   const PAGE_SIZE = 1000;
-  const allListings: { latitude: number; longitude: number }[] = [];
+  const allListings: { id: string; latitude: number; longitude: number }[] = [];
   let offset = 0;
   while (true) {
     const { data, error } = await supabase
       .from('listings')
-      .select('latitude, longitude')
+      .select('id, latitude, longitude')
       .eq('is_touchless', true)
+      .eq('is_approved', true)
       .not('latitude', 'is', null)
       .not('longitude', 'is', null)
       .range(offset, offset + PAGE_SIZE - 1);
 
     if (error || !data || data.length === 0) break;
-    allListings.push(...(data as { latitude: number; longitude: number }[]));
+    allListings.push(...(data as { id: string; latitude: number; longitude: number }[]));
     if (data.length < PAGE_SIZE) break; // Last page
     offset += PAGE_SIZE;
   }
 
-  const listings = allListings;
+  // Build the set of washes whose touchless reviews are predominantly negative
+  // (same rule as the metro page, via the shared module) so the index and the
+  // pages always agree on which listings count toward the 5-listing threshold.
+  const tally = new Map<string, { pos: number; neg: number }>();
+  for (let o = 0; ; o += PAGE_SIZE) {
+    const { data } = await supabase
+      .from('review_snippets')
+      .select('listing_id, sentiment')
+      .eq('is_touchless_evidence', true)
+      .range(o, o + PAGE_SIZE - 1);
+    if (!data || data.length === 0) break;
+    for (const r of data as { listing_id: string; sentiment: string }[]) {
+      const t = tally.get(r.listing_id) ?? { pos: 0, neg: 0 };
+      if (r.sentiment === 'positive') t.pos++;
+      else if (r.sentiment === 'negative') t.neg++;
+      tally.set(r.listing_id, t);
+    }
+    if (data.length < PAGE_SIZE) break;
+  }
+  const disliked = new Set<string>();
+  for (const [id, t] of Array.from(tally)) {
+    if (isDislikedTouchless(t.pos, t.neg)) disliked.add(id);
+  }
+
+  const listings = allListings.filter((l) => !disliked.has(l.id));
 
   // For each metro, count listings within radius
   const results: MetroWithCount[] = [];

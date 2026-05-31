@@ -9,6 +9,7 @@ import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
 import { getStateSlug, slugify } from '@/lib/constants';
 import { METRO_AREAS, getMetroBySlug, boundingBox, haversineDistance, type MetroArea } from '@/lib/metro-areas';
 import { scoreListing, type ScoredListing } from '@/lib/metro-scoring';
+import { isDislikedTouchless } from '@/lib/touchless-quality';
 import { METRO_CONTENT, buildExpertGuide } from '@/lib/metro-content';
 import { OpenStatusBadge } from '@/components/OpenStatusBadge';
 import LogoImage from '@/components/LogoImage';
@@ -31,6 +32,35 @@ const BEST_OF_COLUMNS =
 
 // ── Data fetching ─────────────────────────────────────────────────────
 
+async function getDislikedTouchlessIds(listingIds: string[]): Promise<Set<string>> {
+  const disliked = new Set<string>();
+  if (listingIds.length === 0) return disliked;
+
+  const tally = new Map<string, { pos: number; neg: number }>();
+  // Paginate to dodge Supabase's silent 1000-row SELECT cap on large metros.
+  for (let offset = 0; ; offset += 1000) {
+    const { data } = await supabase
+      .from('review_snippets')
+      .select('listing_id, sentiment')
+      .in('listing_id', listingIds)
+      .eq('is_touchless_evidence', true)
+      .range(offset, offset + 999);
+    if (!data || data.length === 0) break;
+    for (const r of data as { listing_id: string; sentiment: string }[]) {
+      const t = tally.get(r.listing_id) ?? { pos: 0, neg: 0 };
+      if (r.sentiment === 'positive') t.pos++;
+      else if (r.sentiment === 'negative') t.neg++;
+      tally.set(r.listing_id, t);
+    }
+    if (data.length < 1000) break;
+  }
+
+  for (const [id, t] of Array.from(tally)) {
+    if (isDislikedTouchless(t.pos, t.neg)) disliked.add(id);
+  }
+  return disliked;
+}
+
 const getMetroListings = cache(async (metro: MetroArea): Promise<Listing[]> => {
   const box = boundingBox(metro.lat, metro.lng, metro.radiusMiles);
 
@@ -38,6 +68,7 @@ const getMetroListings = cache(async (metro: MetroArea): Promise<Listing[]> => {
     .from('listings')
     .select(BEST_OF_COLUMNS)
     .eq('is_touchless', true)
+    .eq('is_approved', true)
     .gte('latitude', box.minLat)
     .lte('latitude', box.maxLat)
     .gte('longitude', box.minLng)
@@ -48,11 +79,16 @@ const getMetroListings = cache(async (metro: MetroArea): Promise<Listing[]> => {
   if (error || !data) return [];
 
   // Filter to precise radius using haversine
-  return (data as Listing[]).filter((listing) => {
+  const inRadius = (data as Listing[]).filter((listing) => {
     if (listing.latitude == null || listing.longitude == null) return false;
     const dist = haversineDistance(metro.lat, metro.lng, listing.latitude, listing.longitude);
     return dist <= metro.radiusMiles;
   });
+
+  // Drop washes whose touchless reviews are predominantly negative, so we never
+  // recommend a wash customers specifically dislike for its touchless service.
+  const disliked = await getDislikedTouchlessIds(inRadius.map((l) => l.id));
+  return inRadius.filter((l) => !disliked.has(l.id));
 });
 
 async function getTouchlessReviewCounts(listingIds: string[]): Promise<Map<string, number>> {
