@@ -136,10 +136,70 @@ async function findListingByPartialSlug(slug: string): Promise<string | null> {
 }
 
 async function getNearbyListings(listing: Listing, limit = 6): Promise<Listing[]> {
+  // Distance-based nearby query using lat/lng bounding box + Haversine sort.
+  // Previously this pulled "top-reviewed in same state" which surfaced listings
+  // 200+ miles away (e.g. Spokane shown as nearby for Silverdale, WA).
+  //
+  // Strategy: expand the search radius until we get enough results, falling
+  // back to the legacy state-based query if the source listing lacks lat/lng
+  // (only ~1.8% of approved touchless listings).
+  if (listing.latitude == null || listing.longitude == null) {
+    return getNearbyListingsLegacy(listing, limit);
+  }
+
+  // Haversine distance in miles, computed from lat/lng deltas.
+  // 1 degree latitude ≈ 69 miles; 1 degree longitude ≈ 69 * cos(lat) miles.
+  const distanceMiles = (lat: number, lng: number) => {
+    const dLat = (lat - listing.latitude!) * 69;
+    const dLng = (lng - listing.longitude!) * 69 * Math.cos(listing.latitude! * Math.PI / 180);
+    return Math.sqrt(dLat * dLat + dLng * dLng);
+  };
+
+  // Try progressively larger bounding boxes until we get `limit` results.
+  // Touchless washes are sparse in some areas, so 10 mi may yield 0 in rural metros.
+  for (const radiusMiles of [10, 25, 50, 100]) {
+    const latDelta = radiusMiles / 69;
+    const lngDelta = radiusMiles / (69 * Math.cos(listing.latitude * Math.PI / 180));
+
+    const { data } = await supabase
+      .from('listings')
+      .select('id, name, slug, city, state, rating, review_count, address, hero_image, google_photo_url, street_view_url, latitude, longitude')
+      .eq('is_touchless', true)
+      .eq('is_approved', true)
+      .neq('id', listing.id)
+      .gte('latitude', listing.latitude - latDelta)
+      .lte('latitude', listing.latitude + latDelta)
+      .gte('longitude', listing.longitude - lngDelta)
+      .lte('longitude', listing.longitude + lngDelta)
+      .limit(limit * 4); // overfetch for filtering + sorting
+
+    if (!data || data.length === 0) continue;
+
+    // Sort by actual Haversine distance (bounding box catches some farther listings)
+    const ranked = data
+      .map((l) => ({ listing: l, distance: distanceMiles(l.latitude!, l.longitude!) }))
+      .filter((r) => r.distance <= radiusMiles)
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, limit)
+      .map((r) => r.listing);
+
+    if (ranked.length >= limit || radiusMiles === 100) {
+      return ranked as Listing[];
+    }
+  }
+
+  // No results even at 100 mi radius — fall back to state-based query
+  return getNearbyListingsLegacy(listing, limit);
+}
+
+// Legacy fallback: same-state, sorted by review count. Used when the source
+// listing has no lat/lng (~1.8% of listings) or no listings exist within 100mi.
+async function getNearbyListingsLegacy(listing: Listing, limit = 6): Promise<Listing[]> {
   const { data } = await supabase
     .from('listings')
     .select('id, name, slug, city, state, rating, review_count, address, hero_image, google_photo_url, street_view_url, latitude, longitude')
     .eq('is_touchless', true)
+    .eq('is_approved', true)
     .eq('state', listing.state)
     .neq('id', listing.id)
     .order('review_count', { ascending: false })
