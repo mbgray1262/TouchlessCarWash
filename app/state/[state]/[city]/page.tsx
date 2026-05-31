@@ -19,6 +19,7 @@ import {
   NEARBY_RADIUS_MILES,
   INDEXABLE_MIN_EFFECTIVE,
 } from '@/lib/nearby-augment';
+import { FEATURE_FILTERS, MIN_LISTINGS_FOR_FEATURE_PAGE } from '@/lib/feature-filters';
 
 import type { Metadata } from 'next';
 
@@ -661,6 +662,38 @@ export default async function CityPage({ params }: CityPageProps) {
             See our touchless car wash gear &amp; how-to guide &rarr;
           </Link>
         </p>
+
+        {/* Feature filters — each chip routes to a /feature/[slug] subset page.
+            Only shown for features that have ≥ MIN_LISTINGS_FOR_FEATURE_PAGE matches
+            in this city. Drives both PV/session (new internal click target) and
+            captures long-tail intent like "touchless car wash open 24 hours in X". */}
+        {(() => {
+          const availableFilters = FEATURE_FILTERS.filter(
+            (f) => allListings.filter((l) => f.matches(l)).length >= MIN_LISTINGS_FOR_FEATURE_PAGE,
+          );
+          if (availableFilters.length === 0) return null;
+          return (
+            <div className="mt-14 pt-10 border-t border-gray-200">
+              <h2 className="text-xl font-bold text-foreground mb-2">Filter touchless washes in {cityName}</h2>
+              <p className="text-sm text-gray-500 mb-4">Browse by what matters to you.</p>
+              <div className="flex flex-wrap gap-3">
+                {availableFilters.map((f) => {
+                  const matchCount = allListings.filter((l) => f.matches(l)).length;
+                  return (
+                    <Link
+                      key={f.slug}
+                      href={`/state/${params.state}/${params.city}/feature/${f.slug}`}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-blue-50 text-[#0F2744] hover:bg-blue-100 text-sm font-medium transition-colors border border-blue-100"
+                    >
+                      {f.displayName}
+                      <span className="text-xs text-gray-500">({matchCount})</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         {nearbyCities.length > 0 && (
           <div className="mt-14 pt-10 border-t border-gray-200">
