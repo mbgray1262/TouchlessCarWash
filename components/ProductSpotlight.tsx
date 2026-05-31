@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import {
   affiliateUrl,
   amazonImageUrl,
@@ -66,16 +67,14 @@ export function ProductSpotlight({
   if (!product) return null;
 
   return (
+    <div
+      className={['flex flex-col gap-2', className].filter(Boolean).join(' ')}
+    >
     <a
       href={affiliateUrl(product)}
       target="_blank"
       rel="noopener noreferrer sponsored nofollow"
-      className={[
-        'group flex flex-col sm:flex-row gap-5 items-start sm:items-center rounded-2xl border border-gray-200 bg-gradient-to-br from-white to-blue-50/40 p-5 hover:border-[#22C55E] hover:shadow-md transition-all',
-        className,
-      ]
-        .filter(Boolean)
-        .join(' ')}
+      className="group flex flex-col sm:flex-row gap-5 items-start sm:items-center rounded-2xl border border-gray-200 bg-gradient-to-br from-white to-blue-50/40 p-5 hover:border-[#22C55E] hover:shadow-md transition-all"
     >
       <SpotlightVisual product={product} />
       <div className="flex-1 min-w-0">
@@ -108,5 +107,12 @@ export function ProductSpotlight({
         Shop on {vendorLabel(product)} &rarr;
       </span>
     </a>
+    <Link
+      href="/shop"
+      className="self-end text-xs font-semibold text-gray-500 hover:text-[#22C55E] transition-colors"
+    >
+      Browse all touchless car wash gear &rarr;
+    </Link>
+    </div>
   );
 }
