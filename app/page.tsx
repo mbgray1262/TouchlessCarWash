@@ -1,9 +1,12 @@
 import Link from 'next/link';
+import { headers } from 'next/headers';
 import { ProductsBanner } from '@/components/ProductsBanner';
+import { NearbyMetroBanner } from '@/components/NearbyMetroBanner';
+import { decodeNetlifyGeo, nearestMetro } from '@/lib/nearest-metro';
 import { ProductGrid } from '@/components/ProductGrid';
-import { Star, MapPin, CheckCircle, TrendingUp, Search, Eye, Sparkles, Droplet, ArrowRight } from 'lucide-react';
+import { Star, MapPin, CheckCircle, TrendingUp, Search, Droplet, ArrowRight } from 'lucide-react';
 import HeroSection from '@/components/HeroSection';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ListingCard } from '@/components/ListingCard';
@@ -11,9 +14,19 @@ import { RedirectBanner } from '@/components/RedirectBanner';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { getApprovedTouchlessCount } from '@/lib/listing-queries';
 import { US_STATES, getStateSlug } from '@/lib/constants';
+import { getMetroBySlug } from '@/lib/metro-areas';
 import type { Metadata } from 'next';
 
 const SITE_URL = 'https://touchlesscarwashfinder.com';
+
+// Curated major metros for the homepage shortcut grid — all are large,
+// listing-rich /best pages so the section never links to a thin/redirecting one.
+const POPULAR_METRO_SLUGS = [
+  'new-york-city', 'los-angeles', 'chicago', 'houston', 'dallas-fort-worth',
+  'phoenix', 'philadelphia', 'san-antonio', 'san-diego', 'austin',
+  'san-francisco', 'seattle', 'denver', 'atlanta', 'miami',
+  'minneapolis', 'detroit', 'tampa', 'charlotte', 'las-vegas',
+];
 
 // Re-fetch data every hour so counts stay fresh without redeploying
 export const dynamic = 'force-dynamic'; // see /state/.../slug for context — Netlify CDN cache (netlify.toml) handles edge perf; force-dynamic prevents the Next.js ISR etag-based 304-without-body bug that kept breaking /blog and /best on the CDN.
@@ -142,7 +155,7 @@ async function getTotalReviewCount(): Promise<number> {
   return error ? 0 : (count ?? 0);
 }
 
-export default async function Home() {
+export default async function Home({ searchParams }: { searchParams?: { geo?: string } }) {
   const [featuredListings, stateListingCounts, totalCount, totalReviews] =
     await Promise.all([
       getFeaturedListings(),
@@ -150,6 +163,15 @@ export default async function Home() {
       getApprovedTouchlessCount(),
       getTotalReviewCount(),
     ]);
+
+  // Passive geo via Netlify's x-nf-geo header → nearest metro suggestion.
+  // ?geo=lat,lng overrides for local/preview testing (no Netlify header in dev).
+  let geo = decodeNetlifyGeo(headers().get('x-nf-geo'));
+  if (!geo && searchParams?.geo) {
+    const [la, ln] = searchParams.geo.split(',').map(Number);
+    if (Number.isFinite(la) && Number.isFinite(ln)) geo = { lat: la, lng: ln };
+  }
+  const nearbyMetro = geo ? nearestMetro(geo.lat, geo.lng) : null;
 
   const organizationSchema = {
     '@context': 'https://schema.org',
@@ -196,6 +218,7 @@ export default async function Home() {
   return (
     <div className="min-h-screen">
       <RedirectBanner />
+      {nearbyMetro && <NearbyMetroBanner slug={nearbyMetro.slug} label={nearbyMetro.displayName} />}
       {/* Preload hero image with responsive AVIF — matches <picture> srcset in HeroSection */}
       <link
         rel="preload"
@@ -240,57 +263,42 @@ export default async function Home() {
 
       <section className="py-16 bg-[#F0F4F8]">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
+          <div className="text-center mb-10">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              How It Works
+              Popular Metros
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Finding a quality automatic touchless car wash has never been easier
+              Jump straight to the best-rated touchless car washes in a major metro area
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            <Card className="text-center border-2 hover:border-blue-500 transition-colors border-t-4 border-t-blue-500">
-              <CardHeader>
-                <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center mx-auto mb-4">
-                  <MapPin className="w-8 h-8 text-white" />
-                </div>
-                <CardTitle className="text-xl">1. Search Your Area</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-base">
-                  Enter your city or zip code to find touchless car washes nearby
-                </CardDescription>
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 max-w-6xl mx-auto">
+            {POPULAR_METRO_SLUGS.map((slug) => {
+              const metro = getMetroBySlug(slug);
+              if (!metro) return null;
+              return (
+                <Link key={slug} href={`/best/${slug}`} className="group">
+                  <Card className="h-full text-center hover:shadow-lg transition-all cursor-pointer hover:bg-gradient-to-br hover:from-blue-50 hover:to-blue-100 border-t-4 border-t-blue-500">
+                    <CardContent className="p-5 flex flex-col items-center justify-center h-full">
+                      <MapPin className="w-6 h-6 text-blue-500 mb-2 group-hover:scale-110 transition-transform" />
+                      <div className="text-base font-bold text-[#0F2744] leading-tight">
+                        {metro.name}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {metro.displayName.split(',').pop()?.trim()}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
+            })}
+          </div>
 
-            <Card className="text-center border-2 hover:border-green-500 transition-colors border-t-4 border-t-green-500">
-              <CardHeader>
-                <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mx-auto mb-4">
-                  <Eye className="w-8 h-8 text-white" />
-                </div>
-                <CardTitle className="text-xl">2. Compare Options</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-base">
-                  View pricing, amenities, and read verified customer reviews
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center border-2 hover:border-orange-500 transition-colors border-t-4 border-t-orange-500">
-              <CardHeader>
-                <div className="w-16 h-16 rounded-full bg-orange-500 flex items-center justify-center mx-auto mb-4">
-                  <Sparkles className="w-8 h-8 text-white" />
-                </div>
-                <CardTitle className="text-xl">3. Visit & Enjoy</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-base">
-                  Get directions and visit your chosen touchless car wash for a scratch-free clean
-                </CardDescription>
-              </CardContent>
-            </Card>
+          <div className="text-center mt-8">
+            <Link href="/best" className="inline-flex items-center gap-1 text-blue-600 font-medium hover:text-blue-800 transition-colors">
+              View all metro areas
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
         </div>
       </section>
