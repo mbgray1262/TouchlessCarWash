@@ -322,6 +322,45 @@ export function getMetroBySlug(slug: string): MetroArea | undefined {
   return METRO_AREAS.find((m) => m.slug === slug);
 }
 
+/**
+ * Find the metro a city most likely belongs to, for cross-linking city pages
+ * to their /best/[metro] page.
+ *
+ * Resolution order:
+ *   1. Exact city slug == metro slug (e.g. "sioux-falls" → sioux-falls metro)
+ *   2. State + distance fallback — find the closest metro in the same state
+ *      whose radiusMiles covers the city. Useful for cases like Brookline, MA
+ *      which is inside the Boston metro but doesn't share its slug.
+ *
+ * Returns undefined if no matching metro found. The caller should also verify
+ * the metro has enough touchless listings to render a /best/ page before
+ * showing the cross-link.
+ */
+export function findMetroForCity(
+  citySlug: string,
+  stateCode: string,
+  cityLat?: number | null,
+  cityLng?: number | null,
+): MetroArea | undefined {
+  // Try exact slug match first
+  const exact = METRO_AREAS.find((m) => m.slug === citySlug);
+  if (exact && exact.states.includes(stateCode)) return exact;
+
+  // Distance-based fallback (requires city lat/lng — typically from a listing centroid)
+  if (cityLat == null || cityLng == null) return undefined;
+  let bestMetro: MetroArea | undefined;
+  let bestDist = Infinity;
+  for (const metro of METRO_AREAS) {
+    if (!metro.states.includes(stateCode)) continue;
+    const dist = haversineDistance(cityLat, cityLng, metro.lat, metro.lng);
+    if (dist <= metro.radiusMiles && dist < bestDist) {
+      bestMetro = metro;
+      bestDist = dist;
+    }
+  }
+  return bestMetro;
+}
+
 export function getMetrosByRegion(): Record<MetroRegion, MetroArea[]> {
   const grouped: Record<MetroRegion, MetroArea[]> = {
     Northeast: [],

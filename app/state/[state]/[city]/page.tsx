@@ -20,6 +20,8 @@ import {
   INDEXABLE_MIN_EFFECTIVE,
 } from '@/lib/nearby-augment';
 import { FEATURE_FILTERS, MIN_LISTINGS_FOR_FEATURE_PAGE } from '@/lib/feature-filters';
+import { findMetroForCity } from '@/lib/metro-areas';
+import { Trophy } from 'lucide-react';
 
 import type { Metadata } from 'next';
 
@@ -603,25 +605,84 @@ export default async function CityPage({ params }: CityPageProps) {
           </p>
         </div>
 
-        {/* Listings section — client component handles filter/pagination */}
-        <Suspense fallback={
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: Math.min(allListings.length, 12) }).map((_, i) => (
-              <div key={i} className="h-64 bg-gray-100 rounded-xl animate-pulse" />
-            ))}
-          </div>
-        }>
-          <CityListingsClient
-            stateSlug={params.state}
-            citySlug={params.city}
-            stateName={stateName}
-            cityName={cityName}
-            stateCode={stateCode!}
-            allListings={allListings}
-            allFilters={allFilters}
-            filterMap={filterMap}
-          />
-        </Suspense>
+        {/* Find the metro this city belongs to (if any) and compute Best-Of
+            cross-linking signals: the CTA banner above the listings + rank
+            badges on the top 3 cards. Uses the same score formula as
+            /best/[metro] so the rankings agree. */}
+        {(() => {
+          // Use a representative lat/lng from the first listing with coords
+          const sample = allListings.find((l) => l.latitude != null && l.longitude != null);
+          const metro = findMetroForCity(
+            params.city,
+            stateCode!,
+            sample?.latitude ?? undefined,
+            sample?.longitude ?? undefined,
+          );
+
+          // Compute rank by score = rating × log10(reviews + 2). Only listings
+          // with rating > 0 are eligible (matches /best/[metro] behavior).
+          const ratedListings = allListings.filter((l) => (l.rating ?? 0) > 0);
+          const sortedByScore = [...ratedListings].sort(
+            (a, b) =>
+              (b.rating ?? 0) * Math.log10((b.review_count ?? 0) + 2) -
+              (a.rating ?? 0) * Math.log10((a.review_count ?? 0) + 2),
+          );
+          const rankMap: Record<string, number> = {};
+          sortedByScore.slice(0, 3).forEach((l, i) => {
+            rankMap[l.id] = i + 1;
+          });
+
+          return (
+            <>
+              {metro && allListings.length >= 5 && (
+                <div className="mb-8 rounded-2xl border border-yellow-200 bg-gradient-to-r from-yellow-50 to-amber-50 p-5 sm:p-6 shadow-sm">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="shrink-0 w-10 h-10 rounded-full bg-yellow-400 text-yellow-900 flex items-center justify-center shadow">
+                        <Trophy className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-bold text-[#0F2744]">
+                          See the Best Touchless Car Washes in {metro.displayName}
+                        </h2>
+                        <p className="text-sm text-gray-700 mt-0.5">
+                          Our ranked guide to the top {Math.min(10, sortedByScore.length)} verified touchless washes — by rating, review volume, and touchless confirmation.
+                        </p>
+                      </div>
+                    </div>
+                    <Link
+                      href={`/best/${metro.slug}`}
+                      className="shrink-0 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg bg-[#0F2744] text-white text-sm font-semibold hover:bg-[#1a3a5e] transition-colors whitespace-nowrap"
+                    >
+                      View Best Of {metro.displayName.split(',')[0]}
+                      <ChevronRight className="w-4 h-4" />
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              <Suspense fallback={
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {Array.from({ length: Math.min(allListings.length, 12) }).map((_, i) => (
+                    <div key={i} className="h-64 bg-gray-100 rounded-xl animate-pulse" />
+                  ))}
+                </div>
+              }>
+                <CityListingsClient
+                  stateSlug={params.state}
+                  citySlug={params.city}
+                  stateName={stateName}
+                  cityName={cityName}
+                  stateCode={stateCode!}
+                  allListings={allListings}
+                  allFilters={allFilters}
+                  filterMap={filterMap}
+                  rankMap={rankMap}
+                />
+              </Suspense>
+            </>
+          );
+        })()}
 
         {nearbyListings.length > 0 && (
           <div className="mt-14 pt-10 border-t border-gray-200">

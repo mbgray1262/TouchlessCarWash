@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Star, MapPin, Phone, CheckCircle, Navigation, ShieldCheck, Heart, GitCompareArrows } from 'lucide-react';
+import { Star, MapPin, Phone, CheckCircle, Navigation, ShieldCheck, Heart, GitCompareArrows, Trophy } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { type Listing } from '@/lib/supabase';
 import { getStateSlug, slugify } from '@/lib/constants';
@@ -38,13 +38,20 @@ interface ListingCardProps {
   href?: string;
   showVerifiedBadge?: boolean;
   distance?: number; // miles, e.g. 4.2
+  /**
+   * Best-Of rank within the surrounding metro area. When set to 1, 2, or 3
+   * a trophy-style ribbon overlays the card image. Used on city pages to
+   * highlight the top-rated touchless washes and funnel users toward the
+   * /best/[metro] page for the full ranked list.
+   */
+  rank?: number;
 }
 
 const WASH_TYPE_LABELS: Record<string, string> = {
   touchless_automatic: 'Touchless Automatic',
 };
 
-export function ListingCard({ listing, href, showVerifiedBadge = false, distance }: ListingCardProps) {
+export function ListingCard({ listing, href, showVerifiedBadge = false, distance, rank }: ListingCardProps) {
   const defaultHref = `/state/${getStateSlug(listing.state)}/${slugify(listing.city)}/${listing.slug}`;
   const linkHref = href ?? defaultHref;
 
@@ -92,7 +99,12 @@ export function ListingCard({ listing, href, showVerifiedBadge = false, distance
               onError={() => setImgError(true)}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-            {cardLogo && (
+            {rank && rank <= 3 && (
+              <div className="absolute top-2.5 left-2.5 z-10 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-yellow-400 text-yellow-900 text-xs font-bold shadow-lg">
+                <Trophy className="w-3 h-3" />#{rank} Best
+              </div>
+            )}
+            {cardLogo && !(rank && rank <= 3) && (
               <LogoImage
                 src={cardLogo}
                 alt={`${listing.name} logo`}
@@ -140,6 +152,11 @@ export function ListingCard({ listing, href, showVerifiedBadge = false, distance
           <div className="relative h-48 shrink-0">
             <HeroImageFallback variant="card" className="h-48" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+            {rank && rank <= 3 && (
+              <div className="absolute top-2.5 left-2.5 z-10 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-yellow-400 text-yellow-900 text-xs font-bold shadow-lg">
+                <Trophy className="w-3 h-3" />#{rank} Best
+              </div>
+            )}
             <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
               <button
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!isFull || comparing) toggleCompare(listing.id); }}
