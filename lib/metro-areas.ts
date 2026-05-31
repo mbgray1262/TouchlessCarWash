@@ -106,12 +106,12 @@ export const METRO_AREAS: MetroArea[] = [
   // ── Midwest ────────────────────────────────────────────────────────
   { name: 'Chicago', displayName: 'Chicago, IL', slug: 'chicago', lat: 41.8781, lng: -87.6298, radiusMiles: 35, states: ['IL', 'IN', 'WI'], region: 'Midwest' },
   { name: 'Detroit', displayName: 'Detroit, MI', slug: 'detroit', lat: 42.3314, lng: -83.0458, radiusMiles: 30, states: ['MI'], region: 'Midwest' },
-  { name: 'Minneapolis-St. Paul', displayName: 'Minneapolis-St. Paul, MN', slug: 'minneapolis', lat: 44.9778, lng: -93.2650, radiusMiles: 25, states: ['MN', 'WI'], region: 'Midwest' },
+  { name: 'Minneapolis-St. Paul', displayName: 'Minneapolis-St. Paul, MN', slug: 'minneapolis', lat: 44.9778, lng: -93.2650, radiusMiles: 35, states: ['MN', 'WI'], region: 'Midwest' },
   { name: 'Cleveland', displayName: 'Cleveland, OH', slug: 'cleveland', lat: 41.4993, lng: -81.6944, radiusMiles: 25, states: ['OH'], region: 'Midwest' },
   { name: 'Columbus', displayName: 'Columbus, OH', slug: 'columbus', lat: 39.9612, lng: -82.9988, radiusMiles: 25, states: ['OH'], region: 'Midwest' },
   { name: 'Cincinnati', displayName: 'Cincinnati, OH', slug: 'cincinnati', lat: 39.1031, lng: -84.5120, radiusMiles: 25, states: ['OH', 'KY', 'IN'], region: 'Midwest' },
   { name: 'Indianapolis', displayName: 'Indianapolis, IN', slug: 'indianapolis', lat: 39.7684, lng: -86.1581, radiusMiles: 25, states: ['IN'], region: 'Midwest' },
-  { name: 'Milwaukee', displayName: 'Milwaukee, WI', slug: 'milwaukee', lat: 43.0389, lng: -87.9065, radiusMiles: 25, states: ['WI'], region: 'Midwest' },
+  { name: 'Milwaukee', displayName: 'Milwaukee, WI', slug: 'milwaukee', lat: 43.0389, lng: -87.9065, radiusMiles: 30, states: ['WI'], region: 'Midwest' },
   { name: 'Kansas City', displayName: 'Kansas City, MO', slug: 'kansas-city', lat: 39.0997, lng: -94.5786, radiusMiles: 30, states: ['MO', 'KS'], region: 'Midwest' },
   { name: 'St. Louis', displayName: 'St. Louis, MO', slug: 'st-louis', lat: 38.6270, lng: -90.1994, radiusMiles: 30, states: ['MO', 'IL'], region: 'Midwest' },
   { name: 'Grand Rapids', displayName: 'Grand Rapids, MI', slug: 'grand-rapids', lat: 42.9634, lng: -85.6681, radiusMiles: 25, states: ['MI'], region: 'Midwest' },
@@ -154,7 +154,7 @@ export const METRO_AREAS: MetroArea[] = [
   { name: 'Bakersfield', displayName: 'Bakersfield, CA', slug: 'bakersfield', lat: 35.3733, lng: -119.0187, radiusMiles: 25, states: ['CA'], region: 'West' },
   { name: 'Honolulu', displayName: 'Honolulu, HI', slug: 'honolulu', lat: 21.3069, lng: -157.8583, radiusMiles: 20, states: ['HI'], region: 'West' },
   { name: 'Anchorage', displayName: 'Anchorage, AK', slug: 'anchorage', lat: 61.2181, lng: -149.9003, radiusMiles: 20, states: ['AK'], region: 'West' },
-  { name: 'Reno', displayName: 'Reno, NV', slug: 'reno', lat: 39.5296, lng: -119.8138, radiusMiles: 20, states: ['NV'], region: 'West' },
+  { name: 'Reno', displayName: 'Reno, NV', slug: 'reno', lat: 39.5296, lng: -119.8138, radiusMiles: 30, states: ['NV'], region: 'West' },
 
   // Added April 2026 after Sheetz + Kwik Trip + chain expansion revealed new metro clusters.
   { name: 'Sioux Falls', displayName: 'Sioux Falls, SD', slug: 'sioux-falls', lat: 43.5446, lng: -96.7311, radiusMiles: 20, states: ['SD'], region: 'Midwest' },
@@ -211,6 +211,41 @@ export const METRO_AREAS: MetroArea[] = [
   { name: 'Asheville', displayName: 'Asheville, NC', slug: 'asheville', lat: 35.5951, lng: -82.5515, radiusMiles: 20, states: ['NC'], region: 'Southeast' },
   { name: 'Watertown', displayName: 'Watertown, NY', slug: 'watertown-ny', lat: 43.9748, lng: -75.9108, radiusMiles: 20, states: ['NY'], region: 'Northeast' },
   { name: 'Kalispell', displayName: 'Kalispell, MT', slug: 'kalispell', lat: 48.1958, lng: -114.3128, radiusMiles: 20, states: ['MT'], region: 'West' },
+
+  // Added May 31 2026 (batch 2) — geographic clustering (combining nearby
+  // towns) surfaced recognizable metros that were genuine gaps, each with 5+
+  // approved touchless listings within radius. Verified via
+  // scripts/verify-final-metros-2026-05.mjs. Several re-anchored onto the true
+  // metro hub (e.g. Portland ME not Lewiston; Northampton not Springfield —
+  // Springfield MA already falls inside Hartford's radius).
+  { name: 'Lancaster', displayName: 'Lancaster, PA', slug: 'lancaster', lat: 40.0379, lng: -76.3055, radiusMiles: 20, states: ['PA'], region: 'Northeast' },
+  { name: 'Poughkeepsie', displayName: 'Poughkeepsie, NY', slug: 'poughkeepsie', lat: 41.7004, lng: -73.9210, radiusMiles: 20, states: ['NY'], region: 'Northeast' },
+  { name: 'Northampton', displayName: 'Northampton, MA', slug: 'northampton', lat: 42.3251, lng: -72.6412, radiusMiles: 20, states: ['MA'], region: 'Northeast' },
+  { name: 'Utica', displayName: 'Utica-Rome, NY', slug: 'utica', lat: 43.1009, lng: -75.2327, radiusMiles: 20, states: ['NY'], region: 'Northeast' },
+  { name: 'Concord', displayName: 'Concord, NH', slug: 'concord-nh', lat: 43.2081, lng: -71.5376, radiusMiles: 20, states: ['NH'], region: 'Northeast' },
+  { name: 'Elmira', displayName: 'Elmira-Corning, NY', slug: 'elmira', lat: 42.1110, lng: -76.9300, radiusMiles: 20, states: ['NY'], region: 'Northeast' },
+  { name: 'Burlington', displayName: 'Burlington, VT', slug: 'burlington-vt', lat: 44.4759, lng: -73.2121, radiusMiles: 20, states: ['VT'], region: 'Northeast' },
+  { name: 'Portland', displayName: 'Portland, ME', slug: 'portland-me', lat: 43.6591, lng: -70.2568, radiusMiles: 20, states: ['ME'], region: 'Northeast' },
+  { name: 'State College', displayName: 'State College, PA', slug: 'state-college', lat: 40.7934, lng: -77.8600, radiusMiles: 20, states: ['PA'], region: 'Northeast' },
+  { name: 'Ann Arbor', displayName: 'Ann Arbor, MI', slug: 'ann-arbor', lat: 42.2808, lng: -83.7430, radiusMiles: 20, states: ['MI'], region: 'Midwest' },
+  { name: 'Appleton', displayName: 'Appleton-Oshkosh, WI', slug: 'appleton', lat: 44.2619, lng: -88.4154, radiusMiles: 22, states: ['WI'], region: 'Midwest' },
+  { name: 'Green Bay', displayName: 'Green Bay, WI', slug: 'green-bay', lat: 44.5133, lng: -87.9899, radiusMiles: 20, states: ['WI'], region: 'Midwest' },
+  { name: 'La Crosse', displayName: 'La Crosse, WI', slug: 'la-crosse', lat: 43.8014, lng: -91.2396, radiusMiles: 20, states: ['WI', 'MN'], region: 'Midwest' },
+  { name: 'Sheboygan', displayName: 'Sheboygan, WI', slug: 'sheboygan', lat: 43.7508, lng: -87.7145, radiusMiles: 20, states: ['WI'], region: 'Midwest' },
+  { name: 'Ames', displayName: 'Ames, IA', slug: 'ames', lat: 42.0308, lng: -93.6319, radiusMiles: 20, states: ['IA'], region: 'Midwest' },
+  { name: 'Wausau', displayName: 'Wausau, WI', slug: 'wausau', lat: 44.9591, lng: -89.6301, radiusMiles: 20, states: ['WI'], region: 'Midwest' },
+  { name: 'Mankato', displayName: 'Mankato, MN', slug: 'mankato', lat: 44.1636, lng: -93.9994, radiusMiles: 20, states: ['MN'], region: 'Midwest' },
+  { name: 'Sioux City', displayName: 'Sioux City, IA', slug: 'sioux-city', lat: 42.4999, lng: -96.4003, radiusMiles: 20, states: ['IA', 'NE', 'SD'], region: 'Midwest' },
+  { name: 'Grand Forks', displayName: 'Grand Forks, ND', slug: 'grand-forks', lat: 47.9253, lng: -97.0329, radiusMiles: 20, states: ['ND', 'MN'], region: 'Midwest' },
+  { name: 'Baton Rouge', displayName: 'Baton Rouge, LA', slug: 'baton-rouge', lat: 30.4515, lng: -91.1871, radiusMiles: 25, states: ['LA'], region: 'Southeast' },
+  { name: 'Columbia', displayName: 'Columbia, SC', slug: 'columbia-sc', lat: 34.0007, lng: -81.0348, radiusMiles: 20, states: ['SC'], region: 'Southeast' },
+  { name: 'West Palm Beach', displayName: 'West Palm Beach, FL', slug: 'west-palm-beach', lat: 26.7153, lng: -80.0534, radiusMiles: 20, states: ['FL'], region: 'Southeast' },
+  { name: 'Huntington', displayName: 'Huntington, WV', slug: 'huntington-wv', lat: 38.4192, lng: -82.4452, radiusMiles: 20, states: ['WV', 'KY', 'OH'], region: 'Southeast' },
+  { name: 'Northwest Arkansas', displayName: 'Fayetteville-Bentonville, AR', slug: 'northwest-arkansas', lat: 36.2100, lng: -94.1800, radiusMiles: 25, states: ['AR'], region: 'Southwest' },
+  { name: 'Tyler', displayName: 'Tyler, TX', slug: 'tyler', lat: 32.3513, lng: -95.3011, radiusMiles: 20, states: ['TX'], region: 'Southwest' },
+  { name: 'Oceanside', displayName: 'Oceanside-Carlsbad, CA', slug: 'oceanside', lat: 33.1959, lng: -117.3795, radiusMiles: 20, states: ['CA'], region: 'West' },
+  { name: 'Redding', displayName: 'Redding, CA', slug: 'redding', lat: 40.5865, lng: -122.3917, radiusMiles: 20, states: ['CA'], region: 'West' },
+  { name: 'Missoula', displayName: 'Missoula, MT', slug: 'missoula', lat: 46.8787, lng: -113.9966, radiusMiles: 20, states: ['MT'], region: 'West' },
 ];
 
 // ── Lookup helpers ─────────────────────────────────────────────────────
