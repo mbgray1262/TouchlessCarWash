@@ -301,6 +301,48 @@ const getBestOfRankings = cache(async (listingId: string): Promise<BestOfRanking
   return (data || []) as BestOfRanking[];
 });
 
+/**
+ * Fetch the OTHER top-ranked listings in the same metro as the current listing.
+ * Used by the "More Top-Ranked Touchless Washes in [Metro]" section on listing
+ * detail pages — gives comparison-shopping users multiple inline click targets,
+ * driving PV/session up beyond what a single /best/ CTA could.
+ *
+ * Returns each sibling listing paired with its rank, ordered by rank.
+ */
+const getMetroSiblingRankings = cache(async (
+  metroSlug: string,
+  excludeListingId: string,
+  limit: number = 5,
+): Promise<Array<{ listing: Listing; rank: number }>> => {
+  // Pull top-ranked listing IDs in the metro (excluding current)
+  const { data: rankRows } = await supabase
+    .from('best_of_rankings')
+    .select('listing_id, rank')
+    .eq('metro_slug', metroSlug)
+    .neq('listing_id', excludeListingId)
+    .order('rank', { ascending: true })
+    .limit(limit);
+
+  if (!rankRows || rankRows.length === 0) return [];
+
+  const ids = rankRows.map(r => r.listing_id as string);
+  const { data: listings } = await supabase
+    .from('listings')
+    .select('id, name, slug, city, state, address, phone, rating, review_count, hero_image, google_photo_url, street_view_url, logo_photo, google_logo_url, amenities, touchless_wash_types, hours, is_touchless, is_featured, is_claimed, touchless_verified, parent_chain')
+    .in('id', ids);
+
+  if (!listings) return [];
+
+  // Preserve the rank order
+  const byId = new Map((listings as unknown as Listing[]).map(l => [l.id, l]));
+  return rankRows
+    .map(r => {
+      const listing = byId.get(r.listing_id as string);
+      return listing ? { listing, rank: r.rank as number } : null;
+    })
+    .filter((x): x is { listing: Listing; rank: number } => x !== null);
+});
+
 export async function generateMetadata({ params }: ListingPageProps): Promise<Metadata> {
   const listing = await getListing(params.slug);
   if (!listing) return { title: 'Listing Not Found', robots: { index: false, follow: false } };
@@ -1053,6 +1095,14 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     getVerificationStats(listing.id),
   ]);
 
+  // If the current listing is ranked in a metro, fetch the OTHER top-ranked
+  // washes from the same metro so we can show them inline as comparison shopping
+  // targets. Skipped when not ranked — the section won't render in that case.
+  const topRankingForSiblings = rankings.length > 0 ? rankings[0] : null;
+  const metroSiblings = topRankingForSiblings
+    ? await getMetroSiblingRankings(topRankingForSiblings.metro_slug, listing.id, 5)
+    : [];
+
   const stateCode = getStateCode(params.state);
   const stateName = stateCode ? getStateName(stateCode) : '';
   const cityName = listing.city;
@@ -1760,6 +1810,53 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                 {chainResult.listings.map((cl) => (
                   <NearbyListingCard key={cl.id} nearby={cl} stateSlug={getStateSlug(cl.state)} />
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Other Top-Ranked washes in the same metro — only renders for
+              listings that themselves carry a Best-Of rank. Surfaces the
+              full ranked alternatives inline so users don't have to bounce
+              to /best/[metro] to discover them. Each card is its own
+              click target (PV/session multiplier). */}
+          {topRanking && metroSiblings.length > 0 && (
+            <div className="mt-10 rounded-2xl border border-yellow-200 bg-gradient-to-br from-yellow-50 to-amber-50 p-5 sm:p-6">
+              <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="shrink-0 w-9 h-9 rounded-full bg-yellow-400 text-yellow-900 flex items-center justify-center shadow">
+                    <Trophy className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-[#0F2744]">
+                      More Top-Ranked Touchless Washes in {topRanking.metro_name}
+                    </h2>
+                    <p className="text-sm text-gray-600 mt-0.5">
+                      {listing.name} ranked #{topRanking.rank}. Here&rsquo;s the rest of the top {Math.min(10, metroSiblings.length + 1)}.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {metroSiblings.map(({ listing: sibling, rank }) => (
+                  <div key={sibling.id} className="relative">
+                    <NearbyListingCard nearby={sibling} stateSlug={getStateSlug(sibling.state)} />
+                    <div className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-400 text-yellow-900 text-[11px] font-bold shadow">
+                      <Trophy className="w-2.5 h-2.5" />#{rank}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 pt-5 border-t border-yellow-200 flex items-center justify-between flex-wrap gap-3">
+                <p className="text-sm text-gray-600">
+                  Ranked by Google ratings, customer reviews, and touchless confirmation.
+                </p>
+                <Link
+                  href={`/best/${topRanking.metro_slug}`}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0F2744] text-white text-sm font-semibold hover:bg-[#1a3a5e] transition-colors"
+                >
+                  View the Full Top 10 in {topRanking.metro_name.split(',')[0]}
+                  <ChevronRight className="w-4 h-4" />
+                </Link>
               </div>
             </div>
           )}
