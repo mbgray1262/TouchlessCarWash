@@ -109,9 +109,12 @@ export function ProductSpotlight({
     </a>
     <Link
       href="/shop"
-      className="self-end text-xs font-semibold text-gray-500 hover:text-[#22C55E] transition-colors"
+      className="group/shop inline-flex items-center justify-center gap-1.5 self-stretch rounded-xl border border-[#22C55E]/40 bg-[#22C55E]/5 px-5 py-3 text-sm font-bold text-[#0F2744] hover:bg-[#22C55E]/10 hover:border-[#22C55E] transition-colors"
     >
-      Browse all touchless car wash gear &rarr;
+      Browse all touchless car wash gear
+      <span className="transition-transform group-hover/shop:translate-x-0.5">
+        &rarr;
+      </span>
     </Link>
     </div>
   );
