@@ -313,6 +313,20 @@ async function getGenericReviews(listingId: string, limit = 6): Promise<ReviewSn
 }
 
 /**
+ * Active equipment-wash videos (the "See a Touchless Wash in Action" pool),
+ * managed at /admin/videos. Returns them in admin-defined order; the
+ * TouchlessVideo component deterministically picks one by listing id.
+ */
+async function getEquipmentVideos(): Promise<{ id: string; title: string }[]> {
+  const { data } = await supabase
+    .from('equipment_videos')
+    .select('youtube_id,title')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true });
+  return (data || []).map((v) => ({ id: v.youtube_id as string, title: v.title as string }));
+}
+
+/**
  * Count of touchless-evidence review_snippets for this listing. Used by
  * isThinListing to gate indexing of chain listings — ≥1 customer
  * confirmation that the wash IS touchless unlocks the page. We count
@@ -1166,13 +1180,14 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     permanentRedirect(`/state/${params.state}/${canonicalCitySlug}/${params.slug}`);
   }
 
-  const [nearbyListings, reviewSnippets, genericReviews, rankings, chainResult, verificationStats] = await Promise.all([
+  const [nearbyListings, reviewSnippets, genericReviews, rankings, chainResult, verificationStats, equipmentVideos] = await Promise.all([
     getNearbyListings(listing),
     getReviewSnippets(listing.id),
     getGenericReviews(listing.id),
     getBestOfRankings(listing.id),
     getChainListings(listing),
     getVerificationStats(listing.id),
+    getEquipmentVideos(),
   ]);
 
   // If the current listing is ranked in a metro, fetch the OTHER top-ranked
@@ -1752,7 +1767,9 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                 </div>
               )}
 
-              <TouchlessVideo listingId={listing.id} />
+              {equipmentVideos.length > 0 && (
+                <TouchlessVideo listingId={listing.id} videos={equipmentVideos} />
+              )}
 
               <div className="bg-white rounded-2xl border border-gray-200 p-6">
                 <h2 className="text-lg font-bold text-[#0F2744] mb-5 flex items-center gap-2">
