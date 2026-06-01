@@ -12,6 +12,7 @@ import {
   getModelsByBrand,
 } from "@/lib/equipment-data";
 import { slugify, US_STATES } from "@/lib/constants";
+import { EquipmentModelVideo } from "@/components/EquipmentModelVideo";
 
 export const dynamic = 'force-dynamic'; // see /state/.../slug for context — Netlify CDN cache (netlify.toml) handles edge perf; force-dynamic prevents the Next.js ISR etag-based 304-without-body bug that kept breaking /blog and /best on the CDN.
 
@@ -60,6 +61,22 @@ async function getModelListingCount(brandSlug: string, modelName: string) {
   return count || 0;
 }
 
+// One admin-tagged, active video for this exact model (if any). Lowest
+// sort_order wins so the order set on /admin/videos decides which clip shows.
+async function getModelVideo(brandSlug: string, modelSlug: string) {
+  const { data } = await supabase
+    .from("equipment_videos")
+    .select("youtube_id")
+    .eq("brand_slug", brandSlug)
+    .eq("model_slug", modelSlug)
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  return (data?.youtube_id as string) || null;
+}
+
 async function getModelListings(brandSlug: string, modelName: string) {
   const { data } = await supabase
     .from("listings")
@@ -92,9 +109,10 @@ export default async function ModelDetailPage({ params }: Props) {
     permanentRedirect(`/equipment/${brandSlug}`);
   }
 
-  const [listingCount, listings] = await Promise.all([
+  const [listingCount, listings, modelVideoId] = await Promise.all([
     getModelListingCount(brandSlug, model.name),
     getModelListings(brandSlug, model.name),
+    getModelVideo(brandSlug, model.slug),
   ]);
 
   const siblingModels = getModelsByBrand(brandSlug).filter(
@@ -191,6 +209,11 @@ export default async function ModelDetailPage({ params }: Props) {
             </p>
           )}
         </div>
+
+        {/* Equipment video (only if an admin has tagged a clip to this model) */}
+        {modelVideoId && (
+          <EquipmentModelVideo youtubeId={modelVideoId} modelName={model.name} />
+        )}
 
         {/* Key features */}
         {model.keyFeatures && model.keyFeatures.length > 0 && (

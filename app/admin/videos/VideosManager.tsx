@@ -4,6 +4,7 @@ import { useState } from 'react';
 import {
   Plus, Trash2, Eye, EyeOff, ArrowUp, ArrowDown, ExternalLink, Loader2, Check, X, Pencil,
 } from 'lucide-react';
+import { EQUIPMENT_BRAND_DATA, EQUIPMENT_MODEL_DATA } from '@/lib/equipment-data';
 
 export type EquipmentVideoRow = {
   id: string;
@@ -13,7 +14,18 @@ export type EquipmentVideoRow = {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  brand_slug: string | null;
+  model_slug: string | null;
 };
+
+// Brand-grouped model list for the "show on equipment page" dropdown. Built
+// once from the static equipment catalog. Option value is "brand|model".
+const MODEL_OPTIONS = EQUIPMENT_BRAND_DATA
+  .map((brand) => ({
+    label: brand.label,
+    models: EQUIPMENT_MODEL_DATA.filter((m) => m.brandSlug === brand.slug),
+  }))
+  .filter((g) => g.models.length > 0);
 
 export default function VideosManager({ initial }: { initial: EquipmentVideoRow[] }) {
   const [videos, setVideos] = useState<EquipmentVideoRow[]>(initial);
@@ -119,6 +131,13 @@ export default function VideosManager({ initial }: { initial: EquipmentVideoRow[
     } finally {
       setBusyId(null);
     }
+  }
+
+  // Tag (or untag) a video to an equipment model. Value is "brand|model" or
+  // "" to clear. Cleared tags send empty strings; the API turns those to null.
+  async function setModelTag(id: string, value: string) {
+    const [brand_slug, model_slug] = value ? value.split('|') : ['', ''];
+    await patch(id, { brand_slug, model_slug } as Partial<EquipmentVideoRow>);
   }
 
   function startEdit(v: EquipmentVideoRow) {
@@ -244,6 +263,27 @@ export default function VideosManager({ initial }: { initial: EquipmentVideoRow[
                     Open on YouTube <ExternalLink className="w-3 h-3" />
                   </a>
                   {!v.is_active && <span className="text-amber-600 font-medium">Hidden</span>}
+                </div>
+                {/* Equipment-page tag */}
+                <div className="mt-2 flex items-center gap-2">
+                  <label className="text-xs text-gray-400 shrink-0">Show on equipment page:</label>
+                  <select
+                    value={v.brand_slug && v.model_slug ? `${v.brand_slug}|${v.model_slug}` : ''}
+                    onChange={(e) => setModelTag(v.id, e.target.value)}
+                    disabled={busyId !== null}
+                    className="max-w-[16rem] rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 focus:border-orange-400 focus:ring-1 focus:ring-orange-400 outline-none disabled:opacity-50"
+                  >
+                    <option value="">— Not shown on an equipment page —</option>
+                    {MODEL_OPTIONS.map((group) => (
+                      <optgroup key={group.label} label={group.label}>
+                        {group.models.map((m) => (
+                          <option key={`${m.brandSlug}|${m.slug}`} value={`${m.brandSlug}|${m.slug}`}>
+                            {m.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
                 </div>
               </div>
 

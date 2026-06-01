@@ -158,6 +158,16 @@ export async function PATCH(req: NextRequest) {
     if (typeof body.title === 'string') update.title = body.title.trim();
     if (typeof body.is_active === 'boolean') update.is_active = body.is_active;
     if (typeof body.sort_order === 'number') update.sort_order = body.sort_order;
+    // Equipment-page tagging. Sent together; an empty string clears the tag so
+    // the video drops off its equipment page (back to listing-pool only).
+    if ('brand_slug' in body) {
+      const b = typeof body.brand_slug === 'string' ? body.brand_slug.trim() : '';
+      update.brand_slug = b || null;
+    }
+    if ('model_slug' in body) {
+      const m = typeof body.model_slug === 'string' ? body.model_slug.trim() : '';
+      update.model_slug = m || null;
+    }
 
     const { data, error } = await supabaseAdmin
       .from('equipment_videos')
