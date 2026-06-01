@@ -45,3 +45,15 @@ scripts/*-progress.json
 
 # Pipeline report artifacts (local only)
 scripts/*-report.json
+
+# Script run logs and Python caches (local only)
+scripts/*.err
+scripts/*.out
+scripts/__pycache__/
+scripts/discovery-output/
+
+# Supabase CLI local temp state
+supabase/.temp/
+
+# Local editor/agent state
+.claude/launch.json
