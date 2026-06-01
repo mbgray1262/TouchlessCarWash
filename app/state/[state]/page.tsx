@@ -249,6 +249,54 @@ export default async function StatePage({ params }: StatePageProps) {
     })),
   };
 
+  // ── FAQ content ───────────────────────────────────────────────────────
+  // Single source of truth for both the visible <details> accordion and the
+  // FAQPage JSON-LD below, so the two can never drift apart. The first two
+  // Q&As are generated from live state data (unique per state — this dilutes
+  // the duplicate-content signal that the shared "What is touchless" /
+  // "Tesla & BMW" boilerplate creates across all 51 state pages).
+  const topCitiesForFaq = citiesData.slice(0, 5);
+  const topCitiesSentence = topCitiesForFaq.length > 0
+    ? topCitiesForFaq
+        .map((c) => `${c.city} (${c.count} location${c.count !== 1 ? 's' : ''})`)
+        .join(', ')
+    : '';
+
+  const faqItems: { q: string; a: string }[] = [
+    {
+      q: `How many touchless car washes are in ${stateName}?`,
+      a: `Our directory lists ${totalCount} verified touchless car wash${totalCount !== 1 ? ' locations' : ' location'} across ${cities.length} ${cities.length === 1 ? 'city' : 'cities'} in ${stateName}. Each listing has been verified to confirm it offers true touch-free, brushless washing — no physical contact with your vehicle.`,
+    },
+    ...(topCitiesSentence
+      ? [{
+          q: `Which cities in ${stateName} have the most touchless car washes?`,
+          a: `The cities with the most verified touchless car washes in ${stateName} are ${topCitiesSentence}. Browse the full list of cities above to find a no-touch or brushless wash near you anywhere in ${stateName}.`,
+        }]
+      : []),
+    {
+      q: 'What is a touchless car wash?',
+      a: 'A touchless car wash — also known as a touch-free, no-touch, automatic, or laser car wash — uses high-pressure water jets and specialized detergents to clean your vehicle without any physical contact from brushes, cloth, or foam pads. This brushless, automatic wash method eliminates the risk of scratches, swirl marks, and paint damage.',
+    },
+    {
+      q: 'Are touchless car washes safe for ceramic coatings and PPF?',
+      a: 'Yes. Touch-free, brushless car washes are the safest option for vehicles with ceramic coatings, paint protection film (PPF), vinyl wraps, or matte finishes. Because nothing physically touches the surface, there is no risk of peeling, scratching, or damaging these protective layers. This is why owners of Tesla, BMW, Mercedes-Benz, Lexus, Audi, and Porsche vehicles frequently choose touchless washes to protect their investment.',
+    },
+    {
+      q: 'Are touchless car washes safe for Tesla, BMW, and other luxury vehicles?',
+      a: 'Absolutely. Touchless car washes are the safest automated wash option for luxury and high-end vehicles including Tesla Model 3, Model Y, and Model S, BMW 3/5/X Series, Mercedes-Benz C/E-Class, Lexus, Audi, Porsche, Range Rover, and Genesis. Because no brushes or cloth contact your vehicle, there is zero risk of scratching delicate paint, clear coats, ceramic coatings, or paint protection film (PPF). Luxury car owners and auto detailing professionals consistently recommend touch-free washes for preserving showroom-quality finishes.',
+    },
+  ];
+
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqItems.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
+  };
+
   return (
     <div className="min-h-screen">
       <script
@@ -258,6 +306,10 @@ export default async function StatePage({ params }: StatePageProps) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
       <RedirectBanner />
 
@@ -384,42 +436,17 @@ export default async function StatePage({ params }: StatePageProps) {
               Frequently Asked Questions About Touchless Car Washes in {stateName}
             </h2>
             <div className="divide-y divide-gray-200 border border-gray-200 rounded-2xl overflow-hidden bg-white">
-              <details className="group bg-white">
-                <summary className="flex items-center justify-between gap-4 px-6 py-5 cursor-pointer list-none select-none hover:bg-gray-50 transition-colors">
-                  <span className="text-base font-semibold text-gray-900">How many touchless car washes are in {stateName}?</span>
-                  <span className="flex-shrink-0 w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 group-open:rotate-45 transition-transform text-lg leading-none">+</span>
-                </summary>
-                <div className="px-6 pb-6 pt-1 text-gray-600 leading-relaxed text-sm">
-                  Our directory lists {totalCount} verified touchless car wash{totalCount !== 1 ? ' locations' : ' location'} across {cities.length} {cities.length === 1 ? 'city' : 'cities'} in {stateName}. Each listing has been verified to confirm it offers true touch-free, brushless washing — no physical contact with your vehicle.
-                </div>
-              </details>
-              <details className="group bg-white">
-                <summary className="flex items-center justify-between gap-4 px-6 py-5 cursor-pointer list-none select-none hover:bg-gray-50 transition-colors">
-                  <span className="text-base font-semibold text-gray-900">What is a touchless car wash?</span>
-                  <span className="flex-shrink-0 w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 group-open:rotate-45 transition-transform text-lg leading-none">+</span>
-                </summary>
-                <div className="px-6 pb-6 pt-1 text-gray-600 leading-relaxed text-sm">
-                  A touchless car wash — also known as a touch-free, no-touch, automatic, or laser car wash — uses high-pressure water jets and specialized detergents to clean your vehicle without any physical contact from brushes, cloth, or foam pads. This brushless, automatic wash method eliminates the risk of scratches, swirl marks, and paint damage.
-                </div>
-              </details>
-              <details className="group bg-white">
-                <summary className="flex items-center justify-between gap-4 px-6 py-5 cursor-pointer list-none select-none hover:bg-gray-50 transition-colors">
-                  <span className="text-base font-semibold text-gray-900">Are touchless car washes safe for ceramic coatings and PPF?</span>
-                  <span className="flex-shrink-0 w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 group-open:rotate-45 transition-transform text-lg leading-none">+</span>
-                </summary>
-                <div className="px-6 pb-6 pt-1 text-gray-600 leading-relaxed text-sm">
-                  Yes. Touch-free, brushless car washes are the safest option for vehicles with ceramic coatings, paint protection film (PPF), vinyl wraps, or matte finishes. Because nothing physically touches the surface, there is no risk of peeling, scratching, or damaging these protective layers. This is why owners of Tesla, BMW, Mercedes-Benz, Lexus, Audi, and Porsche vehicles frequently choose touchless washes to protect their investment.
-                </div>
-              </details>
-              <details className="group bg-white">
-                <summary className="flex items-center justify-between gap-4 px-6 py-5 cursor-pointer list-none select-none hover:bg-gray-50 transition-colors">
-                  <span className="text-base font-semibold text-gray-900">Are touchless car washes safe for Tesla, BMW, and other luxury vehicles?</span>
-                  <span className="flex-shrink-0 w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 group-open:rotate-45 transition-transform text-lg leading-none">+</span>
-                </summary>
-                <div className="px-6 pb-6 pt-1 text-gray-600 leading-relaxed text-sm">
-                  Absolutely. Touchless car washes are the safest automated wash option for luxury and high-end vehicles including Tesla Model 3, Model Y, and Model S, BMW 3/5/X Series, Mercedes-Benz C/E-Class, Lexus, Audi, Porsche, Range Rover, and Genesis. Because no brushes or cloth contact your vehicle, there is zero risk of scratching delicate paint, clear coats, ceramic coatings, or paint protection film (PPF). Luxury car owners and auto detailing professionals consistently recommend touch-free washes for preserving showroom-quality finishes.
-                </div>
-              </details>
+              {faqItems.map((item) => (
+                <details key={item.q} className="group bg-white">
+                  <summary className="flex items-center justify-between gap-4 px-6 py-5 cursor-pointer list-none select-none hover:bg-gray-50 transition-colors">
+                    <span className="text-base font-semibold text-gray-900">{item.q}</span>
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 group-open:rotate-45 transition-transform text-lg leading-none">+</span>
+                  </summary>
+                  <div className="px-6 pb-6 pt-1 text-gray-600 leading-relaxed text-sm">
+                    {item.a}
+                  </div>
+                </details>
+              ))}
             </div>
           </section>
 
