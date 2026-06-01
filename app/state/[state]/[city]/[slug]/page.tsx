@@ -266,10 +266,19 @@ async function getReviewSnippets(listingId: string): Promise<ReviewSnippet[]> {
 }
 
 /**
- * Positive, on-topic customer reviews that are NOT touchless-evidence snippets.
- * Powers the "More Customer Reviews" section below the touchless-evidence reviews.
- * Strict filters keep quality high: only sentiment='positive' and rating >= 4,
- * so 1-star complaints and off-topic gas-station reviews never surface here.
+ * A balanced, honest sample of general (non-touchless-evidence) customer reviews
+ * for the "More Customer Reviews" section. Shows mostly positive reviews plus a
+ * couple of genuine critical ones, each rendered with its real sentiment badge,
+ * so visitors see a representative picture rather than a cherry-picked one.
+ *
+ * Excluded: neutral/off-topic reviews (the sentiment classifier already buckets
+ * gas-station/food/lukewarm reviews as 'neutral'), and reviews that dispute the
+ * touchless classification — those are confusing under a wash we've verified as
+ * touchless and are already handled by the community-verification widget.
+ *
+ * The section is anchored by positive reviews: if a listing has none, we render
+ * nothing rather than a negative-only block (the main rating already reflects
+ * dissatisfaction). Critical reviews are included only as the minority view.
  */
 async function getGenericReviews(listingId: string, limit = 6): Promise<ReviewSnippet[]> {
   const { data } = await supabase
@@ -277,12 +286,28 @@ async function getGenericReviews(listingId: string, limit = 6): Promise<ReviewSn
     .select('*')
     .eq('listing_id', listingId)
     .eq('is_touchless_evidence', false)
-    .eq('sentiment', 'positive')
-    .gte('rating', 4)
-    .order('rating', { ascending: false, nullsFirst: false })
-    .limit(limit);
+    .in('sentiment', ['positive', 'negative'])
+    .not('rating', 'is', null)
+    .order('iso_date', { ascending: false, nullsFirst: false });
 
-  return (data || []) as ReviewSnippet[];
+  const rows = (data || []) as ReviewSnippet[];
+
+  // Drop reviews arguing the wash isn't really touchless.
+  const disputesTouchless = (t: string) =>
+    /touch/i.test(t) &&
+    /(not|isn.?t|wasn.?t|aren.?t)\s+(really\s+|actually\s+)?touch|touched my (car|vehicle)|strips?\s+touch|brush(es)?\s+touch|anything\s+touch/i.test(t);
+  const eligible = rows.filter((r) => r.review_text && !disputesTouchless(r.review_text));
+
+  const positives = eligible.filter((r) => r.sentiment === 'positive' && (r.rating ?? 0) >= 4);
+  if (positives.length === 0) return [];
+
+  const critical = eligible.filter((r) => r.sentiment === 'negative');
+  const maxCritical = Math.min(2, critical.length, Math.max(0, limit - 2));
+  const chosen = [
+    ...positives.slice(0, limit - maxCritical),
+    ...critical.slice(0, maxCritical),
+  ];
+  return chosen.slice(0, limit);
 }
 
 /**
@@ -1653,15 +1678,15 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                 <div className="bg-white rounded-2xl border border-gray-200 p-6">
                   <div className="flex items-center justify-between mb-1">
                     <h2 className="text-lg font-bold text-[#0F2744] flex items-center gap-2">
-                      <ThumbsUp className="w-5 h-5 text-[#22C55E]" />
+                      <MessageSquareQuote className="w-5 h-5 text-[#0F2744]" />
                       More Customer Reviews
                     </h2>
-                    <span className="text-xs font-semibold text-[#22C55E] bg-green-50 border border-green-200 px-2.5 py-1 rounded-full whitespace-nowrap">
+                    <span className="text-xs font-semibold text-gray-600 bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-full whitespace-nowrap">
                       {genericReviews.length} {genericReviews.length === 1 ? 'review' : 'reviews'}
                     </span>
                   </div>
                   <p className="text-xs text-gray-400 mb-4">
-                    Highly-rated reviews from Google customers at {listing.name}
+                    Recent customer reviews from Google for {listing.name}
                   </p>
                   <div className="space-y-3">
                     {genericReviews.map((snippet) => (
