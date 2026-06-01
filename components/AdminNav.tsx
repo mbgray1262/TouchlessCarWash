@@ -8,7 +8,7 @@ import {
   Link2, Database, Zap, Filter, Sparkles, PenLine, Eye, LogOut, LinkIcon,
   FlaskConical, Map, BarChart3, ChevronDown, Menu, X, Search, Image,
   Clock, MessageSquareText, Pickaxe, Package, Bug, FileEdit, Globe, Camera, Merge,
-  ThumbsUp,
+  ThumbsUp, Video,
 } from 'lucide-react';
 import { useAdminAuth } from './AdminAuthProvider';
 
@@ -58,6 +58,7 @@ const navigation: NavEntry[] = [
     icon: FileText,
     items: [
       { href: '/admin/blog', label: 'Blog', icon: FileText },
+      { href: '/admin/videos', label: 'Equipment Videos', icon: Video },
       { href: '/admin/suggested-edits', label: 'Suggested Edits', icon: PenLine },
       { href: '/admin/community-verifications', label: 'Community Verifications', icon: ThumbsUp },
     ],
