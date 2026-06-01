@@ -20,6 +20,8 @@ import { ListingBreadcrumb } from '@/components/ListingBreadcrumb';
 import { RelatedReading } from '@/components/RelatedReading';
 import { ProductGrid } from '@/components/ProductGrid';
 import { ProductSidebar } from '@/components/ProductSidebar';
+import { SavingsCalculator } from '@/components/SavingsCalculator';
+import { TouchlessVideo } from '@/components/TouchlessVideo';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
@@ -263,6 +265,51 @@ async function getReviewSnippets(listingId: string): Promise<ReviewSnippet[]> {
     .limit(50);
 
   return (data || []) as ReviewSnippet[];
+}
+
+/**
+ * A balanced, honest sample of general (non-touchless-evidence) customer reviews
+ * for the "More Customer Reviews" section. Shows mostly positive reviews plus a
+ * couple of genuine critical ones, each rendered with its real sentiment badge,
+ * so visitors see a representative picture rather than a cherry-picked one.
+ *
+ * Excluded: neutral/off-topic reviews (the sentiment classifier already buckets
+ * gas-station/food/lukewarm reviews as 'neutral'), and reviews that dispute the
+ * touchless classification — those are confusing under a wash we've verified as
+ * touchless and are already handled by the community-verification widget.
+ *
+ * The section is anchored by positive reviews: if a listing has none, we render
+ * nothing rather than a negative-only block (the main rating already reflects
+ * dissatisfaction). Critical reviews are included only as the minority view.
+ */
+async function getGenericReviews(listingId: string, limit = 6): Promise<ReviewSnippet[]> {
+  const { data } = await supabase
+    .from('review_snippets')
+    .select('*')
+    .eq('listing_id', listingId)
+    .eq('is_touchless_evidence', false)
+    .in('sentiment', ['positive', 'negative'])
+    .not('rating', 'is', null)
+    .order('iso_date', { ascending: false, nullsFirst: false });
+
+  const rows = (data || []) as ReviewSnippet[];
+
+  // Drop reviews arguing the wash isn't really touchless.
+  const disputesTouchless = (t: string) =>
+    /touch/i.test(t) &&
+    /(not|isn.?t|wasn.?t|aren.?t)\s+(really\s+|actually\s+)?touch|touched my (car|vehicle)|strips?\s+touch|brush(es)?\s+touch|anything\s+touch/i.test(t);
+  const eligible = rows.filter((r) => r.review_text && !disputesTouchless(r.review_text));
+
+  const positives = eligible.filter((r) => r.sentiment === 'positive' && (r.rating ?? 0) >= 4);
+  if (positives.length === 0) return [];
+
+  const critical = eligible.filter((r) => r.sentiment === 'negative');
+  const maxCritical = Math.min(2, critical.length, Math.max(0, limit - 2));
+  const chosen = [
+    ...positives.slice(0, limit - maxCritical),
+    ...critical.slice(0, maxCritical),
+  ];
+  return chosen.slice(0, limit);
 }
 
 /**
@@ -658,6 +705,38 @@ function asArray(val: unknown): string[] {
   }
   const single = toStr(val);
   return single ? [single] : [];
+}
+
+function parsePrice(raw: unknown): number | null {
+  const m = String(raw ?? '').match(/\d+(?:\.\d+)?/);
+  if (!m) return null;
+  const n = parseFloat(m[0]);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+// Pull only monthly-priced unlimited/membership plans for the savings calculator.
+function monthlyMemberships(listing: Listing): { name: string; price: number }[] {
+  const plans = Array.isArray(listing.extracted_data?.membership_plans)
+    ? listing.extracted_data!.membership_plans
+    : [];
+  return plans
+    .filter((p) => /month|\/mo\b|monthly/i.test(String(p.price ?? '')))
+    .map((p) => ({ name: p.name, price: parsePrice(p.price) }))
+    .filter((p): p is { name: string; price: number } => p.price !== null && p.price < 200)
+    .slice(0, 8);
+}
+
+// Representative single-wash price (median of priced wash packages) to pre-fill
+// the calculator; falls back to a neutral $15 the user can edit.
+function defaultWashPrice(listing: Listing): number {
+  const prices = (listing.wash_packages || [])
+    .map((p) => parsePrice(p.price))
+    .filter((n): n is number => n !== null && n < 100)
+    .sort((a, b) => a - b);
+  if (prices.length === 0) return 15;
+  const mid = Math.floor(prices.length / 2);
+  const median = prices.length % 2 ? prices[mid] : (prices[mid - 1] + prices[mid]) / 2;
+  return Math.round(median);
 }
 
 function buildFAQs(listing: Listing, hours: Record<string, string> | null): { q: string; a: string }[] {
@@ -1087,9 +1166,10 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     permanentRedirect(`/state/${params.state}/${canonicalCitySlug}/${params.slug}`);
   }
 
-  const [nearbyListings, reviewSnippets, rankings, chainResult, verificationStats] = await Promise.all([
+  const [nearbyListings, reviewSnippets, genericReviews, rankings, chainResult, verificationStats] = await Promise.all([
     getNearbyListings(listing),
     getReviewSnippets(listing.id),
+    getGenericReviews(listing.id),
     getBestOfRankings(listing.id),
     getChainListings(listing),
     getVerificationStats(listing.id),
@@ -1507,6 +1587,15 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                 </div>
               )}
 
+              {/* Subscription savings calculator — only where real monthly membership pricing exists */}
+              {monthlyMemberships(listing).length > 0 && (
+                <SavingsCalculator
+                  listingName={listing.name}
+                  memberships={monthlyMemberships(listing)}
+                  defaultWashPrice={defaultWashPrice(listing)}
+                />
+              )}
+
               {/* Special Features & Payment Methods from extracted_data */}
               {listing.extracted_data && (asArray(listing.extracted_data.special_features).length > 0 || asArray(listing.extracted_data.payment_methods).length > 0) && (
                 <div className="bg-white rounded-2xl border border-gray-200 p-6">
@@ -1624,6 +1713,46 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                   )}
                 </div>
               )}
+
+              {/* More Customer Reviews — positive, on-topic Google reviews that
+                  aren't touchless-evidence. Adds review depth to drive engagement
+                  without diluting the curated touchless-evidence section above. */}
+              {genericReviews.length > 0 && (
+                <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                  <div className="flex items-center justify-between mb-1">
+                    <h2 className="text-lg font-bold text-[#0F2744] flex items-center gap-2">
+                      <MessageSquareQuote className="w-5 h-5 text-[#0F2744]" />
+                      More Customer Reviews
+                    </h2>
+                    <span className="text-xs font-semibold text-gray-600 bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-full whitespace-nowrap">
+                      {genericReviews.length} {genericReviews.length === 1 ? 'review' : 'reviews'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400 mb-4">
+                    Recent customer reviews from Google for {listing.name}
+                  </p>
+                  <div className="space-y-3">
+                    {genericReviews.map((snippet) => (
+                      <ReviewSnippetCard key={snippet.id} snippet={snippet} />
+                    ))}
+                  </div>
+                  {listing.google_place_id && (
+                    <div className="mt-4 pt-3 border-t border-gray-100">
+                      <a
+                        href={`https://search.google.com/local/reviews?placeid=${listing.google_place_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-[#22C55E] hover:underline font-medium flex items-center gap-1.5"
+                      >
+                        Read all reviews on Google
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <TouchlessVideo listingId={listing.id} />
 
               <div className="bg-white rounded-2xl border border-gray-200 p-6">
                 <h2 className="text-lg font-bold text-[#0F2744] mb-5 flex items-center gap-2">
