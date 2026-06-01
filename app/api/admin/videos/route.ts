@@ -67,13 +67,26 @@ async function validateYouTube(
     return { ok: false, reason: 'Could not reach YouTube to verify the video.' };
   }
 
+  // Best-effort embeddability probe. We only REJECT when YouTube explicitly
+  // reports embedding is disabled ("playableInEmbed":false). We must NOT reject
+  // merely because the marker is absent: from a datacenter IP, YouTube often
+  // serves a cookie-consent / bot page that omits it, which previously caused
+  // false "embedding disabled" errors on perfectly embeddable videos. oEmbed
+  // above (200 vs 401) already covers the common embedding-disabled case.
   try {
-    const html = await fetch(`https://www.youtube.com/watch?v=${id}`, { cache: 'no-store' }).then((r) => r.text());
-    if (!html.includes('"playableInEmbed":true')) {
+    const html = await fetch(`https://www.youtube.com/watch?v=${id}`, {
+      cache: 'no-store',
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+        cookie: 'CONSENT=YES+1',
+      },
+    }).then((r) => r.text());
+    if (html.includes('"playableInEmbed":false')) {
       return { ok: false, reason: 'This video cannot be embedded on other sites (owner disabled embedding).' };
     }
   } catch {
-    // If the embeddability probe fails but oEmbed succeeded, allow it through.
+    // Probe failed — fall back to the oEmbed result and allow it through.
   }
   return { ok: true, title };
 }
