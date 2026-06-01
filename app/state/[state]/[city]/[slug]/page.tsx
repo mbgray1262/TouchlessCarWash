@@ -21,6 +21,7 @@ import { RelatedReading } from '@/components/RelatedReading';
 import { ProductGrid } from '@/components/ProductGrid';
 import { ProductSidebar } from '@/components/ProductSidebar';
 import { SavingsCalculator } from '@/components/SavingsCalculator';
+import { TouchlessVideo } from '@/components/TouchlessVideo';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
@@ -1750,6 +1751,8 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                   )}
                 </div>
               )}
+
+              <TouchlessVideo listingId={listing.id} />
 
               <div className="bg-white rounded-2xl border border-gray-200 p-6">
                 <h2 className="text-lg font-bold text-[#0F2744] mb-5 flex items-center gap-2">
