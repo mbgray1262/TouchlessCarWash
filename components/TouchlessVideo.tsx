@@ -3,17 +3,17 @@
 import { useState } from 'react';
 import { Play, Youtube } from 'lucide-react';
 
-// Curated pool of generic, evergreen touchless-wash explainer videos. These are
-// intentionally NOT matched to any listing's equipment — they explain how
-// touchless washing works in general, so they are safe for every location.
-// All verified public + embeddable. Rotated by listing id for variety.
+// Curated pool of real touchless equipment-in-action footage (robotic-arch wash
+// process + a real customer POV drive-through) — NOT talking-head explainers.
+// These are generic, evergreen clips intentionally NOT matched to any listing's
+// specific equipment, so they are safe for every location. All verified public +
+// embeddable. Rotated by listing id for variety.
 const VIDEOS: { id: string; title: string }[] = [
-  { id: 'wtbbcsBTHl4', title: 'How do touchless car washes work?' },
-  { id: '3Kfh4WQtq6A', title: 'Touchless automatic car washes' },
-  { id: 'xAvWxFeXrko', title: 'A touchless wash cleaning a dirty car' },
-  { id: '6XedoKvOTL0', title: 'How to use a touchless wash and avoid swirls' },
-  { id: 'br2qSO0TkZw', title: 'Is a contactless wash really cleaning your car?' },
-  { id: '81sSltx4kag', title: 'The truth about touchless washing' },
+  { id: 'maLC0s1YEBs', title: 'Touchless wash — full automatic process' },
+  { id: 'ZjqRLZL4boc', title: 'Touchless washing robot with moving dryer' },
+  { id: 'o3An-VWWXYM', title: 'Touchless wash with high-power air drying' },
+  { id: 'si2AFsPUGXA', title: 'Compact touchless wash — full process' },
+  { id: '8rUdWbXJxfY', title: 'POV: driving through a touchless wash' },
 ];
 
 function pickIndex(seed: string): number {
@@ -30,10 +30,10 @@ export function TouchlessVideo({ listingId }: { listingId: string }) {
     <div className="bg-white rounded-2xl border border-gray-200 p-6">
       <h2 className="text-lg font-bold text-[#0F2744] mb-1 flex items-center gap-2">
         <Youtube className="w-5 h-5 text-[#22C55E]" />
-        How Touchless Car Washes Work
+        See a Touchless Wash in Action
       </h2>
       <p className="text-xs text-gray-400 mb-4">
-        A quick video on what to expect from a touchless wash.
+        Real touchless equipment washing a car — no brushes, no contact.
       </p>
 
       <div className="relative w-full overflow-hidden rounded-xl bg-black" style={{ aspectRatio: '16 / 9' }}>
