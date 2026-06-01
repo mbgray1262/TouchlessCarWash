@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase';
 import { US_STATES, getStateSlug, slugify } from '@/lib/constants';
 import { METRO_AREAS, boundingBox, haversineDistance } from '@/lib/metro-areas';
 import { FEATURES } from '@/lib/features';
-import { EQUIPMENT_BRAND_DATA, EQUIPMENT_MODEL_DATA } from '@/lib/equipment-data';
+import { EQUIPMENT_BRAND_DATA } from '@/lib/equipment-data';
 import { CHAINS } from '@/lib/chains';
 import { isThinListing } from '@/lib/listing-quality';
 import { NEARBY_RADIUS_MILES, INDEXABLE_MIN_EFFECTIVE } from '@/lib/nearby-augment';
@@ -370,34 +370,9 @@ export async function GET() {
     }
   }
 
-  // Get model counts
-  const { data: modelCounts } = await supabase
-    .from('listings')
-    .select('equipment_brand, equipment_model')
-    .eq('is_touchless', true)
-    .eq('is_approved', true)
-    .not('equipment_brand', 'is', null)
-    .not('equipment_model', 'is', null);
-
-  const modelCountMap = new Map<string, number>();
-  for (const row of modelCounts || []) {
-    const key = `${row.equipment_brand}||${row.equipment_model}`;
-    modelCountMap.set(key, (modelCountMap.get(key) ?? 0) + 1);
-  }
-
-  for (const model of EQUIPMENT_MODEL_DATA) {
-    const brand = EQUIPMENT_BRAND_DATA.find(b => b.slug === model.brandSlug);
-    if (!brand) continue;
-    const key = `${model.brandSlug}||${model.name}`;
-    if ((modelCountMap.get(key) ?? 0) >= 2) {
-      equipmentUrls.push(`  <url>
-    <loc>${baseUrl}/equipment/${model.brandSlug}/${model.slug}</loc>
-    <lastmod>${now}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>`);
-    }
-  }
+  // Per-model URLs were retired: every /equipment/<brand>/<model> now
+  // 301-redirects to the vendor page's #model-<slug> section, so we no longer
+  // emit them in the sitemap (the brand URLs above carry the equipment SEO).
 
   // ── Chain pages ──────────────────────────────────────────────────────────────
   const chainUrls: string[] = [];

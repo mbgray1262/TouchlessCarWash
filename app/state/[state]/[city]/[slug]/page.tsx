@@ -1510,8 +1510,10 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                       ? `${brandLabel} · ${listing.equipment_model}`
                       : brandLabel;
                     const brandData = getBrandBySlug(listing.equipment_brand);
+                    // Link straight to the vendor page's model section (the old
+                    // per-model URL now 301-redirects there, so we skip the hop).
                     const equipmentUrl = listing.equipment_model && brandData
-                      ? `/equipment/${listing.equipment_brand}/${slugifyModel(listing.equipment_model)}`
+                      ? `/equipment/${listing.equipment_brand}#model-${slugifyModel(listing.equipment_model)}`
                       : brandData ? `/equipment/${listing.equipment_brand}` : null;
                     return (
                       <div className="text-sm text-gray-700">

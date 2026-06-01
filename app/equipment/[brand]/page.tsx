@@ -12,6 +12,7 @@ import {
 } from "@/lib/equipment-data";
 import { slugify, US_STATES } from "@/lib/constants";
 import { ProductGrid } from "@/components/ProductGrid";
+import { EquipmentModelVideo } from "@/components/EquipmentModelVideo";
 
 export const dynamic = 'force-dynamic'; // see /state/.../slug for context — Netlify CDN cache (netlify.toml) handles edge perf; force-dynamic prevents the Next.js ISR etag-based 304-without-body bug that kept breaking /blog and /best on the CDN.
 
@@ -28,6 +29,10 @@ function getStateSlug(code: string): string {
 
 type Props = {
   params: Promise<{ brand: string }>;
+  // ?model=<exact model name> filters the locations list to one model. The
+  // canonical stays the clean /equipment/<brand> URL (set in generateMetadata),
+  // so filtered views don't get indexed as duplicates.
+  searchParams: Promise<{ model?: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -78,37 +83,64 @@ async function getBrandListingCount(brandSlug: string) {
   return count || 0;
 }
 
-async function getBrandListings(brandSlug: string) {
-  const { data } = await supabase
+async function getBrandListings(brandSlug: string, modelName?: string) {
+  let q = supabase
     .from("listings")
     .select(
       "id, name, slug, city, state, hero_image, hero_focal_point, google_photo_url, equipment_model"
     )
     .eq("equipment_brand", brandSlug)
     .eq("is_touchless", true)
-    .or("hero_image.not.is.null,google_photo_url.not.is.null")
-    .limit(8);
+    .or("hero_image.not.is.null,google_photo_url.not.is.null");
 
+  // When filtered to one model show more of them; otherwise a brand sampler.
+  if (modelName) q = q.eq("equipment_model", modelName).limit(24);
+  else q = q.limit(8);
+
+  const { data } = await q;
   return data || [];
 }
 
-export default async function BrandDetailPage({ params }: Props) {
+// Map of model_slug -> youtube_id for this brand's active, tagged videos.
+// Lowest sort_order wins when a model has more than one tagged clip.
+async function getBrandVideos(brandSlug: string): Promise<Record<string, string>> {
+  const { data } = await supabase
+    .from("equipment_videos")
+    .select("model_slug, youtube_id")
+    .eq("brand_slug", brandSlug)
+    .eq("is_active", true)
+    .not("model_slug", "is", null)
+    .order("sort_order", { ascending: true });
+
+  const map: Record<string, string> = {};
+  for (const row of data ?? []) {
+    const slug = row.model_slug as string;
+    if (slug && !map[slug]) map[slug] = row.youtube_id as string;
+  }
+  return map;
+}
+
+export default async function BrandDetailPage({ params, searchParams }: Props) {
   const { brand: brandSlug } = await params;
+  const { model: modelFilter } = await searchParams;
   const brand = getBrandBySlug(brandSlug);
 
   if (!brand) {
     notFound();
   }
 
-  const [listingCount, modelCounts, listings] = await Promise.all([
+  const [listingCount, modelCounts, listings, videoMap] = await Promise.all([
     getBrandListingCount(brandSlug),
     getModelCounts(brandSlug),
-    getBrandListings(brandSlug),
+    getBrandListings(brandSlug, modelFilter),
+    getBrandVideos(brandSlug),
   ]);
 
   const models = getModelsByBrand(brandSlug);
+  // Show a model section if it has real listings OR a tagged video, so models
+  // like the Saber/Opti 8000 (and any with a clip) always appear.
   const modelsWithListings = models.filter(
-    (model) => (modelCounts[model.name] || 0) > 0
+    (model) => (modelCounts[model.name] || 0) > 0 || !!videoMap[model.slug]
   );
 
   const jsonLd = {
@@ -214,31 +246,61 @@ export default async function BrandDetailPage({ params }: Props) {
           </section>
         )}
 
-        {/* Models section */}
+        {/* Models section — each model inline with description, features and a
+            video where we have one. Replaces the old per-model pages (which now
+            301-redirect to the matching #model-<slug> anchor below). */}
         {modelsWithListings.length > 0 && (
           <section className="mb-16">
             <h2 className="text-2xl font-bold mb-6">
               {brand.label} Models
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="space-y-6">
               {modelsWithListings.map((model) => {
                 const count = modelCounts[model.name] || 0;
+                const videoId = videoMap[model.slug];
                 return (
-                  <Link
+                  <div
                     key={model.slug}
-                    href={`/equipment/${brand.slug}/${model.slug}`}
+                    id={`model-${model.slug}`}
+                    className="scroll-mt-24 bg-white border border-gray-200 rounded-xl p-6"
                   >
-                    <Card className="hover:shadow-lg transition-shadow h-full">
-                      <CardContent className="p-5">
-                        <h3 className="text-lg font-semibold mb-2">
-                          {model.name}
-                        </h3>
-                        <p className="text-sm text-blue-600 font-medium">
-                          {count} {count === 1 ? "location" : "locations"}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </Link>
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 mb-2">
+                      <h3 className="text-xl font-semibold text-[#0F2744]">
+                        {model.name}
+                      </h3>
+                      {count > 0 && (
+                        <Link
+                          href={`/equipment/${brand.slug}?model=${encodeURIComponent(model.name)}#locations`}
+                          className="text-sm text-blue-600 font-medium hover:underline shrink-0"
+                        >
+                          See {count} {count === 1 ? "location" : "locations"} &rarr;
+                        </Link>
+                      )}
+                    </div>
+
+                    <p className="text-gray-700 leading-relaxed">{model.description}</p>
+
+                    {model.bestFor && (
+                      <p className="text-sm text-gray-600 mt-3">
+                        <span className="font-semibold">Best for:</span> {model.bestFor}
+                      </p>
+                    )}
+
+                    {model.keyFeatures && model.keyFeatures.length > 0 && (
+                      <ul className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+                        {model.keyFeatures.map((feature, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                            <span className="text-blue-500 mt-0.5 shrink-0">✓</span>
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    {videoId && (
+                      <EquipmentModelVideo youtubeId={videoId} modelName={model.name} compact />
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -247,10 +309,19 @@ export default async function BrandDetailPage({ params }: Props) {
 
         {/* Listings section */}
         {listings.length > 0 && (
-          <section className="mb-16">
+          <section id="locations" className="mb-16 scroll-mt-24">
             <h2 className="text-2xl font-bold mb-6">
-              Car Washes Using {brand.label}
+              {modelFilter
+                ? `Car Washes Using the ${modelFilter}`
+                : `Car Washes Using ${brand.label}`}
             </h2>
+            {modelFilter && (
+              <p className="-mt-4 mb-6 text-sm text-gray-500">
+                <Link href={`/equipment/${brand.slug}`} className="text-blue-600 hover:underline">
+                  &larr; Show all {brand.label} locations
+                </Link>
+              </p>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {listings.map((listing) => {
                 const image =
