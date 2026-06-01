@@ -3,17 +3,18 @@
 import { useState } from 'react';
 import { Play, Youtube } from 'lucide-react';
 
-// Curated pool of real touchless equipment-in-action footage (robotic-arch wash
-// process + a real customer POV drive-through) — NOT talking-head explainers.
-// These are generic, evergreen clips intentionally NOT matched to any listing's
-// specific equipment, so they are safe for every location. All verified public +
-// embeddable. Rotated by listing id for variety.
+// Curated pool of the most common US in-bay touchless systems actually washing
+// cars at real locations — PDQ LaserWash 360 and WashWorld Razor. NOT talking-head
+// explainers. These are generic, evergreen clips intentionally NOT matched to any
+// listing's specific equipment, so they are safe for every location. All verified
+// public + embeddable. Rotated by listing id for variety.
 const VIDEOS: { id: string; title: string }[] = [
-  { id: 'maLC0s1YEBs', title: 'Touchless wash — full automatic process' },
-  { id: 'ZjqRLZL4boc', title: 'Touchless washing robot with moving dryer' },
-  { id: 'o3An-VWWXYM', title: 'Touchless wash with high-power air drying' },
-  { id: 'si2AFsPUGXA', title: 'Compact touchless wash — full process' },
-  { id: '8rUdWbXJxfY', title: 'POV: driving through a touchless wash' },
+  { id: 'uOreLJusX1U', title: 'PDQ LaserWash 360 Plus — full touchless wash' },
+  { id: 'z7OvJIWFtGo', title: 'PDQ LaserWash 360 Plus touchless wash' },
+  { id: 'O4frXLZWzRw', title: 'PDQ LaserWash 360 Plus touchless system' },
+  { id: 'X6Ms4mlCOPc', title: 'WashWorld Razor EDGE touchless wash' },
+  { id: 'S-yXmRv69do', title: 'WashWorld Razor touchless wash' },
+  { id: 'QzVYH0V__U0', title: 'WashWorld Razor HyperForce touchless wash' },
 ];
 
 function pickIndex(seed: string): number {
