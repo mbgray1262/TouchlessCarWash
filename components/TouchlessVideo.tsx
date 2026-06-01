@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Play, Youtube } from 'lucide-react';
+import Link from 'next/link';
+import { Play, Youtube, ArrowRight } from 'lucide-react';
 
 export type EquipmentVideo = { id: string; title: string };
 
@@ -84,6 +85,19 @@ export function TouchlessVideo({ listingId, videos }: { listingId: string; video
             </span>
           </button>
         )}
+      </div>
+
+      {/* Funnel to the full video hub — drives curious visitors to a
+          binge-able gallery (more pages per session) without crowding this
+          page with extra heavy embeds. */}
+      <div className="mt-4 text-center">
+        <Link
+          href="/videos"
+          className="text-sm text-[#22C55E] hover:underline font-medium inline-flex items-center gap-1.5"
+        >
+          See more touchless washes in action
+          <ArrowRight className="w-4 h-4" />
+        </Link>
       </div>
     </div>
   );

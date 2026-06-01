@@ -118,6 +118,12 @@ export default async function EquipmentIndexPage() {
             range of services offered. Browse the brands below to learn more
             about each manufacturer and find car washes that use their systems.
           </p>
+          <Link
+            href="/videos"
+            className="inline-flex items-center gap-1.5 mt-4 text-sm font-medium text-blue-700 hover:underline"
+          >
+            Watch these systems wash a car →
+          </Link>
         </div>
 
         {/* Mid-content product spotlight */}

@@ -345,6 +345,12 @@ export async function GET() {
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>`);
+  equipmentUrls.push(`  <url>
+    <loc>${baseUrl}/videos</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>`);
 
   // Get equipment brand counts to only include brands with listings
   const { data: brandCounts } = await supabase
