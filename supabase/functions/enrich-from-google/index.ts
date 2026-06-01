@@ -77,13 +77,20 @@ interface PlaceDetails {
   photos?: { photo_reference: string; width: number; height: number }[];
   opening_hours?: { weekday_text?: string[]; open_now?: boolean };
   geometry?: { location?: { lat: number; lng: number } };
+  reviews?: {
+    author_name?: string;
+    rating?: number;
+    text?: string;
+    time?: number;
+    relative_time_description?: string;
+  }[];
 }
 
 async function fetchDetails(placeId: string, key: string): Promise<PlaceDetails | null> {
   const fields = [
     'name', 'business_status', 'types', 'formatted_address', 'geometry/location',
     'formatted_phone_number', 'website',
-    'rating', 'user_ratings_total', 'opening_hours', 'photos',
+    'rating', 'user_ratings_total', 'opening_hours', 'photos', 'reviews',
   ].join(',');
   const r = await fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=${fields}&key=${key}`);
   const d = await r.json();
@@ -92,6 +99,53 @@ async function fetchDetails(placeId: string, key: string): Promise<PlaceDetails 
 
 function photoUrl(photoRef: string, key: string, maxW = 1200): string {
   return `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${maxW}&photo_reference=${photoRef}&key=${key}`;
+}
+
+// Save up to 5 Google reviews as generic (non-touchless-evidence) review_snippets.
+// These power the "More Customer Reviews" section on listing pages. We store them
+// with is_touchless_evidence=false and source='google_places' so they never get
+// confused with the curated touchless-evidence snippets. Sentiment is left null
+// here and classified later by scripts/classify-generic-review-sentiment.mjs.
+// Deduped against existing google_places snippets for this listing by review_id.
+async function saveReviews(
+  supabase: ReturnType<typeof createClient>,
+  listingId: string,
+  reviews: PlaceDetails['reviews'],
+): Promise<number> {
+  if (!reviews || reviews.length === 0) return 0;
+
+  const { data: existing } = await supabase
+    .from('review_snippets')
+    .select('review_id')
+    .eq('listing_id', listingId)
+    .eq('source', 'google_places');
+  const seen = new Set((existing ?? []).map((r: { review_id: string | null }) => r.review_id).filter(Boolean));
+
+  const rows = reviews
+    .slice(0, 5)
+    .filter((rv) => (rv.text ?? '').trim().length >= 15)
+    .map((rv) => {
+      const reviewId = `gpl_${rv.time ?? 0}_${(rv.author_name ?? 'anon').replace(/\s+/g, '').slice(0, 20)}`;
+      return {
+        listing_id: listingId,
+        reviewer_name: rv.author_name ?? null,
+        rating: rv.rating ?? null,
+        review_text: (rv.text ?? '').trim(),
+        review_date: rv.relative_time_description ?? null,
+        iso_date: rv.time ? new Date(rv.time * 1000).toISOString().slice(0, 10) : null,
+        review_id: reviewId,
+        touchless_keywords: [],
+        is_touchless_evidence: false,
+        source: 'google_places',
+        sentiment: null,
+      };
+    })
+    .filter((row) => !seen.has(row.review_id));
+
+  if (rows.length === 0) return 0;
+  const { error } = await supabase.from('review_snippets').insert(rows);
+  if (error) return 0;
+  return rows.length;
 }
 
 // Parse weekday_text (["Monday: 8:00 AM – 10:00 PM", ...]) into {monday:"...", tuesday:"..."} object
@@ -134,7 +188,7 @@ serve(async (req) => {
   const { data: listings, error } = await query.limit(limit);
   if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: corsHeaders });
 
-  let enriched = 0, closed = 0, tunnel = 0, noPid = 0, skipped = 0;
+  let enriched = 0, closed = 0, tunnel = 0, noPid = 0, skipped = 0, reviewsSaved = 0;
   const results: Array<{ id: string; action: string; fields: string[] }> = [];
 
   for (const l of (listings ?? []) as Listing[]) {
@@ -216,13 +270,17 @@ serve(async (req) => {
 
     await supabase.from('listings').update(update).eq('id', l.id);
     enriched++;
+
+    const saved = await saveReviews(supabase, l.id, details.reviews);
+    if (saved > 0) { reviewsSaved += saved; filled.push(`reviews:${saved}`); }
+
     results.push({ id: l.id, action: 'enriched', fields: filled });
   }
 
   return new Response(JSON.stringify({
     mode,
     processed: (listings ?? []).length,
-    enriched, closed, tunnelChain: tunnel, noPid, skipped,
+    enriched, closed, tunnelChain: tunnel, noPid, skipped, reviewsSaved,
     sample: results.slice(0, 10),
   }, null, 2), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 });

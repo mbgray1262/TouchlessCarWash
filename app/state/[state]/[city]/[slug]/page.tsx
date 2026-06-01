@@ -266,6 +266,26 @@ async function getReviewSnippets(listingId: string): Promise<ReviewSnippet[]> {
 }
 
 /**
+ * Positive, on-topic customer reviews that are NOT touchless-evidence snippets.
+ * Powers the "More Customer Reviews" section below the touchless-evidence reviews.
+ * Strict filters keep quality high: only sentiment='positive' and rating >= 4,
+ * so 1-star complaints and off-topic gas-station reviews never surface here.
+ */
+async function getGenericReviews(listingId: string, limit = 6): Promise<ReviewSnippet[]> {
+  const { data } = await supabase
+    .from('review_snippets')
+    .select('*')
+    .eq('listing_id', listingId)
+    .eq('is_touchless_evidence', false)
+    .eq('sentiment', 'positive')
+    .gte('rating', 4)
+    .order('rating', { ascending: false, nullsFirst: false })
+    .limit(limit);
+
+  return (data || []) as ReviewSnippet[];
+}
+
+/**
  * Count of touchless-evidence review_snippets for this listing. Used by
  * isThinListing to gate indexing of chain listings — ≥1 customer
  * confirmation that the wash IS touchless unlocks the page. We count
@@ -1087,9 +1107,10 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     permanentRedirect(`/state/${params.state}/${canonicalCitySlug}/${params.slug}`);
   }
 
-  const [nearbyListings, reviewSnippets, rankings, chainResult, verificationStats] = await Promise.all([
+  const [nearbyListings, reviewSnippets, genericReviews, rankings, chainResult, verificationStats] = await Promise.all([
     getNearbyListings(listing),
     getReviewSnippets(listing.id),
+    getGenericReviews(listing.id),
     getBestOfRankings(listing.id),
     getChainListings(listing),
     getVerificationStats(listing.id),
@@ -1609,6 +1630,44 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                       Scroll to see all {reviewSnippets.length} reviews
                     </p>
                   )}
+                  {listing.google_place_id && (
+                    <div className="mt-4 pt-3 border-t border-gray-100">
+                      <a
+                        href={`https://search.google.com/local/reviews?placeid=${listing.google_place_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-[#22C55E] hover:underline font-medium flex items-center gap-1.5"
+                      >
+                        Read all reviews on Google
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* More Customer Reviews — positive, on-topic Google reviews that
+                  aren't touchless-evidence. Adds review depth to drive engagement
+                  without diluting the curated touchless-evidence section above. */}
+              {genericReviews.length > 0 && (
+                <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                  <div className="flex items-center justify-between mb-1">
+                    <h2 className="text-lg font-bold text-[#0F2744] flex items-center gap-2">
+                      <ThumbsUp className="w-5 h-5 text-[#22C55E]" />
+                      More Customer Reviews
+                    </h2>
+                    <span className="text-xs font-semibold text-[#22C55E] bg-green-50 border border-green-200 px-2.5 py-1 rounded-full whitespace-nowrap">
+                      {genericReviews.length} {genericReviews.length === 1 ? 'review' : 'reviews'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400 mb-4">
+                    Highly-rated reviews from Google customers at {listing.name}
+                  </p>
+                  <div className="space-y-3">
+                    {genericReviews.map((snippet) => (
+                      <ReviewSnippetCard key={snippet.id} snippet={snippet} />
+                    ))}
+                  </div>
                   {listing.google_place_id && (
                     <div className="mt-4 pt-3 border-t border-gray-100">
                       <a
