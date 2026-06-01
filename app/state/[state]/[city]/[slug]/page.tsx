@@ -20,6 +20,7 @@ import { ListingBreadcrumb } from '@/components/ListingBreadcrumb';
 import { RelatedReading } from '@/components/RelatedReading';
 import { ProductGrid } from '@/components/ProductGrid';
 import { ProductSidebar } from '@/components/ProductSidebar';
+import { SavingsCalculator } from '@/components/SavingsCalculator';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
@@ -703,6 +704,38 @@ function asArray(val: unknown): string[] {
   }
   const single = toStr(val);
   return single ? [single] : [];
+}
+
+function parsePrice(raw: unknown): number | null {
+  const m = String(raw ?? '').match(/\d+(?:\.\d+)?/);
+  if (!m) return null;
+  const n = parseFloat(m[0]);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+// Pull only monthly-priced unlimited/membership plans for the savings calculator.
+function monthlyMemberships(listing: Listing): { name: string; price: number }[] {
+  const plans = Array.isArray(listing.extracted_data?.membership_plans)
+    ? listing.extracted_data!.membership_plans
+    : [];
+  return plans
+    .filter((p) => /month|\/mo\b|monthly/i.test(String(p.price ?? '')))
+    .map((p) => ({ name: p.name, price: parsePrice(p.price) }))
+    .filter((p): p is { name: string; price: number } => p.price !== null && p.price < 200)
+    .slice(0, 8);
+}
+
+// Representative single-wash price (median of priced wash packages) to pre-fill
+// the calculator; falls back to a neutral $15 the user can edit.
+function defaultWashPrice(listing: Listing): number {
+  const prices = (listing.wash_packages || [])
+    .map((p) => parsePrice(p.price))
+    .filter((n): n is number => n !== null && n < 100)
+    .sort((a, b) => a - b);
+  if (prices.length === 0) return 15;
+  const mid = Math.floor(prices.length / 2);
+  const median = prices.length % 2 ? prices[mid] : (prices[mid - 1] + prices[mid]) / 2;
+  return Math.round(median);
 }
 
 function buildFAQs(listing: Listing, hours: Record<string, string> | null): { q: string; a: string }[] {
@@ -1551,6 +1584,15 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                     })}
                   </div>
                 </div>
+              )}
+
+              {/* Subscription savings calculator — only where real monthly membership pricing exists */}
+              {monthlyMemberships(listing).length > 0 && (
+                <SavingsCalculator
+                  listingName={listing.name}
+                  memberships={monthlyMemberships(listing)}
+                  defaultWashPrice={defaultWashPrice(listing)}
+                />
               )}
 
               {/* Special Features & Payment Methods from extracted_data */}
