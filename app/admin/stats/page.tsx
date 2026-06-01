@@ -9,7 +9,7 @@ import { US_STATES } from '@/lib/constants';
 // SUPABASE_SERVICE_ROLE_KEY being set on the Netlify side.
 import {
   BarChart3, ShieldCheck, Heart, Star, MessageSquareQuote, Trophy,
-  Globe, Phone, Navigation, TrendingUp, Users, MapPin,
+  Globe, Phone, Navigation, TrendingUp, Users, MapPin, Video,
 } from 'lucide-react';
 
 // Canonical US state codes (50 states + DC) used to dedupe non-US listings
@@ -179,6 +179,7 @@ async function getStats() {
     phoneEvents: phoneEventsRes.count ?? 0,
     websiteEvents: websiteEventsRes.count ?? 0,
     favoriteEvents: favoriteEventsRes.count ?? 0,
+    videoPlayEvents: eventCountMap.video_play ?? 0,
     netFavorites: Math.max(0, netFavorites),
     recentEvents: Number(recentEventsRes.data ?? 0),
     // Intersect with the canonical US state list so non-US codes (Canadian
@@ -230,13 +231,14 @@ export default async function AdminStatsPage() {
 
         {/* Engagement */}
         <h2 className="text-lg font-semibold text-[#0F2744] mb-3">User Engagement</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4 mb-8">
           <StatCard icon={TrendingUp} label="Total Actions" value={totalEngagement + stats.favoriteEvents} sub="all time" color="blue" />
           <StatCard icon={TrendingUp} label="Last 7 Days" value={stats.recentEvents} color="green" />
           <StatCard icon={Navigation} label="Directions" value={stats.directionEvents} color="blue" />
           <StatCard icon={Phone} label="Phone Clicks" value={stats.phoneEvents} color="green" />
           <StatCard icon={Globe} label="Website Clicks" value={stats.websiteEvents} color="purple" />
           <StatCard icon={Heart} label="Favorites" value={stats.favoriteEvents} sub={`${stats.netFavorites} net saved`} color="red" />
+          <StatCard icon={Video} label="Video Plays" value={stats.videoPlayEvents} color="amber" />
         </div>
 
         {/* Top Lists */}

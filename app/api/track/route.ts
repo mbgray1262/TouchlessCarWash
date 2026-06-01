@@ -10,7 +10,7 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
 );
 
-const VALID_EVENTS = new Set(['directions', 'phone', 'website', 'favorite', 'unfavorite']);
+const VALID_EVENTS = new Set(['directions', 'phone', 'website', 'favorite', 'unfavorite', 'video_play']);
 
 export async function POST(request: Request) {
   try {

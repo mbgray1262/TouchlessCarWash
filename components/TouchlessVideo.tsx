@@ -30,6 +30,22 @@ export function TouchlessVideo({ listingId, videos }: { listingId: string; video
   const pool = videos && videos.length > 0 ? videos : FALLBACK_VIDEOS;
   const video = pool[pickIndex(listingId, pool.length)];
 
+  function handlePlay() {
+    setPlaying(true);
+    // Fire-and-forget engagement tracking (shows up as "Video Plays" in admin
+    // stats). Never block playback or surface errors if tracking fails.
+    try {
+      fetch('/api/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listing_id: listingId, event_type: 'video_play' }),
+        keepalive: true,
+      }).catch(() => {});
+    } catch {
+      /* ignore */
+    }
+  }
+
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-6">
       <h2 className="text-lg font-bold text-[#0F2744] mb-1 flex items-center gap-2">
@@ -52,7 +68,7 @@ export function TouchlessVideo({ listingId, videos }: { listingId: string; video
         ) : (
           <button
             type="button"
-            onClick={() => setPlaying(true)}
+            onClick={handlePlay}
             aria-label={`Play video: ${video.title}`}
             className="group absolute inset-0 h-full w-full"
           >
