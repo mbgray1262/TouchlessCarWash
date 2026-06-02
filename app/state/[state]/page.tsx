@@ -140,7 +140,15 @@ export async function generateMetadata({ params }: StatePageProps): Promise<Meta
     : `Find ${totalCount}+ verified touchless car washes near you in ${stateName} — no-touch, brushless locations across ${citiesData.length} cities${topCitySnippet}. Ratings, hours & directions.`;
 
   const canonicalUrl = `https://touchlesscarwashfinder.com/state/${params.state}`;
-  const title = `Best Touchless Car Wash Near Me in ${stateName} — ${totalCount}+ Locations (${monthShort} ${year})`;
+  // Lead with the count + "Best" + freshness — the highest-CTR formula proven
+  // on /best pages — and tighten the line so it stops truncating in the SERP.
+  // The old "Best Touchless Car Wash Near Me in Texas — 130+ Locations (Jun
+  // 2026)" ran 67 chars and got cut; "130+ Best Touchless Car Washes in Texas
+  // (Jun 2026)" = 50 chars. "Near Me" is dropped at the state level (it maps
+  // to local/city intent, not statewide queries like "texas touchless car wash").
+  const title = totalCount === 1
+    ? `Best Touchless Car Wash in ${stateName} (${monthShort} ${year})`
+    : `${totalCount}+ Best Touchless Car Washes in ${stateName} (${monthShort} ${year})`;
 
   return {
     title,

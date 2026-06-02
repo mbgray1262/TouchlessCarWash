@@ -257,8 +257,15 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
   // Title kept under ~60 chars to avoid Google's SERP truncation, which was
   // hiding the location count + freshness signals on the previous template
   // ("Best Touchless Car Wash in San Diego, CA — 47 Verified Locations (May 2026)" = 76 chars).
-  // Adds "Near Me" modifier — top search modifier per GSC (21K imp/mo on "touchless car wash near me").
-  const title = `Touchless Car Wash Near Me in ${cityName}, ${stateCode} — ${effectiveCount} Locations`;
+  // Combines the highest-CTR levers proven on /best pages (lead with the
+  // count, add "Best", add a freshness year) WITHOUT dropping "Near Me" —
+  // the top search modifier per GSC (21K imp/mo on "touchless car wash near
+  // me"). e.g. "8 Best Touchless Car Washes Near Me in San Diego, CA (2026)"
+  // = 58 chars. Year-only (not month) keeps thousands of city URLs from
+  // churning their titles every month.
+  const title = effectiveCount === 1
+    ? `Best Touchless Car Wash Near Me in ${cityName}, ${stateCode} (${year})`
+    : `${effectiveCount} Best Touchless Car Washes Near Me in ${cityName}, ${stateCode} (${year})`;
 
   // Noindex when:
   //   1. There are NO in-city approved touchless listings (page is just a
