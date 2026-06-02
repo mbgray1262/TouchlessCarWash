@@ -26,12 +26,6 @@ interface CityListingsClientProps {
   allFilters: Filter[];
   /** Pre-computed map: filter_id → Set of listing IDs that have that filter */
   filterMap: Record<number, string[]>;
-  /**
-   * Optional map of listing_id → Best Of rank (1, 2, or 3) within the
-   * surrounding metro. When provided, matching cards render a trophy
-   * badge to highlight top-rated washes and reinforce the /best/[metro] CTA.
-   */
-  rankMap?: Record<string, number>;
 }
 
 export function CityListingsClient({
@@ -43,7 +37,6 @@ export function CityListingsClient({
   allListings,
   allFilters,
   filterMap,
-  rankMap,
 }: CityListingsClientProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -122,7 +115,6 @@ export function CityListingsClient({
               key={listing.id}
               listing={listing}
               href={`/state/${stateSlug}/${citySlug}/${listing.slug}`}
-              rank={rankMap?.[listing.id]}
             />
           ))}
         </div>

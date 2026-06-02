@@ -620,10 +620,11 @@ export default async function CityPage({ params }: CityPageProps) {
           </p>
         </div>
 
-        {/* Find the metro this city belongs to (if any) and compute Best-Of
-            cross-linking signals: the CTA banner above the listings + rank
-            badges on the top 3 cards. Uses the same score formula as
-            /best/[metro] so the rankings agree. */}
+        {/* This page is a plain directory of washes INSIDE the city — sorted by
+            rating, no trophies or rankings. Ranked "best of" lives only on the
+            metro /best/[slug] page (a 35-mile-radius guide), so the two views
+            never contradict each other. The banner below offers that wider
+            metro view as a clearly-distinct, opt-in cross-link. */}
         {(() => {
           // Use a representative lat/lng from the first listing with coords
           const sample = allListings.find((l) => l.latitude != null && l.longitude != null);
@@ -633,23 +634,11 @@ export default async function CityPage({ params }: CityPageProps) {
             sample?.latitude ?? undefined,
             sample?.longitude ?? undefined,
           );
-
-          // Compute rank by score = rating × log10(reviews + 2). Only listings
-          // with rating > 0 are eligible (matches /best/[metro] behavior).
-          const ratedListings = allListings.filter((l) => (l.rating ?? 0) > 0);
-          const sortedByScore = [...ratedListings].sort(
-            (a, b) =>
-              (b.rating ?? 0) * Math.log10((b.review_count ?? 0) + 2) -
-              (a.rating ?? 0) * Math.log10((a.review_count ?? 0) + 2),
-          );
-          const rankMap: Record<string, number> = {};
-          sortedByScore.slice(0, 3).forEach((l, i) => {
-            rankMap[l.id] = i + 1;
-          });
+          const metroShort = metro ? metro.displayName.split(',')[0] : '';
 
           return (
             <>
-              {metro && allListings.length >= 5 && (
+              {metro && (
                 <div className="mb-8 rounded-2xl border border-yellow-200 bg-gradient-to-r from-yellow-50 to-amber-50 p-5 sm:p-6 shadow-sm">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div className="flex items-start gap-3">
@@ -658,10 +647,10 @@ export default async function CityPage({ params }: CityPageProps) {
                       </div>
                       <div>
                         <h2 className="text-lg font-bold text-[#0F2744]">
-                          See the Best Touchless Car Washes in {metro.displayName}
+                          Want the wider {metroShort} area?
                         </h2>
                         <p className="text-sm text-gray-700 mt-0.5">
-                          Our ranked guide to the top {Math.min(10, sortedByScore.length)} verified touchless washes — by rating, review volume, and touchless confirmation.
+                          This page shows the {allListings.length} touchless wash{allListings.length !== 1 ? 'es' : ''} inside {cityName} itself. See our ranked guide to the 10 best across the greater {metroShort} metro — including nearby suburbs within {metro.radiusMiles} miles.
                         </p>
                       </div>
                     </div>
@@ -669,7 +658,7 @@ export default async function CityPage({ params }: CityPageProps) {
                       href={`/best/${metro.slug}`}
                       className="shrink-0 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg bg-[#0F2744] text-white text-sm font-semibold hover:bg-[#1a3a5e] transition-colors whitespace-nowrap"
                     >
-                      View Best Of {metro.displayName.split(',')[0]}
+                      See the {metroShort} Area Best-Of
                       <ChevronRight className="w-4 h-4" />
                     </Link>
                   </div>
@@ -692,7 +681,6 @@ export default async function CityPage({ params }: CityPageProps) {
                   allListings={allListings}
                   allFilters={allFilters}
                   filterMap={filterMap}
-                  rankMap={rankMap}
                 />
               </Suspense>
             </>

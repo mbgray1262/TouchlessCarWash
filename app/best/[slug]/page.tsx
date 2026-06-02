@@ -226,8 +226,8 @@ export async function generateMetadata({ params }: BestOfPageProps): Promise<Met
   // (specificity, authority, recency). Drop "& Brushless" to fit pixel
   // budget and lead with the count, which lifts CTR more than power
   // words alone.
-  const title = `${count} Best Touchless Car Washes in ${metro.displayName} — Ranked ${month} ${year}`;
-  const description = `The ${count} top-rated touchless car washes in ${metro.name}, ranked by verified Google reviews, customer ratings, and touchless-evidence confirmation. Updated ${month} ${year}.`;
+  const title = `${count} Best Touchless Car Washes in the ${metro.name} Area — Ranked ${month} ${year}`;
+  const description = `The ${count} top-rated touchless car washes across the greater ${metro.name} area, ranked by verified Google reviews, customer ratings, and touchless-evidence confirmation. Updated ${month} ${year}.`;
 
   return {
     title,
@@ -356,6 +356,49 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
     .slice(0, 4)
     .map(([name]) => name);
 
+  // ── Group ALL area listings by city ─────────────────────────────────
+  // Powers the "All N washes in the {metro} Area" directory below the
+  // top-10 ranking. This is how every wash in the radius becomes reachable
+  // (not just the top 10) AND how we cross-link from the metro view into
+  // each individual city page. Trophies/ranks intentionally NOT shown here
+  // — ranking is reserved for the top-10 list above.
+  const cityGroups = (() => {
+    const groups = new Map<
+      string,
+      { cityLabel: string; href: string; listings: Listing[] }
+    >();
+    for (const l of allListings) {
+      if (!l.city || !l.state) continue;
+      const key = `${slugify(l.city)}-${l.state}`;
+      const existing = groups.get(key);
+      if (existing) {
+        existing.listings.push(l);
+      } else {
+        groups.set(key, {
+          cityLabel: `${l.city}, ${l.state}`,
+          href: `/state/${getStateSlug(l.state)}/${slugify(l.city)}`,
+          listings: [l],
+        });
+      }
+    }
+    return Array.from(groups.values())
+      .map((g) => ({
+        ...g,
+        // Within each city, sort by rating then review volume.
+        listings: g.listings.sort((a, b) => {
+          const r = (Number(b.rating) || 0) - (Number(a.rating) || 0);
+          if (r !== 0) return r;
+          return (b.review_count || 0) - (a.review_count || 0);
+        }),
+      }))
+      // Most-populated cities first, then alphabetical.
+      .sort((a, b) => {
+        const c = b.listings.length - a.listings.length;
+        if (c !== 0) return c;
+        return a.cityLabel.localeCompare(b.cityLabel);
+      });
+  })();
+
   // Structured data — BreadcrumbList (mirrors visible breadcrumb)
   const breadcrumbSchema = {
     '@context': 'https://schema.org',
@@ -459,14 +502,14 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
               <Trophy className="w-5 h-5 text-yellow-400" />
             </div>
             <h1 className="text-3xl md:text-5xl font-bold leading-tight mb-4">
-              {count} Best Touchless & Brushless Car Washes in {metro.displayName} ({year})
+              {count} Best Touchless & Brushless Car Washes in the {metro.name} Area ({year})
             </h1>
             <p className="text-lg text-blue-100 leading-relaxed max-w-2xl mx-auto">
               Ranked by Google ratings, customer reviews, and verified touchless confirmation.
               Every listing is confirmed brushless — no risk to your paint.
             </p>
             <p className="text-sm text-blue-200/70 mt-4">
-              {allListings.length} touchless car washes found within {metro.radiusMiles} miles of {metro.name}
+              Covering {allListings.length} touchless car washes across the greater {metro.name} metro — within {metro.radiusMiles} miles of the city center.
             </p>
           </div>
         </section>
@@ -493,7 +536,7 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
                 At a Glance
               </h2>
               <p className="text-gray-800 text-[15px] leading-relaxed mb-4">
-                <strong>{metro.name}</strong> has <strong>{allListings.length} verified touchless car wash{allListings.length === 1 ? '' : 'es'}</strong> within {metro.radiusMiles} miles of the city center.
+                The <strong>greater {metro.name} area</strong> has <strong>{allListings.length} verified touchless car wash{allListings.length === 1 ? '' : 'es'}</strong> within {metro.radiusMiles} miles of the city center, spread across {cityGroups.length} {cityGroups.length === 1 ? 'city' : 'cities'}.
                 {topPick && (
                   <>
                     {' '}The top-ranked wash is <strong>{topPick.name}</strong> in {topPick.city}, {topPick.state}
@@ -559,9 +602,17 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
         {/* Ranked Listings */}
         <section className="py-12 px-4 bg-white" aria-labelledby="ranked-listings-heading">
           <div className="container mx-auto max-w-4xl">
-            <h2 id="ranked-listings-heading" className="text-2xl font-bold text-[#0F2744] mb-6">
-              Top {count} Touchless Car Washes in {metro.name}
+            <h2 id="ranked-listings-heading" className="text-2xl font-bold text-[#0F2744] mb-2">
+              Top {count} Touchless Car Washes in the {metro.name} Area
             </h2>
+            <p className="text-gray-500 mb-6">
+              Our highest-ranked picks from across the metro. Looking for washes in one
+              specific town? Jump to the{' '}
+              <a href="#all-area-washes" className="text-[#0F2744] font-medium hover:underline">
+                full city-by-city list
+              </a>{' '}
+              below.
+            </p>
             <div className="space-y-6">
               {topListings.map((listing, idx) => {
                 const rank = idx + 1;
@@ -712,6 +763,72 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
             </div>
           </div>
         </section>
+
+        {/* All washes in the area, grouped by city */}
+        {cityGroups.length > 0 && (
+          <section id="all-area-washes" className="py-12 px-4 bg-gray-50 border-t border-gray-100 scroll-mt-4" aria-labelledby="all-area-heading">
+            <div className="container mx-auto max-w-4xl">
+              <h2 id="all-area-heading" className="text-2xl font-bold text-[#0F2744] mb-2">
+                All {allListings.length} Touchless Car Washes in the {metro.name} Area
+              </h2>
+              <p className="text-gray-500 mb-8">
+                Every verified touchless wash within {metro.radiusMiles} miles of {metro.name}, organized by city.
+                Tap a city name to see only the washes in that town, or tap any wash for full details.
+              </p>
+
+              {/* Jump-to-city chips */}
+              <div className="flex flex-wrap gap-2 mb-8">
+                {cityGroups.map((g) => (
+                  <Link
+                    key={g.href}
+                    href={g.href}
+                    className="inline-flex items-center gap-1.5 bg-white border border-gray-200 rounded-full px-3 py-1.5 text-sm text-[#0F2744] hover:border-[#22C55E] hover:text-[#22C55E] transition-colors"
+                  >
+                    {g.cityLabel.split(',')[0]}
+                    <span className="text-gray-400">{g.listings.length}</span>
+                  </Link>
+                ))}
+              </div>
+
+              <div className="space-y-8">
+                {cityGroups.map((g) => (
+                  <div key={g.href}>
+                    <div className="flex items-baseline justify-between gap-3 mb-3 pb-2 border-b border-gray-200">
+                      <Link
+                        href={g.href}
+                        className="text-lg font-bold text-[#0F2744] hover:text-[#22C55E] transition-colors inline-flex items-center gap-1 group"
+                      >
+                        {g.cityLabel}
+                        <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-[#22C55E] transition-colors" />
+                      </Link>
+                      <span className="text-sm text-gray-400 shrink-0">
+                        {g.listings.length} wash{g.listings.length === 1 ? '' : 'es'}
+                      </span>
+                    </div>
+                    <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-1">
+                      {g.listings.map((l) => (
+                        <li key={l.id}>
+                          <Link
+                            href={`/state/${getStateSlug(l.state)}/${slugify(l.city)}/${l.slug}`}
+                            className="flex items-center justify-between gap-2 py-2 text-[15px] text-gray-700 hover:text-[#22C55E] transition-colors border-b border-gray-100"
+                          >
+                            <span className="truncate">{l.name}</span>
+                            {Number(l.rating) > 0 && (
+                              <span className="flex items-center gap-1 shrink-0 text-sm text-gray-500">
+                                <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+                                {Number(l.rating).toFixed(1)}
+                              </span>
+                            )}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* How We Rank */}
         <section className="py-14 px-4 bg-gray-50">
