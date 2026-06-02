@@ -3,38 +3,41 @@
 import Link from 'next/link';
 import { Droplet } from 'lucide-react';
 
-// Top 30 cities by touchless car wash listing count (data-driven, updated periodically)
+// Top 30 cities by approved touchless car wash listing count.
+// Data-driven — last refreshed 2026-06-02 from the live listings table
+// (scripts/top-cities-for-footer.mjs). Re-run that script and paste the
+// output here whenever the directory grows substantially.
 const TOP_CITIES: { name: string; stateSlug: string; citySlug: string; stateCode: string }[] = [
-  { name: 'Phoenix', stateSlug: 'arizona', citySlug: 'phoenix', stateCode: 'AZ' },
-  { name: 'Mesa', stateSlug: 'arizona', citySlug: 'mesa', stateCode: 'AZ' },
+  { name: 'Las Vegas', stateSlug: 'nevada', citySlug: 'las-vegas', stateCode: 'NV' },
+  { name: 'Sioux Falls', stateSlug: 'south-dakota', citySlug: 'sioux-falls', stateCode: 'SD' },
   { name: 'Louisville', stateSlug: 'kentucky', citySlug: 'louisville', stateCode: 'KY' },
-  { name: 'Tulsa', stateSlug: 'oklahoma', citySlug: 'tulsa', stateCode: 'OK' },
-  { name: 'Orlando', stateSlug: 'florida', citySlug: 'orlando', stateCode: 'FL' },
-  { name: 'Columbus', stateSlug: 'ohio', citySlug: 'columbus', stateCode: 'OH' },
-  { name: 'Omaha', stateSlug: 'nebraska', citySlug: 'omaha', stateCode: 'NE' },
-  { name: 'Chicago', stateSlug: 'illinois', citySlug: 'chicago', stateCode: 'IL' },
-  { name: 'San Diego', stateSlug: 'california', citySlug: 'san-diego', stateCode: 'CA' },
-  { name: 'Houston', stateSlug: 'texas', citySlug: 'houston', stateCode: 'TX' },
-  { name: 'Akron', stateSlug: 'ohio', citySlug: 'akron', stateCode: 'OH' },
-  { name: 'Canton', stateSlug: 'ohio', citySlug: 'canton', stateCode: 'OH' },
-  { name: 'Dayton', stateSlug: 'ohio', citySlug: 'dayton', stateCode: 'OH' },
-  { name: 'Syracuse', stateSlug: 'new-york', citySlug: 'syracuse', stateCode: 'NY' },
-  { name: 'Evansville', stateSlug: 'indiana', citySlug: 'evansville', stateCode: 'IN' },
-  { name: 'Denver', stateSlug: 'colorado', citySlug: 'denver', stateCode: 'CO' },
-  { name: 'Tucson', stateSlug: 'arizona', citySlug: 'tucson', stateCode: 'AZ' },
   { name: 'Pittsburgh', stateSlug: 'pennsylvania', citySlug: 'pittsburgh', stateCode: 'PA' },
+  { name: 'Austin', stateSlug: 'texas', citySlug: 'austin', stateCode: 'TX' },
+  { name: 'Columbus', stateSlug: 'ohio', citySlug: 'columbus', stateCode: 'OH' },
+  { name: 'Rochester', stateSlug: 'minnesota', citySlug: 'rochester', stateCode: 'MN' },
+  { name: 'Miami', stateSlug: 'florida', citySlug: 'miami', stateCode: 'FL' },
+  { name: 'Rochester', stateSlug: 'new-york', citySlug: 'rochester', stateCode: 'NY' },
+  { name: 'San Antonio', stateSlug: 'texas', citySlug: 'san-antonio', stateCode: 'TX' },
+  { name: 'San Diego', stateSlug: 'california', citySlug: 'san-diego', stateCode: 'CA' },
+  { name: 'Akron', stateSlug: 'ohio', citySlug: 'akron', stateCode: 'OH' },
   { name: 'Wichita', stateSlug: 'kansas', citySlug: 'wichita', stateCode: 'KS' },
   { name: 'Reno', stateSlug: 'nevada', citySlug: 'reno', stateCode: 'NV' },
+  { name: 'Anchorage', stateSlug: 'alaska', citySlug: 'anchorage', stateCode: 'AK' },
+  { name: 'Minneapolis', stateSlug: 'minnesota', citySlug: 'minneapolis', stateCode: 'MN' },
+  { name: 'Des Moines', stateSlug: 'iowa', citySlug: 'des-moines', stateCode: 'IA' },
+  { name: 'Thornton', stateSlug: 'colorado', citySlug: 'thornton', stateCode: 'CO' },
   { name: 'Spokane', stateSlug: 'washington', citySlug: 'spokane', stateCode: 'WA' },
-  { name: 'Tacoma', stateSlug: 'washington', citySlug: 'tacoma', stateCode: 'WA' },
-  { name: 'Boulder', stateSlug: 'colorado', citySlug: 'boulder', stateCode: 'CO' },
-  { name: 'Huntsville', stateSlug: 'alabama', citySlug: 'huntsville', stateCode: 'AL' },
-  { name: 'Virginia Beach', stateSlug: 'virginia', citySlug: 'virginia-beach', stateCode: 'VA' },
-  { name: 'Greenville', stateSlug: 'south-carolina', citySlug: 'greenville', stateCode: 'SC' },
+  { name: 'Sacramento', stateSlug: 'california', citySlug: 'sacramento', stateCode: 'CA' },
+  { name: 'Omaha', stateSlug: 'nebraska', citySlug: 'omaha', stateCode: 'NE' },
+  { name: 'Eau Claire', stateSlug: 'wisconsin', citySlug: 'eau-claire', stateCode: 'WI' },
+  { name: 'Greensboro', stateSlug: 'north-carolina', citySlug: 'greensboro', stateCode: 'NC' },
+  { name: 'Madison', stateSlug: 'wisconsin', citySlug: 'madison', stateCode: 'WI' },
+  { name: 'Los Angeles', stateSlug: 'california', citySlug: 'los-angeles', stateCode: 'CA' },
+  { name: 'Lincoln', stateSlug: 'nebraska', citySlug: 'lincoln', stateCode: 'NE' },
+  { name: 'North Las Vegas', stateSlug: 'nevada', citySlug: 'north-las-vegas', stateCode: 'NV' },
   { name: 'Aurora', stateSlug: 'colorado', citySlug: 'aurora', stateCode: 'CO' },
-  { name: 'Buffalo', stateSlug: 'new-york', citySlug: 'buffalo', stateCode: 'NY' },
-  { name: 'Rochester', stateSlug: 'new-york', citySlug: 'rochester', stateCode: 'NY' },
-  { name: 'Muncie', stateSlug: 'indiana', citySlug: 'muncie', stateCode: 'IN' },
+  { name: 'Erie', stateSlug: 'pennsylvania', citySlug: 'erie', stateCode: 'PA' },
+  { name: 'El Paso', stateSlug: 'texas', citySlug: 'el-paso', stateCode: 'TX' },
 ];
 
 // All 50 states + DC
