@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
+import { Search, X } from 'lucide-react';
 import { ListingCard } from '@/components/ListingCard';
 import { ClientPagination, PAGE_SIZE } from '@/components/Pagination';
 import { SearchFilters } from '@/components/SearchFilters';
@@ -48,14 +49,27 @@ export function StateListingsClient({
   const rawPage = parseInt(searchParams.get('page') ?? '1', 10) || 1;
   const filterSlugs = searchParams.get('filters')?.split(',').filter(Boolean) ?? [];
   const hasFilters = filterSlugs.length > 0;
-  const isDefault = !hasFilters && rawPage === 1;
+  // Free-text search by city or wash name. Sanitize PostgREST-significant
+  // characters so a stray comma/paren can't break the .or() expression.
+  const query = (searchParams.get('q') ?? '').replace(/[%,()]/g, ' ').trim();
+  const hasQuery = query.length > 0;
+  const isDefault = !hasFilters && !hasQuery && rawPage === 1;
 
   const [listings, setListings] = useState<Listing[]>(initialListings);
   const [totalCount, setTotalCount] = useState(serverTotal);
   const [loading, setLoading] = useState(false);
+  // Controlled value for the search input — mirrors the URL's ?q= but updates
+  // instantly while the debounce timer waits before pushing to the URL.
+  const [searchInput, setSearchInput] = useState(query);
 
-  // Track the filter+page key so we can skip stale fetches
-  const fetchKey = `${filterSlugs.join(',')}|${rawPage}`;
+  // Keep the input in sync if the URL changes externally (e.g. back button).
+  useEffect(() => {
+    setSearchInput(query);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
+
+  // Track the filter+page+query key so we can skip stale fetches
+  const fetchKey = `${filterSlugs.join(',')}|${rawPage}|${query}`;
   const prevFetchKey = useRef(fetchKey);
 
   const fetchListings = useCallback(async () => {
@@ -98,12 +112,18 @@ export function StateListingsClient({
       const from = (rawPage - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
 
-      let query = supabase
+      let dbQuery = supabase
         .from('listings')
         .select(LISTING_CARD_COLUMNS, { count: 'exact' })
         .eq('is_touchless', true)
-        .eq('state', stateCode)
-        .order('rating', { ascending: false });
+        .eq('state', stateCode);
+
+      // Free-text search across wash name OR city.
+      if (hasQuery) {
+        dbQuery = dbQuery.or(`name.ilike.%${query}%,city.ilike.%${query}%`);
+      }
+
+      dbQuery = dbQuery.order('rating', { ascending: false });
 
       if (qualifiedIds !== null) {
         if (qualifiedIds.length === 0) {
@@ -111,10 +131,10 @@ export function StateListingsClient({
           setTotalCount(0);
           return;
         }
-        query = query.in('id', qualifiedIds);
+        dbQuery = dbQuery.in('id', qualifiedIds);
       }
 
-      const { data, count } = await query.range(from, to);
+      const { data, count } = await dbQuery.range(from, to);
       setListings((data as Listing[]) ?? []);
       setTotalCount(count ?? 0);
     } catch (err) {
@@ -135,18 +155,46 @@ export function StateListingsClient({
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
   const currentPage = Math.min(rawPage, Math.max(totalPages, 1));
 
-  function handlePageChange(newPage: number) {
+  function pushState(opts: { page?: number; q?: string }) {
     const params = new URLSearchParams();
     if (filterSlugs.length > 0) params.set('filters', filterSlugs.join(','));
-    if (newPage > 1) params.set('page', String(newPage));
+    const nextQ = opts.q ?? query;
+    if (nextQ) params.set('q', nextQ);
+    const nextPage = opts.page ?? 1;
+    if (nextPage > 1) params.set('page', String(nextPage));
     const qs = params.toString();
     router.push(`/state/${stateSlug}${qs ? `?${qs}` : ''}`, { scroll: false });
   }
 
+  function handlePageChange(newPage: number) {
+    pushState({ page: newPage });
+  }
+
+  // Debounce the search box: wait until typing pauses, then push ?q= to the
+  // URL (resetting to page 1). A new query supersedes the previous timer.
+  useEffect(() => {
+    const trimmed = searchInput.replace(/[%,()]/g, ' ').trim();
+    if (trimmed === query) return; // already in sync — nothing to push
+    const timer = setTimeout(() => {
+      pushState({ q: trimmed, page: 1 });
+    }, 350);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchInput]);
+
+  function clearSearch() {
+    setSearchInput('');
+    pushState({ q: '', page: 1 });
+  }
+
   return (
     <div className="mt-12">
-      <h2 className="text-2xl font-bold text-foreground mb-6">
-        {hasFilters ? (
+      <h2 className="text-2xl font-bold text-foreground mb-4">
+        {hasQuery ? (
+          <>
+            {totalCount} result{totalCount !== 1 ? 's' : ''} for &ldquo;{query}&rdquo;
+          </>
+        ) : hasFilters ? (
           <>
             {totalCount} of {serverTotal} Location{serverTotal !== 1 ? 's' : ''}
           </>
@@ -162,6 +210,29 @@ export function StateListingsClient({
           </span>
         )}
       </h2>
+
+      {/* Search by city or wash name */}
+      <div className="relative mb-4 max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+        <input
+          type="text"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder={`Search by city or wash name in ${stateName}…`}
+          aria-label={`Search touchless car washes in ${stateName} by city or name`}
+          className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-sm"
+        />
+        {searchInput && (
+          <button
+            type="button"
+            onClick={clearSearch}
+            aria-label="Clear search"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
 
       <SearchFilters
         filters={allFilters}
@@ -185,6 +256,19 @@ export function StateListingsClient({
               href={`/state/${stateSlug}/${slugify(listing.city)}/${listing.slug}`}
             />
           ))}
+        </div>
+      ) : hasQuery ? (
+        <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-200">
+          <p className="text-gray-500 text-lg mb-2">
+            No touchless car washes in {stateName} match &ldquo;{query}&rdquo;.
+          </p>
+          <button
+            type="button"
+            onClick={clearSearch}
+            className="text-primary text-sm font-medium hover:underline"
+          >
+            Clear search
+          </button>
         </div>
       ) : hasFilters ? (
         <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-200">

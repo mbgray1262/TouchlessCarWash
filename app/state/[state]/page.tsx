@@ -1,7 +1,9 @@
 import { cache, Suspense } from 'react';
 import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Trophy } from 'lucide-react';
+import { METRO_AREAS } from '@/lib/metro-areas';
+import { getMetroListingCount } from '@/lib/metro-queries';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants';
@@ -229,6 +231,20 @@ export default async function StatePage({ params }: StatePageProps) {
     .filter(s => s !== stateCode && validStateCodes.has(s))
     .map(s => ({ code: s, name: getStateName(s), slug: getStateSlug(s) }));
 
+  // Metro "Best-Of" guides whose PRIMARY state is this state (so e.g. the
+  // Chicago guide shows on Illinois, not on Indiana/Wisconsin). Only surface
+  // metros that have a real ranked page — gated at 5+ verified washes in
+  // radius. Counts come from the SAME helper the /best page uses, so the
+  // number shown here always matches the metro page.
+  const primaryMetros = METRO_AREAS.filter((m) => m.states[0] === stateCode);
+  const metroGuides = (
+    await Promise.all(
+      primaryMetros.map(async (m) => ({ metro: m, count: await getMetroListingCount(m) })),
+    )
+  )
+    .filter((g) => g.count >= 5)
+    .sort((a, b) => b.count - a.count);
+
   const now = new Date();
   const month = now.toLocaleString('default', { month: 'long' });
   const year = now.getFullYear();
@@ -354,6 +370,41 @@ export default async function StatePage({ params }: StatePageProps) {
               )}
             </p>
           </div>
+
+          {metroGuides.length > 0 && (
+            <div className="mb-8">
+              <div className="flex items-center gap-2 mb-2">
+                <Trophy className="w-5 h-5 text-yellow-500" />
+                <h2 className="text-2xl font-bold text-foreground">Top-Rated by Metro Area</h2>
+              </div>
+              <p className="text-gray-600 mb-4">
+                Want our ranked guide to the best touchless washes across a major {stateName} area?
+                Start here — or browse every city below.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {metroGuides.map(({ metro, count }) => (
+                  <Link key={metro.slug} href={`/best/${metro.slug}`} className="group">
+                    <Card className="h-full hover:shadow-lg transition-all cursor-pointer border-yellow-300 bg-gradient-to-br from-yellow-50 to-amber-50">
+                      <CardContent className="p-4 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-yellow-400/20 flex items-center justify-center shrink-0">
+                          <Trophy className="w-5 h-5 text-yellow-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-foreground group-hover:text-yellow-700 transition-colors">
+                            {metro.name} Area
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            {count} washes · Top 10 ranked
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-yellow-600 group-hover:translate-x-0.5 transition-all ml-auto shrink-0" />
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
           {topCities.length > 0 && (
             <div className="mb-8">
