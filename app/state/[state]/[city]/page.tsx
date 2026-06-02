@@ -21,6 +21,7 @@ import {
 } from '@/lib/nearby-augment';
 import { FEATURE_FILTERS, MIN_LISTINGS_FOR_FEATURE_PAGE } from '@/lib/feature-filters';
 import { findMetroForCity } from '@/lib/metro-areas';
+import { getCityContent, buildCityGuide } from '@/lib/city-content';
 import { Trophy } from 'lucide-react';
 
 import type { Metadata } from 'next';
@@ -430,6 +431,13 @@ export default async function CityPage({ params }: CityPageProps) {
   const highestRatedAnswer = buildHighestRatedAnswer();
   const mostReviewedAnswer = buildMostReviewedAnswer();
 
+  // Curated, locally-grounded editorial for high-demand cities whose listing
+  // counts are thin (Chicago, Houston, San Diego, etc.). Adds unique content
+  // depth to pages that otherwise rank at the bottom of page one. null for
+  // every other city, so the section simply doesn't render.
+  const cityContent = getCityContent(params.state, slugify(cityName));
+  const cityGuide = cityContent ? buildCityGuide(cityContent) : null;
+
   const cityVariant = params.city.charCodeAt(0) % 4;
   const introSynonyms = [
     `touchless, touch-free, and no-touch`,
@@ -690,6 +698,19 @@ export default async function CityPage({ params }: CityPageProps) {
             </>
           );
         })()}
+
+        {cityGuide && (
+          <section className="mt-14 pt-10 border-t border-gray-200">
+            <h2 className="text-2xl font-bold text-foreground mb-4">
+              Touchless Car Washes in {cityName}: A Local Guide
+            </h2>
+            <div className="space-y-4 text-gray-700 text-base leading-relaxed">
+              {cityGuide.map((para, i) => (
+                <p key={i}>{para}</p>
+              ))}
+            </div>
+          </section>
+        )}
 
         {nearbyListings.length > 0 && (
           <div className="mt-14 pt-10 border-t border-gray-200">
