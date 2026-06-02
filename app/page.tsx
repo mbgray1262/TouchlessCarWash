@@ -36,6 +36,12 @@ const TOP_STATES = ['CA', 'TX', 'FL', 'NY', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI', 
 export async function generateMetadata(): Promise<Metadata> {
   const count = await getApprovedTouchlessCount();
   const countStr = count > 0 ? count.toLocaleString() + '+' : '3,000+';
+  // Round the <title> count DOWN to the nearest 100 so the title stays stable as
+  // listings are added/removed daily. The exact count changes constantly, and a
+  // title that mutates on every change fragments GA's "page title" reporting (one
+  // page shows up as dozens of near-identical rows) and looks unstable to Google's
+  // crawler. The precise count still appears in the meta description and page body.
+  const titleCountStr = count > 0 ? (Math.floor(count / 100) * 100).toLocaleString() + '+' : '3,000+';
   const now = new Date();
   const year = now.getFullYear();
   // Lead with the exact head-term match ("Touchless Car Wash Near Me") and
@@ -44,7 +50,7 @@ export async function generateMetadata(): Promise<Metadata> {
   // it narrows the match against ~10K monthly impressions for the broader
   // "touchless car wash near me" without adding searcher value (the body
   // copy still covers the automatic / brushless / laser variants).
-  const title = `Touchless Car Wash Near Me — ${countStr} Verified Locations | ${year}`;
+  const title = `Touchless Car Wash Near Me — ${titleCountStr} Verified Locations | ${year}`;
   const description = `Find a touchless car wash near you — ${countStr} verified no-touch, brushless, laser & contactless locations across all 50 states + DC. Ratings, hours, and directions for every one.`;
   return {
     title: { absolute: title },
