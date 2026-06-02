@@ -87,7 +87,22 @@ const VERIFIED_ALL_AUTO_CHAINS = new Set([
 VERIFIED_ALL_AUTO_CHAINS.delete('Flagstop Car Wash');
 
 // Strict compound positive phrases
-const NAME_COMPOUND = /\btouchless\s+(?:car\s*)?wash\b|\btouch\s*free\s+(?:car\s*)?wash\b|\btouchfree\s+(?:car\s*)?wash\b|\blaser\s*wash\b|\blaserwash\b|\bbrushless\s+(?:car\s*)?wash\b|\bno[\s-]touch\s+(?:car\s*)?wash\b|\btouch[\s-]less\s+(?:car\s*)?wash\b/i;
+// Compound touchless phrase in the business name. Handles hyphen/space variants
+// ("touch-free" / "touch free") and the common nouns operators use besides
+// "wash" — "automatic", "auto spa", "bay" — plus the "automatic touchless"
+// word order. Broadened 2026-06-02 so the audit stops demoting obviously
+// touchless-named mixed facilities (e.g. "54 Touch-Free Car Wash",
+// "24 Hr Automatic Touchless", "Touch Free Auto Spa").
+const TL_TOKEN = '(?:touch[\\s-]?less|touch[\\s-]?free|touchfree)';
+const NAME_COMPOUND = new RegExp(
+  `\\b${TL_TOKEN}\\s+(?:car\\s*)?wash\\b` +
+  `|\\b${TL_TOKEN}\\s+(?:automatic|auto[\\s-]*spa|bay)\\b` +
+  `|\\bautomatic\\s+${TL_TOKEN}\\b` +
+  `|\\blaser\\s*wash\\b|\\blaserwash\\b` +
+  `|\\bbrushless\\s+(?:car\\s*)?wash\\b` +
+  `|\\bno[\\s-]touch\\s+(?:car\\s*)?wash\\b`,
+  'i'
+);
 const NAME_SHORT_SIGNAL = /\btouchless\b|\btouchfree\b|\btouch[\s-]free\b|\blaser\b|\bbrushless\b/i;
 const NAME_EXPLICIT_REJECT = /\bself[\s-]?(?:service|serve|svc)\b|\bsoft[\s-]?touch\b(?!\s*automatic)|\bcoin[\s-]?op\b|\bhand[\s-]wash/i;
 const NAME_COUNTER_SIGNAL = /touchless|touch[\s-]?free|laser|brushless|no[\s-]touch/i;
@@ -118,6 +133,10 @@ const SNAPSHOT_NEGATIVE = [
 ];
 const SNAPSHOT_MIXED_OFFER = /\bsoft[\s-]?touch\s+(?:&|and|or|\+)\s+touchless\b|\btouchless\s+(?:&|and|or|\+)\s+soft[\s-]?touch\b|\btouchless\s+(?:or|\+)\s+tunnel\b/i;
 
+// Per-listing positive/negative touchless review-evidence tallies (populated
+// in the pre-pass below, consumed by evaluate()).
+const REVIEW_EVIDENCE = {};
+
 function snapshotText(snap) {
   if (!snap) return '';
   if (typeof snap === 'string') return snap;
@@ -129,8 +148,33 @@ function snapshotText(snap) {
 }
 
 function evaluate(l) {
-  // Hard-rejects first
-  if (GOOGLE_SELF_SERVICE.test(l.google_subtypes || '')) return { pass: false, reason: 'google-subtype-self-service' };
+  // ── PROTECTION (root-cause fix, 2026-06-02) ─────────────────────────────
+  // NEVER demote a listing backed by authoritative HUMAN or CHAIN evidence.
+  // The earlier sweeps demoted real mixed-facility touchless washes (e.g.
+  // Kent Kwik Midkiff/Yukon) purely on a self-serve/soft-touch contra-signal
+  // while ignoring the customer reviews and operator/chain tags that confirm a
+  // touchless automatic bay. Review evidence is authoritative (multiple
+  // corroborating reviews ≈ a vendor Touch Free list), so it overrides the
+  // name/snapshot contra-signals below.
+  //  - touchless_verified ∈ {review, user_review, chain, operator}  → deliberate confirmation
+  //  - >=2 positive touchless review snippets and not predominantly negative
+  //    (and the name isn't an obvious hand-wash / detailer, where "brushless"
+  //    means a hand technique rather than an automatic machine).
+  if (['review', 'user_review', 'chain', 'operator'].includes(l.touchless_verified))
+    return { pass: true, reason: 'protected-verified-tag' };
+  const ev = REVIEW_EVIDENCE[l.id] || { pos: 0, neg: 0 };
+  const disliked = (ev.pos + ev.neg) >= 3 && (ev.neg / (ev.pos + ev.neg)) >= 0.6;
+  const handWashName = /\bhand\s*(car\s*)?wash\b|\bdetail(er|ing)?\b|\bauto\s*spa\b|\bmobile\b/i.test(l.name || '');
+  if (ev.pos >= 2 && !disliked && !handWashName)
+    return { pass: true, reason: 'protected-review-evidence' };
+
+  // Hard-rejects first.
+  // NOTE (2026-06-02): a self-serve Google subtype does NOT disqualify a
+  // mixed facility that ALSO advertises touchless in its name (e.g. "A C
+  // Touchless Car Wash", "LaserWash TouchFree Car Wash"). Google's primary
+  // category is often the self-serve bays while a touchless automatic bay
+  // sits alongside. Only hard-reject when there's no touchless name signal.
+  if (GOOGLE_SELF_SERVICE.test(l.google_subtypes || '') && !NAME_COUNTER_SIGNAL.test(l.name || '')) return { pass: false, reason: 'google-subtype-self-service' };
   if (NAME_EXPLICIT_REJECT.test(l.name || '') && !NAME_COUNTER_SIGNAL.test(l.name || '')) return { pass: false, reason: 'name-explicit-self-serve' };
 
   // Pass criteria — any ONE is enough
@@ -168,13 +212,30 @@ function evaluate(l) {
 const all = [];
 for (let offset = 0; offset < 10000; offset += 1000) {
   const { data } = await sb.from('listings')
-    .select('id, name, city, state, parent_chain, google_subtypes, google_category, equipment_brand, touchless_wash_types, crawl_snapshot, classification_source, touchless_verified')
+    .select('id, name, city, state, parent_chain, google_subtypes, google_category, equipment_brand, touchless_wash_types, crawl_snapshot, classification_source, touchless_verified, crawl_notes')
     .eq('is_touchless', true).range(offset, offset + 999);
   if (!data || data.length === 0) break;
   all.push(...data);
   if (data.length < 1000) break;
 }
 console.log(`Auditing ${all.length} is_touchless=true listings`);
+
+// Pre-pass: tally positive/negative touchless review evidence per listing so
+// evaluate() can protect evidence-backed listings (root-cause fix 2026-06-02).
+{
+  const ids = all.map(l => l.id);
+  for (let i = 0; i < ids.length; i += 300) {
+    const { data } = await sb.from('review_snippets')
+      .select('listing_id,sentiment')
+      .eq('is_touchless_evidence', true)
+      .in('listing_id', ids.slice(i, i + 300));
+    for (const r of (data || [])) {
+      const e = (REVIEW_EVIDENCE[r.listing_id] ||= { pos: 0, neg: 0 });
+      if (r.sentiment === 'negative') e.neg++; else e.pos++;
+    }
+  }
+  console.log(`Loaded review evidence for ${Object.keys(REVIEW_EVIDENCE).length} listings`);
+}
 
 const pass = [], fail = [];
 const reasonCounts = {};
@@ -198,19 +259,40 @@ writeFileSync(resolve(repoRoot, 'scripts/discovery-output/v3-audit.json'),
 console.log(`\nFirst 30 FAIL samples:`);
 for (const f of fail.slice(0, 30)) console.log(`  [${f.failReason}] ${f.name.slice(0,38).padEnd(38)} ${f.city||'?'}, ${f.state||'?'}`);
 
-// REVERT
+// How many FAILs are currently LIVE (approved)? Those are the real risk set.
+{
+  const fids = fail.map(f => f.id);
+  const live = [];
+  for (let i = 0; i < fids.length; i += 200) {
+    const { data } = await sb.from('listings').select('id,name,city,state,is_approved').in('id', fids.slice(i, i + 200)).eq('is_approved', true);
+    live.push(...(data || []));
+  }
+  console.log(`\nFAILs that are currently APPROVED/live: ${live.length}`);
+  for (const l of live) console.log(`  LIVE  ${l.name.slice(0,38).padEnd(38)} ${l.city||'?'}, ${l.state||'?'}`);
+}
+
+// REVERT — destructive. Requires explicit --apply, otherwise dry-run only.
+// (Safety added 2026-06-02 after this sweep over-demoted evidence-backed
+// mixed-facility touchless washes. Protections in evaluate() now spare
+// listings with a verified tag or positive review evidence.)
+const APPLY = process.argv.includes('--apply');
+if (!APPLY) {
+  console.log(`\n[DRY RUN] Would revert ${fail.length} listings to is_touchless=false.`);
+  console.log('Re-run with --apply to write changes.');
+  process.exit(0);
+}
+const REVERT_NOTE = '[reverted] v3 strict audit: insufficient automatic-touchless evidence';
 console.log(`\nReverting ${fail.length} listings to is_touchless=false...`);
-const ids = fail.map(f => f.id);
 let done = 0;
-for (let i = 0; i < ids.length; i += 200) {
-  const batch = ids.slice(i, i + 200);
+for (const f of fail) {
+  const notes = f.crawl_notes ? `${f.crawl_notes}\n${REVERT_NOTE}` : REVERT_NOTE;
   const { error } = await sb.from('listings').update({
     is_touchless: false, is_approved: false,
     classification_source: 'reverted_apr15_v3_strict',
-    crawl_notes: 'Reverted by v3 strict audit: insufficient automatic-touchless evidence',
-  }).in('id', batch);
-  if (!error) done += batch.length;
-  else console.error('err:', error.message);
+    crawl_notes: notes,
+  }).eq('id', f.id);
+  if (!error) done++;
+  else console.error('err:', f.id, error.message);
 }
 console.log(`Reverted: ${done}`);
 
