@@ -15,7 +15,7 @@ package = "@netlify/plugin-nextjs"
 [[headers]]
   for = "/state/*"
   [headers.values]
-    Netlify-CDN-Cache-Control = "public, s-maxage=60, stale-while-revalidate=86400, durable"
+    Netlify-CDN-Cache-Control = "public, s-maxage=3600, stale-while-revalidate=86400, durable"
 
 # Top-nav landing pages: same SWR pattern as /state/* to prevent the ETag-
 # based 304 cache poisoning we hit on /best and /blog (April 30 2026).
@@ -28,77 +28,77 @@ package = "@netlify/plugin-nextjs"
 [[headers]]
   for = "/best/chains"
   [headers.values]
-    Netlify-CDN-Cache-Control = "public, s-maxage=300, stale-while-revalidate=86400, durable"
+    Netlify-CDN-Cache-Control = "public, s-maxage=1800, stale-while-revalidate=86400, durable"
 
 [[headers]]
   for = "/best/chains/*"
   [headers.values]
-    Netlify-CDN-Cache-Control = "public, s-maxage=300, stale-while-revalidate=86400, durable"
+    Netlify-CDN-Cache-Control = "public, s-maxage=1800, stale-while-revalidate=86400, durable"
 
 [[headers]]
   for = "/best"
   [headers.values]
-    Netlify-CDN-Cache-Control = "public, s-maxage=300, stale-while-revalidate=86400, durable"
+    Netlify-CDN-Cache-Control = "public, s-maxage=1800, stale-while-revalidate=86400, durable"
 
 [[headers]]
   for = "/best/*"
   [headers.values]
-    Netlify-CDN-Cache-Control = "public, s-maxage=300, stale-while-revalidate=86400, durable"
+    Netlify-CDN-Cache-Control = "public, s-maxage=1800, stale-while-revalidate=86400, durable"
 
 [[headers]]
   for = "/blog"
   [headers.values]
-    Netlify-CDN-Cache-Control = "public, s-maxage=300, stale-while-revalidate=86400, durable"
+    Netlify-CDN-Cache-Control = "public, s-maxage=1800, stale-while-revalidate=86400, durable"
 
 [[headers]]
   for = "/blog/*"
   [headers.values]
-    Netlify-CDN-Cache-Control = "public, s-maxage=300, stale-while-revalidate=86400, durable"
+    Netlify-CDN-Cache-Control = "public, s-maxage=1800, stale-while-revalidate=86400, durable"
 
 [[headers]]
   for = "/chains"
   [headers.values]
-    Netlify-CDN-Cache-Control = "public, s-maxage=300, stale-while-revalidate=86400, durable"
+    Netlify-CDN-Cache-Control = "public, s-maxage=1800, stale-while-revalidate=86400, durable"
 
 [[headers]]
   for = "/chain/*"
   [headers.values]
-    Netlify-CDN-Cache-Control = "public, s-maxage=300, stale-while-revalidate=86400, durable"
+    Netlify-CDN-Cache-Control = "public, s-maxage=1800, stale-while-revalidate=86400, durable"
 
 [[headers]]
   for = "/states"
   [headers.values]
-    Netlify-CDN-Cache-Control = "public, s-maxage=300, stale-while-revalidate=86400, durable"
+    Netlify-CDN-Cache-Control = "public, s-maxage=1800, stale-while-revalidate=86400, durable"
 
 [[headers]]
   for = "/features"
   [headers.values]
-    Netlify-CDN-Cache-Control = "public, s-maxage=300, stale-while-revalidate=86400, durable"
+    Netlify-CDN-Cache-Control = "public, s-maxage=1800, stale-while-revalidate=86400, durable"
 
 [[headers]]
   for = "/features/*"
   [headers.values]
-    Netlify-CDN-Cache-Control = "public, s-maxage=300, stale-while-revalidate=86400, durable"
+    Netlify-CDN-Cache-Control = "public, s-maxage=1800, stale-while-revalidate=86400, durable"
 
 [[headers]]
   for = "/equipment"
   [headers.values]
-    Netlify-CDN-Cache-Control = "public, s-maxage=300, stale-while-revalidate=86400, durable"
+    Netlify-CDN-Cache-Control = "public, s-maxage=1800, stale-while-revalidate=86400, durable"
 
 [[headers]]
   for = "/equipment/*"
   [headers.values]
-    Netlify-CDN-Cache-Control = "public, s-maxage=300, stale-while-revalidate=86400, durable"
+    Netlify-CDN-Cache-Control = "public, s-maxage=1800, stale-while-revalidate=86400, durable"
 
 [[headers]]
   for = "/about"
   [headers.values]
-    Netlify-CDN-Cache-Control = "public, s-maxage=300, stale-while-revalidate=86400, durable"
+    Netlify-CDN-Cache-Control = "public, s-maxage=1800, stale-while-revalidate=86400, durable"
 
 [[headers]]
   for = "/"
   [headers.values]
-    Netlify-CDN-Cache-Control = "public, s-maxage=60, stale-while-revalidate=86400, durable"
+    Netlify-CDN-Cache-Control = "public, s-maxage=1800, stale-while-revalidate=86400, durable"
 
 # Old listing slug that was incorrectly matching a Florida listing — send to Austin city page
 [[redirects]]
