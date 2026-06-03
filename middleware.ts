@@ -20,6 +20,26 @@ const BLOCKED_COUNTRIES = new Set([
   'LB', 'JO', 'IL', 'PS', 'TR', 'AM', 'AZ', 'GE',
 ]);
 
+// Distinguishes a real human browser from a cheap scraper for the geo-block.
+// Real browsers (Chrome/Safari/Firefox/Edge) always send Accept-Language plus
+// the Sec-Fetch-* / Sec-CH-UA hint headers on navigation and fetch; bare
+// scrapers (python-requests, curl, naive axios) almost never send Sec-Fetch.
+// This lets a human reviewer in a blocked region (e.g. an overseas Amazon
+// Associates / ad-network reviewer) through while still dropping the bulk of
+// the volume bot traffic the geo-block was added to stop.
+function looksLikeRealBrowser(request: NextRequest): boolean {
+  const ua = (request.headers.get('user-agent') || '').toLowerCase();
+  if (!ua.includes('mozilla')) return false;
+  const hasAcceptLanguage = !!request.headers.get('accept-language');
+  const hasSecFetch = !!(
+    request.headers.get('sec-fetch-mode')
+    || request.headers.get('sec-fetch-site')
+    || request.headers.get('sec-fetch-dest')
+  );
+  const hasSecChUa = !!request.headers.get('sec-ch-ua');
+  return hasAcceptLanguage && (hasSecFetch || hasSecChUa);
+}
+
 function getCountryCode(request: NextRequest): string | null {
   // Next.js standard geo (Netlify plugin populates this)
   const ngeo = (request as unknown as { geo?: { country?: string } }).geo;
@@ -137,7 +157,7 @@ export function middleware(request: NextRequest) {
     return new NextResponse('Forbidden', { status: 403 });
   }
 
-  if (!isAllowedSearchBot) {
+  if (!isAllowedSearchBot && !looksLikeRealBrowser(request)) {
     const country = getCountryCode(request);
     if (country && BLOCKED_COUNTRIES.has(country)) {
       return new NextResponse('Forbidden', { status: 403 });
