@@ -539,26 +539,26 @@ export const PLACEMENT_PRESETS = {
   // Homepage — touchless-named products (front-door SEO match) plus two
   // Chemical Guys CJ direct products (higher commission rate than Amazon).
   homepage: [
-    'swift-touchless-shampoo',
-    'optimum-touchless-decon',
-    'chemguys-honeydew-snow-foam',
     'chemguys-mr-pink-super-suds',
+    'chemguys-honeydew-snow-foam',
+    'chemguys-hydroslick',
+    'chemguys-woolly-mammoth-towel',
   ],
   // Equipment audience — DIY at home. TORQ foam cannon (CJ) + pressure
   // washer + touchless soaps form the full kit.
   equipment: [
-    'swift-touchless-shampoo',
+    'chemguys-mr-pink-super-suds',
     'chemguys-torq-max-foam-8',
-    'westinghouse-epx3100',
     'chemguys-honeydew-snow-foam',
+    'chemguys-woolly-mammoth-towel',
   ],
   // Chain subscribers — when their unlimited's closed or they want to
   // reproduce that touchless experience at home. HydroSlick (CJ ceramic)
   // covers between-wash protection at a higher commission rate.
   chains: [
-    'swift-touchless-shampoo',
-    'optimum-touchless-decon',
+    'chemguys-mr-pink-super-suds',
     'chemguys-hydroslick',
+    'chemguys-woolly-mammoth-towel',
   ],
   // Unlimited subscribers — between-wash care. Optimum (touchless SEO) +
   // Chemical Guys ceramic & drying towel (CJ direct, earn during the appeal).
