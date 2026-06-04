@@ -195,8 +195,8 @@ export default function PaintSafeModule({
         </h2>
       )}
 
-      {/* ---- drawer toggle (verified only) ---- */}
-      {verified && (
+      {/* ---- drawer toggle (verified only; never offer a dead button) ---- */}
+      {verified && clear > 0 && (
         <button
           onClick={() => setOpen((o) => !o)}
           className="mt-3 inline-flex items-center gap-2 bg-[#0F2744] hover:bg-[#1e3a5f] text-white rounded-[10px] px-4 py-2.5 text-[13.5px] font-bold transition-colors"

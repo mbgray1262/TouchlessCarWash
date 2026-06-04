@@ -3,7 +3,7 @@ import { permanentRedirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@supabase/supabase-js';
-import { Star, MapPin, Phone, Award, CheckCircle, ChevronRight, Trophy, MessageSquareQuote, Sparkles } from 'lucide-react';
+import { Star, MapPin, Phone, Award, CheckCircle, ChevronRight, Trophy, MessageSquareQuote, Sparkles, ShieldCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
 import { getStateSlug, slugify } from '@/lib/constants';
@@ -638,6 +638,16 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
                               </span>
                             )}
                           </div>
+
+                          {/* Paint-Safe Verified chip */}
+                          {listing.paint_safe_verified && (
+                            <div className="mb-3">
+                              <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <ShieldCheck className="w-3.5 h-3.5" />
+                                Paint-Safe Verified
+                              </span>
+                            </div>
+                          )}
 
                           {/* Amenity badges */}
                           {listing.amenities && listing.amenities.length > 0 && (
