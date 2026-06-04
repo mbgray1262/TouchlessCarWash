@@ -182,7 +182,7 @@ export default function PaintSafeModule({
           <div className="flex-1">
             <div className="text-[18px] font-extrabold text-emerald-700 flex items-center gap-1.5">Paint-Safe Verified ✓</div>
             <div className="text-[13px] text-slate-600 mt-0.5">
-              <b className="text-[#0F2744]">{pctPos}% positive</b> on paint · {reviewCount.toLocaleString()} reviews · based on real customer feedback
+              Customers report it&rsquo;s gentle on paint — based on <b className="text-[#0F2744]">{clear}</b> paint {clear === 1 ? 'mention' : 'mentions'} across {reviewCount.toLocaleString()} reviews
             </div>
             <a href={methodologyHref} className="inline-block mt-1.5 text-[12px] text-blue-600 hover:underline">How we verify this ›</a>
           </div>
@@ -207,8 +207,13 @@ export default function PaintSafeModule({
       {/* ---- evidence drawer ---- */}
       {(open || !verified) && clear > 0 && (
         <div className={verified ? 'mt-4 pt-4 border-t border-gray-200' : 'mt-3'}>
-          {/* split bar */}
-          <div className="flex h-4 rounded-full overflow-hidden border border-gray-200">
+          {/* context + split bar — framed against TOTAL reviews so a tiny paint
+              sample never reads as an alarming headline percentage. */}
+          <p className="text-[12.5px] text-slate-500 mb-2">
+            Of <b className="text-slate-700">{reviewCount.toLocaleString()}</b> total reviews,{' '}
+            <b className="text-slate-700">{clear}</b> mention paint or finish:
+          </p>
+          <div className="flex h-3 rounded-full overflow-hidden border border-gray-200">
             <div className="bg-[#22C55E]" style={{ width: `${pctPos}%` }} />
             <div className="bg-red-400" style={{ width: `${pctNeg}%` }} />
           </div>
@@ -222,7 +227,7 @@ export default function PaintSafeModule({
             >
               <ThumbsUp className="w-4 h-4 text-emerald-700 shrink-0" />
               <span className="text-[11px] text-slate-600 leading-tight">
-                <b className="block text-[14px] text-[#0F2744]">{pctPos}% gentle on paint</b>tap to see these
+                <b className="block text-[14px] text-[#0F2744]">{paintPos} {paintPos === 1 ? 'says' : 'say'} gentle on paint</b>tap to see these
               </span>
               <span className="ml-auto text-[10.5px] font-extrabold uppercase text-emerald-700">Filter ›</span>
             </button>
@@ -234,7 +239,7 @@ export default function PaintSafeModule({
             >
               <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
               <span className="text-[11px] text-slate-600 leading-tight">
-                <b className="block text-[14px] text-[#0F2744]">{pctNeg}% raised concerns</b>tap to read
+                <b className="block text-[14px] text-[#0F2744]">{paintNeg} mentioned a concern</b>tap to read
               </span>
               <span className="ml-auto text-[10.5px] font-extrabold uppercase text-red-600">Filter ›</span>
             </button>
