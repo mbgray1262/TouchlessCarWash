@@ -1,10 +1,12 @@
 // Per-IP rate limit (Netlify code-based rate limiting — works on all plans).
 //
 // Stops the aggressive bot/scraper BURSTS that were causing the sharp GA traffic
-// spikes: any single IP making more than 100 requests in 60 seconds to a content
-// page gets a 429 (blocked). That's very generous for a real visitor — including
-// opening multiple tabs and Next.js link prefetching — so legitimate traffic is
-// unaffected, while a scraper hammering pages in a burst is cut off immediately.
+// spikes: any single IP making more than 60 requests in 60 seconds to a content
+// page gets a 429 (blocked). 60/min leaves headroom for a real visitor — Next.js
+// prefetches links on scroll (a listing-dense page can fire dozens of background
+// requests) and shared IPs (offices/carriers) aggregate many users — while a
+// scraper hammering pages in a burst is cut off. Going much below 60 risks
+// false-positives on engaged real users, so 60 is the floor.
 //
 // Scope: real content routes only (home, state/city/listing, search, best-of,
 // chains, features, paint-safe). Static assets (/_next/*) and APIs are excluded.
@@ -35,7 +37,7 @@ export const config = {
   ],
   excludedPath: ['/_next/*', '/api/*'],
   rateLimit: {
-    windowLimit: 100,
+    windowLimit: 60,
     windowSize: 60, // seconds (max 180)
     aggregateBy: ['ip', 'domain'],
   },
