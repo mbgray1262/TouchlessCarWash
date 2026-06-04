@@ -7,6 +7,7 @@ import { getStateSlug, slugify, US_STATES } from '@/lib/constants';
 import { ListingCard } from '@/components/ListingCard';
 import { Pagination, PAGE_SIZE } from '@/components/Pagination';
 import { SearchFilters } from '@/components/SearchFilters';
+import { withPaintSafeChip, PAINT_SAFE_FILTER_SLUG } from '@/lib/paint-safe-filter';
 import { METRO_AREAS, haversineDistance, boundingBox, getMetroBySlug, type MetroArea } from '@/lib/metro-areas';
 import { MapPin, Map as MapIcon, Trophy, Search, ArrowRight } from 'lucide-react';
 import type { Metadata } from 'next';
@@ -63,6 +64,9 @@ async function searchListings(
   activeFilterSlugs: string[],
   allFilters: Filter[]
 ): Promise<Listing[]> {
+  // Paint-Safe Verified is a synthetic chip filtering the paint_safe_verified
+  // column, not an amenity join — it never resolves to a listing_filters id.
+  const wantsPaintSafe = activeFilterSlugs.includes(PAINT_SAFE_FILTER_SLUG);
   const filterIds = activeFilterSlugs
     .map(slug => allFilters.find(f => f.slug === slug)?.id)
     .filter((id): id is number => id != null);
@@ -92,6 +96,7 @@ async function searchListings(
       .eq('is_touchless', true)
       .order('rating', { ascending: false });
 
+    if (wantsPaintSafe) q = q.eq('paint_safe_verified', true);
     if (query) {
       q = q.or(buildSearchFilter(query));
     }
@@ -105,6 +110,7 @@ async function searchListings(
       .eq('is_touchless', true)
       .order('rating', { ascending: false });
 
+    if (wantsPaintSafe) q = q.eq('paint_safe_verified', true);
     if (query) {
       q = q.or(buildSearchFilter(query));
     }
@@ -152,7 +158,9 @@ async function searchByProximity(
 ): Promise<(Listing & { distanceMiles: number })[]> {
   const radii = [25, 50, 100];
 
-  // Pre-compute qualified listing IDs if filters are active
+  const wantsPaintSafe = activeFilterSlugs.includes(PAINT_SAFE_FILTER_SLUG);
+
+  // Pre-compute qualified listing IDs if amenity filters are active
   let qualifiedIds: string[] | null = null;
   if (activeFilterSlugs.length > 0) {
     const filterIds = activeFilterSlugs
@@ -196,6 +204,9 @@ async function searchByProximity(
 
     if (qualifiedIds) {
       query = query.in('id', qualifiedIds);
+    }
+    if (wantsPaintSafe) {
+      query = query.eq('paint_safe_verified', true);
     }
 
     const { data } = await query;
@@ -593,7 +604,10 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
       <div className="container mx-auto px-4 max-w-6xl py-8">
         <SearchFilters
-          filters={allFilters}
+          filters={withPaintSafeChip(
+            allFilters,
+            activeFilterSlugs.includes(PAINT_SAFE_FILTER_SLUG) || listings.some(l => l.paint_safe_verified),
+          )}
           activeFilterSlugs={activeFilterSlugs}
           currentQuery={query}
           lat={resolvedLat}

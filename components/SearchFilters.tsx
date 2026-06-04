@@ -1,7 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Sparkles, Clock, Wind, RefreshCw, Hand, Truck, IdCard, Car } from 'lucide-react';
+import { Sparkles, Clock, Wind, RefreshCw, Hand, Truck, IdCard, Car, ShieldCheck } from 'lucide-react';
+import { PAINT_SAFE_FILTER_SLUG } from '@/lib/paint-safe-filter';
 
 interface Filter {
   id: number;
@@ -30,6 +31,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   truck: Truck,
   'id-card': IdCard,
   car: Car,
+  'shield-check': ShieldCheck,
 };
 
 /** Wash-type filter slugs — rendered first, in this order */
@@ -82,27 +84,36 @@ export function SearchFilters({ filters, activeFilterSlugs, currentQuery, lat, l
 
   if (filters.length === 0) return null;
 
-  // Split into wash types (ordered) and amenities (original order)
+  // Split into the Paint-Safe Verified chip (rendered first), wash types
+  // (ordered), and amenities (original order).
+  const paintSafe = filters.find(f => f.slug === PAINT_SAFE_FILTER_SLUG);
   const washTypes = WASH_TYPE_SLUGS
     .map(slug => filters.find(f => f.slug === slug))
     .filter((f): f is Filter => f != null);
-  const amenities = filters.filter(f => !WASH_TYPE_SET.has(f.slug));
+  const amenities = filters.filter(
+    f => !WASH_TYPE_SET.has(f.slug) && f.slug !== PAINT_SAFE_FILTER_SLUG,
+  );
+  const leadCount = (paintSafe ? 1 : 0) + washTypes.length;
 
   function renderChip(f: Filter) {
     const Icon = ICON_MAP[f.icon ?? ''] ?? Sparkles;
     const active = activeSet.has(f.slug);
     const isWashType = WASH_TYPE_SET.has(f.slug);
+    const isPaintSafe = f.slug === PAINT_SAFE_FILTER_SLUG;
+    const style = active
+      ? isPaintSafe
+        ? 'bg-emerald-600 border-emerald-600 text-white'
+        : 'bg-[#0F2744] border-[#0F2744] text-white'
+      : isPaintSafe
+        ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:border-emerald-500 hover:bg-emerald-100'
+        : isWashType
+          ? 'bg-blue-50 border-blue-200 text-[#0F2744] hover:border-[#0F2744] hover:bg-blue-100'
+          : 'bg-white border-gray-200 text-gray-700 hover:border-[#0F2744] hover:text-[#0F2744]';
     return (
       <button
         key={f.id}
         onClick={() => toggleFilter(f.slug)}
-        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
-          active
-            ? 'bg-[#0F2744] border-[#0F2744] text-white'
-            : isWashType
-              ? 'bg-blue-50 border-blue-200 text-[#0F2744] hover:border-[#0F2744] hover:bg-blue-100'
-              : 'bg-white border-gray-200 text-gray-700 hover:border-[#0F2744] hover:text-[#0F2744]'
-        }`}
+        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${style}`}
       >
         <Icon className="w-3.5 h-3.5" />
         {f.name}
@@ -113,8 +124,9 @@ export function SearchFilters({ filters, activeFilterSlugs, currentQuery, lat, l
   return (
     <div className="mb-6">
       <div className="flex flex-wrap items-center gap-2">
+        {paintSafe && renderChip(paintSafe)}
         {washTypes.map(renderChip)}
-        {washTypes.length > 0 && amenities.length > 0 && (
+        {leadCount > 0 && amenities.length > 0 && (
           <div className="w-px h-6 bg-gray-200 mx-1" />
         )}
         {amenities.map(renderChip)}

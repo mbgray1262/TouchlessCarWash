@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { US_STATES, getStateName, slugify, getStateSlug } from '@/lib/constants';
 import { CityListingsClient } from '@/components/CityListingsClient';
+import { withPaintSafeChip, PAINT_SAFE_FILTER_ID } from '@/lib/paint-safe-filter';
 import { ListingCard } from '@/components/ListingCard';
 import { RedirectBanner } from '@/components/RedirectBanner';
 import { RelatedReading } from '@/components/RelatedReading';
@@ -375,6 +376,13 @@ export default async function CityPage({ params }: CityPageProps) {
   // Build filter→listingIds map for client-side in-memory filtering
   const filterMap = await getFilterMapForListings(allListings.map(l => l.id));
 
+  // Inject the synthetic "Paint-Safe Verified" chip when at least one listing
+  // in this city has earned the badge. It filters on the paint_safe_verified
+  // boolean (not an amenity join), so we seed its entry in the in-memory map.
+  const paintSafeIds = allListings.filter(l => l.paint_safe_verified).map(l => l.id);
+  const cityFilters = withPaintSafeChip(allFilters, paintSafeIds.length > 0);
+  if (paintSafeIds.length > 0) filterMap[PAINT_SAFE_FILTER_ID] = paintSafeIds;
+
   // FAQ data always uses the full unfiltered listings
   const listingsWithRating = allListings.filter(l => l.rating != null && l.rating > 0);
   const topRatingValue = listingsWithRating.length > 0 ? Math.max(...listingsWithRating.map(l => l.rating)) : null;
@@ -679,7 +687,7 @@ export default async function CityPage({ params }: CityPageProps) {
                   cityName={cityName}
                   stateCode={stateCode!}
                   allListings={allListings}
-                  allFilters={allFilters}
+                  allFilters={cityFilters}
                   filterMap={filterMap}
                 />
               </Suspense>

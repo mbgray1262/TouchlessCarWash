@@ -9,9 +9,10 @@ import { ClientPagination, PAGE_SIZE } from '@/components/Pagination';
 import { SearchFilters } from '@/components/SearchFilters';
 import type { Listing } from '@/lib/supabase';
 import { slugify } from '@/lib/constants';
+import { withPaintSafeChip, PAINT_SAFE_FILTER_SLUG } from '@/lib/paint-safe-filter';
 
 const LISTING_CARD_COLUMNS =
-  'id, name, slug, city, state, address, phone, rating, review_count, hero_image, google_photo_url, street_view_url, logo_photo, google_logo_url, amenities, touchless_wash_types, extracted_data, hours, is_touchless, is_featured, is_claimed';
+  'id, name, slug, city, state, address, phone, rating, review_count, hero_image, google_photo_url, street_view_url, logo_photo, google_logo_url, amenities, touchless_wash_types, extracted_data, hours, is_touchless, is_featured, is_claimed, paint_safe_verified';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,6 +34,7 @@ interface StateListingsClientProps {
   initialListings: Listing[];
   totalCount: number;
   allFilters: Filter[];
+  hasPaintSafe: boolean;
 }
 
 export function StateListingsClient({
@@ -42,6 +44,7 @@ export function StateListingsClient({
   initialListings,
   totalCount: serverTotal,
   allFilters,
+  hasPaintSafe,
 }: StateListingsClientProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -82,10 +85,16 @@ export function StateListingsClient({
 
     setLoading(true);
     try {
+      // The Paint-Safe Verified chip is a synthetic filter on the
+      // paint_safe_verified column — handle it separately from the amenity
+      // filters, which join through listing_filters.
+      const wantsPaintSafe = filterSlugs.includes(PAINT_SAFE_FILTER_SLUG);
+      const amenitySlugs = filterSlugs.filter((s) => s !== PAINT_SAFE_FILTER_SLUG);
+
       // Resolve filter IDs → qualified listing IDs
       let qualifiedIds: string[] | null = null;
-      if (hasFilters) {
-        const filterIds = filterSlugs
+      if (amenitySlugs.length > 0) {
+        const filterIds = amenitySlugs
           .map((slug) => allFilters.find((f) => f.slug === slug)?.id)
           .filter((id): id is number => id != null);
 
@@ -121,6 +130,10 @@ export function StateListingsClient({
       // Free-text search across wash name OR city.
       if (hasQuery) {
         dbQuery = dbQuery.or(`name.ilike.%${query}%,city.ilike.%${query}%`);
+      }
+
+      if (wantsPaintSafe) {
+        dbQuery = dbQuery.eq('paint_safe_verified', true);
       }
 
       dbQuery = dbQuery.order('rating', { ascending: false });
@@ -235,7 +248,7 @@ export function StateListingsClient({
       </div>
 
       <SearchFilters
-        filters={allFilters}
+        filters={withPaintSafeChip(allFilters, hasPaintSafe)}
         activeFilterSlugs={filterSlugs}
         currentQuery=""
         baseHref={`/state/${stateSlug}`}

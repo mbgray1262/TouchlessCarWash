@@ -179,7 +179,7 @@ export default async function StatePage({ params }: StatePageProps) {
   const stateName = getStateName(stateCode);
 
   // Fetch ALL base data in a single parallel stage — no waterfalls
-  const [allFilters, totalCount, citiesData, statesWithListings, descTemplate, initialListings, featureCountsRaw] = await Promise.all([
+  const [allFilters, totalCount, citiesData, statesWithListings, descTemplate, initialListings, featureCountsRaw, paintSafeCount] = await Promise.all([
     getFilters(),
     getStateListingCount(stateCode),
     getCitiesInState(stateCode),
@@ -195,6 +195,14 @@ export default async function StatePage({ params }: StatePageProps) {
         return match ? { slug: f.slug, name: f.name, count: Number(match.count) } : null;
       }),
     ),
+    // Does this state have any Paint-Safe Verified washes? Gates the chip.
+    supabase
+      .from('listings')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_touchless', true)
+      .eq('state', stateCode)
+      .eq('paint_safe_verified', true)
+      .then(({ count }) => count ?? 0),
   ]);
 
   // Substitute live counts into the description template — counts stay
@@ -487,6 +495,7 @@ export default async function StatePage({ params }: StatePageProps) {
               initialListings={initialListings}
               totalCount={totalCount}
               allFilters={allFilters}
+              hasPaintSafe={paintSafeCount > 0}
             />
           </Suspense>
 
