@@ -22,6 +22,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Play, Youtube, ArrowRight } from 'lucide-react';
+import { TrackedYouTubeEmbed } from '@/components/TrackedYouTubeEmbed';
 
 export type HomeVideo = { youtubeId: string; title: string };
 
@@ -89,13 +90,7 @@ export function TouchlessVideoModule({
         style={{ aspectRatio: '16 / 9' }}
       >
         {playing ? (
-          <iframe
-            className="absolute inset-0 h-full w-full"
-            src={`https://www.youtube-nocookie.com/embed/${video.youtubeId}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1`}
-            title={video.title}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
+          <TrackedYouTubeEmbed youtubeId={video.youtubeId} location={location} title={video.title} />
         ) : (
           <button
             type="button"

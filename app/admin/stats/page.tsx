@@ -79,6 +79,7 @@ async function getStats() {
     // listing_id + count tuples; we resolve names below).
     topFavoritedIdsRes,
     topEngagedIdsRes,
+    videoStatsRes,
   ] = await Promise.all([
     supabase.from('listings').select('id', { count: 'exact', head: true }),
     // Match the homepage / about-page count — only approved touchless listings.
@@ -107,6 +108,7 @@ async function getStats() {
     supabase.rpc('states_with_touchless_listings'),
     supabase.rpc('listing_event_top', { p_event_types: ['favorite'], p_limit: 5 }),
     supabase.rpc('listing_event_top', { p_event_types: ['directions', 'phone', 'website'], p_limit: 5 }),
+    supabase.rpc('video_event_stats'),
   ]);
 
   // Tally engagement counts from the RPC result.
@@ -182,6 +184,8 @@ async function getStats() {
     websiteEvents: websiteEventsRes.count ?? 0,
     favoriteEvents: favoriteEventsRes.count ?? 0,
     videoPlayEvents: eventCountMap.video_play ?? 0,
+    videoAvgSeconds: Number((videoStatsRes.data as { avg_seconds?: number }[] | null)?.[0]?.avg_seconds) || 0,
+    videoWatchSessions: Number((videoStatsRes.data as { sessions?: number }[] | null)?.[0]?.sessions) || 0,
     netFavorites: Math.max(0, netFavorites),
     recentEvents: Number(recentEventsRes.data ?? 0),
     // Intersect with the canonical US state list so non-US codes (Canadian
@@ -193,6 +197,13 @@ async function getStats() {
     topFavoritedListings,
     topEngagedListings,
   };
+}
+
+function formatDuration(totalSeconds: number): string {
+  const s = Math.max(0, Math.round(totalSeconds));
+  const m = Math.floor(s / 60);
+  const rem = s % 60;
+  return `${m}:${String(rem).padStart(2, '0')}`;
 }
 
 export default async function AdminStatsPage() {
@@ -241,6 +252,13 @@ export default async function AdminStatsPage() {
           <StatCard icon={Globe} label="Website Clicks" value={stats.websiteEvents} color="purple" />
           <StatCard icon={Heart} label="Favorites" value={stats.favoriteEvents} sub={`${stats.netFavorites} net saved`} color="red" />
           <StatCard icon={Video} label="Video Plays" value={stats.videoPlayEvents} color="amber" />
+          <StatCard
+            icon={Video}
+            label="Avg. Video Watch"
+            value={stats.videoWatchSessions > 0 ? formatDuration(stats.videoAvgSeconds) : '—'}
+            sub={stats.videoWatchSessions > 0 ? `${stats.videoWatchSessions.toLocaleString()} watch sessions` : 'no data yet'}
+            color="amber"
+          />
         </div>
 
         {/* Top Lists */}
