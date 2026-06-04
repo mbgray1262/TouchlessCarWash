@@ -10,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ListingCard } from '@/components/ListingCard';
+import { HomeVideoSection } from '@/components/HomeVideoSection';
 import { RedirectBanner } from '@/components/RedirectBanner';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { getApprovedTouchlessCount } from '@/lib/listing-queries';
@@ -153,6 +154,16 @@ async function getStateListingCounts(): Promise<Record<string, number>> {
 // lib/listing-queries.ts so the home page stat, About page stat, and any
 // other place we cite the directory size all show the same number.
 
+async function getHomepageVideos(): Promise<{ youtubeId: string; title: string }[]> {
+  const { data } = await supabase
+    .from('equipment_videos')
+    .select('youtube_id, title, sort_order')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
+    .limit(6);
+  return (data ?? []).map((r) => ({ youtubeId: r.youtube_id as string, title: r.title as string }));
+}
+
 async function getTotalReviewCount(): Promise<number> {
   const { count, error } = await supabase
     .from('review_snippets')
@@ -162,12 +173,13 @@ async function getTotalReviewCount(): Promise<number> {
 }
 
 export default async function Home({ searchParams }: { searchParams?: { geo?: string } }) {
-  const [featuredListings, stateListingCounts, totalCount, totalReviews] =
+  const [featuredListings, stateListingCounts, totalCount, totalReviews, homeVideos] =
     await Promise.all([
       getFeaturedListings(),
       getStateListingCounts(),
       getApprovedTouchlessCount(),
       getTotalReviewCount(),
+      getHomepageVideos(),
     ]);
 
   // Passive geo via Netlify's x-nf-geo header → nearest metro suggestion.
@@ -333,6 +345,8 @@ export default async function Home({ searchParams }: { searchParams?: { geo?: st
           </div>
         </section>
       )}
+
+      <HomeVideoSection videos={homeVideos} />
 
       <section className="py-14 px-4 bg-gray-50 border-y border-gray-200">
         <div className="container mx-auto max-w-6xl">
