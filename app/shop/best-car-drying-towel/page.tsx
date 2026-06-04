@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   },
 };
 
-const COMPARE_IDS = ['metrovac-master-blaster', 'griots-microfiber-towel'] as const;
+const COMPARE_IDS = ['metrovac-master-blaster', 'chemguys-woolly-mammoth-towel'] as const;
 
 type DrySpec = {
   id: (typeof COMPARE_IDS)[number];
@@ -49,11 +49,11 @@ const DRY_SPECS: Record<(typeof COMPARE_IDS)[number], DrySpec> = {
     contact: 'Zero contact',
     bestFor: 'The truly scratch-free finish — blows water out of every crevice',
   },
-  'griots-microfiber-towel': {
-    id: 'griots-microfiber-towel',
+  'chemguys-woolly-mammoth-towel': {
+    id: 'chemguys-woolly-mammoth-towel',
     method: 'Plush microfiber',
     contact: 'Light contact',
-    bestFor: 'Glass, jambs, and spots the blower misses',
+    bestFor: 'Glass, jambs, and the final scratch-free wipe the blower misses',
   },
 };
 
@@ -179,7 +179,7 @@ export default function BestDryingPage() {
             </p>
             <p className="text-xs text-white/60 italic mt-4 max-w-3xl">
               Editor-tested picks. We earn from qualifying purchases as Amazon
-              Associates — links don&rsquo;t change your price.
+              Associates and Chemical Guys affiliates — links don&rsquo;t change your price.
             </p>
           </div>
         </section>
@@ -196,8 +196,8 @@ export default function BestDryingPage() {
               />
               <PickCard
                 title="Best drying towel"
-                product="Griot's Garage XL Microfiber"
-                why="Plush, ultra-absorbent, and safe for ceramic coatings — for glass, jambs, and what the blower misses."
+                product="Chemical Guys Woolly Mammoth"
+                why="Plush 1-inch microfiber that holds nearly a gallon of water, with silk-banded edges and ceramic/PPF-safe — for glass, jambs, and the final scratch-free wipe."
               />
             </div>
           </div>

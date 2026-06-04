@@ -16,8 +16,8 @@ const PAGE_PATH = '/shop/best-ceramic-coating-spray';
 const PAGE_URL = `${SITE_URL}${PAGE_PATH}`;
 const YEAR = new Date().getFullYear();
 
-const TITLE = `Best Ceramic Coating Spray ${YEAR}: Meguiar's Hybrid Ceramic vs. Chemical Guys HydroSlick`;
-const DESCRIPTION = `Spray-on ceramic you apply right after a wash makes every future touchless rinse shed dirt and water faster. We compare Meguiar's Hybrid Ceramic Wax and Chemical Guys HydroSlick for ${YEAR}.`;
+const TITLE = `Best Ceramic Coating Spray ${YEAR}: Chemical Guys HydroSlick vs. Meguiar's Hybrid Ceramic`;
+const DESCRIPTION = `Spray-on ceramic you apply right after a wash makes every future touchless rinse shed dirt and water faster. Our top pick is Chemical Guys HydroSlick — ~6 months of durability and a deeper gloss. We compare it against Meguiar's Hybrid Ceramic Wax, the easiest-to-apply pick for beginners, for ${YEAR}.`;
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   },
 };
 
-const COMPARE_IDS = ['meguiars-hybrid-ceramic-wax', 'chemguys-hydroslick'] as const;
+const COMPARE_IDS = ['chemguys-hydroslick', 'meguiars-hybrid-ceramic-wax'] as const;
 
 type CeramicSpec = {
   id: (typeof COMPARE_IDS)[number];
@@ -170,12 +170,15 @@ export default function BestCeramicSprayPage() {
               </h1>
             </div>
             <p className="text-base md:text-lg text-[#22C55E]/90 font-semibold mb-4">
-              Meguiar&rsquo;s Hybrid Ceramic vs. Chemical Guys HydroSlick
+              Chemical Guys HydroSlick vs. Meguiar&rsquo;s Hybrid Ceramic
             </p>
             <p className="text-lg text-blue-100 max-w-3xl leading-relaxed">
               A spray-on ceramic applied right after your wash makes every future
               touchless rinse sheet water and shed dirt faster — so your car stays
-              cleaner, longer, with less effort. Here are the two we&rsquo;d buy.
+              cleaner, longer, with less effort. Our top pick is{' '}
+              <strong className="text-white">Chemical Guys HydroSlick</strong> — roughly
+              six months of durability and a deeper, glossier finish. Here are the two
+              we&rsquo;d buy.
             </p>
             <p className="text-xs text-white/60 italic mt-4 max-w-3xl">
               Editor-tested picks. We earn from qualifying purchases as Amazon
@@ -190,14 +193,14 @@ export default function BestCeramicSprayPage() {
             <h2 className="text-xl font-bold text-[#0F2744] mb-5">Quick winners by use case</h2>
             <div className="grid sm:grid-cols-2 gap-4">
               <PickCard
-                title="Easiest to apply"
-                product="Meguiar's Hybrid Ceramic Wax"
-                why="Spray on the wet car, rinse off, done — zero buffing. The no-fuss pick for routine upkeep."
-              />
-              <PickCard
-                title="Longest protection"
+                title="Editor's Choice — longest protection & deepest gloss"
                 product="Chemical Guys HydroSlick"
                 why="SiO2 hyperwax that bonds in minutes for ~6 months of slick, glossy, hydrophobic protection."
+              />
+              <PickCard
+                title="Easiest to apply — best for beginners"
+                product="Meguiar's Hybrid Ceramic Wax"
+                why="Spray on the wet car, rinse off, done — zero buffing. The no-fuss pick for routine upkeep, ~3–4 months."
               />
             </div>
           </div>

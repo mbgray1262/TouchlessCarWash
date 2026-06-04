@@ -16,8 +16,8 @@ const PAGE_PATH = '/shop/best-foam-cannon';
 const PAGE_URL = `${SITE_URL}${PAGE_PATH}`;
 const YEAR = new Date().getFullYear();
 
-const TITLE = `Best Foam Cannon for Touchless Car Washing ${YEAR}: MTM Hydro vs. TORQ vs. MATCC`;
-const DESCRIPTION = `We compared the three foam cannons serious detailers actually use — MTM Hydro PF22.2, Chemical Guys TORQ Max Foam 8, and MATCC Adjustable. PSI ratings, build quality, foam thickness, and price-per-feature breakdown.`;
+const TITLE = `Best Foam Cannon for Touchless Car Washing ${YEAR}: Chemical Guys TORQ vs. MTM Hydro vs. MATCC`;
+const DESCRIPTION = `We compared the three foam cannons serious detailers actually use. Our Editor's Choice for an at-home touchless setup is the Chemical Guys TORQ Max Foam 8 — lifetime warranty, adjustable thick foam, and a perfect fit with the Chemical Guys soap ecosystem. Plus the pro-build MTM Hydro PF22.2 and budget MATCC. PSI ratings, build quality, foam thickness, and price-per-feature breakdown.`;
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -34,8 +34,8 @@ export const metadata: Metadata = {
 };
 
 const COMPARE_IDS = [
-  'mtm-pf22',
   'chemguys-torq-max-foam-8',
+  'mtm-pf22',
   'matcc-foam-cannon',
 ] as const;
 
@@ -157,12 +157,16 @@ export default function BestFoamCannonPage() {
               </h1>
             </div>
             <p className="text-base md:text-lg text-[#22C55E]/90 font-semibold mb-4">
-              MTM Hydro PF22.2 vs. Chemical Guys TORQ vs. MATCC
+              Chemical Guys TORQ vs. MTM Hydro PF22.2 vs. MATCC
             </p>
             <p className="text-lg text-blue-100 max-w-3xl leading-relaxed">
               The foam cannon is the most important piece of a no-contact home wash —
               thick clinging foam is what does the cleaning work your sponge would
               otherwise do. We compared the three cannons serious detailers actually buy.
+              Our Editor&rsquo;s Choice for a touchless setup is the{' '}
+              <strong className="text-white">Chemical Guys TORQ Max Foam 8</strong> — a
+              lifetime warranty, adjustable thick foam, and seamless pairing with the
+              Chemical Guys soap ecosystem make it the best all-around pick.
             </p>
             <p className="text-xs text-white/60 italic mt-4 max-w-3xl">
               Editor-tested picks. We earn from qualifying purchases as Amazon
@@ -180,14 +184,14 @@ export default function BestFoamCannonPage() {
             </h2>
             <div className="grid sm:grid-cols-3 gap-4">
               <PickCard
-                title="Best overall build"
-                product="MTM Hydro PF22.2"
-                why="Italian-made brass + stainless. The cannon every pro detailer points to."
+                title="Editor's Choice — best all-around"
+                product="Chemical Guys TORQ"
+                why="Lifetime warranty, adjustable thick foam, and a perfect match with the Chemical Guys soap ecosystem out of the box — the best all-around cannon for a touchless setup."
               />
               <PickCard
-                title="Best with warranty"
-                product="Chemical Guys TORQ"
-                why="Lifetime warranty + matches their soap ecosystem out of the box."
+                title="Best build / most durable"
+                product="MTM Hydro PF22.2"
+                why="Italian-made brass + stainless. The cannon every pro detailer points to."
               />
               <PickCard
                 title="Best budget"

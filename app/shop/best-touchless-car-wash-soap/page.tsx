@@ -16,8 +16,8 @@ const PAGE_PATH = '/shop/best-touchless-car-wash-soap';
 const PAGE_URL = `${SITE_URL}${PAGE_PATH}`;
 const YEAR = new Date().getFullYear();
 
-const TITLE = `Best Touchless Car Wash Soap ${YEAR}: Swift vs. Mr. Pink vs. Optimum vs. Meguiar's vs. Adam's`;
-const DESCRIPTION = `We compared 5 of the most popular touchless car wash soaps — Swift Touchless, Chemical Guys Mr. Pink, Optimum Touchless Decon, Meguiar's Hyper-Wash, and Adam's. Real prices, pH info, and best-fit guidance for ceramic coatings.`;
+const TITLE = `Best Touchless Car Wash Soap ${YEAR}: Mr. Pink vs. Swift vs. Optimum vs. Meguiar's vs. Adam's`;
+const DESCRIPTION = `We compared 5 of the most popular touchless car wash soaps. Our top pick is Chemical Guys Mr. Pink — pH-balanced, ceramic-coating safe, and foam-cannon ready for maximum suds. Plus Swift Touchless, Optimum Touchless Decon, Meguiar's Hyper-Wash, and Adam's. Real prices, pH info, and best-fit guidance for ceramic coatings.`;
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -34,8 +34,8 @@ export const metadata: Metadata = {
 };
 
 const COMPARE_IDS = [
-  'swift-touchless-shampoo',
   'chemguys-mr-pink-super-suds',
+  'swift-touchless-shampoo',
   'optimum-touchless-decon',
   'meguiars-hyperwash',
   'adams-car-shampoo',
@@ -175,12 +175,15 @@ export default function BestTouchlessSoapPage() {
               </h1>
             </div>
             <p className="text-base md:text-lg text-[#22C55E]/90 font-semibold mb-4">
-              Swift vs. Mr. Pink vs. Optimum vs. Meguiar&rsquo;s vs. Adam&rsquo;s
+              Mr. Pink vs. Swift vs. Optimum vs. Meguiar&rsquo;s vs. Adam&rsquo;s
             </p>
             <p className="text-lg text-blue-100 max-w-3xl leading-relaxed">
               We compared the five most popular touchless car wash soaps for at-home
-              no-contact washing. Real prices, pH info, ceramic-coating compatibility,
-              and a clear winner for each kind of buyer.
+              no-contact washing. Our Editor&rsquo;s Choice is{' '}
+              <strong className="text-white">Chemical Guys Mr. Pink</strong> — pH-balanced
+              and ceramic-coating safe, foam-cannon ready, and built for maximum suds, it&rsquo;s
+              the best all-around soap for a touchless setup. Real prices, pH info,
+              ceramic-coating compatibility, and a clear winner for each kind of buyer.
             </p>
             <p className="text-xs text-white/60 italic mt-4 max-w-3xl">
               Editor-tested picks. We earn from qualifying purchases as Amazon
@@ -198,14 +201,14 @@ export default function BestTouchlessSoapPage() {
             </h2>
             <div className="grid sm:grid-cols-2 gap-4">
               <PickCard
+                title="Editor's Choice — best all-around"
+                product="Chemical Guys Mr. Pink Super Suds"
+                why="pH-balanced and ceramic-coating safe, foam-cannon ready, maximum suds. The best all-around soap for a touchless setup."
+              />
+              <PickCard
                 title="Best for ceramic coatings"
                 product="Optimum Touchless Decon"
                 why="pH-neutral, won't strip SiO2 protection, ceramic-safe."
-              />
-              <PickCard
-                title="Best for foam cannons"
-                product="Chemical Guys Mr. Pink Super Suds"
-                why="#1 selling foam-cannon shampoo — thick, slick, suds for days."
               />
               <PickCard
                 title="Best heavy-duty"

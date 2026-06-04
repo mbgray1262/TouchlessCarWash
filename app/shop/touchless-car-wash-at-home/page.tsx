@@ -66,8 +66,8 @@ const STEPS: Step[] = [
   {
     n: 4,
     title: 'Touchless soap — the cleaner',
-    body: 'A high-foaming, pH-appropriate soap does the chemical work a sponge would otherwise do. Match it to your car: pH-neutral if you have a ceramic coating, heavy-duty if you fight road grime.',
-    productId: 'swift-touchless-shampoo',
+    body: 'A high-foaming, pH-appropriate soap does the chemical work a sponge would otherwise do. Chemical Guys Mr. Pink is our go-to here — pH-balanced and ceramic-coating safe, it whips into thick suds through a foam cannon for maximum cling and is gentle enough for any finish.',
+    productId: 'chemguys-mr-pink-super-suds',
     guideHref: '/shop/best-touchless-car-wash-soap',
     guideLabel: 'Compare the best touchless soaps',
   },
@@ -82,8 +82,8 @@ const STEPS: Step[] = [
   {
     n: 6,
     title: 'Protect — make the next wash easier',
-    body: 'Mist on a spray ceramic while the car is still damp. It leaves a slick, hydrophobic layer so future washes shed dirt and water faster and your car stays clean longer.',
-    productId: 'meguiars-hybrid-ceramic-wax',
+    body: 'Spread on a spray ceramic like Chemical Guys HydroSlick while the car is still damp. This SiO2 hyperwax bonds in minutes and leaves a slick, hydrophobic layer that lasts around six months — so future washes shed dirt and water faster and your car stays glossy and clean longer.',
+    productId: 'chemguys-hydroslick',
     guideHref: '/shop/best-ceramic-coating-spray',
     guideLabel: 'Compare the best ceramic sprays',
   },
