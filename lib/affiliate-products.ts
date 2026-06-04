@@ -114,6 +114,24 @@ export const PRODUCTS: Product[] = [
       'Prevents water spots after the wash. Scratch-free and safe for ceramic coatings and PPF.',
     hasImage: true,
   },
+  // Chemical Guys plush drying towel via CJ direct — the CG equivalent of the
+  // Griot's towel (kept below for comparison). Earns commission during the
+  // Amazon Associates appeal.
+  {
+    id: 'chemguys-woolly-mammoth-towel',
+    brand: 'Chemical Guys',
+    name: 'Woolly Mammoth Microfiber Drying Towel (36" x 25")',
+    category: 'drying-towel',
+    vendor: 'chemicalguys-cj',
+    chemicalguysUrl:
+      'https://www.chemicalguys.com/products/woolly-mammoth-microfiber-drying-towel-36-x-25?variant=46294802366769',
+    priceRange: '$30',
+    rating: 4.8,
+    positioning:
+      'Plush 1"-thick microfiber that drinks up nearly a gallon of water — dries the whole car scratch-free in one pass. Silk-banded edges, safe on ceramic coatings and PPF.',
+    imageUrl:
+      'https://cdn.shopify.com/s/files/1/0742/8938/1681/files/1-11-30-20-MIC1995-WoollyMammoth-FrontPackaging.jpg?v=1762198336',
+  },
   {
     // Replaced the Amazon Interior Wipes with the Chemical Guys flagship
     // liquid Total Interior Cleaner & Protectant (TIC) via CJ direct —
@@ -214,6 +232,22 @@ export const PRODUCTS: Product[] = [
       'pH-best biodegradable formula. Cult-favorite DIY brand with thick suds and zero scratch risk.',
     imageUrl: 'https://m.media-amazon.com/images/I/71UQMENo4fL.jpg',
   },
+  // Chemical Guys SiO2 ceramic soap via CJ direct — cleans + adds protection.
+  {
+    id: 'chemguys-hydrosuds-ceramic-soap',
+    brand: 'Chemical Guys',
+    name: 'HydroSuds Ceramic Car Wash Soap (16oz)',
+    category: 'touchless-soap',
+    vendor: 'chemicalguys-cj',
+    chemicalguysUrl:
+      'https://www.chemicalguys.com/products/hydrosuds-high-gloss-hyper-foaming-sio2-ceramic-car-wash-soap?variant=46286819721521',
+    priceRange: '$20',
+    rating: 4.7,
+    positioning:
+      'SiO2 ceramic soap that cleans and lays down water-beading protection in one wash. pH-neutral and foam-cannon ready for a high-foam touchless wash.',
+    imageUrl:
+      'https://cdn.shopify.com/s/files/1/0742/8938/1681/files/0-0000001-CWS21216-Front-2000x2000.jpg?v=1762198193',
+  },
 
   // ───── Rinseless / waterless (no hose, no pressure washer) ─────
   // For the "no driveway" audience — apartments, condos, garages, winter.
@@ -230,6 +264,22 @@ export const PRODUCTS: Product[] = [
       'Wash your car with no hose and no pressure washer — just two buckets. ONR’s polymers wrap around dirt so you wipe it off without scratching. The go-to for apartments, garages, and winter washing.',
     hasImage: true,
     editorPick: true,
+  },
+  // Chemical Guys waterless wash via CJ direct — no hose, no bucket option.
+  {
+    id: 'chemguys-swift-wipe-waterless',
+    brand: 'Chemical Guys',
+    name: 'Swift Wipe Waterless Car Wash (16oz)',
+    category: 'rinseless',
+    vendor: 'chemicalguys-cj',
+    chemicalguysUrl:
+      'https://www.chemicalguys.com/products/swift-wipe-complete-waterless-car-wash-easy-spray-wipe-formula?variant=45547759894833',
+    priceRange: '$13',
+    rating: 4.6,
+    positioning:
+      'No hose, no bucket — spray on, wipe off. Slickening agents lift dirt without scratching and leave a high-gloss sealant behind. Perfect for apartments and quick touch-ups.',
+    imageUrl:
+      'https://cdn.shopify.com/s/files/1/0742/8938/1681/files/0-000000001-CWS20916-Front-2000x2000.jpg?v=1762198109',
   },
 
   // ───── Snow foam (touchless prewash) ─────
@@ -349,6 +399,22 @@ export const PRODUCTS: Product[] = [
     imageUrl:
       'https://cdn.shopify.com/s/files/1/0742/8938/1681/files/0-0000001-WAC22916-Front-2000x2000.jpg?v=1699306445',
   },
+  // Chemical Guys SiO2 quick detailer via CJ direct — between-wash ceramic.
+  {
+    id: 'chemguys-hydrospeed-ceramic',
+    brand: 'Chemical Guys',
+    name: 'HydroSpeed Ceramic Quick Detailer (16oz)',
+    category: 'ceramic-protection',
+    vendor: 'chemicalguys-cj',
+    chemicalguysUrl:
+      'https://www.chemicalguys.com/products/hydrospeed-ceramic-quick-detailer?variant=46294740894001',
+    priceRange: '$25',
+    rating: 4.7,
+    positioning:
+      'Spray-on SiO2 ceramic detailer — mist on after a wash for instant gloss and weeks of water beading. The fastest way to boost protection between washes.',
+    imageUrl:
+      'https://cdn.shopify.com/s/files/1/0742/8938/1681/files/0-0000001-WAC23316-Front-2000x2000.jpg?v=1762198320',
+  },
 
   // ───── No-touch drying ─────
   {
@@ -461,13 +527,13 @@ export const PLACEMENT_PRESETS = {
   // Sticky sidebar — keep the 3 image-having products (sidebar prominence
   // benefits from real product photos since the unit is small/glanceable)
   listing: [
-    'meguiars-hybrid-ceramic-wax',
-    'griots-microfiber-towel',
+    'chemguys-hydrospeed-ceramic',
+    'chemguys-woolly-mammoth-towel',
     'chemguys-total-interior-cleaner',
   ],
   metroBest: [
-    'meguiars-hybrid-ceramic-wax',
-    'griots-microfiber-towel',
+    'chemguys-hydrospeed-ceramic',
+    'chemguys-woolly-mammoth-towel',
     'chemguys-total-interior-cleaner',
   ],
   // Homepage — touchless-named products (front-door SEO match) plus two
@@ -494,17 +560,18 @@ export const PLACEMENT_PRESETS = {
     'optimum-touchless-decon',
     'chemguys-hydroslick',
   ],
-  // Unlimited subscribers — between-wash care. Add Optimum for ceramic owners.
+  // Unlimited subscribers — between-wash care. Optimum (touchless SEO) +
+  // Chemical Guys ceramic & drying towel (CJ direct, earn during the appeal).
   unlimited: [
     'optimum-touchless-decon',
-    'meguiars-hybrid-ceramic-wax',
-    'griots-microfiber-towel',
+    'chemguys-hydrospeed-ceramic',
+    'chemguys-woolly-mammoth-towel',
   ],
-  // 24-hour convenience focus — quick interior + drying essentials
+  // 24-hour convenience focus — quick interior + drying essentials (all CG)
   twentyFourHour: [
-    'meguiars-hybrid-ceramic-wax',
+    'chemguys-hydrospeed-ceramic',
     'chemguys-total-interior-cleaner',
-    'griots-microfiber-towel',
+    'chemguys-woolly-mammoth-towel',
   ],
 } as const satisfies Record<string, readonly string[]>;
 
