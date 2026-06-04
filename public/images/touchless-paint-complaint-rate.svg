@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 500" width="820" height="500" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif" role="img" aria-label="Distribution of paint-damage complaint rates across 3,741 touchless car washes: 66% had zero complaints, 21% under 1%, 8% at 1 to 2%, 4% above 2%.">
-  <rect width="820" height="500" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 510" width="820" height="510" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif" role="img" aria-label="Distribution of paint-damage complaint rates across 3,741 touchless car washes: 66% had zero complaints, 21% under 1%, 8% at 1 to 2%, 4% above 2%.">
+  <rect width="820" height="510" fill="#ffffff"/>
   <!-- Title -->
   <text x="40" y="48" font-size="24" font-weight="800" fill="#0F2744">How often do customers report paint damage?</text>
   <text x="40" y="76" font-size="15" font-weight="500" fill="#64748b">Share of 3,741 touchless car washes, by % of their reviews that mention paint damage</text>
