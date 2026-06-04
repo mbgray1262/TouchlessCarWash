@@ -30,6 +30,9 @@ interface DatasetInput {
 }
 
 export function getBlogDatasetJsonLd(input: DatasetInput): Record<string, unknown> | null {
+  if (input.slug === 'does-touchless-car-wash-scratch-paint-study') {
+    return paintSafetyDataset(input);
+  }
   if (input.slug !== 'touchless-car-wash-statistics') return null;
 
   const url = `${SITE_URL}/blog/${input.slug}`;
@@ -173,6 +176,92 @@ export function getBlogDatasetJsonLd(input: DatasetInput): Record<string, unknow
         encodingFormat: 'text/html',
         contentUrl: url,
       },
+    ],
+  };
+}
+
+/**
+ * Dataset markup for the Touchless Paint-Safety Study
+ * (/blog/does-touchless-car-wash-scratch-paint-study). Each headline stat is a
+ * citable PropertyValue anchored to the in-page heading it appears under, so AI
+ * tools and Google Dataset Search deep-link to the right section.
+ */
+function paintSafetyDataset(input: DatasetInput): Record<string, unknown> {
+  const url = `${SITE_URL}/blog/${input.slug}`;
+  const variableMeasured = [
+    {
+      '@type': 'PropertyValue',
+      name: 'Touchless car washes with zero paint-damage complaints',
+      value: 66,
+      unitText: '%',
+      url: `${url}#the-headline-finding`,
+    },
+    {
+      '@type': 'PropertyValue',
+      name: 'Touchless car washes with a paint-damage complaint rate under 1% of reviews',
+      value: 87,
+      unitText: '%',
+      url: `${url}#the-headline-finding`,
+    },
+    {
+      '@type': 'PropertyValue',
+      name: 'Median share of a touchless wash’s reviews mentioning paint damage',
+      value: 0,
+      unitText: '%',
+      url: `${url}#the-headline-finding`,
+    },
+    {
+      '@type': 'PropertyValue',
+      name: 'Verified touchless car washes analyzed',
+      value: 4485,
+      unitText: 'locations',
+      url: `${url}#methodology`,
+    },
+    {
+      '@type': 'PropertyValue',
+      name: 'Google reviews analyzed for paint-safety mentions',
+      value: 730663,
+      unitText: 'reviews',
+      url: `${url}#methodology`,
+    },
+    {
+      '@type': 'PropertyValue',
+      name: 'Review comments identified that mention paint or finish',
+      value: 6144,
+      unitText: 'mentions',
+      url: `${url}#methodology`,
+    },
+  ];
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Dataset',
+    name: input.title,
+    description: input.description,
+    url,
+    sameAs: url,
+    license: 'https://creativecommons.org/licenses/by/4.0/',
+    isAccessibleForFree: true,
+    datePublished: input.datePublished,
+    dateModified: input.dateModified,
+    keywords: [
+      'touchless car wash paint safety',
+      'does touchless car wash scratch paint',
+      'car wash paint damage statistics',
+      'touchless car wash reviews',
+      'brushless car wash',
+    ],
+    creator: { '@type': 'Organization', name: ORG_NAME, url: SITE_URL },
+    publisher: { '@type': 'Organization', name: ORG_NAME, url: SITE_URL },
+    spatialCoverage: { '@type': 'Place', name: 'United States' },
+    temporalCoverage: '2024-01-01/2026-06-04',
+    measurementTechnique: [
+      'Natural-language classification of Google review snippets for paint/finish mentions',
+      'Per-location paint-complaint rate computed as a share of total reviews',
+    ],
+    variableMeasured,
+    distribution: [
+      { '@type': 'DataDownload', encodingFormat: 'text/html', contentUrl: url },
     ],
   };
 }

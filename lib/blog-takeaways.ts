@@ -5,6 +5,13 @@
  * (Rendered as a highlighted box at the top of each post for GEO.)
  */
 export const BLOG_TAKEAWAYS: Record<string, string[]> = {
+  "does-touchless-car-wash-scratch-paint-study": [
+    "An analysis of 730,000+ Google reviews across 4,485 touchless car washes found paint-damage complaints are rare.",
+    "66% of touchless car washes had zero paint-damage complaints in their entire review history.",
+    "87% of touchless car washes had a paint-complaint rate under 1% of all their reviews.",
+    "The typical (median) touchless wash had 0% of its reviews mention paint or finish damage.",
+    "Touchless washes use high-pressure water and detergents instead of brushes, removing the main cause of swirl marks.",
+  ],
   "24-hour-touchless-car-wash-near-me": [
     "Gas stations with in-bay automatic touchless car washes are the most common 24-hour option available nationwide.",
     "Search Google Maps for 'car wash' and filter by 'open now' to find gas station washes operating late night.",

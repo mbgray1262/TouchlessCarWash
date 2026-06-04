@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 500" width="820" height="500" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif" role="img" aria-label="Distribution of paint-damage complaint rates across 3,741 touchless car washes: 66% had zero complaints, 21% under 1%, 8% at 1 to 2%, 4% above 2%.">
+  <rect width="820" height="500" fill="#ffffff"/>
+  <!-- Title -->
+  <text x="40" y="48" font-size="24" font-weight="800" fill="#0F2744">How often do customers report paint damage?</text>
+  <text x="40" y="76" font-size="15" font-weight="500" fill="#64748b">Share of 3,741 touchless car washes, by % of their reviews that mention paint damage</text>
+
+  <!-- Plot area baseline y=400, top y=110; max bar = 66% -->
+  <!-- gridline -->
+  <line x1="40" y1="400" x2="780" y2="400" stroke="#e2e8f0" stroke-width="2"/>
+
+  <!-- Bar 1: 0% complaints -> 66% -->
+  <rect x="80"  y="135" width="140" height="265" rx="6" fill="#22C55E"/>
+  <text x="150" y="123" font-size="22" font-weight="800" fill="#0F2744" text-anchor="middle">66%</text>
+  <text x="150" y="424" font-size="14" font-weight="700" fill="#0F2744" text-anchor="middle">Zero complaints</text>
+  <text x="150" y="444" font-size="12" font-weight="500" fill="#64748b" text-anchor="middle">2,480 washes</text>
+
+  <!-- Bar 2: under 1% -> 21% -->
+  <rect x="270" y="316" width="140" height="84" rx="6" fill="#86efac"/>
+  <text x="340" y="304" font-size="22" font-weight="800" fill="#0F2744" text-anchor="middle">21%</text>
+  <text x="340" y="424" font-size="14" font-weight="700" fill="#0F2744" text-anchor="middle">Under 1%</text>
+  <text x="340" y="444" font-size="12" font-weight="500" fill="#64748b" text-anchor="middle">789 washes</text>
+
+  <!-- Bar 3: 1-2% -> 8% -->
+  <rect x="460" y="368" width="140" height="32" rx="6" fill="#fcd34d"/>
+  <text x="530" y="356" font-size="22" font-weight="800" fill="#0F2744" text-anchor="middle">8%</text>
+  <text x="530" y="424" font-size="14" font-weight="700" fill="#0F2744" text-anchor="middle">1% to 2%</text>
+  <text x="530" y="444" font-size="12" font-weight="500" fill="#64748b" text-anchor="middle">314 washes</text>
+
+  <!-- Bar 4: 2%+ -> 4% -->
+  <rect x="650" y="384" width="140" height="16" rx="6" fill="#f87171"/>
+  <text x="720" y="372" font-size="22" font-weight="800" fill="#0F2744" text-anchor="middle">4%</text>
+  <text x="720" y="424" font-size="14" font-weight="700" fill="#0F2744" text-anchor="middle">Above 2%</text>
+  <text x="720" y="444" font-size="12" font-weight="500" fill="#64748b" text-anchor="middle">158 washes</text>
+
+  <!-- Source attribution baked in for embeds -->
+  <text x="40" y="482" font-size="12.5" font-weight="600" fill="#94a3b8">Source: Touchless Car Wash Finder — analysis of 730,000+ Google reviews · touchlesscarwashfinder.com</text>
+</svg>
