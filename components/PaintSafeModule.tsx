@@ -128,6 +128,7 @@ export default function PaintSafeModule({
   const [sent, setSent] = useState<null | 'positive' | 'negative'>(null);
   const [sort, setSort] = useState<'helpful' | 'recent'>('helpful');
   const [expanded, setExpanded] = useState(false); // collapse the review list so amenities/photos/FAQ stay reachable
+  const [showAllTouchless, setShowAllTouchless] = useState(false); // not-enough state's touchless snippet list
   const INITIAL = 6;
 
   const clear = paintPos + paintNeg;
@@ -154,16 +155,48 @@ export default function PaintSafeModule({
 
   // ----- STATE: not enough reviews -----
   if (state === 'not_enough') {
+    // Always surface touchless-evidence snippets when we have them — they
+    // build confidence in why this wash is classified touchless, independent
+    // of whether there's enough paint feedback to evaluate paint-safety.
+    const touchless = snippets.filter((s) => s.theme === 'touchless');
+    const shownTouchless = showAllTouchless ? touchless : touchless.slice(0, INITIAL);
     return (
       <section className="bg-white border border-gray-200 rounded-2xl p-5 mb-4">
-        <div className="flex gap-3.5 items-center bg-slate-50 border border-dashed border-gray-200 rounded-xl p-4">
+        {touchless.length > 0 && (
+          <div className="mb-4">
+            <h2 className="text-[17px] font-extrabold text-[#0F2744] flex items-center gap-2 mb-1">
+              💬 What customers say about the touchless wash
+            </h2>
+            <p className="text-[12.5px] text-slate-500 mb-3">
+              {touchless.length} customer {touchless.length === 1 ? 'review mentions' : 'reviews mention'} the
+              touchless / brushless wash at this location.
+            </p>
+            <div className="flex flex-col gap-2.5">
+              {shownTouchless.map((s) => (
+                <SnippetCard key={s.id} s={s} />
+              ))}
+            </div>
+            {touchless.length > INITIAL && (
+              <button
+                onClick={() => setShowAllTouchless((x) => !x)}
+                className="mt-3 w-full text-center text-[13px] font-bold text-[#0F2744] bg-slate-50 hover:bg-slate-100 border border-gray-200 rounded-xl py-2.5 transition-colors"
+              >
+                {showAllTouchless ? 'Show fewer reviews' : `Show all ${touchless.length} reviews ›`}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Paint-safety status — secondary, framed as neutral no-data (never a negative grade). */}
+        <div className={`flex gap-3.5 items-center bg-slate-50 border border-dashed border-gray-200 rounded-xl p-4 ${touchless.length > 0 ? 'mt-1' : ''}`}>
           <div className="w-12 h-12 rounded-xl bg-gray-200 text-gray-400 flex items-center justify-center shrink-0">
             <ShieldCheck className="w-6 h-6" />
           </div>
           <div>
             <div className="text-[15px] font-extrabold text-slate-600">Paint-safety: not enough reviews yet</div>
             <div className="text-[12.5px] text-gray-400 mt-0.5">
-              We verify paint safety from real customer reviews — this wash doesn&apos;t have enough paint mentions yet.
+              We verify paint safety from real customer reviews — this wash doesn&apos;t have enough paint mentions yet.{' '}
+              <a href={methodologyHref} className="text-blue-600 hover:underline">How it works ›</a>
             </div>
           </div>
         </div>
