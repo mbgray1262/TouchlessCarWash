@@ -127,6 +127,8 @@ export default function PaintSafeModule({
   const [theme, setTheme] = useState<'all' | PaintTheme>('all');
   const [sent, setSent] = useState<null | 'positive' | 'negative'>(null);
   const [sort, setSort] = useState<'helpful' | 'recent'>('helpful');
+  const [expanded, setExpanded] = useState(false); // collapse the review list so amenities/photos/FAQ stay reachable
+  const INITIAL = 6;
 
   const clear = paintPos + paintNeg;
   const pctPos = clear > 0 ? Math.round((paintPos / clear) * 100) : 0;
@@ -220,7 +222,7 @@ export default function PaintSafeModule({
           {/* dual filter buttons */}
           <div className="flex gap-2.5 mt-3">
             <button
-              onClick={() => setSent((s) => (s === 'positive' ? null : 'positive'))}
+              onClick={() => { setSent((s) => (s === 'positive' ? null : 'positive')); setExpanded(false); }}
               className={`flex-1 flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 text-left transition ${
                 sent === 'positive' ? 'ring-2 ring-emerald-300' : ''
               } border-emerald-300 bg-emerald-50 hover:bg-emerald-100`}
@@ -232,7 +234,7 @@ export default function PaintSafeModule({
               <span className="ml-auto text-[10.5px] font-extrabold uppercase text-emerald-700">Filter ›</span>
             </button>
             <button
-              onClick={() => setSent((s) => (s === 'negative' ? null : 'negative'))}
+              onClick={() => { setSent((s) => (s === 'negative' ? null : 'negative')); setExpanded(false); }}
               className={`flex-1 flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 text-left transition ${
                 sent === 'negative' ? 'ring-2 ring-red-300' : ''
               } border-red-300 bg-red-50 hover:bg-red-100`}
@@ -251,7 +253,7 @@ export default function PaintSafeModule({
               .map(([k, label]) => (
                 <button
                   key={k}
-                  onClick={() => { setTheme(k); setSent(null); }}
+                  onClick={() => { setTheme(k); setSent(null); setExpanded(false); }}
                   className={`text-[12px] font-bold px-3 py-1.5 rounded-full border transition ${
                     theme === k && !sent ? 'bg-[#0F2744] text-white border-[#0F2744]' : 'bg-slate-100 text-slate-600 border-gray-200 hover:bg-slate-200'
                   }`}
@@ -272,14 +274,22 @@ export default function PaintSafeModule({
               </select>
             </label>
           </div>
-          {/* cards */}
+          {/* cards — collapsed to INITIAL so the rest of the page stays reachable */}
           <div className="flex flex-col gap-2.5 mt-2.5">
             {rows.length > 0 ? (
-              rows.map((s) => <SnippetCard key={s.id} s={s} />)
+              rows.slice(0, expanded ? rows.length : INITIAL).map((s) => <SnippetCard key={s.id} s={s} />)
             ) : (
               <div className="text-[13px] text-gray-400 py-3 text-center">No matching reviews in this filter.</div>
             )}
           </div>
+          {rows.length > INITIAL && (
+            <button
+              onClick={() => setExpanded((e) => !e)}
+              className="mt-3 w-full text-center text-[13px] font-bold text-[#0F2744] bg-slate-50 hover:bg-slate-100 border border-gray-200 rounded-xl py-2.5 transition-colors"
+            >
+              {expanded ? 'Show fewer reviews' : `Show all ${rows.length} reviews ›`}
+            </button>
+          )}
           {/* footer note for has-data-unverified */}
           {!verified && (
             <p className="mt-3 text-[11.5px] text-gray-400 italic">
