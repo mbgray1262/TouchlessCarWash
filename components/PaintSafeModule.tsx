@@ -9,7 +9,7 @@
  * The internal granular score lives on the listing (paint_score) for ranking only — not shown here.
  */
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { ShieldCheck, ChevronDown, ThumbsUp, AlertTriangle } from 'lucide-react';
 
 export type PaintTheme = 'paint' | 'touchless' | 'cleanliness' | 'other';
@@ -48,6 +48,31 @@ function Stars({ n }: { n: number | null }) {
   );
 }
 
+/**
+ * Highlight paint/touchless phrases in a snippet. Negation-aware: a negated or
+ * positive phrase ("no scratches", "doesn't scratch", "gentle", "touchless") is
+ * matched FIRST (green) and consumes the span, so a bare damage word only gets
+ * the red highlight when it isn't already part of a positive/negated phrase.
+ */
+function highlightPaint(text: string): ReactNode[] {
+  const re = /(\b(?:no|not|never|without|zero|didn'?t|doesn'?t|won'?t|wasn'?t|hasn'?t|haven'?t)\b[\w\s,'-]{0,18}?\b(?:scratch\w*|swirl\w*|damage\w*|mark\w*|harm\w*)|\b(?:gentle|scratch[\s-]?free|swirl[\s-]?free|flawless|pristine|spotless|immaculate|touch[\s-]?free|touchless|brushless)\b|\bno (?:brushes|scratches|swirls|damage|marks)\b|\bpaint (?:looks|is|stayed|came out|still)\w*\s+(?:great|perfect|amazing|fine|good|flawless|immaculate|pristine))|(\b(?:scratch\w*|swirl\w*|damage\w*|chip\w*|scuff\w*|ruin\w*|dent\w*|peel\w*)\b)/gi;
+  const nodes: ReactNode[] = [];
+  let last = 0, key = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) nodes.push(text.slice(last, m.index));
+    const green = m[1] !== undefined;
+    nodes.push(
+      <mark key={key++} className={green ? 'bg-emerald-100 text-emerald-800 rounded px-0.5' : 'bg-red-100 text-red-800 rounded px-0.5'}>
+        {m[0]}
+      </mark>,
+    );
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) nodes.push(text.slice(last));
+  return nodes;
+}
+
 function SnippetCard({ s }: { s: PaintSnippet }) {
   const tagStyle =
     s.sentiment === 'negative'
@@ -81,7 +106,7 @@ function SnippetCard({ s }: { s: PaintSnippet }) {
         </div>
         <Stars n={s.rating} />
       </div>
-      <p className="text-[13.5px] text-slate-800 mt-2 leading-relaxed">{s.text}</p>
+      <p className="text-[13.5px] text-slate-800 mt-2 leading-relaxed">{highlightPaint(s.text)}</p>
       <div className="flex items-center gap-2 mt-2.5">
         <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-md ${tagStyle}`}>{tagLabel}</span>
         {s.date && <span className="text-[11px] text-gray-400 ml-auto">{s.date}</span>}
