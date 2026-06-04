@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ListingCard } from '@/components/ListingCard';
 import { HomeVideoSection } from '@/components/HomeVideoSection';
+import { getTouchlessVideoPool } from '@/lib/videos';
 import { RedirectBanner } from '@/components/RedirectBanner';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { getApprovedTouchlessCount } from '@/lib/listing-queries';
@@ -154,16 +155,6 @@ async function getStateListingCounts(): Promise<Record<string, number>> {
 // lib/listing-queries.ts so the home page stat, About page stat, and any
 // other place we cite the directory size all show the same number.
 
-async function getHomepageVideos(): Promise<{ youtubeId: string; title: string }[]> {
-  const { data } = await supabase
-    .from('equipment_videos')
-    .select('youtube_id, title, sort_order')
-    .eq('is_active', true)
-    .order('sort_order', { ascending: true })
-    .limit(6);
-  return (data ?? []).map((r) => ({ youtubeId: r.youtube_id as string, title: r.title as string }));
-}
-
 async function getTotalReviewCount(): Promise<number> {
   const { count, error } = await supabase
     .from('review_snippets')
@@ -179,7 +170,7 @@ export default async function Home({ searchParams }: { searchParams?: { geo?: st
       getStateListingCounts(),
       getApprovedTouchlessCount(),
       getTotalReviewCount(),
-      getHomepageVideos(),
+      getTouchlessVideoPool(),
     ]);
 
   // Passive geo via Netlify's x-nf-geo header → nearest metro suggestion.

@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ShieldCheck, CheckCircle } from 'lucide-react';
+import { getTouchlessVideoPool } from '@/lib/videos';
+import { TouchlessVideoModule } from '@/components/HomeVideoSection';
 
 const SITE_URL = 'https://touchlesscarwashfinder.com';
 const SITE_NAME = 'Touchless Car Wash Finder';
@@ -46,7 +48,8 @@ const FAQ = [
   { q: 'Can a wash earn the badge over time?', a: 'Yes. As new reviews come in, we periodically re-check every wash. A location that builds a track record of gentle, no-damage feedback can earn the badge on a future update.' },
 ];
 
-export default function PaintSafePage() {
+export default async function PaintSafePage() {
+  const paintVideos = await getTouchlessVideoPool();
   const faqSchema = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
@@ -125,6 +128,18 @@ export default function PaintSafePage() {
               </div>
             ))}
           </div>
+
+          {/* See it in action */}
+          {paintVideos.length > 0 && (
+            <div className="mt-12 pt-10 border-t border-gray-100">
+              <TouchlessVideoModule
+                videos={paintVideos}
+                location="paint-safe"
+                heading="See It for Yourself"
+                subheading="A real touchless wash in action — no brushes ever touch the paint."
+              />
+            </div>
+          )}
 
           {/* CTA */}
           <div className="mt-10 rounded-2xl bg-[#0F2744] text-white p-6 text-center">

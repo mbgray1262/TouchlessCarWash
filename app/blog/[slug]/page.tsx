@@ -10,6 +10,8 @@ import { generateSubscriptionsContent } from '@/lib/dynamic-blog-subscriptions';
 import { getTakeaways } from '@/lib/blog-takeaways';
 import { getHowTo } from '@/lib/blog-howto-steps';
 import { getBlogDatasetJsonLd } from '@/lib/blog-dataset-schema';
+import { getTouchlessVideoPool } from '@/lib/videos';
+import { TouchlessVideoModule } from '@/components/HomeVideoSection';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic'; // see /state/.../slug for context — Netlify CDN cache (netlify.toml) handles edge perf; force-dynamic prevents the Next.js ISR etag-based 304-without-body bug that kept breaking /blog and /best on the CDN.
@@ -306,6 +308,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     content = post.content;
   }
   const renderedContent = renderMarkdown(content);
+  const blogVideos = await getTouchlessVideoPool();
 
   const breadcrumbJsonLd = {
     '@context': 'https://schema.org',
@@ -446,6 +449,17 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           className="prose-content"
           dangerouslySetInnerHTML={{ __html: renderedContent }}
         />
+
+        {blogVideos.length > 0 && (
+          <div className="mt-12 pt-8 border-t border-gray-200">
+            <TouchlessVideoModule
+              videos={blogVideos}
+              location="blog"
+              heading="Watch a Touchless Wash in Action"
+              subheading="No brushes, no contact — just high-pressure water and detergents doing the work."
+            />
+          </div>
+        )}
 
         {post.tags && post.tags.length > 0 && (
           <div className="mt-12 pt-8 border-t border-gray-200">
