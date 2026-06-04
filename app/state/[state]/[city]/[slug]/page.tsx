@@ -25,6 +25,7 @@ import { TouchlessVideo } from '@/components/TouchlessVideo';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
+import PaintSafeModule, { type PaintSnippet, type PaintTheme } from '@/components/PaintSafeModule';
 import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants';
 import { getAnyCityCoords, findNearestTouchlessCityPath } from '@/lib/geo-fallback';
 import { streetAddress, hasStreetAddress } from '@/lib/utils';
@@ -265,6 +266,44 @@ async function getReviewSnippets(listingId: string): Promise<ReviewSnippet[]> {
     .limit(50);
 
   return (data || []) as ReviewSnippet[];
+}
+
+/**
+ * Snippets that feed the Paint-Safe evidence drawer: touchless-confirmation
+ * reviews + paint-relevant reviews (Haiku-labeled). Brush-attributed paint
+ * complaints (paint_about_touchless='brush') are excluded so the touchless
+ * wash isn't blamed for a brush-bay scratch. Mapped to the component's shape.
+ */
+async function getPaintModuleSnippets(listingId: string): Promise<PaintSnippet[]> {
+  const { data } = await supabase
+    .from('review_snippets')
+    .select('*')
+    .eq('listing_id', listingId)
+    .or('is_touchless_evidence.eq.true,paint_relevant.eq.true')
+    .order('rating', { ascending: false, nullsFirst: false })
+    .limit(60);
+  const rows = (data || []) as ReviewSnippet[];
+  const out: PaintSnippet[] = [];
+  for (const r of rows) {
+    if (!r.review_text || r.review_text.length < 40) continue;
+    const isPaint = r.paint_relevant === true && r.paint_about_touchless !== 'brush';
+    const theme: PaintTheme = isPaint ? 'paint' : r.is_touchless_evidence ? 'touchless' : 'other';
+    if (theme === 'other') continue; // drop brush-only / unrelated snippets
+    const sentiment = (isPaint ? r.paint_sentiment : r.sentiment) ?? 'neutral';
+    out.push({
+      id: r.id,
+      theme,
+      sentiment: sentiment as 'positive' | 'negative' | 'neutral',
+      text: r.review_text,
+      reviewerName: r.reviewer_name,
+      credentials: r.reviewer_credentials ?? null,
+      isLocalGuide: !!r.reviewer_is_local_guide,
+      rating: r.rating,
+      date: r.review_date,
+      recencyDays: null,
+    });
+  }
+  return out;
 }
 
 /**
@@ -1180,7 +1219,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     permanentRedirect(`/state/${params.state}/${canonicalCitySlug}/${params.slug}`);
   }
 
-  const [nearbyListings, reviewSnippets, genericReviews, rankings, chainResult, verificationStats, equipmentVideos] = await Promise.all([
+  const [nearbyListings, reviewSnippets, genericReviews, rankings, chainResult, verificationStats, equipmentVideos, paintSnippets] = await Promise.all([
     getNearbyListings(listing),
     getReviewSnippets(listing.id),
     getGenericReviews(listing.id),
@@ -1188,6 +1227,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     getChainListings(listing),
     getVerificationStats(listing.id),
     getEquipmentVideos(),
+    getPaintModuleSnippets(listing.id),
   ]);
 
   // If the current listing is ranked in a metro, fetch the OTHER top-ranked
@@ -1474,6 +1514,16 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
         <div className="container mx-auto px-4 max-w-5xl py-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
+              {/* Paint-Safe module — verified badge + unified review-evidence drawer
+                  (absorbs the old touchless-snippets section). Public badge only; the
+                  granular paint_score stays internal for ranking. */}
+              <PaintSafeModule
+                state={(listing.paint_state as 'verified' | 'has_data_unverified' | 'not_enough') ?? 'not_enough'}
+                reviewCount={listing.review_count ?? 0}
+                paintPos={listing.paint_pos ?? 0}
+                paintNeg={listing.paint_neg ?? 0}
+                snippets={paintSnippets}
+              />
               {/* AI-Generated Description */}
               {listing.description && (
                 <div className="bg-white rounded-2xl border border-gray-200 p-6">
@@ -1685,51 +1735,9 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                 </div>
               )}
 
-              {/* Customer Review Snippets — touchless evidence from Google Reviews */}
-              {reviewSnippets.length > 0 && (
-                <div id="reviews" className="bg-white rounded-2xl border border-gray-200 p-6 scroll-mt-24">
-                  <div className="flex items-center justify-between mb-1">
-                    <h2 className="text-lg font-bold text-[#0F2744] flex items-center gap-2">
-                      <MessageSquareQuote className="w-5 h-5 text-[#22C55E]" />
-                      What Customers Say About the Touchless Wash
-                    </h2>
-                    <span className="text-xs font-semibold text-[#22C55E] bg-green-50 border border-green-200 px-2.5 py-1 rounded-full whitespace-nowrap">
-                      {reviewSnippets.length} {reviewSnippets.length === 1 ? 'review' : 'reviews'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-400 mb-4">
-                    Real reviews from Google mentioning the touchless experience
-                  </p>
-                  <div className="relative">
-                    <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
-                      {reviewSnippets.map((snippet) => (
-                        <ReviewSnippetCard key={snippet.id} snippet={snippet} />
-                      ))}
-                    </div>
-                    {reviewSnippets.length > 5 && (
-                      <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent" />
-                    )}
-                  </div>
-                  {reviewSnippets.length > 5 && (
-                    <p className="text-xs text-gray-400 text-center mt-2">
-                      Scroll to see all {reviewSnippets.length} reviews
-                    </p>
-                  )}
-                  {listing.google_place_id && (
-                    <div className="mt-4 pt-3 border-t border-gray-100">
-                      <a
-                        href={`https://search.google.com/local/reviews?placeid=${listing.google_place_id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-[#22C55E] hover:underline font-medium flex items-center gap-1.5"
-                      >
-                        Read all reviews on Google
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </a>
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* Touchless review snippets are now shown inside the Paint-Safe module
+                  above (unified evidence drawer, "Touchless" theme chip). Section removed
+                  here to avoid duplicating reviews on the page. */}
 
               {/* More Customer Reviews — positive, on-topic Google reviews that
                   aren't touchless-evidence. Adds review depth to drive engagement

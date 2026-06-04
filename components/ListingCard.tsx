@@ -215,6 +215,13 @@ export function ListingCard({ listing, href, showVerifiedBadge = false, distance
             <span>{listing.address}</span>
           </div>
 
+          {listing.paint_safe_verified && (
+            <div className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5 mb-1 w-fit">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Paint-Safe Verified
+            </div>
+          )}
+
           {distance != null && (
             <div className="flex items-center gap-1.5 text-sm text-blue-600 font-medium mb-1">
               <Navigation className="w-3.5 h-3.5 shrink-0" />

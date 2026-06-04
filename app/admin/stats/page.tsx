@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { US_STATES } from '@/lib/constants';
+import { getQualifyingMetros, type MetroWithCount } from '@/lib/metro-queries';
 
 // listing_events has RLS that allows anon INSERTs (so /api/track works) but
 // blocks anon SELECTs (so individual click data stays private). We expose
@@ -62,8 +63,7 @@ async function getStats() {
     featuredListingsRes,
     reviewSnippetsRes,
     blogPostsRes,
-    bestOfMetrosRes,        // distinct metros that actually have rankings
-    bestOfRankingsRes,
+    qualifyingMetros,       // live list of qualifying metros — drives BOTH Best Of Metros + Ranked Listings (no stale cache)
     suggestedEditsRes,
     pendingEditsRes,
     // Engagement aggregates — single RPC call that returns counts grouped
@@ -93,11 +93,13 @@ async function getStats() {
       .eq('is_featured', true).eq('is_approved', true),
     supabase.from('review_snippets').select('id', { count: 'exact', head: true }),
     supabase.from('blog_posts').select('id', { count: 'exact', head: true }).eq('status', 'published'),
-    // "Best Of Metros" used to query a non-existent best_of_metros table,
-    // hence the perma-zero. Real source: distinct metro_slug values in
-    // best_of_rankings (the table actually populated by the ranking RPC).
-    supabase.from('best_of_rankings').select('metro_slug'),
-    supabase.from('best_of_rankings').select('id', { count: 'exact', head: true }),
+    // "Best Of Metros" + "Ranked Listings" both derive from the SAME live
+    // function the /best index page uses, so the dashboard can never drift from
+    // what's actually shown. (Previously read the best_of_rankings table — a
+    // lazy cache only populated when a metro page is visited — so both
+    // under-reported.) Best Of Metros = qualifying metros; Ranked Listings =
+    // sum of up to 10 ranked spots per metro (matches scored.slice(0,10)).
+    getQualifyingMetros(),
     supabase.from('suggested_edits').select('id', { count: 'exact', head: true }),
     supabase.from('suggested_edits').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
     supabase.rpc('listing_event_counts'),
@@ -171,8 +173,8 @@ async function getStats() {
     featuredListings: featuredListingsRes.count ?? 0,
     reviewSnippets: reviewSnippetsRes.count ?? 0,
     blogPosts: blogPostsRes.count ?? 0,
-    bestOfMetros: new Set(((bestOfMetrosRes.data ?? []) as { metro_slug: string }[]).map(r => r.metro_slug)).size,
-    bestOfRankings: bestOfRankingsRes.count ?? 0,
+    bestOfMetros: (qualifyingMetros as MetroWithCount[]).length,
+    bestOfRankings: (qualifyingMetros as MetroWithCount[]).reduce((sum, m) => sum + Math.min(m.listingCount, 10), 0),
     suggestedEdits: suggestedEditsRes.count ?? 0,
     pendingEdits: pendingEditsRes.count ?? 0,
     directionEvents: directionEventsRes.count ?? 0,

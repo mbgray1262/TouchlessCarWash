@@ -73,11 +73,17 @@ export type Listing = {
   hero_image_source: 'manual' | 'google' | 'website' | 'street_view' | 'chain_brand' | null;
   touchless_verified: 'user_review' | 'admin' | 'chain' | null;
   vendor_id: number | null;
+  // Paint-Safe feature (added 2026-06-04; optional). paint_score is INTERNAL (ranking only).
+  paint_safe_verified?: boolean | null;
+  paint_state?: 'verified' | 'has_data_unverified' | 'not_enough' | null;
+  paint_score?: number | null;
+  paint_pos?: number | null;
+  paint_neg?: number | null;
 };
 
 // Columns needed by ListingCard — avoids fetching heavy fields like description,
 // google_about, popular_times, reviews_per_score, wash_packages, photos, etc.
-export const LISTING_CARD_COLUMNS = 'id, name, slug, city, state, address, phone, rating, review_count, hero_image, hero_focal_point, hero_image_source, google_photo_url, street_view_url, logo_photo, google_logo_url, amenities, touchless_wash_types, extracted_data, hours, is_touchless, is_featured, is_claimed, touchless_verified, parent_chain' as const;
+export const LISTING_CARD_COLUMNS = 'id, name, slug, city, state, address, phone, rating, review_count, hero_image, hero_focal_point, hero_image_source, google_photo_url, street_view_url, logo_photo, google_logo_url, amenities, touchless_wash_types, extracted_data, hours, is_touchless, is_featured, is_claimed, touchless_verified, parent_chain, paint_safe_verified' as const;
 
 export type Review = {
   id: string;
@@ -102,6 +108,15 @@ export type ReviewSnippet = {
   source: string;
   sentiment: 'positive' | 'negative' | 'neutral' | null;
   created_at: string;
+  // reviewer metadata (added 2026-06; optional — older rows may be null)
+  reviewer_credentials?: string | null;
+  reviewer_review_count?: number | null;
+  reviewer_photo_count?: number | null;
+  reviewer_is_local_guide?: boolean | null;
+  // Paint-Safe Haiku labels (added 2026-06-04; power the evidence drawer)
+  paint_relevant?: boolean | null;
+  paint_sentiment?: 'positive' | 'negative' | 'neutral' | null;
+  paint_about_touchless?: 'touchless' | 'brush' | 'unclear' | null;
 };
 
 export type Submission = {

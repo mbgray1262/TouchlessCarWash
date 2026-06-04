@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, MapPin, Building2, Trophy } from 'lucide-react';
+import { Search, MapPin, Building2, Trophy, ShieldCheck } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
@@ -877,6 +877,19 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
           <p className="text-sm text-white/70">
             Verified listings • Real reviews • Updated regularly
           </p>
+
+          {/* Paint-Safe feature indicator — the "what's new / why us" hook */}
+          <a
+            href="/paint-safe"
+            className="mt-4 inline-flex items-center gap-2.5 bg-white/10 hover:bg-white/15 border border-white/25 rounded-xl px-4 py-2.5 transition-colors max-w-md"
+          >
+            <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-[#22C55E] text-white shrink-0 shadow-md shadow-emerald-900/40">
+              <ShieldCheck className="w-5 h-5" />
+            </span>
+            <span className="text-sm text-white leading-snug">
+              <b className="text-emerald-300">New — Paint-Safe Verified:</b> we check every wash for paint safety using thousands of real customer reviews.
+            </span>
+          </a>
         </div>
       </div>
     </section>
