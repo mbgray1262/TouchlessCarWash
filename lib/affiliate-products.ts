@@ -365,17 +365,25 @@ export const PRODUCTS: Product[] = [
   },
 
   // ───── Wheel care (no-touch) ─────
+  // Chemical Guys Diablo wheel cleaner via CJ direct — replaces the Amazon
+  // Sonax wheel cleaner during the Associates appeal. CJ pays a higher
+  // commission rate than Amazon and the spray-and-rinse, no-scrub profile
+  // fits the touchless audience. (To re-add Sonax later, restore the Amazon
+  // entry: asin 'B003UT3S6Q'.)
   {
-    id: 'sonax-full-effect',
-    brand: 'Sonax',
-    name: 'Full Effect Wheel Cleaner',
+    id: 'chemguys-diablo-wheel-cleaner',
+    brand: 'Chemical Guys',
+    name: 'Diablo Foaming Wheel & Rim Cleaner (16oz)',
     category: 'wheel-care',
-    asin: 'B003UT3S6Q',
-    priceRange: '$25',
-    rating: 4.6,
+    vendor: 'chemicalguys-cj',
+    chemicalguysUrl:
+      'https://www.chemicalguys.com/products/diablo-oxygen-infused-foam-wheel-and-rim-cleaner?variant=46981708349745',
+    priceRange: '$19',
+    rating: 4.7,
     positioning:
-      'Color-changing spray-and-rinse. Cleans brake dust without scrubbing.',
-    hasImage: true,
+      'Oxygen-infused foam clings to the wheel and lifts brake dust with no scrubbing. pH-balanced and safe on every finish — painted, chrome, polished, or clear-coated.',
+    imageUrl:
+      'https://cdn.shopify.com/s/files/1/0742/8938/1681/files/CLD_997-16-Front-FIXED.jpg?v=1762198475',
   },
 ];
 
