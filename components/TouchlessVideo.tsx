@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Play, Youtube, ArrowRight } from 'lucide-react';
 import { TrackedYouTubeEmbed } from '@/components/TrackedYouTubeEmbed';
 
-export type EquipmentVideo = { id: string; title: string };
+export type EquipmentVideo = { id: string; title: string; brand?: string | null };
 
 // Fallback pool used only if the DB has no active videos (e.g. during the
 // first deploy before the equipment_videos table is populated). The live pool
@@ -27,9 +27,23 @@ function pickIndex(seed: string, len: number): number {
   return h % len;
 }
 
-export function TouchlessVideo({ listingId, videos }: { listingId: string; videos?: EquipmentVideo[] }) {
+export function TouchlessVideo({
+  listingId,
+  videos,
+  preferBrand,
+}: {
+  listingId: string;
+  videos?: EquipmentVideo[];
+  /** The listing's tagged equipment brand slug (e.g. "pdq"). When we have
+   *  videos for that brand we silently prefer them — so the clip tends to
+   *  match the equipment shown on this listing — without ever claiming an
+   *  exact match. Falls back to the full pool when there's no match. */
+  preferBrand?: string | null;
+}) {
   const [playing, setPlaying] = useState(false);
-  const pool = videos && videos.length > 0 ? videos : FALLBACK_VIDEOS;
+  const fullPool = videos && videos.length > 0 ? videos : FALLBACK_VIDEOS;
+  const branded = preferBrand ? fullPool.filter((v) => v.brand === preferBrand) : [];
+  const pool = branded.length > 0 ? branded : fullPool;
   const video = pool[pickIndex(listingId, pool.length)];
 
   function handlePlay() {

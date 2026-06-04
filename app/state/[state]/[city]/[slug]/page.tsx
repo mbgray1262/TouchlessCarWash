@@ -356,13 +356,13 @@ async function getGenericReviews(listingId: string, limit = 6): Promise<ReviewSn
  * managed at /admin/videos. Returns them in admin-defined order; the
  * TouchlessVideo component deterministically picks one by listing id.
  */
-async function getEquipmentVideos(): Promise<{ id: string; title: string }[]> {
+async function getEquipmentVideos(): Promise<{ id: string; title: string; brand: string | null }[]> {
   const { data } = await supabase
     .from('equipment_videos')
-    .select('youtube_id,title')
+    .select('youtube_id,title,brand_slug')
     .eq('is_active', true)
     .order('sort_order', { ascending: true });
-  return (data || []).map((v) => ({ id: v.youtube_id as string, title: v.title as string }));
+  return (data || []).map((v) => ({ id: v.youtube_id as string, title: v.title as string, brand: (v.brand_slug as string) ?? null }));
 }
 
 /**
@@ -1778,7 +1778,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
               )}
 
               {equipmentVideos.length > 0 && (
-                <TouchlessVideo listingId={listing.id} videos={equipmentVideos} />
+                <TouchlessVideo listingId={listing.id} videos={equipmentVideos} preferBrand={listing.equipment_brand} />
               )}
 
               <div className="bg-white rounded-2xl border border-gray-200 p-6">
