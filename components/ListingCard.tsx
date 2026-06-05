@@ -14,6 +14,7 @@ import HeroImageFallback from '@/components/HeroImageFallback';
 import { OpenStatusBadge } from '@/components/OpenStatusBadge';
 import { ensureHttps } from '@/lib/seo';
 import { getDisplayImage } from '@/lib/listing-image';
+import { tssTier } from '@/lib/touchless-satisfaction';
 
 /** Hostnames configured in next.config.js remotePatterns — safe for next/image optimization. */
 const OPTIMIZED_HOSTS = new Set([
@@ -214,6 +215,25 @@ export function ListingCard({ listing, href, showVerifiedBadge = false, distance
             <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5" />
             <span>{listing.address}</span>
           </div>
+
+          {listing.touchless_satisfaction_score != null && (() => {
+            const t = tssTier(listing.touchless_satisfaction_score);
+            return (
+              <div
+                className="inline-flex items-center gap-1.5 text-xs font-bold rounded-full pl-1 pr-2.5 py-0.5 mb-1 w-fit border"
+                style={{ background: t.bg, borderColor: t.arc + '55', color: t.color }}
+                title="Touchless Satisfaction Score — based on touchless-specific reviews"
+              >
+                <span
+                  className="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-[10px] font-extrabold"
+                  style={{ background: t.arc }}
+                >
+                  {listing.touchless_satisfaction_score}
+                </span>
+                Touchless Satisfaction · {t.label}
+              </div>
+            );
+          })()}
 
           {listing.paint_safe_verified && (
             <div className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5 mb-1 w-fit">

@@ -79,11 +79,16 @@ export type Listing = {
   paint_score?: number | null;
   paint_pos?: number | null;
   paint_neg?: number | null;
+  // Touchless Satisfaction Score (added 2026-06-04; optional).
+  touchless_satisfaction_score?: number | null;
+  touchless_pos?: number | null;
+  touchless_neg?: number | null;
+  touchless_mentions?: number | null;
 };
 
 // Columns needed by ListingCard — avoids fetching heavy fields like description,
 // google_about, popular_times, reviews_per_score, wash_packages, photos, etc.
-export const LISTING_CARD_COLUMNS = 'id, name, slug, city, state, address, phone, rating, review_count, hero_image, hero_focal_point, hero_image_source, google_photo_url, street_view_url, logo_photo, google_logo_url, amenities, touchless_wash_types, extracted_data, hours, is_touchless, is_featured, is_claimed, touchless_verified, parent_chain, paint_safe_verified' as const;
+export const LISTING_CARD_COLUMNS = 'id, name, slug, city, state, address, phone, rating, review_count, hero_image, hero_focal_point, hero_image_source, google_photo_url, street_view_url, logo_photo, google_logo_url, amenities, touchless_wash_types, extracted_data, hours, is_touchless, is_featured, is_claimed, touchless_verified, parent_chain, paint_safe_verified, touchless_satisfaction_score' as const;
 
 export type Review = {
   id: string;
@@ -117,6 +122,8 @@ export type ReviewSnippet = {
   paint_relevant?: boolean | null;
   paint_sentiment?: 'positive' | 'negative' | 'neutral' | null;
   paint_about_touchless?: 'touchless' | 'brush' | 'unclear' | null;
+  // Touchless Satisfaction Haiku label: which bay the review is about.
+  touchless_about?: 'touchless' | 'other_service' | 'unclear' | null;
 };
 
 export type Submission = {

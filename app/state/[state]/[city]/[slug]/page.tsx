@@ -26,6 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
 import PaintSafeModule, { type PaintSnippet, type PaintTheme } from '@/components/PaintSafeModule';
+import TouchlessSatisfactionGauge, { type TssSnippet } from '@/components/TouchlessSatisfactionGauge';
 import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants';
 import { getAnyCityCoords, findNearestTouchlessCityPath } from '@/lib/geo-fallback';
 import { streetAddress, hasStreetAddress } from '@/lib/utils';
@@ -1514,6 +1515,26 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
         <div className="container mx-auto px-4 max-w-5xl py-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
+              {/* Touchless Satisfaction Score — the headline 0–100 gauge. Shown
+                  whenever the listing has enough touchless reviews to score. */}
+              {listing.touchless_satisfaction_score != null && (
+                <TouchlessSatisfactionGauge
+                  score={listing.touchless_satisfaction_score}
+                  pos={listing.touchless_pos ?? 0}
+                  neg={listing.touchless_neg ?? 0}
+                  mentions={listing.touchless_mentions ?? 0}
+                  snippets={reviewSnippets
+                    .filter((r) => r.touchless_about !== 'other_service' && r.review_text && r.review_text.length >= 30)
+                    .map((r): TssSnippet => ({
+                      id: r.id,
+                      text: r.review_text,
+                      sentiment: r.sentiment ?? null,
+                      reviewerName: r.reviewer_name,
+                      rating: r.rating,
+                      date: r.review_date ?? null,
+                    }))}
+                />
+              )}
               {/* Paint-Safe module — verified badge + unified review-evidence drawer
                   (absorbs the old touchless-snippets section). Public badge only; the
                   granular paint_score stays internal for ranking. */}
