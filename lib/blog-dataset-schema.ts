@@ -33,6 +33,9 @@ export function getBlogDatasetJsonLd(input: DatasetInput): Record<string, unknow
   if (input.slug === 'does-touchless-car-wash-scratch-paint-study') {
     return paintSafetyDataset(input);
   }
+  if (input.slug === 'best-touchless-car-wash-chains-ranked') {
+    return chainRankingDataset(input);
+  }
   if (input.slug !== 'touchless-car-wash-statistics') return null;
 
   const url = `${SITE_URL}/blog/${input.slug}`;
@@ -263,5 +266,50 @@ function paintSafetyDataset(input: DatasetInput): Record<string, unknown> {
     distribution: [
       { '@type': 'DataDownload', encodingFormat: 'text/html', contentUrl: url },
     ],
+  };
+}
+
+/**
+ * Dataset markup for the chain-ranking study
+ * (/blog/best-touchless-car-wash-chains-ranked). Headline facts as citable
+ * PropertyValues, anchored to in-page sections.
+ */
+function chainRankingDataset(input: DatasetInput): Record<string, unknown> {
+  const url = `${SITE_URL}/blog/${input.slug}`;
+  const variableMeasured = [
+    { '@type': 'PropertyValue', name: 'Touchless car wash chains ranked by customer satisfaction', value: 22, unitText: 'chains', url: `${url}#the-full-ranking` },
+    { '@type': 'PropertyValue', name: 'Individual chain locations scored', value: 312, unitText: 'locations', url: `${url}#how-we-ranked-the-chains` },
+    { '@type': 'PropertyValue', name: 'Highest chain Touchless Satisfaction Score (BP)', value: 77, unitText: 'out of 100', url: `${url}#the-full-ranking` },
+    { '@type': 'PropertyValue', name: 'Autowash chain Touchless Satisfaction Score', value: 76, unitText: 'out of 100', url: `${url}#the-full-ranking` },
+    { '@type': 'PropertyValue', name: 'Kwik Trip chain Touchless Satisfaction Score', value: 73, unitText: 'out of 100', url: `${url}#the-full-ranking` },
+  ];
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Dataset',
+    name: input.title,
+    description: input.description,
+    url,
+    sameAs: url,
+    license: 'https://creativecommons.org/licenses/by/4.0/',
+    isAccessibleForFree: true,
+    datePublished: input.datePublished,
+    dateModified: input.dateModified,
+    keywords: [
+      'touchless car wash chains',
+      'best touchless car wash chain',
+      'car wash chain ranking',
+      'touchless satisfaction score',
+      'kwik trip car wash',
+    ],
+    creator: { '@type': 'Organization', name: ORG_NAME, url: SITE_URL },
+    publisher: { '@type': 'Organization', name: ORG_NAME, url: SITE_URL },
+    spatialCoverage: { '@type': 'Place', name: 'United States' },
+    temporalCoverage: '2024-01-01/2026-06-05',
+    measurementTechnique: [
+      'Natural-language classification of Google review snippets for touchless-wash sentiment',
+      'Per-location Touchless Satisfaction Score averaged by parent chain (min 8 locations)',
+    ],
+    variableMeasured,
+    distribution: [{ '@type': 'DataDownload', encodingFormat: 'text/html', contentUrl: url }],
   };
 }

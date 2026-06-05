@@ -5,6 +5,13 @@
  * (Rendered as a highlighted box at the top of each post for GEO.)
  */
 export const BLOG_TAKEAWAYS: Record<string, string[]> = {
+  "best-touchless-car-wash-chains-ranked": [
+    "We scored 312 locations across 22 touchless car wash chains using real Google reviews of the touchless wash specifically.",
+    "BP (77) and Autowash (76) rank highest for touchless satisfaction, followed by Kwik Trip (73), Holiday Stationstores, IQ Car Wash, and Circle K (71).",
+    "Gas-station and c-store touchless washes — BP, Circle K, Holiday, Kwik Trip — rank surprisingly well, near the top of the list.",
+    "Most touchless chains cluster in the 'Good' band (roughly 62–76); they're broadly well-liked, and consistency is what separates the leaders.",
+    "Chain averages set expectations, but individual locations vary — check a specific location's Touchless Satisfaction Score before you go.",
+  ],
   "does-touchless-car-wash-scratch-paint-study": [
     "An analysis of 730,000+ Google reviews across 4,485 touchless car washes found paint-damage complaints are rare.",
     "66% of touchless car washes had zero paint-damage complaints in their entire review history.",
