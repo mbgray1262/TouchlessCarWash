@@ -29,6 +29,7 @@ import PaintSafeModule, { type PaintSnippet, type PaintTheme } from '@/component
 import TouchlessSatisfactionGauge, { type TssSnippet } from '@/components/TouchlessSatisfactionGauge';
 import { TouchlessScoreComparison, type ScoreRankItem } from '@/components/TouchlessScoreComparison';
 import { tssTier } from '@/lib/touchless-satisfaction';
+import { ListingThumb } from '@/components/ListingThumb';
 import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants';
 import { getAnyCityCoords, findNearestTouchlessCityPath } from '@/lib/geo-fallback';
 import { streetAddress, hasStreetAddress } from '@/lib/utils';
@@ -169,7 +170,7 @@ async function getNearbyListings(listing: Listing, limit = 6): Promise<Listing[]
 
     const { data } = await supabase
       .from('listings')
-      .select('id, name, slug, city, state, rating, review_count, address, hero_image, google_photo_url, street_view_url, latitude, longitude')
+      .select('id, name, slug, city, state, rating, review_count, address, hero_image, google_photo_url, street_view_url, latitude, longitude, parent_chain, hero_image_source')
       .eq('is_touchless', true)
       .eq('is_approved', true)
       .neq('id', listing.id)
@@ -203,7 +204,7 @@ async function getNearbyListings(listing: Listing, limit = 6): Promise<Listing[]
 async function getNearbyListingsLegacy(listing: Listing, limit = 6): Promise<Listing[]> {
   const { data } = await supabase
     .from('listings')
-    .select('id, name, slug, city, state, rating, review_count, address, hero_image, google_photo_url, street_view_url, latitude, longitude')
+    .select('id, name, slug, city, state, rating, review_count, address, hero_image, google_photo_url, street_view_url, latitude, longitude, parent_chain, hero_image_source')
     .eq('is_touchless', true)
     .eq('is_approved', true)
     .eq('state', listing.state)
@@ -226,7 +227,7 @@ async function getChainListings(listing: Listing, limit = 6): Promise<{ chainNam
     supabase.from('vendors').select('canonical_name').eq('id', listing.vendor_id).single(),
     supabase
       .from('listings')
-      .select('id, name, slug, city, state, rating, review_count, address, hero_image, google_photo_url, street_view_url')
+      .select('id, name, slug, city, state, rating, review_count, address, hero_image, google_photo_url, street_view_url, parent_chain, hero_image_source')
       .eq('is_touchless', true)
       .eq('vendor_id', listing.vendor_id)
       .neq('id', listing.id)
@@ -1135,17 +1136,14 @@ function ReviewSnippetCard({ snippet }: { snippet: ReviewSnippet }) {
 
 function NearbyListingCard({ nearby, stateSlug }: { nearby: Listing; stateSlug: string }) {
   const citySlug = slugify(nearby.city);
-  const thumb = nearby.hero_image ?? nearby.google_photo_url ?? nearby.street_view_url ?? null;
   return (
     <Link
       href={`/state/${stateSlug}/${citySlug}/${nearby.slug}`}
       className="group flex gap-3 p-3 rounded-xl border border-gray-200 bg-white hover:border-[#22C55E] hover:shadow-sm transition-all"
     >
-      {thumb && (
-        <div className="relative shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
-          <Image src={thumb} alt={nearby.name} fill sizes="64px" className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized={!isOptimizedImageHost(thumb)} />
-        </div>
-      )}
+      <div className="relative shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
+        <ListingThumb listing={nearby} alt={nearby.name} />
+      </div>
       <div className="flex-1 min-w-0">
         <div className="font-semibold text-[#0F2744] text-sm leading-tight group-hover:text-[#22C55E] transition-colors truncate">{nearby.name}</div>
         <div className="text-xs text-gray-500 mt-0.5 truncate">{nearby.city}, {nearby.state}</div>
@@ -1408,7 +1406,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                 {topRanking && (
                   <Link
                     href={`/badge/${listing.slug}`}
-                    className="absolute bottom-4 right-4 md:bottom-6 md:right-6 z-10 flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-semibold text-sm px-4 py-2.5 rounded-lg shadow-lg hover:shadow-xl transition-all"
+                    className="absolute bottom-4 right-4 md:bottom-6 md:right-6 z-10 hidden md:flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-semibold text-sm px-4 py-2.5 rounded-lg shadow-lg hover:shadow-xl transition-all"
                   >
                     <Trophy className="w-4 h-4" />
                     Claim Your Badge
