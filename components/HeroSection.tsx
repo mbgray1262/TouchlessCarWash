@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, MapPin, Building2, Trophy, ShieldCheck } from 'lucide-react';
+import { Search, MapPin, Building2, Trophy, Gauge } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
@@ -878,16 +878,17 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
             Verified listings • Real reviews • Updated regularly
           </p>
 
-          {/* Paint-Safe feature indicator — the "what's new / why us" hook */}
+          {/* Touchless Satisfaction Score — the flagship "why us" hook */}
           <a
-            href="/paint-safe"
-            className="mt-4 inline-flex items-center gap-2.5 bg-white/10 hover:bg-white/15 border border-white/25 rounded-xl px-4 py-2.5 transition-colors max-w-md"
+            href="/touchless-satisfaction-score"
+            className="mt-4 inline-flex items-center gap-3 bg-white/10 hover:bg-white/15 border border-white/25 rounded-xl px-4 py-2.5 transition-colors max-w-md"
           >
-            <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-[#22C55E] text-white shrink-0 shadow-md shadow-emerald-900/40">
-              <ShieldCheck className="w-5 h-5" />
+            <span className="flex flex-col items-center justify-center w-11 h-11 rounded-lg bg-[#22C55E] text-white shrink-0 shadow-md shadow-emerald-900/40 leading-none">
+              <Gauge className="w-4 h-4" />
+              <span className="text-[10px] font-extrabold mt-0.5">0–100</span>
             </span>
             <span className="text-sm text-white leading-snug">
-              <b className="text-emerald-300">New — Paint-Safe Verified:</b> we check every wash for paint safety using thousands of real customer reviews.
+              <b className="text-emerald-300">New — Touchless Satisfaction Score:</b> every wash rated 0–100 on its touchless experience, from thousands of real customer reviews.
             </span>
           </a>
         </div>
