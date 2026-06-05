@@ -1293,7 +1293,6 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
   const hours = listing.hours as Record<string, string> | null;
   // Open/closed status is now handled client-side by HoursStatusBadge
   // to use the user's local timezone instead of the server's UTC time
-  const heroDescription = buildHeroDescription(listing);
 
   // The canonical-slug redirect above guarantees params.city is already
   // canonical, but recompute slugify(listing.city) here for clarity and
@@ -1356,6 +1355,90 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
 
   const topRanking = rankings.length > 0 ? rankings[0] : null;
 
+  // One clean, mobile-first hero content block, shared by both the image and
+  // no-image hero layouts (previously duplicated). Compact prioritized badges,
+  // a single clear "Get Directions" affordance (address shown once, no iOS
+  // data-detector mess since it's an explicit link), and NO restated
+  // description (the full description lives below in the content column).
+  const heroShortAddress = `${streetAddress(listing.address, listing.city, listing.state, listing.zip)}, ${listing.city}, ${listing.state}`;
+  const heroDirectionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${streetAddress(listing.address, listing.city, listing.state, listing.zip)}, ${listing.city}, ${listing.state} ${listing.zip}`)}`;
+  const heroPill = 'text-[11px] font-semibold px-2 py-0.5';
+  const heroContent = (
+    <>
+      <ListingBreadcrumb
+        listingName={listing.name}
+        stateSlug={params.state}
+        stateName={stateName}
+        citySlug={params.city}
+        cityName={cityName}
+        variant="hero"
+      />
+      <div className="flex items-start gap-3 md:gap-4 mt-1">
+        {logoImage && (
+          <LogoImage
+            src={logoImage}
+            alt={`${listing.name} logo`}
+            wrapperClassName="shrink-0 w-14 h-14 md:w-20 md:h-20 rounded-xl overflow-hidden bg-white p-1.5 shadow-lg mt-1"
+            className="w-full h-full object-contain"
+          />
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-1.5 mb-2">
+            {topRanking && (
+              <Link href={`/best/${topRanking.metro_slug}`}>
+                <Badge className={`bg-yellow-400 text-yellow-900 border-0 shadow-sm hover:bg-yellow-300 transition-colors ${heroPill}`}>
+                  <Trophy className="w-3 h-3 mr-1" />#{topRanking.rank} in {topRanking.metro_name}
+                </Badge>
+              </Link>
+            )}
+            {listing.touchless_satisfaction_score != null && (
+              <Badge className={`border-0 shadow-sm text-white ${heroPill}`} style={{ backgroundColor: tssTier(listing.touchless_satisfaction_score).arc }}>
+                <Gauge className="w-3 h-3 mr-1" />Satisfaction {listing.touchless_satisfaction_score}
+              </Badge>
+            )}
+            {listing.paint_safe_verified && (
+              <Badge className={`bg-emerald-600 text-white border-0 shadow-sm ${heroPill}`}>
+                <ShieldCheck className="w-3 h-3 mr-1" />Paint-Safe
+              </Badge>
+            )}
+            <Badge className={`bg-[#22C55E] text-white border-0 shadow-sm ${heroPill}`}>
+              <CheckCircle className="w-3 h-3 mr-1" />Touchless Verified
+            </Badge>
+            {listing.is_claimed && (
+              <Badge className={`bg-blue-500 text-white border-0 shadow-sm ${heroPill}`}>
+                <ShieldCheck className="w-3 h-3 mr-1" />Verified Owner
+              </Badge>
+            )}
+          </div>
+          <h1 className="text-2xl md:text-4xl font-bold text-white leading-tight mb-2">{listing.name}</h1>
+          {ratingStars && <div className="mb-3 text-sm text-white/90">{ratingStars}</div>}
+          <TrackableLink
+            href={heroDirectionsUrl}
+            listingId={listing.id}
+            eventType="directions"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 max-w-full bg-white/10 hover:bg-white/20 border border-white/25 rounded-xl px-3.5 py-2 text-white text-sm transition-colors"
+          >
+            <MapPin className="w-4 h-4 shrink-0 text-[#22C55E]" />
+            <span className="truncate">{heroShortAddress}</span>
+            <span className="flex items-center gap-0.5 text-[#22C55E] font-semibold shrink-0">· Directions<ChevronRight className="w-3.5 h-3.5" /></span>
+          </TrackableLink>
+          {topRanking && (
+            <div className="mt-3">
+              <Link
+                href={`/badge/${listing.slug}`}
+                className="inline-flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-semibold text-xs md:text-sm px-3 py-2 rounded-lg shadow transition-all"
+              >
+                <Trophy className="w-4 h-4" />Claim Your Badge
+              </Link>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <>
       <script
@@ -1389,7 +1472,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                   ~65% of the screen with dark navy bg leaking through on
                   the right. Pinning w-full forces the cap to take from
                   height only, and object-cover handles the crop. */}
-              <div className="relative w-full overflow-hidden md:h-auto md:aspect-[16/9] md:max-h-[44rem]">
+              <div className="relative w-full overflow-hidden">
                 <Image
                   src={heroImage}
                   alt={listing.name}
@@ -1400,81 +1483,10 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                   style={{ objectPosition: heroObjectPosition }}
                   unoptimized={!isOptimizedImageHost(heroImage)}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0F2744] via-[#0F2744]/50 to-[#0F2744]/10" />
-
-                {/* Claim Your Badge — floating button on hero */}
-                {topRanking && (
-                  <Link
-                    href={`/badge/${listing.slug}`}
-                    className="absolute top-4 right-4 md:top-auto md:bottom-6 md:right-6 z-20 flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-semibold text-xs md:text-sm px-3 py-2 md:px-4 md:py-2.5 rounded-lg shadow-lg hover:shadow-xl transition-all"
-                  >
-                    <Trophy className="w-4 h-4" />
-                    Claim Your Badge
-                  </Link>
-                )}
-              </div>
-
-              <div className="relative md:absolute md:inset-0 flex flex-col justify-end min-h-[20rem] md:min-h-0 pointer-events-none">
-                <div className="container mx-auto px-4 max-w-5xl pb-8 pt-4 pointer-events-auto">
-                  <ListingBreadcrumb
-                    listingName={listing.name}
-                    stateSlug={params.state}
-                    stateName={stateName}
-                    citySlug={params.city}
-                    cityName={cityName}
-                    variant="hero"
-                  />
-
-                  <div className="flex items-start gap-4">
-                    {logoImage && (
-                      <LogoImage
-                        src={logoImage}
-                        alt={`${listing.name} logo`}
-                        wrapperClassName="shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-white p-1.5 shadow-lg mt-1"
-                        className="w-full h-full object-contain"
-                      />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <Badge className="bg-[#22C55E] text-white border-0 shadow-sm">
-                          <CheckCircle className="w-3 h-3 mr-1" />Touchless Verified
-                        </Badge>
-                        {listing.touchless_satisfaction_score != null && (
-                          <Badge className="border-0 shadow-sm text-white" style={{ backgroundColor: tssTier(listing.touchless_satisfaction_score).arc }}>
-                            <Gauge className="w-3 h-3 mr-1" />Touchless Satisfaction {listing.touchless_satisfaction_score}
-                          </Badge>
-                        )}
-                        {listing.paint_safe_verified && (
-                          <Badge className="bg-emerald-600 text-white border-0 shadow-sm">
-                            <ShieldCheck className="w-3 h-3 mr-1" />Paint-Safe Verified
-                          </Badge>
-                        )}
-                        {listing.is_claimed && (
-                          <Badge className="bg-blue-500 text-white border-0 shadow-sm">
-                            <ShieldCheck className="w-3 h-3 mr-1" />Verified Owner
-                          </Badge>
-                        )}
-                        {listing.is_featured && (
-                          <Badge className="bg-amber-400 text-amber-900 border-0">Featured</Badge>
-                        )}
-                        {topRanking && (
-                          <Link href={`/best/${topRanking.metro_slug}`}>
-                            <Badge className="bg-yellow-400 text-yellow-900 border-0 shadow-sm hover:bg-yellow-300 transition-colors">
-                              <Trophy className="w-3 h-3 mr-1" />#{topRanking.rank} Best in {topRanking.metro_name}
-                            </Badge>
-                          </Link>
-                        )}
-                      </div>
-                      <h1 className="text-3xl md:text-4xl font-bold text-white leading-tight mb-2">{listing.name}</h1>
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-white/80 text-sm">
-                        <span className="flex items-center gap-1.5">
-                          <MapPin className="w-4 h-4 shrink-0" />
-                          {streetAddress(listing.address, listing.city, listing.state, listing.zip)}, {listing.city}, {listing.state}
-                        </span>
-                        {ratingStars}
-                      </div>
-                      <p className="mt-2.5 text-sm text-white/80 max-w-2xl leading-relaxed line-clamp-2">{heroDescription}</p>
-                    </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0F2744] via-[#0F2744]/70 to-[#0F2744]/25" />
+                <div className="relative flex flex-col justify-end min-h-[20rem] md:min-h-[26rem]">
+                  <div className="container mx-auto px-4 max-w-5xl pb-8 pt-6">
+                    {heroContent}
                   </div>
                 </div>
               </div>
@@ -1487,70 +1499,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
           {!heroImage && (
             <div className="relative">
               <div className="container mx-auto px-4 max-w-5xl py-8">
-                <ListingBreadcrumb
-                  listingName={listing.name}
-                  stateSlug={params.state}
-                  stateName={stateName}
-                  citySlug={params.city}
-                  cityName={cityName}
-                  variant="hero"
-                />
-
-                <div className="flex items-start gap-4">
-                  {logoImage && (
-                    <LogoImage
-                      src={logoImage}
-                      alt={`${listing.name} logo`}
-                      wrapperClassName="shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-white p-1.5 shadow-lg mt-1"
-                      className="w-full h-full object-contain"
-                    />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-2">
-                      <Badge className="bg-[#22C55E] text-white border-0 shadow-sm">
-                        <CheckCircle className="w-3 h-3 mr-1" />Touchless Verified
-                      </Badge>
-                      {listing.touchless_satisfaction_score != null && (
-                        <Badge className="border-0 shadow-sm text-white" style={{ backgroundColor: tssTier(listing.touchless_satisfaction_score).arc }}>
-                          <Gauge className="w-3 h-3 mr-1" />Touchless Satisfaction {listing.touchless_satisfaction_score}
-                        </Badge>
-                      )}
-                      {listing.paint_safe_verified && (
-                        <Badge className="bg-emerald-600 text-white border-0 shadow-sm">
-                          <ShieldCheck className="w-3 h-3 mr-1" />Paint-Safe Verified
-                        </Badge>
-                      )}
-                      {listing.is_featured && (
-                        <Badge className="bg-amber-400 text-amber-900 border-0">Featured</Badge>
-                      )}
-                      {topRanking && (
-                        <Link href={`/best/${topRanking.metro_slug}`}>
-                          <Badge className="bg-yellow-400 text-yellow-900 border-0 shadow-sm hover:bg-yellow-300 transition-colors">
-                            <Trophy className="w-3 h-3 mr-1" />#{topRanking.rank} Best in {topRanking.metro_name}
-                          </Badge>
-                        </Link>
-                      )}
-                    </div>
-                    <h1 className="text-3xl md:text-4xl font-bold text-white leading-tight mb-2">{listing.name}</h1>
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-white/80 text-sm">
-                      <span className="flex items-center gap-1.5">
-                        <MapPin className="w-4 h-4 shrink-0" />
-                        {streetAddress(listing.address, listing.city, listing.state, listing.zip)}, {listing.city}, {listing.state}
-                      </span>
-                      {ratingStars}
-                    </div>
-                    <p className="mt-2.5 text-sm text-white/80 max-w-2xl leading-relaxed line-clamp-2">{heroDescription}</p>
-                    {topRanking && (
-                      <Link
-                        href={`/badge/${listing.slug}`}
-                        className="inline-flex items-center gap-2 mt-4 bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-semibold text-sm px-4 py-2.5 rounded-lg shadow-lg hover:shadow-xl transition-all"
-                      >
-                        <Trophy className="w-4 h-4" />
-                        Claim Your Badge
-                      </Link>
-                    )}
-                  </div>
-                </div>
+                {heroContent}
               </div>
             </div>
           )}
