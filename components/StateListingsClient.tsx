@@ -12,7 +12,7 @@ import { slugify } from '@/lib/constants';
 import { withPaintSafeChip, PAINT_SAFE_FILTER_SLUG } from '@/lib/paint-safe-filter';
 
 const LISTING_CARD_COLUMNS =
-  'id, name, slug, city, state, address, phone, rating, review_count, hero_image, google_photo_url, street_view_url, logo_photo, google_logo_url, amenities, touchless_wash_types, extracted_data, hours, is_touchless, is_featured, is_claimed, paint_safe_verified';
+  'id, name, slug, city, state, address, phone, rating, review_count, hero_image, google_photo_url, street_view_url, logo_photo, google_logo_url, amenities, touchless_wash_types, extracted_data, hours, is_touchless, is_featured, is_claimed, paint_safe_verified, touchless_satisfaction_score';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -56,7 +56,8 @@ export function StateListingsClient({
   // characters so a stray comma/paren can't break the .or() expression.
   const query = (searchParams.get('q') ?? '').replace(/[%,()]/g, ' ').trim();
   const hasQuery = query.length > 0;
-  const isDefault = !hasFilters && !hasQuery && rawPage === 1;
+  const sortTss = searchParams.get('sort') === 'tss';
+  const isDefault = !hasFilters && !hasQuery && !sortTss && rawPage === 1;
 
   const [listings, setListings] = useState<Listing[]>(initialListings);
   const [totalCount, setTotalCount] = useState(serverTotal);
@@ -72,7 +73,7 @@ export function StateListingsClient({
   }, [query]);
 
   // Track the filter+page+query key so we can skip stale fetches
-  const fetchKey = `${filterSlugs.join(',')}|${rawPage}|${query}`;
+  const fetchKey = `${filterSlugs.join(',')}|${rawPage}|${query}|${sortTss ? 'tss' : 'rec'}`;
   const prevFetchKey = useRef(fetchKey);
 
   const fetchListings = useCallback(async () => {
@@ -136,7 +137,9 @@ export function StateListingsClient({
         dbQuery = dbQuery.eq('paint_safe_verified', true);
       }
 
-      dbQuery = dbQuery.order('rating', { ascending: false });
+      dbQuery = sortTss
+        ? dbQuery.order('touchless_satisfaction_score', { ascending: false, nullsFirst: false }).order('rating', { ascending: false })
+        : dbQuery.order('rating', { ascending: false });
 
       if (qualifiedIds !== null) {
         if (qualifiedIds.length === 0) {
@@ -168,11 +171,13 @@ export function StateListingsClient({
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
   const currentPage = Math.min(rawPage, Math.max(totalPages, 1));
 
-  function pushState(opts: { page?: number; q?: string }) {
+  function pushState(opts: { page?: number; q?: string; sort?: 'tss' | 'recommended' }) {
     const params = new URLSearchParams();
     if (filterSlugs.length > 0) params.set('filters', filterSlugs.join(','));
     const nextQ = opts.q ?? query;
     if (nextQ) params.set('q', nextQ);
+    const nextSort = opts.sort ?? (sortTss ? 'tss' : 'recommended');
+    if (nextSort === 'tss') params.set('sort', 'tss');
     const nextPage = opts.page ?? 1;
     if (nextPage > 1) params.set('page', String(nextPage));
     const qs = params.toString();
@@ -253,6 +258,18 @@ export function StateListingsClient({
         currentQuery=""
         baseHref={`/state/${stateSlug}`}
       />
+
+      <div className="flex items-center gap-2 mb-4">
+        <label className="text-sm text-gray-500">Sort by:</label>
+        <select
+          value={sortTss ? 'tss' : 'recommended'}
+          onChange={(e) => pushState({ sort: e.target.value as 'tss' | 'recommended', page: 1 })}
+          className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white font-medium text-[#0F2744] focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+        >
+          <option value="recommended">Recommended</option>
+          <option value="tss">Touchless Satisfaction Score</option>
+        </select>
+      </div>
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

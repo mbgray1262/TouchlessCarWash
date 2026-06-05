@@ -60,9 +60,23 @@ export function CityListingsClient({
     );
   }, [allListings, filterSlugs.join(','), allFilters, filterMap, hasFilters]);
 
-  const totalPages = Math.ceil(filteredListings.length / PAGE_SIZE);
+  // Optional sort by Touchless Satisfaction Score (unscored fall to the bottom).
+  const [sort, setSort] = useState<'recommended' | 'tss'>('recommended');
+  const sortedListings = useMemo(() => {
+    if (sort !== 'tss') return filteredListings;
+    return [...filteredListings].sort(
+      (a, b) => (b.touchless_satisfaction_score ?? -1) - (a.touchless_satisfaction_score ?? -1),
+    );
+  }, [filteredListings, sort]);
+
+  const hasAnyScore = useMemo(
+    () => allListings.some((l) => l.touchless_satisfaction_score != null),
+    [allListings],
+  );
+
+  const totalPages = Math.ceil(sortedListings.length / PAGE_SIZE);
   const currentPage = Math.min(rawPage, Math.max(totalPages, 1));
-  const paginatedListings = filteredListings.slice(
+  const paginatedListings = sortedListings.slice(
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE,
   );
@@ -105,6 +119,19 @@ export function CityListingsClient({
             currentQuery=""
             baseHref={`/state/${stateSlug}/${citySlug}`}
           />
+          {hasAnyScore && allListings.length > 1 && (
+            <div className="flex items-center gap-2 -mt-2 mb-4">
+              <label className="text-sm text-gray-500">Sort by:</label>
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as 'recommended' | 'tss')}
+                className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white font-medium text-[#0F2744] focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+              >
+                <option value="recommended">Recommended</option>
+                <option value="tss">Touchless Satisfaction Score</option>
+              </select>
+            </div>
+          )}
         </>
       )}
 

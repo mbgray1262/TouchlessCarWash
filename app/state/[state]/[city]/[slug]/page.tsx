@@ -27,6 +27,7 @@ import { Button } from '@/components/ui/button';
 import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
 import PaintSafeModule, { type PaintSnippet, type PaintTheme } from '@/components/PaintSafeModule';
 import TouchlessSatisfactionGauge, { type TssSnippet } from '@/components/TouchlessSatisfactionGauge';
+import { TouchlessScoreComparison, type ScoreRankItem } from '@/components/TouchlessScoreComparison';
 import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants';
 import { getAnyCityCoords, findNearestTouchlessCityPath } from '@/lib/geo-fallback';
 import { streetAddress, hasStreetAddress } from '@/lib/utils';
@@ -357,6 +358,27 @@ async function getGenericReviews(listingId: string, limit = 6): Promise<ReviewSn
  * managed at /admin/videos. Returns them in admin-defined order; the
  * TouchlessVideo component deterministically picks one by listing id.
  */
+async function getCityScoreRanking(state: string, city: string): Promise<ScoreRankItem[]> {
+  const { data } = await supabase
+    .from('listings')
+    .select('id, name, slug, city, state, touchless_satisfaction_score')
+    .eq('is_touchless', true)
+    .eq('is_approved', true)
+    .eq('state', state)
+    .ilike('city', city)
+    .not('touchless_satisfaction_score', 'is', null)
+    .order('touchless_satisfaction_score', { ascending: false })
+    .limit(8);
+  return (data ?? []).map((r) => ({
+    id: r.id as string,
+    name: r.name as string,
+    slug: r.slug as string,
+    city: r.city as string,
+    state: r.state as string,
+    score: r.touchless_satisfaction_score as number,
+  }));
+}
+
 async function getEquipmentVideos(): Promise<{ id: string; title: string; brand: string | null }[]> {
   const { data } = await supabase
     .from('equipment_videos')
@@ -1220,7 +1242,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     permanentRedirect(`/state/${params.state}/${canonicalCitySlug}/${params.slug}`);
   }
 
-  const [nearbyListings, reviewSnippets, genericReviews, rankings, chainResult, verificationStats, equipmentVideos, paintSnippets] = await Promise.all([
+  const [nearbyListings, reviewSnippets, genericReviews, rankings, chainResult, verificationStats, equipmentVideos, paintSnippets, cityScoreRanking] = await Promise.all([
     getNearbyListings(listing),
     getReviewSnippets(listing.id),
     getGenericReviews(listing.id),
@@ -1229,6 +1251,9 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     getVerificationStats(listing.id),
     getEquipmentVideos(),
     getPaintModuleSnippets(listing.id),
+    listing.touchless_satisfaction_score != null
+      ? getCityScoreRanking(listing.state, listing.city)
+      : Promise.resolve([] as ScoreRankItem[]),
   ]);
 
   // If the current listing is ranked in a metro, fetch the OTHER top-ranked
@@ -1533,6 +1558,14 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                       rating: r.rating,
                       date: r.review_date ?? null,
                     }))}
+                />
+              )}
+              {cityScoreRanking.length >= 2 && (
+                <TouchlessScoreComparison
+                  items={cityScoreRanking}
+                  currentId={listing.id}
+                  cityLabel={listing.city}
+                  cityHref={`/state/${getStateSlug(listing.state)}/${slugify(listing.city)}?sort=tss`}
                 />
               )}
               {/* Paint-Safe module — verified badge + unified review-evidence drawer

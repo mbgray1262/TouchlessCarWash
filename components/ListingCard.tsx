@@ -220,17 +220,20 @@ export function ListingCard({ listing, href, showVerifiedBadge = false, distance
             const t = tssTier(listing.touchless_satisfaction_score);
             return (
               <div
-                className="inline-flex items-center gap-1.5 text-xs font-bold rounded-full pl-1 pr-2.5 py-0.5 mb-1 w-fit border"
-                style={{ background: t.bg, borderColor: t.arc + '55', color: t.color }}
+                className="inline-flex items-center gap-2 rounded-full pl-1 pr-3 py-1 mb-1.5 w-fit border"
+                style={{ background: t.bg, borderColor: t.arc + '66' }}
                 title="Touchless Satisfaction Score — based on touchless-specific reviews"
               >
                 <span
-                  className="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-[10px] font-extrabold"
+                  className="inline-flex items-center justify-center w-7 h-7 rounded-full text-white text-[15px] font-extrabold leading-none shadow-sm"
                   style={{ background: t.arc }}
                 >
                   {listing.touchless_satisfaction_score}
                 </span>
-                Touchless Satisfaction · {t.label}
+                <span className="leading-tight">
+                  <span className="block text-[10px] font-semibold uppercase tracking-wide text-gray-500">Touchless Satisfaction</span>
+                  <span className="block text-[13px] font-extrabold" style={{ color: t.color }}>{t.label}</span>
+                </span>
               </div>
             );
           })()}

@@ -145,6 +145,19 @@ async function getFeaturedListings(): Promise<Listing[]> {
   return (data as Listing[]) || [];
 }
 
+async function getTopSatisfactionListings(): Promise<Listing[]> {
+  const { data } = await supabase
+    .from('listings')
+    .select(LISTING_CARD_COLUMNS)
+    .eq('is_touchless', true)
+    .eq('is_approved', true)
+    .gte('touchless_mentions', 10)
+    .not('touchless_satisfaction_score', 'is', null)
+    .order('touchless_satisfaction_score', { ascending: false })
+    .limit(6);
+  return (data as Listing[]) || [];
+}
+
 async function getStateListingCounts(): Promise<Record<string, number>> {
   const { data, error } = await supabase.rpc('state_listing_counts');
   if (error || !data) return {};
@@ -164,13 +177,14 @@ async function getTotalReviewCount(): Promise<number> {
 }
 
 export default async function Home({ searchParams }: { searchParams?: { geo?: string } }) {
-  const [featuredListings, stateListingCounts, totalCount, totalReviews, homeVideos] =
+  const [featuredListings, stateListingCounts, totalCount, totalReviews, homeVideos, topSatisfaction] =
     await Promise.all([
       getFeaturedListings(),
       getStateListingCounts(),
       getApprovedTouchlessCount(),
       getTotalReviewCount(),
       getTouchlessVideoPool(),
+      getTopSatisfactionListings(),
     ]);
 
   // Passive geo via Netlify's x-nf-geo header → nearest metro suggestion.
@@ -331,6 +345,32 @@ export default async function Home({ searchParams }: { searchParams?: { geo?: st
                   listing={listing}
                   showVerifiedBadge
                 />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {topSatisfaction.length >= 3 && (
+        <section className="py-16 bg-white">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-10 max-w-2xl mx-auto">
+              <span className="inline-block text-xs font-bold uppercase tracking-wider text-[#22C55E] bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1 mb-4">New</span>
+              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+                We score the touchless wash — not just the business
+              </h2>
+              <p className="text-lg text-muted-foreground">
+                The <strong className="text-[#0F2744]">Touchless Satisfaction Score</strong> rates how happy customers
+                are with the touchless wash specifically, from thousands of real reviews. Here are some of the
+                highest-scoring washes in the country.
+              </p>
+              <Link href="/touchless-satisfaction-score" className="inline-block mt-4 text-[#22C55E] hover:underline font-semibold">
+                How the score works →
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+              {topSatisfaction.map((listing) => (
+                <ListingCard key={listing.id} listing={listing} />
               ))}
             </div>
           </div>
