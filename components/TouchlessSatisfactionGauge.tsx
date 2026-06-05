@@ -9,7 +9,7 @@
  * excluded upstream (touchless_about != 'other_service').
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ChevronDown, ThumbsUp, AlertTriangle, Gauge as GaugeIcon } from 'lucide-react';
 import { tssTier } from '@/lib/touchless-satisfaction';
 
@@ -20,6 +20,31 @@ export interface TssSnippet {
   reviewerName: string | null;
   rating: number | null;
   date: string | null;
+}
+
+/**
+ * Highlight touchless/cleanliness phrases in a snippet. Negation-aware: a
+ * negated negative ("no streaks", "didn't scratch") or a positive descriptor
+ * ("spotless", "touchless", "came out clean") is matched FIRST and shown green;
+ * a bare negative word ("dirty", "streaks", "scratched") falls through to red.
+ */
+function highlightTouchless(text: string): ReactNode[] {
+  const re = /(\b(?:no|not|never|without|zero|didn'?t|doesn'?t|won'?t|wasn'?t|hasn'?t|haven'?t)\b[\w\s,'-]{0,15}?\b(?:scratch\w*|streak\w*|spot\w*|dirt\w*|damage\w*|residue|mark\w*|swirl\w*|miss\w*|smear\w*)|\b(?:spotless|sparkl\w*|shin(?:e|y|ing)|gleaming|immaculate|pristine|flawless|gentle|scratch[\s-]?free|spot[\s-]?free|streak[\s-]?free|touch[\s-]?free|touchless|brushless|clean\w*)\b|\b(?:came?|comes?|come)\s+out\s+(?:so\s+|really\s+|super\s+)?(?:clean\w*|great|perfect|spotless|amazing|nice|shiny|new))|(\b(?:dirty|filthy|streak\w*|streaky|smear\w*|grimy|grime|scratch\w*|swirl\w*|damage\w*|broke\w*|broken|residue|missed)\b)/gi;
+  const nodes: ReactNode[] = [];
+  let last = 0, key = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) nodes.push(text.slice(last, m.index));
+    const green = m[1] !== undefined;
+    nodes.push(
+      <mark key={key++} className={green ? 'bg-emerald-100 text-emerald-800 rounded px-0.5' : 'bg-red-100 text-red-800 rounded px-0.5'}>
+        {m[0]}
+      </mark>,
+    );
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) nodes.push(text.slice(last));
+  return nodes;
 }
 
 export default function TouchlessSatisfactionGauge({
@@ -159,7 +184,7 @@ export default function TouchlessSatisfactionGauge({
                       </span>
                     )}
                   </div>
-                  <p className="text-[13.5px] text-slate-800 mt-2 leading-relaxed">{s.text}</p>
+                  <p className="text-[13.5px] text-slate-800 mt-2 leading-relaxed">{highlightTouchless(s.text)}</p>
                   <div className="flex items-center gap-2 mt-2.5">
                     <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-md ${s.sentiment === 'negative' ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
                       {s.sentiment === 'negative' ? 'Critical' : 'Positive'}
