@@ -7,7 +7,7 @@ import {
   Star, MapPin, Phone, Globe, Clock, CheckCircle, ArrowLeft,
   Sparkles, ExternalLink, ChevronRight, Navigation, HelpCircle,
   CalendarCheck, ChevronDown, Droplet, CreditCard, Zap, MessageSquareQuote, Quote, Trophy, ShieldCheck,
-  ThumbsUp, ThumbsDown, Minus
+  ThumbsUp, ThumbsDown, Minus, Gauge
 } from 'lucide-react';
 import LogoImage from '@/components/LogoImage';
 import HeroImageFallback from '@/components/HeroImageFallback';
@@ -28,6 +28,7 @@ import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
 import PaintSafeModule, { type PaintSnippet, type PaintTheme } from '@/components/PaintSafeModule';
 import TouchlessSatisfactionGauge, { type TssSnippet } from '@/components/TouchlessSatisfactionGauge';
 import { TouchlessScoreComparison, type ScoreRankItem } from '@/components/TouchlessScoreComparison';
+import { tssTier } from '@/lib/touchless-satisfaction';
 import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants';
 import { getAnyCityCoords, findNearestTouchlessCityPath } from '@/lib/geo-fallback';
 import { streetAddress, hasStreetAddress } from '@/lib/utils';
@@ -1440,6 +1441,16 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                         <Badge className="bg-[#22C55E] text-white border-0 shadow-sm">
                           <CheckCircle className="w-3 h-3 mr-1" />Touchless Verified
                         </Badge>
+                        {listing.touchless_satisfaction_score != null && (
+                          <Badge className="border-0 shadow-sm text-white" style={{ backgroundColor: tssTier(listing.touchless_satisfaction_score).arc }}>
+                            <Gauge className="w-3 h-3 mr-1" />Touchless Satisfaction {listing.touchless_satisfaction_score}
+                          </Badge>
+                        )}
+                        {listing.paint_safe_verified && (
+                          <Badge className="bg-emerald-600 text-white border-0 shadow-sm">
+                            <ShieldCheck className="w-3 h-3 mr-1" />Paint-Safe Verified
+                          </Badge>
+                        )}
                         {listing.is_claimed && (
                           <Badge className="bg-blue-500 text-white border-0 shadow-sm">
                             <ShieldCheck className="w-3 h-3 mr-1" />Verified Owner
@@ -1501,6 +1512,16 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                       <Badge className="bg-[#22C55E] text-white border-0 shadow-sm">
                         <CheckCircle className="w-3 h-3 mr-1" />Touchless Verified
                       </Badge>
+                      {listing.touchless_satisfaction_score != null && (
+                        <Badge className="border-0 shadow-sm text-white" style={{ backgroundColor: tssTier(listing.touchless_satisfaction_score).arc }}>
+                          <Gauge className="w-3 h-3 mr-1" />Touchless Satisfaction {listing.touchless_satisfaction_score}
+                        </Badge>
+                      )}
+                      {listing.paint_safe_verified && (
+                        <Badge className="bg-emerald-600 text-white border-0 shadow-sm">
+                          <ShieldCheck className="w-3 h-3 mr-1" />Paint-Safe Verified
+                        </Badge>
+                      )}
                       {listing.is_featured && (
                         <Badge className="bg-amber-400 text-amber-900 border-0">Featured</Badge>
                       )}

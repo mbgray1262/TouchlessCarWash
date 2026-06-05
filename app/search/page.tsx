@@ -27,6 +27,7 @@ interface SearchPageProps {
     lng?: string;
     filters?: string;
     page?: string;
+    sort?: string;
   };
 }
 
@@ -536,6 +537,14 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     }
   }
 
+  // Optional sort by Touchless Satisfaction Score (unscored fall to the bottom).
+  const sortTss = searchParams.sort === 'tss';
+  if (sortTss) {
+    listings = [...listings].sort(
+      (a, b) => (b.touchless_satisfaction_score ?? -1) - (a.touchless_satisfaction_score ?? -1),
+    );
+  }
+
   const totalPages = Math.ceil(listings.length / PAGE_SIZE);
   const page = Math.min(currentPage, Math.max(1, totalPages));
   const paginatedListings = listings.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -613,6 +622,24 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           lat={resolvedLat}
           lng={resolvedLng}
         />
+
+        {(hasSearch || resolvedProximity) && listings.length > 1 && (sortTss || listings.some(l => l.touchless_satisfaction_score != null)) && (
+          <div className="flex items-center gap-2 mb-5 -mt-1">
+            <span className="text-sm text-gray-500">Sort by:</span>
+            <Link
+              href={baseHref}
+              className={`text-sm font-medium px-3 py-1.5 rounded-full border transition-colors ${!sortTss ? 'bg-[#0F2744] text-white border-[#0F2744]' : 'bg-white text-gray-700 border-gray-200 hover:border-[#0F2744]'}`}
+            >
+              Recommended
+            </Link>
+            <Link
+              href={baseHref.includes('?') ? `${baseHref}&sort=tss` : `${baseHref}?sort=tss`}
+              className={`text-sm font-medium px-3 py-1.5 rounded-full border transition-colors ${sortTss ? 'bg-[#0F2744] text-white border-[#0F2744]' : 'bg-white text-gray-700 border-gray-200 hover:border-[#0F2744]'}`}
+            >
+              Touchless Satisfaction
+            </Link>
+          </div>
+        )}
 
         {!hasSearch && !resolvedProximity ? (
           <Card>
