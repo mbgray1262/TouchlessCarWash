@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif" role="img" aria-label="The best touchless car wash chains ranked by Touchless Satisfaction Score: BP 77, Autowash 76, Rocky Mountain 74, Kwik Trip 73, IQ Car Wash 71, Holiday Stationstores 71, Circle K 71, Brown Bear 70.">
+  <rect width="1200" height="630" fill="#0F2744"/>
+  <rect x="0" y="0" width="1200" height="6" fill="#22C55E"/>
+  <text x="60" y="74" font-size="40" font-weight="800" fill="#ffffff">The Best Touchless Car Wash Chains</text>
+  <text x="60" y="108" font-size="19" font-weight="600" fill="#22C55E">Ranked by Touchless Satisfaction Score · 312 locations across 22 chains</text>
+
+  <!-- rows: name | bar track (x380→1020, 640px) | score -->
+  <g font-size="20" font-weight="700" fill="#e2e8f0">
+    <!-- 1 BP 77 -->
+    <text x="60" y="192">1.  BP</text>
+    <rect x="380" y="176" width="640" height="20" rx="10" fill="#ffffff14"/>
+    <rect x="380" y="176" width="493" height="20" rx="10" fill="#22C55E"/>
+    <text x="1040" y="192" font-size="20" font-weight="800" fill="#ffffff">77</text>
+    <!-- 2 Autowash 76 -->
+    <text x="60" y="242">2.  Autowash</text>
+    <rect x="380" y="226" width="640" height="20" rx="10" fill="#ffffff14"/>
+    <rect x="380" y="226" width="486" height="20" rx="10" fill="#22C55E"/>
+    <text x="1040" y="242" font-size="20" font-weight="800" fill="#ffffff">76</text>
+    <!-- 3 Rocky Mountain 74 -->
+    <text x="60" y="292">3.  Rocky Mountain</text>
+    <rect x="380" y="276" width="640" height="20" rx="10" fill="#ffffff14"/>
+    <rect x="380" y="276" width="474" height="20" rx="10" fill="#22C55E"/>
+    <text x="1040" y="292" font-size="20" font-weight="800" fill="#ffffff">74</text>
+    <!-- 4 Kwik Trip 73 -->
+    <text x="60" y="342">4.  Kwik Trip</text>
+    <rect x="380" y="326" width="640" height="20" rx="10" fill="#ffffff14"/>
+    <rect x="380" y="326" width="467" height="20" rx="10" fill="#22C55E"/>
+    <text x="1040" y="342" font-size="20" font-weight="800" fill="#ffffff">73</text>
+    <!-- 5 IQ Car Wash 71 -->
+    <text x="60" y="392">5.  IQ Car Wash</text>
+    <rect x="380" y="376" width="640" height="20" rx="10" fill="#ffffff14"/>
+    <rect x="380" y="376" width="454" height="20" rx="10" fill="#34D399"/>
+    <text x="1040" y="392" font-size="20" font-weight="800" fill="#ffffff">71</text>
+    <!-- 6 Holiday Stationstores 71 -->
+    <text x="60" y="442">6.  Holiday Stationstores</text>
+    <rect x="380" y="426" width="640" height="20" rx="10" fill="#ffffff14"/>
+    <rect x="380" y="426" width="454" height="20" rx="10" fill="#34D399"/>
+    <text x="1040" y="442" font-size="20" font-weight="800" fill="#ffffff">71</text>
+    <!-- 7 Circle K 71 -->
+    <text x="60" y="492">7.  Circle K</text>
+    <rect x="380" y="476" width="640" height="20" rx="10" fill="#ffffff14"/>
+    <rect x="380" y="476" width="454" height="20" rx="10" fill="#34D399"/>
+    <text x="1040" y="492" font-size="20" font-weight="800" fill="#ffffff">71</text>
+    <!-- 8 Brown Bear 70 -->
+    <text x="60" y="542">8.  Brown Bear</text>
+    <rect x="380" y="526" width="640" height="20" rx="10" fill="#ffffff14"/>
+    <rect x="380" y="526" width="448" height="20" rx="10" fill="#34D399"/>
+    <text x="1040" y="542" font-size="20" font-weight="800" fill="#ffffff">70</text>
+  </g>
+
+  <text x="60" y="600" font-size="15" font-weight="600" fill="#94a3b8">Source: Touchless Car Wash Finder — Touchless Satisfaction Score from real Google reviews · touchlesscarwashfinder.com</text>
+</svg>
