@@ -29,6 +29,10 @@ export interface Product {
   vendor?: AffiliateVendor; // defaults to 'amazon' for back-compat
   // Amazon-only: ASIN powers both the affiliate URL and canonical image lookup
   asin?: string;
+  // Optional Amazon ASIN for a Chemical Guys product (which is ALSO sold on
+  // Amazon). Powers the secondary "Also on Amazon" buy button. If absent,
+  // secondaryAmazonUrl() falls back to a tagged Amazon search.
+  amazonAsin?: string;
   // Chemical Guys (CJ) only: canonical chemicalguys.com product URL. The
   // affiliate-tracked URL is constructed at runtime using the universal
   // CJ_CHEMGUYS_LINK_ID — no per-product link generation needed.
@@ -57,6 +61,26 @@ export function affiliateUrl(p: Product): string {
 
 /** Back-compat alias — older callers may still import amazonUrl. */
 export const amazonUrl = affiliateUrl;
+
+/**
+ * Secondary buy option for Chemical Guys products, which are also sold on
+ * Amazon. Returns a tagged Amazon link (exact ASIN if known, else a brand+name
+ * search) so we can show an "Also on Amazon" button beside the higher-margin
+ * Chemical Guys / CJ link — capturing Prime-loyal buyers and 24h cart-wide
+ * credit without losing the CG sale. Returns null for non-CG products (Amazon-
+ * only items already link to Amazon as their primary and have no CJ version).
+ */
+export function secondaryAmazonUrl(p: Product): string | null {
+  if (p.vendor !== 'chemicalguys-cj') return null;
+  if (p.amazonAsin) {
+    return `https://www.amazon.com/dp/${p.amazonAsin}/?tag=${AMAZON_AFFILIATE_TAG}`;
+  }
+  const query = `${p.brand} ${p.name}`
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return `https://www.amazon.com/s?k=${encodeURIComponent(query)}&tag=${AMAZON_AFFILIATE_TAG}`;
+}
 
 export function vendorLabel(p: Product): string {
   return p.vendor === 'chemicalguys-cj' ? 'Chemical Guys' : 'Amazon';

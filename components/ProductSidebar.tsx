@@ -4,11 +4,11 @@ import {
   amazonImageUrl,
   categoryGradient,
   getProducts,
-  vendorLabel,
   PLACEMENT_PRESETS,
   type PlacementPreset,
   type Product,
 } from '@/lib/affiliate-products';
+import { BuyButtons } from '@/components/BuyButtons';
 
 type Props = {
   preset?: PlacementPreset;
@@ -85,40 +85,42 @@ export function ProductSidebar({
       </div>
       <div className="space-y-3">
         {products.map((p) => (
-          <a
+          <div
             key={p.id}
-            href={affiliateUrl(p)}
-            target="_blank"
-            rel="noopener noreferrer sponsored nofollow"
-            className="group block rounded-lg border border-gray-100 bg-gray-50 hover:bg-white hover:border-[#22C55E] p-3 transition-all"
+            className="group rounded-lg border border-gray-100 bg-gray-50 hover:bg-white hover:border-[#22C55E] p-3 transition-all"
           >
-            <div className="flex gap-3 items-start">
-              <Thumb product={p} />
-              <div className="flex-1 min-w-0">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-0.5">
-                  {p.brand}
-                </div>
-                <div className="font-semibold text-sm text-[#0F2744] leading-snug mb-1">
-                  {p.name}
-                </div>
-                <div className="flex items-center gap-1.5 text-xs">
-                  <span className="text-yellow-500 font-medium">
-                    &#11088; {p.rating}
-                  </span>
-                  <span className="text-gray-300">·</span>
-                  <span className="text-gray-700 font-medium">
-                    {p.priceRange}
-                  </span>
+            <a
+              href={affiliateUrl(p)}
+              target="_blank"
+              rel="noopener noreferrer sponsored nofollow"
+              className="block"
+            >
+              <div className="flex gap-3 items-start">
+                <Thumb product={p} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-0.5">
+                    {p.brand}
+                  </div>
+                  <div className="font-semibold text-sm text-[#0F2744] leading-snug mb-1">
+                    {p.name}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <span className="text-yellow-500 font-medium">
+                      &#11088; {p.rating}
+                    </span>
+                    <span className="text-gray-300">·</span>
+                    <span className="text-gray-700 font-medium">
+                      {p.priceRange}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-            <p className="text-xs text-gray-600 leading-snug mt-2 line-clamp-2">
-              {p.positioning}
-            </p>
-            <span className="inline-flex items-center text-xs font-semibold text-[#0F2744] group-hover:text-[#22C55E] transition-colors mt-2">
-              Shop on {vendorLabel(p)} &rarr;
-            </span>
-          </a>
+              <p className="text-xs text-gray-600 leading-snug mt-2 line-clamp-2">
+                {p.positioning}
+              </p>
+            </a>
+            <BuyButtons product={p} size="sm" className="mt-2.5" />
+          </div>
         ))}
       </div>
       <Link
@@ -128,7 +130,7 @@ export function ProductSidebar({
         See our full touchless toolkit &rarr;
       </Link>
       <p className="text-[10px] text-gray-400 italic mt-2 leading-tight">
-        Amazon affiliate links — we earn from qualifying purchases at no extra cost.
+        Amazon &amp; Chemical Guys affiliate links — we earn from qualifying purchases at no extra cost.
       </p>
     </aside>
   );

@@ -2,9 +2,9 @@ import {
   affiliateUrl,
   amazonImageUrl,
   categoryGradient,
-  vendorLabel,
   type Product,
 } from '@/lib/affiliate-products';
+import { BuyButtons } from '@/components/BuyButtons';
 
 type Variant = 'card' | 'compact';
 
@@ -159,45 +159,45 @@ export function ProductCard({
   }
 
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer sponsored nofollow"
-      className="group relative flex flex-col h-full rounded-xl border border-gray-200 bg-white overflow-hidden hover:border-[#22C55E] hover:shadow-md transition-all"
-    >
+    <div className="group relative flex flex-col h-full rounded-xl border border-gray-200 bg-white overflow-hidden hover:border-[#22C55E] hover:shadow-md transition-all">
       {product.editorPick && (
         <span className="absolute top-3 left-3 z-10 inline-flex items-center gap-1 rounded-full bg-[#22C55E] text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 shadow-sm">
           &#9733; Editor&rsquo;s Pick
         </span>
       )}
-      <ImageOrFallback
-        product={product}
-        size="lg"
-        className="border-0 border-b border-gray-100 rounded-none"
-      />
-      <div className="flex flex-col flex-1 p-5">
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">
-          {product.brand}
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer sponsored nofollow"
+        className="flex flex-col flex-1"
+      >
+        <ImageOrFallback
+          product={product}
+          size="lg"
+          className="border-0 border-b border-gray-100 rounded-none"
+        />
+        <div className="flex flex-col flex-1 p-5 pb-3">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">
+            {product.brand}
+          </div>
+          <h3 className="font-bold text-[#0F2744] mb-2 leading-snug">
+            {product.name}
+          </h3>
+          <div className="flex items-center gap-2 mb-3 text-sm">
+            <span className="text-yellow-500 font-medium">
+              &#11088; {product.rating}
+            </span>
+            <span className="text-gray-300">·</span>
+            <span className="text-gray-700 font-medium">
+              {product.priceRange}
+            </span>
+          </div>
+          <p className="text-sm text-gray-600 leading-relaxed flex-1">
+            {product.positioning}
+          </p>
         </div>
-        <h3 className="font-bold text-[#0F2744] mb-2 leading-snug">
-          {product.name}
-        </h3>
-        <div className="flex items-center gap-2 mb-3 text-sm">
-          <span className="text-yellow-500 font-medium">
-            &#11088; {product.rating}
-          </span>
-          <span className="text-gray-300">·</span>
-          <span className="text-gray-700 font-medium">
-            {product.priceRange}
-          </span>
-        </div>
-        <p className="text-sm text-gray-600 leading-relaxed mb-4 flex-1">
-          {product.positioning}
-        </p>
-        <span className="inline-flex items-center gap-1 text-sm font-semibold text-[#0F2744] group-hover:text-[#22C55E] transition-colors mt-auto">
-          Shop on {vendorLabel(product)} &rarr;
-        </span>
-      </div>
-    </a>
+      </a>
+      <BuyButtons product={product} className="px-5 pb-5" />
+    </div>
   );
 }
