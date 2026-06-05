@@ -319,23 +319,13 @@ export async function GET() {
     <priority>0.8</priority>
   </url>`);
 
-  // Only include feature/state pages with 3+ listings (matching the page's notFound() threshold)
-  const featureStateUrls: string[] = [];
-  for (const feature of FEATURES) {
-    const { data } = await supabase.rpc('feature_state_counts', { p_filter_slug: feature.slug });
-    if (data) {
-      for (const row of data as { state: string; count: number }[]) {
-        if (row.count >= 3) {
-          featureStateUrls.push(`  <url>
-    <loc>${baseUrl}/features/${feature.slug}/${getStateSlug(row.state)}</loc>
-    <lastmod>${now}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>`);
-        }
-      }
-    }
-  }
+  // NOTE: We deliberately do NOT emit /features/<slug>/<state> URLs here.
+  // Those pages set their canonical to the master /state/<state> hub (they're
+  // a filtered view of it — see app/features/[slug]/[state]/page.tsx), so
+  // advertising them in the sitemap produces Ahrefs/GSC "Non-canonical page in
+  // sitemap" errors (193 of them as of Jun 2026). A sitemap must only list
+  // self-canonical URLs. These pages are still reachable via internal feature
+  // filters and inherit their SEO value through the canonical to /state/<state>.
 
   // Equipment pages — index, brand pages, and model pages
   const equipmentUrls: string[] = [];
@@ -522,7 +512,6 @@ export async function GET() {
 ${bestOfUrls.join('\n')}
 ${featureIndexUrl}
 ${featureHubUrls.join('\n')}
-${featureStateUrls.join('\n')}
 ${equipmentUrls.join('\n')}
 ${chainUrls.join('\n')}
 ${stateUrls.join('\n')}

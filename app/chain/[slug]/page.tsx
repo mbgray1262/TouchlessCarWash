@@ -145,6 +145,25 @@ export default async function ChainPage({ params }: ChainPageProps) {
 
   const otherChains = CHAINS.filter(c => c.slug !== chain.slug);
 
+  // Cap the number of heavy <ListingCard>s rendered across the whole page so
+  // very large chains stay under Googlebot's 2 MB HTML crawl limit. Kwik Trip
+  // (447 locations) rendered ~3.7 MB of cards and got flagged by Ahrefs/Google.
+  // State groups are already sorted by descending location count, so the
+  // biggest states get full cards first; every remaining location still
+  // renders as a compact crawlable text link, so no location loses its
+  // internal link. Chains under the cap (the vast majority) are unaffected.
+  const MAX_FULL_CARDS = 100;
+  let cardBudget = MAX_FULL_CARDS;
+  const renderGroups = stateGroups.map((sg) => {
+    const cardCount = Math.min(cardBudget, sg.listings.length);
+    cardBudget -= cardCount;
+    return {
+      ...sg,
+      cardListings: sg.listings.slice(0, cardCount),
+      overflowListings: sg.listings.slice(cardCount),
+    };
+  });
+
   const breadcrumbJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
@@ -268,7 +287,7 @@ export default async function ChainPage({ params }: ChainPageProps) {
         )}
 
         {/* Listings grouped by state */}
-        {stateGroups.map((sg) => (
+        {renderGroups.map((sg) => (
           <div key={sg.code} id={sg.code.toLowerCase()} className="mb-10">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
@@ -283,11 +302,29 @@ export default async function ChainPage({ params }: ChainPageProps) {
                 View all in {sg.name} →
               </Link>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sg.listings.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} />
-              ))}
-            </div>
+            {sg.cardListings.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {sg.cardListings.map((listing) => (
+                  <ListingCard key={listing.id} listing={listing} />
+                ))}
+              </div>
+            )}
+            {/* Overflow locations as compact crawlable links — keeps page HTML
+                under Googlebot's 2 MB limit on very large chains while still
+                giving every location an internal link. */}
+            {sg.overflowListings.length > 0 && (
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1.5">
+                {sg.overflowListings.map((listing) => (
+                  <Link
+                    key={listing.id}
+                    href={`/state/${sg.slug}/${slugify(listing.city)}/${listing.slug}`}
+                    className="text-sm text-primary hover:underline truncate"
+                  >
+                    {listing.name}{listing.city ? ` — ${listing.city}` : ''}
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         ))}
 
