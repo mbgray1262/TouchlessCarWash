@@ -148,7 +148,7 @@ export default function TouchlessSatisfactionGauge({
             <div className="bg-[#22C55E]" style={{ width: `${pctPos}%` }} />
             <div className="bg-red-400" style={{ width: `${100 - pctPos}%` }} />
           </div>
-          <div className="flex gap-2.5 mt-3">
+          <div className="flex flex-col sm:flex-row gap-2.5 mt-3">
             <button
               onClick={() => { setFilter((f) => (f === 'positive' ? null : 'positive')); setExpanded(false); }}
               className={`flex-1 flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 text-left transition border-emerald-300 bg-emerald-50 hover:bg-emerald-100 ${filter === 'positive' ? 'ring-2 ring-emerald-300' : ''}`}

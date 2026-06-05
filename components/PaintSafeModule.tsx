@@ -252,8 +252,8 @@ export default function PaintSafeModule({
             <div className="bg-[#22C55E]" style={{ width: `${pctPos}%` }} />
             <div className="bg-red-400" style={{ width: `${pctNeg}%` }} />
           </div>
-          {/* dual filter buttons */}
-          <div className="flex gap-2.5 mt-3">
+          {/* dual filter buttons — stack on mobile so the labels don't cram/wrap */}
+          <div className="flex flex-col sm:flex-row gap-2.5 mt-3">
             <button
               onClick={() => { setSent((s) => (s === 'positive' ? null : 'positive')); setExpanded(false); }}
               className={`flex-1 flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 text-left transition ${
