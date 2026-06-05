@@ -1,8 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
-// Service-role client (server-only). video_events has RLS with no anon policy,
-// so writes must use the service key — which never reaches the browser.
+// Server-side client. Prefer the service-role key when present, but fall back
+// to the anon key — which works because video_events has an anon INSERT policy
+// (migration 20260604170000), matching how /api/track writes listing_events.
+// SUPABASE_SERVICE_ROLE_KEY is not set on Netlify, so without that anon policy
+// every insert here is silently rejected by RLS.
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
