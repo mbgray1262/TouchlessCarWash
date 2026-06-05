@@ -61,20 +61,23 @@ export default function VendorMatchingPage() {
       let totalUnmatched = 0;
 
       for (const row of rows) {
-        totalUnmatched += row.listing_count;
+        // Postgres count(*) serializes to a JSON string, so coerce to a real
+        // number — otherwise totalUnmatched concatenates instead of summing.
+        const listingCount = Number(row.listing_count) || 0;
+        totalUnmatched += listingCount;
         if (row.vendor_id !== null && row.vendor_name !== null) {
           ready.push({
             domain: row.domain,
             vendorId: row.vendor_id,
             vendorName: row.vendor_name,
-            listingCount: row.listing_count,
+            listingCount,
             listingIds: row.listing_ids,
           });
         } else {
-          const isChain = row.listing_count >= 3;
+          const isChain = listingCount >= 3;
           newVendors.push({
             domain: row.domain,
-            listingCount: row.listing_count,
+            listingCount,
             listingIds: row.listing_ids,
             sampleNames: row.sample_names ?? [],
             isChain,
