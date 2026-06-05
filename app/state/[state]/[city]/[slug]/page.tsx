@@ -1389,7 +1389,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                   ~65% of the screen with dark navy bg leaking through on
                   the right. Pinning w-full forces the cap to take from
                   height only, and object-cover handles the crop. */}
-              <div className="relative h-80 w-full md:h-auto md:aspect-[16/9] md:max-h-[44rem] overflow-hidden">
+              <div className="relative w-full overflow-hidden md:h-auto md:aspect-[16/9] md:max-h-[44rem]">
                 <Image
                   src={heroImage}
                   alt={listing.name}
@@ -1406,7 +1406,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                 {topRanking && (
                   <Link
                     href={`/badge/${listing.slug}`}
-                    className="absolute bottom-4 right-4 md:bottom-6 md:right-6 z-10 hidden md:flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-semibold text-sm px-4 py-2.5 rounded-lg shadow-lg hover:shadow-xl transition-all"
+                    className="absolute top-4 right-4 md:top-auto md:bottom-6 md:right-6 z-20 flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-semibold text-xs md:text-sm px-3 py-2 md:px-4 md:py-2.5 rounded-lg shadow-lg hover:shadow-xl transition-all"
                   >
                     <Trophy className="w-4 h-4" />
                     Claim Your Badge
@@ -1414,7 +1414,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                 )}
               </div>
 
-              <div className="absolute inset-0 flex flex-col justify-end pointer-events-none">
+              <div className="relative md:absolute md:inset-0 flex flex-col justify-end min-h-[20rem] md:min-h-0 pointer-events-none">
                 <div className="container mx-auto px-4 max-w-5xl pb-8 pt-4 pointer-events-auto">
                   <ListingBreadcrumb
                     listingName={listing.name}
