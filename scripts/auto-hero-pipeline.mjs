@@ -108,6 +108,23 @@ function photoUrlV1(photoName, maxWidth = 1600) {
   return `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=${maxWidth}&key=${GOOGLE_KEY}`;
 }
 
+// Raw Google photo URLs (places.googleapis.com/.../media?key=) are nulled by a
+// DB trigger (they leak the key and aren't durable). Rehost the bytes into
+// Supabase storage and return the permanent public URL so hero_image sticks.
+async function rehostGooglePhoto(listingId, photoUrl) {
+  const img = await fetchImageBase64(photoUrl);
+  if (!img) return null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/rehost-listing-photos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SERVICE_KEY}` },
+      body: JSON.stringify({ listing_id: listingId, photos: [{ index: 0, data: img.base64, contentType: img.mediaType }] }),
+    });
+    const j = await res.json();
+    return j?.uploaded?.[0]?.url || null;
+  } catch (e) { log(`  ⚠ rehost error: ${e.message}`); return null; }
+}
+
 // ── Claude vision screening ───────────────────────────────────────────
 async function fetchImageBase64(url) {
   try {
@@ -316,16 +333,21 @@ async function processListing(listing, chainBrands) {
     const pick = await pickBestHero(urls, listing.name, listing.city, listing.state);
     result.steps.push({ step: 'google-photos-ai', picked: pick.index >= 0, reason: pick.reason });
     if (pick.index >= 0) {
-      result.final_hero = pick.url;
-      result.final_source = 'google-ai';
-      if (!DRY_RUN) {
-        await sb.from('listings').update({
-          hero_image: pick.url,
-          hero_image_source: 'google-ai',
-          photos: urls,
-        }).eq('id', listing.id);
+      // Rehost into Supabase storage — the raw Google URL would be nulled by a DB trigger.
+      const rehosted = DRY_RUN ? pick.url : await rehostGooglePhoto(listing.id, pick.url);
+      if (rehosted) {
+        result.final_hero = rehosted;
+        result.final_source = 'google-ai';
+        if (!DRY_RUN) {
+          await sb.from('listings').update({
+            hero_image: rehosted,
+            hero_image_source: 'google-ai',
+          }).eq('id', listing.id);
+        }
+        log(`  ✓ hero source: google photo (AI picked #${pick.index}, rehosted) — ${pick.reason?.slice(0,90)}`);
+      } else {
+        log(`  ✗ google photo picked but rehost failed; falling back`);
       }
-      log(`  ✓ hero source: google photo (AI picked #${pick.index}) — ${pick.reason?.slice(0,100)}`);
     } else {
       log(`  ✗ google photos rejected: ${pick.reason?.slice(0,100)}`);
     }
