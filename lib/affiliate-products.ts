@@ -431,11 +431,8 @@ export const PRODUCTS: Product[] = [
   },
 
   // ───── Wheel care (no-touch) ─────
-  // Chemical Guys Diablo wheel cleaner via CJ direct — replaces the Amazon
-  // Sonax wheel cleaner during the Associates appeal. CJ pays a higher
-  // commission rate than Amazon and the spray-and-rinse, no-scrub profile
-  // fits the touchless audience. (To re-add Sonax later, restore the Amazon
-  // entry: asin 'B003UT3S6Q'.)
+  // Chemical Guys Diablo (CJ, 10%) is the high-margin lead; Sonax (Amazon)
+  // restored below for buyer choice now that Associates is reinstated.
   {
     id: 'chemguys-diablo-wheel-cleaner',
     brand: 'Chemical Guys',
@@ -450,6 +447,18 @@ export const PRODUCTS: Product[] = [
       'Oxygen-infused foam clings to the wheel and lifts brake dust with no scrubbing. pH-balanced and safe on every finish — painted, chrome, polished, or clear-coated.',
     imageUrl:
       'https://cdn.shopify.com/s/files/1/0742/8938/1681/files/CLD_997-16-Front-FIXED.jpg?v=1762198475',
+  },
+  {
+    id: 'sonax-full-effect',
+    brand: 'Sonax',
+    name: 'Full Effect Wheel Cleaner',
+    category: 'wheel-care',
+    asin: 'B003UT3S6Q',
+    priceRange: '$25',
+    rating: 4.6,
+    positioning:
+      'Color-changing spray-and-rinse. Turns red as it dissolves brake dust and embedded iron — no scrubbing.',
+    hasImage: true,
   },
 ];
 
@@ -523,55 +532,62 @@ export const SHOP_SECTIONS: { id: string; title: string; subtitle: string; categ
 // Per-page-type curation. Image-having products are preferred for grid-style
 // placements so the visual is consistent; the catalog still references the
 // non-imaged products via search-result swaps later.
+// Per-page-type curation. Strategy (both Amazon + Chemical Guys/CJ live):
+// each slot mixes high-commission Chemical Guys products (10% via CJ, best
+// $/sale) with proven Amazon converters and "Touchless"-named soaps (Amazon
+// converts higher + 24h cart-wide attribution + matches search intent). The
+// blend captures both buyer types instead of forcing one store.
 export const PLACEMENT_PRESETS = {
-  // Sticky sidebar — keep the 3 image-having products (sidebar prominence
-  // benefits from real product photos since the unit is small/glanceable)
+  // Sticky sidebar — image-having products only (small/glanceable unit).
+  // Lead with the proven Meguiar's $20 ceramic wax (high Amazon conversion)
+  // + two high-margin CG items.
   listing: [
-    'chemguys-hydrospeed-ceramic',
-    'chemguys-woolly-mammoth-towel',
+    'meguiars-hybrid-ceramic-wax',
     'chemguys-total-interior-cleaner',
+    'chemguys-woolly-mammoth-towel',
   ],
   metroBest: [
-    'chemguys-hydrospeed-ceramic',
-    'chemguys-woolly-mammoth-towel',
+    'meguiars-hybrid-ceramic-wax',
     'chemguys-total-interior-cleaner',
+    'chemguys-woolly-mammoth-towel',
   ],
-  // Homepage — touchless-named products (front-door SEO match) plus two
-  // Chemical Guys CJ direct products (higher commission rate than Amazon).
+  // Homepage — Swift "Touchless" soap (Amazon SEO match + editor pick) plus
+  // three high-margin CG products spanning soap, snow foam, and ceramic.
   homepage: [
+    'swift-touchless-shampoo',
     'chemguys-mr-pink-super-suds',
     'chemguys-honeydew-snow-foam',
     'chemguys-hydroslick',
-    'chemguys-woolly-mammoth-towel',
   ],
-  // Equipment audience — DIY at home. TORQ foam cannon (CJ) + pressure
-  // washer + touchless soaps form the full kit.
+  // Equipment audience — the full DIY at-home kit. Pressure washer (Amazon,
+  // core hardware, now earning again) + CG foam cannon + CG snow foam +
+  // Swift touchless soap.
   equipment: [
-    'chemguys-mr-pink-super-suds',
+    'sun-joe-spx3000',
     'chemguys-torq-max-foam-8',
     'chemguys-honeydew-snow-foam',
-    'chemguys-woolly-mammoth-towel',
+    'swift-touchless-shampoo',
   ],
-  // Chain subscribers — when their unlimited's closed or they want to
-  // reproduce that touchless experience at home. HydroSlick (CJ ceramic)
-  // covers between-wash protection at a higher commission rate.
+  // Chain subscribers — reproduce the touchless experience at home. Optimum
+  // "Touchless" Decon (Amazon SEO, ceramic-safe) + CG soap + CG ceramic.
   chains: [
+    'optimum-touchless-decon',
     'chemguys-mr-pink-super-suds',
+    'chemguys-hydroslick',
+  ],
+  // Unlimited subscribers — between-wash care. Optimum (touchless SEO) + CG
+  // ceramic + CG drying towel.
+  unlimited: [
+    'optimum-touchless-decon',
     'chemguys-hydroslick',
     'chemguys-woolly-mammoth-towel',
   ],
-  // Unlimited subscribers — between-wash care. Optimum (touchless SEO) +
-  // Chemical Guys ceramic & drying towel (CJ direct, earn during the appeal).
-  unlimited: [
-    'optimum-touchless-decon',
-    'chemguys-hydrospeed-ceramic',
-    'chemguys-woolly-mammoth-towel',
-  ],
-  // 24-hour convenience focus — quick interior + drying essentials (all CG)
+  // 24-hour convenience — quick proven converters: Meguiar's wax + CG
+  // interior cleaner + Griot's microfiber towel (4.9, strong Amazon seller).
   twentyFourHour: [
-    'chemguys-hydrospeed-ceramic',
+    'meguiars-hybrid-ceramic-wax',
     'chemguys-total-interior-cleaner',
-    'chemguys-woolly-mammoth-towel',
+    'griots-microfiber-towel',
   ],
 } as const satisfies Record<string, readonly string[]>;
 
