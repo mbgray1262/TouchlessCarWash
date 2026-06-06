@@ -1,0 +1,430 @@
+{
+ "miss": [
+  {
+   "id": "86d89f96-e5fd-467f-bd9a-6991fe6b9322",
+   "ours": "Fairview Laserwash",
+   "city": "",
+   "st": "OH",
+   "appr": false,
+   "osm": "Fairview Laserwash",
+   "d": 0
+  },
+  {
+   "id": "df438bdc-e664-460a-a85c-bdf01727d955",
+   "ours": "Touchfree Car Wash",
+   "city": "",
+   "st": "NY",
+   "appr": false,
+   "osm": "Touchfree Car Wash",
+   "d": 0
+  },
+  {
+   "id": "3b7ac1e7-85ef-4689-a96e-a976d773e79f",
+   "ours": "Champ Touchless Car Wash",
+   "city": "",
+   "st": "NY",
+   "appr": false,
+   "osm": "Champ Touchless Car Wash",
+   "d": 0
+  },
+  {
+   "id": "aa9323e9-53ce-488a-bbcf-d9948b4be2a5",
+   "ours": "Parkersburg Laserwash",
+   "city": "",
+   "st": "IA",
+   "appr": false,
+   "osm": "Parkersburg Laserwash",
+   "d": 0
+  },
+  {
+   "id": "5038fcd9-fffc-462d-b3b3-e1453defdea7",
+   "ours": "AutoSpa LaserWash",
+   "city": "",
+   "st": "SD",
+   "appr": false,
+   "osm": "AutoSpa LaserWash",
+   "d": 0
+  },
+  {
+   "id": "d860deaf-facd-4d51-96bd-22398673143f",
+   "ours": "Roswell LaserWash",
+   "city": "",
+   "st": "TX",
+   "appr": false,
+   "osm": "Roswell LaserWash",
+   "d": 0
+  },
+  {
+   "id": "17c170e0-0e05-4427-8f8b-2e0968a9e19b",
+   "ours": "Hut's Laser Wash",
+   "city": "",
+   "st": "MI",
+   "appr": false,
+   "osm": "Hut's Laser Wash",
+   "d": 0
+  },
+  {
+   "id": "85e272d1-d833-41c0-b000-5715ad088888",
+   "ours": "Futura Touchless Car Wash",
+   "city": "",
+   "st": "KY",
+   "appr": false,
+   "osm": "Futura Touchless Car Wash",
+   "d": 0
+  },
+  {
+   "id": "1ebcf00f-8c12-417a-b7ab-a8edd9e22917",
+   "ours": "Circle K | Car Wash",
+   "city": "Schertz",
+   "st": "TX",
+   "appr": false,
+   "osm": "Valero Touchless Car Wash",
+   "d": 23
+  },
+  {
+   "id": "aa27c45c-73d5-4a66-a4c6-8000d9f96bd2",
+   "ours": "Alltown Car Wash",
+   "city": "Manchester",
+   "st": "NH",
+   "appr": false,
+   "osm": "Touchless Car Wash",
+   "d": 21
+  },
+  {
+   "id": "5e136821-fe0e-4e82-99b8-2581a087bba8",
+   "ours": "TurboClean Touchless Car Wash",
+   "city": "",
+   "st": "MN",
+   "appr": false,
+   "osm": "TurboClean Touchless Car Wash",
+   "d": 0
+  },
+  {
+   "id": "ee6706df-2f5c-4929-af6b-cca88fe6c43f",
+   "ours": "Brookville Laserwash",
+   "city": "",
+   "st": "IN",
+   "appr": false,
+   "osm": "Brookville Laserwash",
+   "d": 0
+  },
+  {
+   "id": "8bc4d54c-2156-4449-a5aa-c3636ff4c205",
+   "ours": "Touch Free Car Wash",
+   "city": "",
+   "st": "KS",
+   "appr": false,
+   "osm": "Touch Free Car Wash",
+   "d": 0
+  },
+  {
+   "id": "de96de27-2c00-45be-8157-a0fe2ba6a596",
+   "ours": "M & H Touchless Car Wash",
+   "city": "",
+   "st": "SD",
+   "appr": false,
+   "osm": "M & H Touchless Car Wash",
+   "d": 0
+  },
+  {
+   "id": "8015c0a4-b52e-4dc9-984e-b2c3d951455c",
+   "ours": "Touch-Free Car Wash",
+   "city": "",
+   "st": "MI",
+   "appr": false,
+   "osm": "Touch-Free Car Wash",
+   "d": 0
+  },
+  {
+   "id": "0493e2df-4360-423a-89e4-eb6a05eb8d46",
+   "ours": "Mister Car Wash",
+   "city": "Muscle Shoals",
+   "st": "AL",
+   "appr": false,
+   "osm": "Touchless Wash",
+   "d": 2
+  },
+  {
+   "id": "7cee1e11-cba6-45dc-bd76-b66ff16510a5",
+   "ours": "Touch Free Car Wash",
+   "city": "",
+   "st": "MI",
+   "appr": false,
+   "osm": "Touch Free Car Wash",
+   "d": 0
+  },
+  {
+   "id": "1f06cd05-348f-46da-831f-d9ea94808444",
+   "ours": "LaserWash",
+   "city": "",
+   "st": "MN",
+   "appr": false,
+   "osm": "LaserWash",
+   "d": 0
+  },
+  {
+   "id": "44bab339-2d1f-4136-b61e-99dd5044dec5",
+   "ours": "Oleson's Touchless Car Wash",
+   "city": "",
+   "st": "MI",
+   "appr": false,
+   "osm": "Oleson's Touchless Car Wash",
+   "d": 0
+  },
+  {
+   "id": "73028b00-a9ab-4f50-b8ba-79697d610dc1",
+   "ours": "Radius Touch Free Car Wash",
+   "city": "",
+   "st": "AR",
+   "appr": false,
+   "osm": "Radius Touch Free Car Wash",
+   "d": 0
+  },
+  {
+   "id": "13d0bbf5-2ad4-4eab-a9c5-e062b9b4872b",
+   "ours": "Portsmouth Touchless Car Wash",
+   "city": "",
+   "st": "KY",
+   "appr": false,
+   "osm": "Portsmouth Touchless Car Wash",
+   "d": 0
+  },
+  {
+   "id": "1a26960a-2cf0-4062-b071-a74366a0a215",
+   "ours": "Laser Wash",
+   "city": "",
+   "st": "TX",
+   "appr": false,
+   "osm": "Laser Wash",
+   "d": 0
+  },
+  {
+   "id": "64795181-5397-41cb-b4b7-9354023c5fab",
+   "ours": "Huxley Laser Wash",
+   "city": "",
+   "st": "IA",
+   "appr": false,
+   "osm": "Huxley Laser Wash",
+   "d": 0
+  },
+  {
+   "id": "85dfd047-26a7-40c9-af93-f22b8cb4a920",
+   "ours": "Touchless Car Wash",
+   "city": "",
+   "st": "OK",
+   "appr": false,
+   "osm": "Touchless Car Wash",
+   "d": 0
+  }
+ ],
+ "newStrong": [
+  {
+   "name": "Touch Free",
+   "lat": 42.4644,
+   "lon": -71.0621
+  },
+  {
+   "name": "Grand Touchless Car Wash",
+   "lat": 32.5482,
+   "lon": -94.3685,
+   "automated": "yes"
+  },
+  {
+   "name": "Quick Stop Laserwash",
+   "lat": 36.7992,
+   "lon": -78.4583
+  },
+  {
+   "name": "Touchless Laser Wash",
+   "lat": 26.6155,
+   "lon": -81.9413
+  },
+  {
+   "name": "San Jose Touchless Carwash",
+   "lat": 37.3039,
+   "lon": -121.8553
+  },
+  {
+   "name": "Tan's Touchless Carwash",
+   "lat": 37.3527,
+   "lon": -121.9911
+  },
+  {
+   "name": "Touchless Car Wash",
+   "lat": 32.3006,
+   "lon": -106.7374
+  },
+  {
+   "name": "Walnut Creek Laser Wash",
+   "lat": 41.6426,
+   "lon": -93.8326
+  },
+  {
+   "name": "Laserwash 4000",
+   "lat": 35.6926,
+   "lon": -79.7999
+  },
+  {
+   "name": "Touchless Auto Wash",
+   "lat": 37.4751,
+   "lon": -122.2095
+  },
+  {
+   "name": "EZ Wash Touchless Car Wash",
+   "lat": 41.0344,
+   "lon": -84.037
+  },
+  {
+   "name": "Touchless Car Wash",
+   "lat": 30.2865,
+   "lon": -97.6819
+  },
+  {
+   "name": "LaserWash",
+   "lat": 30.2014,
+   "lon": -97.8376,
+   "automated": "yes"
+  },
+  {
+   "name": "Touchless Loving Car Wash",
+   "lat": 36.7993,
+   "lon": -76.0039
+  },
+  {
+   "name": "Airport Touchless Car Wash",
+   "lat": 47.4134,
+   "lon": -122.2971
+  },
+  {
+   "name": "AutoSpa LaserWash",
+   "lat": 43.5433,
+   "lon": -96.6593,
+   "automated": "yes"
+  },
+  {
+   "name": "North Olmsted Laser Wash",
+   "lat": 41.4251,
+   "lon": -81.8994
+  },
+  {
+   "name": "Town Tub Touchless Car Wash",
+   "lat": 42.9802,
+   "lon": -84.1183
+  },
+  {
+   "name": "Elephant Touchless Car Wash",
+   "lat": 47.2504,
+   "lon": -122.3022
+  },
+  {
+   "name": "Lobo Laserwash",
+   "lat": 33.5955,
+   "lon": -102.3477
+  },
+  {
+   "name": "Pro-Clean Laser Wash",
+   "lat": 41.4237,
+   "lon": -82.6803
+  },
+  {
+   "name": "Yvon's Touchfree Car Wash",
+   "lat": 44.1116,
+   "lon": -70.1123
+  },
+  {
+   "name": "Ducky's Touch Free Car Wash",
+   "lat": 40.3868,
+   "lon": -80.0885
+  },
+  {
+   "name": "Touch-Free Car Wash",
+   "lat": 40.9997,
+   "lon": -81.9956
+  },
+  {
+   "name": "Clean2o Touchfree Car Wash",
+   "lat": 43.047,
+   "lon": -73.8481
+  },
+  {
+   "name": "Hot Tub Touchless Car Wash",
+   "lat": 41.7066,
+   "lon": -91.6636
+  },
+  {
+   "name": "Touchless Car Wash",
+   "lat": 39.8404,
+   "lon": -83.0738
+  },
+  {
+   "name": "Hy-Miler Laser Wash",
+   "lat": 41.4075,
+   "lon": -82.5906,
+   "automated": "yes"
+  },
+  {
+   "name": "Laserwash",
+   "lat": 32.4015,
+   "lon": -98.8124,
+   "automated": "yes"
+  },
+  {
+   "name": "Bellis Fair Touch Free Car Wash",
+   "lat": 48.7863,
+   "lon": -122.4856,
+   "automated": "yes"
+  },
+  {
+   "name": "Touchless Express",
+   "lat": 40.2929,
+   "lon": -83.069
+  },
+  {
+   "name": "Laser Wash",
+   "lat": 44.5089,
+   "lon": -89.1314
+  },
+  {
+   "name": "Touchless Car Wash",
+   "lat": 42.1544,
+   "lon": -83.2541,
+   "automated": "yes"
+  },
+  {
+   "name": "Touchless Car Wash",
+   "lat": 42.1544,
+   "lon": -83.2543,
+   "automated": "yes"
+  },
+  {
+   "name": "Laserwash",
+   "lat": 33.0791,
+   "lon": -96.8627,
+   "automated": "yes"
+  },
+  {
+   "name": "WHATAWASH Touch-Free Automatic Car Wash",
+   "lat": 41.0444,
+   "lon": -80.6353
+  },
+  {
+   "name": "Springs Road Laser Wash",
+   "lat": 35.7411,
+   "lon": -81.3051,
+   "automated": "yes"
+  },
+  {
+   "name": "Clarsville Laser Wash",
+   "lat": 36.6132,
+   "lon": -78.5871,
+   "automated": "yes"
+  },
+  {
+   "name": "Savannah's Laser Wash",
+   "lat": 29.1458,
+   "lon": -98.9022
+  }
+ ],
+ "excludedCount": 62,
+ "weakCount": 27
+}

@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 760" width="1040" height="760" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+  <rect width="1040" height="760" fill="#f1f5f9"/>
+
+  <text x="40" y="46" font-size="22" font-weight="800" fill="#0F2744">Touchless Satisfaction Score — UX mockup</text>
+  <text x="40" y="72" font-size="14" fill="#64748b">How the new score coexists with the Google star rating and the Paint-Safe Verified badge</text>
+
+  <!-- ============ DETAIL PAGE CARD ============ -->
+  <rect x="40" y="96" width="960" height="300" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="68" y="138" font-size="13" font-weight="700" fill="#94a3b8" letter-spacing="1">LISTING DETAIL — SIGNAL ROW</text>
+
+  <text x="68" y="178" font-size="26" font-weight="800" fill="#0F2744">Brittain's Car Wash</text>
+  <text x="68" y="204" font-size="14" fill="#64748b">Elgin, IL · Touchless &amp; brushless automatic wash</text>
+
+  <!-- Signal 1: Google rating (secondary) -->
+  <text x="68" y="250" font-size="12" font-weight="700" fill="#94a3b8" letter-spacing="0.5">GOOGLE RATING</text>
+  <text x="68" y="284" font-size="26" font-weight="800" fill="#0F2744">★ 4.7</text>
+  <text x="150" y="284" font-size="14" fill="#94a3b8">(363)</text>
+
+  <!-- divider -->
+  <line x1="240" y1="232" x2="240" y2="296" stroke="#e2e8f0" stroke-width="1.5"/>
+
+  <!-- Signal 2: Touchless Satisfaction Score (PRIMARY — our differentiator) -->
+  <text x="270" y="250" font-size="12" font-weight="800" fill="#16a34a" letter-spacing="0.5">TOUCHLESS SATISFACTION</text>
+  <!-- gauge -->
+  <g>
+    <!-- circular gauge track -->
+    <circle cx="306" cy="318" r="40" fill="none" stroke="#e5e7eb" stroke-width="9"/>
+    <!-- arc ~84% sweep, green; approximate with a stroke-dasharray on a circle (circumference ~251) -->
+    <circle cx="306" cy="318" r="40" fill="none" stroke="#22C55E" stroke-width="9" stroke-linecap="round"
+            stroke-dasharray="211 251" transform="rotate(-90 306 318)"/>
+    <text x="306" y="324" font-size="30" font-weight="800" fill="#0F2744" text-anchor="middle">84</text>
+    <text x="306" y="342" font-size="10" fill="#94a3b8" text-anchor="middle">/100</text>
+  </g>
+  <text x="364" y="312" font-size="20" font-weight="800" fill="#16a34a">Very Good</text>
+  <text x="364" y="336" font-size="13" fill="#64748b">Based on 41 customer reviews of</text>
+  <text x="364" y="354" font-size="13" fill="#64748b">the touchless wash · How we score ›</text>
+
+  <!-- Signal 3: Paint-Safe Verified badge (specific dimension) -->
+  <line x1="700" y1="232" x2="700" y2="356" stroke="#e2e8f0" stroke-width="1.5"/>
+  <rect x="732" y="250" width="232" height="92" rx="12" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="1.5"/>
+  <circle cx="766" cy="296" r="18" fill="#22C55E"/>
+  <path d="M758 296 l6 6 l11 -13" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="794" y="291" font-size="15" font-weight="800" fill="#047857">Paint-Safe Verified</text>
+  <text x="794" y="312" font-size="12" fill="#059669">Customers report it's</text>
+  <text x="794" y="328" font-size="12" fill="#059669">gentle on paint</text>
+
+  <!-- ============ LISTING CARD (compact pill) ============ -->
+  <text x="40" y="446" font-size="13" font-weight="700" fill="#94a3b8" letter-spacing="1">ON A LISTING CARD / SEARCH RESULT</text>
+  <rect x="40" y="462" width="300" height="250" rx="14" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <rect x="40" y="462" width="300" height="120" rx="14" fill="#0F2744"/>
+  <rect x="40" y="552" width="300" height="30" fill="#0F2744"/>
+  <!-- score pill on the image corner -->
+  <rect x="250" y="476" width="76" height="34" rx="17" fill="#ffffff"/>
+  <circle cx="269" cy="493" r="11" fill="#22C55E"/>
+  <text x="269" y="497" font-size="11" font-weight="800" fill="#ffffff" text-anchor="middle">84</text>
+  <text x="286" y="490" font-size="9" font-weight="700" fill="#0F2744">SATISFACTION</text>
+  <text x="286" y="501" font-size="9" font-weight="700" fill="#16a34a">Very Good</text>
+
+  <text x="60" y="612" font-size="17" font-weight="800" fill="#0F2744">Brittain's Car Wash</text>
+  <text x="60" y="634" font-size="12" fill="#64748b">Elgin, IL · ★ 4.7 (363)</text>
+  <rect x="60" y="650" width="150" height="26" rx="13" fill="#ecfdf5" stroke="#a7f3d0"/>
+  <text x="76" y="667" font-size="11" font-weight="700" fill="#047857">✓ Paint-Safe Verified</text>
+
+  <!-- ============ SORT CONTROL ============ -->
+  <text x="380" y="446" font-size="13" font-weight="700" fill="#94a3b8" letter-spacing="1">SORT / COMPARE (city, state, search)</text>
+  <rect x="380" y="462" width="300" height="48" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="400" y="491" font-size="14" fill="#0F2744" font-weight="600">Sort:  Touchless Satisfaction ▾</text>
+  <rect x="380" y="524" width="300" height="36" rx="8" fill="#0F2744"/>
+  <text x="396" y="547" font-size="13" font-weight="700" fill="#ffffff">⬍ Highest Satisfaction first</text>
+  <text x="380" y="592" font-size="13" fill="#64748b">Lets visitors rank washes in a city head-to-head —</text>
+  <text x="380" y="611" font-size="13" fill="#64748b">the comparison ability the badge alone couldn't give.</text>
+
+  <!-- tier legend -->
+  <text x="720" y="446" font-size="13" font-weight="700" fill="#94a3b8" letter-spacing="1">TIER LABELS (provisional)</text>
+  <g font-size="12.5" fill="#334155">
+    <rect x="720" y="462" width="14" height="14" rx="3" fill="#16a34a"/><text x="742" y="474">85–100  Excellent</text>
+    <rect x="720" y="486" width="14" height="14" rx="3" fill="#22C55E"/><text x="742" y="498">70–84   Very Good</text>
+    <rect x="720" y="510" width="14" height="14" rx="3" fill="#84cc16"/><text x="742" y="522">55–69   Good</text>
+    <rect x="720" y="534" width="14" height="14" rx="3" fill="#f59e0b"/><text x="742" y="546">40–54   Fair</text>
+    <rect x="720" y="558" width="14" height="14" rx="3" fill="#94a3b8"/><text x="742" y="570">&lt;40     Mixed reviews</text>
+  </g>
+  <text x="720" y="600" font-size="11.5" fill="#94a3b8">Positive-leaning wording; final cutoffs set</text>
+  <text x="720" y="616" font-size="11.5" fill="#94a3b8">once the real blended distribution is in.</text>
+</svg>

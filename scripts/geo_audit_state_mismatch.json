@@ -1,0 +1,182 @@
+[
+  {
+    "id": "033967f2-9715-42a1-906e-6695c4122422",
+    "name": "Kwik Trip",
+    "slug": "kwik-trip-120",
+    "stored": {
+      "city": "Lake Geneva",
+      "state": "MI",
+      "zip": ""
+    },
+    "coords": {
+      "lat": 42.5821352,
+      "lng": -88.4252092
+    },
+    "geocoded": {
+      "city": "Lake Geneva",
+      "state": "WI",
+      "zip": "53147"
+    },
+    "display": "Kwik Trip, 850, South Wells Street, Lake Geneva, Walworth County, Wisconsin, 53147, United States"
+  },
+  {
+    "id": "1b60ac73-81d2-4ef1-a6d9-c20418cec94f",
+    "name": "Kwik Trip",
+    "slug": "kwik-trip-180",
+    "stored": {
+      "city": "Kenosha",
+      "state": "MI",
+      "zip": ""
+    },
+    "coords": {
+      "lat": 42.5219832,
+      "lng": -87.8939653
+    },
+    "geocoded": {
+      "city": "Pleasant Prairie",
+      "state": "WI",
+      "zip": "53158"
+    },
+    "display": "Kwik Trip, 10451, 72nd Avenue, Pleasant Prairie, Kenosha County, Wisconsin, 53158, United States"
+  },
+  {
+    "id": "1c0149dc-4d60-426b-b0cd-65e63d2051f2",
+    "name": "Kwik Trip",
+    "slug": "kwik-trip-191",
+    "stored": {
+      "city": "Wausau",
+      "state": "MI",
+      "zip": ""
+    },
+    "coords": {
+      "lat": 44.953324,
+      "lng": -89.6540682
+    },
+    "geocoded": {
+      "city": "Wausau",
+      "state": "WI",
+      "zip": "54401"
+    },
+    "display": "Kwik Trip, 1415, West Street, S.W. Jones, Wausau, Marathon County, Wisconsin, 54401, United States"
+  },
+  {
+    "id": "1f34c1a0-639d-44fa-bf29-16820b22d600",
+    "name": "Terrible's",
+    "slug": "terribles",
+    "stored": {
+      "city": "Las Vegas",
+      "state": "CA",
+      "zip": ""
+    },
+    "coords": {
+      "lat": 35.9994404,
+      "lng": -115.2443356
+    },
+    "geocoded": {
+      "city": "Las Vegas",
+      "state": "NV",
+      "zip": "89179"
+    },
+    "display": "Terrible's, 10465, South Rainbow Boulevard, Las Vegas, Clark County, Nevada, 89179, United States"
+  },
+  {
+    "id": "3134a4f3-5fcc-4872-8355-796ecf966494",
+    "name": "Kwik Trip",
+    "slug": "kwik-trip-163",
+    "stored": {
+      "city": "New Berlin",
+      "state": "MI",
+      "zip": ""
+    },
+    "coords": {
+      "lat": 42.9448342,
+      "lng": -88.1105357
+    },
+    "geocoded": {
+      "city": "New Berlin",
+      "state": "WI",
+      "zip": "53151"
+    },
+    "display": "15710, West Small Road, New Berlin, Waukesha County, Wisconsin, 53151, United States"
+  },
+  {
+    "id": "37375a60-4262-4464-a3b0-b3eb08d4832b",
+    "name": "Circle K",
+    "slug": "holiday-stationstores-grand-forks-2250-s-columbia-rd-mn-2746382",
+    "stored": {
+      "city": "Grand Forks",
+      "state": "MN",
+      "zip": "00000"
+    },
+    "coords": {
+      "lat": 47.898149,
+      "lng": -97.067309
+    },
+    "geocoded": {
+      "city": "Grand Forks",
+      "state": "ND",
+      "zip": "58201"
+    },
+    "display": "Holiday, 2250, South Columbia Road, Grand Forks, Grand Forks County, North Dakota, 58201, United States"
+  },
+  {
+    "id": "37de474d-f558-40a0-909b-07712391cc83",
+    "name": "Kwik Trip",
+    "slug": "kwik-trip-179",
+    "stored": {
+      "city": "Sturtevant",
+      "state": "MI",
+      "zip": ""
+    },
+    "coords": {
+      "lat": 42.6987155,
+      "lng": -87.9156105
+    },
+    "geocoded": {
+      "city": "Sturtevant",
+      "state": "WI",
+      "zip": "53177"
+    },
+    "display": "Kwik Trip, 10500, Durand Avenue, Sturtevant, Racine County, Wisconsin, 53177, United States"
+  },
+  {
+    "id": "38ac734f-aa26-4134-9111-6d1262cb3b88",
+    "name": "Car Wash",
+    "slug": "car-wash-hfwlse",
+    "stored": {
+      "city": "Winchester",
+      "state": "WV",
+      "zip": "22603"
+    },
+    "coords": {
+      "lat": 39.2163566,
+      "lng": -78.1428458
+    },
+    "geocoded": {
+      "city": "",
+      "state": "VA",
+      "zip": "22656"
+    },
+    "display": "Truist, Martinsburg Pike, Frederick County, Virginia, 22656, United States"
+  },
+  {
+    "id": "4ab85d90-5e94-4c44-9d7e-2ebd8f57fd58",
+    "name": "Kwik Trip",
+    "slug": "kwik-trip-133",
+    "stored": {
+      "city": "Oak Creek",
+      "state": "MI",
+      "zip": ""
+    },
+    "coords": {
+      "lat": 42.8734118,
+      "lng": -87.9437184
+    },
+    "geocoded": {
+      "city": "Oak Creek",
+      "state": "WI",
+      "zip": "53154"
+    },
+    "display": "Kwik Trip, 2040, West Ryan Road, Oak Creek, Milwaukee County, Wisconsin, 53154, United States"
+  }
+]

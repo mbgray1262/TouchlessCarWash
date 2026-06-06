@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paint-Safe: badge states</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--navy:#0F2744;--green:#22C55E;--green-d:#15803d;--ink:#0f172a;--slate:#475569;--mute:#94a3b8;--line:#e2e8f0;--red:#dc2626;--blue:#3b82f6;--amber:#d97706}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',-apple-system,sans-serif;background:#eef2f6;color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.5;padding:24px 16px 60px}
+  .wrap{max-width:760px;margin:0 auto}
+  .ann{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#fff;background:var(--ink);display:inline-block;padding:3px 10px;border-radius:6px;margin:26px 0 8px}
+  .ann.ok{background:var(--green-d)}.ann.neutral{background:#64748b}.ann.data{background:var(--amber)}
+  .annsub{font-size:13px;color:var(--slate);margin:-4px 0 10px}
+  .lst{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:6px}
+  .head{display:flex;align-items:center;gap:11px;padding-bottom:14px;border-bottom:1px solid #f1f5f9;margin-bottom:14px}
+  .thumb{width:46px;height:46px;border-radius:10px;background:linear-gradient(135deg,#60a5fa,#2563eb);flex:0 0 auto}
+  .nm{font-size:16px;font-weight:800;color:var(--navy)}
+  .meta{font-size:12.5px;color:var(--slate);margin-top:2px}
+  .tlbadge{font-size:11px;font-weight:700;color:var(--green-d);background:#ecfdf5;border:1px solid #bbf7d0;border-radius:999px;padding:3px 9px;display:inline-block;margin-top:5px}
+
+  /* earned badge */
+  .bhero{display:flex;gap:14px;align-items:center;background:linear-gradient(120deg,#f0fdf4,#fff);border:1.5px solid #bbf7d0;border-radius:13px;padding:14px 16px}
+  .shield{width:50px;height:50px;border-radius:12px;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;flex:0 0 auto;box-shadow:0 4px 12px #22c55e55}
+  .bt{font-size:17px;font-weight:800;color:var(--green-d)}
+  .bs{font-size:12.5px;color:var(--slate);margin-top:2px}.bs b{color:var(--ink)}
+
+  /* not-enough state */
+  .ne{display:flex;gap:14px;align-items:center;background:#f8fafc;border:1.5px dashed var(--line);border-radius:13px;padding:16px}
+  .ne .sh{width:50px;height:50px;border-radius:12px;background:#e2e8f0;color:#94a3b8;display:flex;align-items:center;justify-content:center;font-size:24px;flex:0 0 auto}
+  .ne .t{font-size:15px;font-weight:800;color:var(--slate)}
+  .ne .s{font-size:12.5px;color:var(--mute);margin-top:3px}
+  .ne .cta{margin-top:8px;font-size:12px;font-weight:700;color:var(--blue)}
+
+  /* evidence (state C) */
+  .evhead{font-size:15px;font-weight:800;color:var(--navy);margin-bottom:10px;display:flex;align-items:center;gap:7px}
+  .ev-split{display:flex;height:15px;border-radius:999px;overflow:hidden;border:1px solid var(--line)}
+  .ev-split .pos{background:var(--green)}.ev-split .neg{background:#f87171}
+  .senti{display:flex;gap:10px;margin-top:11px}
+  .sbtn{flex:1;display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:11px;border:2px solid;background:#fff;text-align:left}
+  .sbtn .ic{font-size:16px}.sbtn .tx{font-size:11px;color:var(--slate);line-height:1.25}.sbtn .tx b{font-size:13.5px;font-weight:800;display:block;color:var(--ink)}
+  .sbtn .cue{margin-left:auto;font-size:10px;font-weight:800;text-transform:uppercase}
+  .sbtn.pos{border-color:#86efac;background:#f0fdf4}.sbtn.pos .tx b,.sbtn.pos .cue{color:var(--green-d)}
+  .sbtn.neg{border-color:#fca5a5;background:#fef2f2}.sbtn.neg .tx b,.sbtn.neg .cue{color:var(--red)}
+  .rev{border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-top:10px}
+  .rev-top{display:flex;align-items:center;gap:9px}
+  .av{width:30px;height:30px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--slate);font-size:12px}
+  .who{font-size:12.5px;font-weight:700}.cred{font-size:10.5px;color:var(--mute);font-weight:600}
+  .stars{margin-left:auto;color:#f59e0b;font-size:12px}
+  .bd{font-size:13px;color:#1e293b;margin-top:7px}.hl{background:#dcfce7;border-radius:4px;padding:0 3px;font-weight:600;color:var(--green-d)}.hl.bad{background:#fee2e2;color:#b91c1c}
+  .tag{font-size:10px;font-weight:700;padding:3px 7px;border-radius:6px;background:#ecfdf5;color:var(--green-d);margin-top:8px;display:inline-block}.tag.neg{background:#fef2f2;color:#b91c1c}
+  .foot{margin-top:12px;font-size:11.5px;color:var(--mute);font-style:italic}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- reference: earned -->
+<div class="ann ok">For reference — EARNED the badge</div>
+<div class="lst">
+  <div class="head"><div class="thumb"></div><div><div class="nm">Crystal Clean Touchless</div><div class="meta">Naperville, IL · ★ 4.6 · 1,284 reviews</div><span class="tlbadge">✓ Verified Touchless</span></div></div>
+  <div class="bhero"><div class="shield">🛡️</div><div><div class="bt">Paint-Safe Verified ✓</div><div class="bs"><b>91% positive</b> on paint · 312 reviews · based on real customer feedback</div></div></div>
+</div>
+
+<!-- STATE 1: not enough reviews -->
+<div class="ann neutral">No-badge state 1 — NOT ENOUGH REVIEWS (17% of listings)</div>
+<div class="annsub">Verified touchless, but too few paint mentions to verify. Neutral &amp; inviting — never negative.</div>
+<div class="lst">
+  <div class="head"><div class="thumb" style="background:linear-gradient(135deg,#34d399,#059669)"></div><div><div class="nm">Sudsy's Express Touchless Wash</div><div class="meta">Marion, OH · ★ 4.4 · 14 reviews</div><span class="tlbadge">✓ Verified Touchless</span></div></div>
+  <div class="ne">
+    <div class="sh">🛡️</div>
+    <div>
+      <div class="t">Paint-Safety: not enough reviews yet</div>
+      <div class="s">We verify paint safety from real customer reviews — this wash doesn't have enough paint mentions yet.</div>
+      <div class="cta">Been here? Share your experience →</div>
+    </div>
+  </div>
+</div>
+
+<!-- STATE 2: has data, not verified -->
+<div class="ann data">No-badge state 2 — HAS DATA, DIDN'T QUALIFY (≈19% of listings)</div>
+<div class="annsub">No green badge, no negative label — just the honest evidence + factual split. The badge's absence + real quotes are the signal.</div>
+<div class="lst">
+  <div class="head"><div class="thumb" style="background:linear-gradient(135deg,#a78bfa,#7c3aed)"></div><div><div class="nm">Speedy Shine Auto Wash</div><div class="meta">Tucson, AZ · ★ 4.1 · 286 reviews</div><span class="tlbadge">✓ Verified Touchless</span></div></div>
+  <div class="evhead">💬 What customers say about paint &amp; finish</div>
+  <div class="ev-split"><div class="pos" style="width:55%"></div><div class="neg" style="width:45%"></div></div>
+  <div class="senti">
+    <button class="sbtn pos"><span class="ic">👍</span><span class="tx"><b>55% gentle on paint</b>tap to see these</span><span class="cue">Filter ›</span></button>
+    <button class="sbtn neg"><span class="ic">⚠️</span><span class="tx"><b>45% raised concerns</b>tap to read</span><span class="cue">Filter ›</span></button>
+  </div>
+  <div class="rev"><div class="rev-top"><div class="av">J</div><div><div class="who">Jenna P.</div><div class="cred">31 reviews</div></div><div class="stars">★★★★★</div></div><div class="bd">Quick and convenient, and <span class="hl">no scratches</span> on my SUV after months of weekly washes.</div><span class="tag">Paint Safety</span></div>
+  <div class="rev"><div class="rev-top"><div class="av">R</div><div><div class="who">Ray M.</div><div class="cred">★ Local Guide · 64 reviews</div></div><div class="stars">★★☆☆☆</div></div><div class="bd">Noticed some <span class="hl bad">light swirl marks</span> on my hood afterward. Staff were polite but it bummed me out.</div><span class="tag neg">Paint concern</span></div>
+  <div class="rev"><div class="rev-top"><div class="av">D</div><div><div class="who">Dana L.</div><div class="cred">22 reviews</div></div><div class="stars">★★★☆☆</div></div><div class="bd">Decent wash but I saw a couple <span class="hl bad">fine scratches</span> near the door handle. Could be coincidence.</div><span class="tag neg">Paint concern</span></div>
+  <div class="foot">Paint-Safe Verified is awarded to washes with consistently positive paint feedback. We show every wash's real reviews — verified or not — so you can decide.</div>
+</div>
+
+</div>
+</body>
+</html>

@@ -57,3 +57,9 @@ supabase/.temp/
 
 # Local editor/agent state
 .claude/launch.json
+
+# Scratch / temp / backup artifacts from data-mining sessions (not source)
+scripts/_tmp_*
+scripts/_*.json
+scripts/_*.console
+_backup-*.json

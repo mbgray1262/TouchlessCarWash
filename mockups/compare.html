@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paint-Safe: Gauge vs Verified Badge</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--navy:#0F2744;--green:#22C55E;--green-d:#15803d;--ink:#0f172a;--slate:#475569;--mute:#94a3b8;--line:#e2e8f0;--red:#dc2626;--blue:#3b82f6}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',-apple-system,sans-serif;background:#eef2f6;color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.5;padding:24px 16px 60px}
+  .wrap{max-width:780px;margin:0 auto}
+  .vh{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--slate);margin:26px 0 10px;display:flex;align-items:center;gap:8px}
+  .vh .pill{background:var(--ink);color:#fff;padding:2px 8px;border-radius:6px;font-size:10px}
+  .vh.b .pill{background:var(--green-d)}
+  .intro{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-size:13.5px;color:var(--slate)}
+  .intro b{color:var(--ink)}
+
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;margin-top:4px}
+  /* ---- evidence (identical in both) ---- */
+  .ev-split{display:flex;height:15px;border-radius:999px;overflow:hidden;border:1px solid var(--line);margin-top:4px}
+  .ev-split .pos{background:var(--green);width:91%}.ev-split .neg{background:#f87171;width:9%}
+  .senti{display:flex;gap:10px;margin-top:11px}
+  .sbtn{flex:1;display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:11px;border:2px solid;background:#fff;text-align:left}
+  .sbtn .ic{font-size:17px}.sbtn .tx{font-size:11px;color:var(--slate);line-height:1.25}.sbtn .tx b{font-size:14px;font-weight:800;display:block;color:var(--ink)}
+  .sbtn .cue{margin-left:auto;font-size:10.5px;font-weight:800;text-transform:uppercase}
+  .sbtn.pos{border-color:#86efac;background:#f0fdf4}.sbtn.pos .tx b,.sbtn.pos .cue{color:var(--green-d)}
+  .sbtn.neg{border-color:#fca5a5;background:#fef2f2}.sbtn.neg .tx b,.sbtn.neg .cue{color:var(--red)}
+  .pills{display:flex;gap:7px;flex-wrap:wrap;margin:14px 0 4px}
+  .pill2{font-size:12px;font-weight:700;padding:6px 11px;border-radius:999px;background:#f1f5f9;color:var(--slate);border:1px solid var(--line)}
+  .pill2.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .rev{border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-top:10px}
+  .rev-top{display:flex;align-items:center;gap:9px}
+  .av{width:30px;height:30px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--slate);font-size:12px}
+  .who{font-size:12.5px;font-weight:700}.cred{font-size:10.5px;color:var(--blue);font-weight:600}
+  .stars{margin-left:auto;color:#f59e0b;font-size:12px}
+  .body{font-size:13px;color:#1e293b;margin-top:7px}.hl{background:#dcfce7;border-radius:4px;padding:0 3px;font-weight:600;color:var(--green-d)}
+  .tag{font-size:10px;font-weight:700;padding:3px 7px;border-radius:6px;background:#ecfdf5;color:var(--green-d);margin-top:8px;display:inline-block}
+  .evlabel{font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--mute);margin:18px 0 2px}
+
+  /* ---- A: gauge headline ---- */
+  .gtop{display:flex;gap:18px;align-items:center}
+  .gauge{position:relative;width:104px;height:104px;flex:0 0 auto}.gauge svg{transform:rotate(-90deg)}
+  .gauge .v{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .gauge .n{font-size:30px;font-weight:800;color:var(--navy)}.gauge .of{font-size:9px;color:var(--mute);font-weight:700}
+  .gname{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--slate)}
+  .glabel{font-size:16px;font-weight:800;color:var(--green-d)}
+  .gsub{font-size:12.5px;color:var(--slate);margin-top:6px}
+
+  /* ---- B: verified badge headline ---- */
+  .bhero{display:flex;gap:16px;align-items:center;background:linear-gradient(120deg,#f0fdf4,#fff);border:1.5px solid #bbf7d0;border-radius:14px;padding:16px 18px}
+  .shield{width:58px;height:58px;border-radius:14px;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:30px;flex:0 0 auto;box-shadow:0 4px 12px #22c55e55}
+  .btitle{font-size:19px;font-weight:800;color:var(--green-d);display:flex;align-items:center;gap:8px}
+  .bsub{font-size:13px;color:var(--slate);margin-top:3px}.bsub b{color:var(--ink)}
+  .bminigauge{margin-left:auto;text-align:center;flex:0 0 auto}
+  .bminigauge .ring{position:relative;width:62px;height:62px;margin:0 auto}.bminigauge svg{transform:rotate(-90deg)}
+  .bminigauge .rn{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:var(--navy)}
+  .bminigauge .rl{font-size:9px;font-weight:700;color:var(--mute);text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+  .howlink{display:inline-block;margin-top:10px;font-size:12px;color:var(--blue)}
+  .notrated{margin-top:12px;background:#f8fafc;border:1px dashed var(--line);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--slate)}
+  .notrated b{color:var(--ink)}
+  .cta{margin-top:13px;display:inline-flex;align-items:center;gap:8px;background:var(--navy);color:#fff;border:none;border-radius:10px;padding:10px 15px;font-size:13px;font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="intro">Same listing, two ways to present the paint-safety signal. <b>The evidence section (snippets, filters, sentiment split) is identical in both</b> — that's where the engagement/time-on-page comes from. Only the <b>headline</b> differs.</div>
+
+<!-- ============ VERSION A ============ -->
+<div class="vh a"><span class="pill">Version A</span> Granular Score (gauge headline)</div>
+<div class="card">
+  <div class="gtop">
+    <div class="gauge"><svg width="104" height="104" viewBox="0 0 104 104"><circle cx="52" cy="52" r="44" fill="none" stroke="#e2e8f0" stroke-width="11"/><circle cx="52" cy="52" r="44" fill="none" stroke="#22C55E" stroke-width="11" stroke-linecap="round" stroke-dasharray="276.46" stroke-dashoffset="24.9"/></svg><div class="v"><span class="n">92</span><span class="of">/ 100</span></div></div>
+    <div><div class="gname">Paint-Safe Score</div><div class="glabel">● Excellent</div><div class="gsub">Based on <b>34 paint-related mentions</b> in customer reviews.</div></div>
+  </div>
+  <div class="evlabel">▼ evidence (the engagement engine — identical below)</div>
+  <div class="ev-split"><div class="pos"></div><div class="neg"></div></div>
+  <div class="senti">
+    <button class="sbtn pos"><span class="ic">👍</span><span class="tx"><b>91% gentle on paint</b>tap to see these</span><span class="cue">Filter ›</span></button>
+    <button class="sbtn neg"><span class="ic">⚠️</span><span class="tx"><b>9% raised concerns</b>tap to read</span><span class="cue">Filter ›</span></button>
+  </div>
+  <div class="pills"><span class="pill2 on">All 34</span><span class="pill2">Paint 34</span><span class="pill2">Touchless 21</span><span class="pill2">Cleanliness 12</span></div>
+  <div class="rev"><div class="rev-top"><div class="av">M</div><div><div class="who">Marcus T.</div><div class="cred">★ Local Guide · 142 reviews</div></div><div class="stars">★★★★★</div></div><div class="body">Two years, my black truck — <span class="hl">never a single scratch</span>. Genuinely <span class="hl">gentle on the paint</span>.</div><span class="tag">Paint Safety</span></div>
+  <div class="rev"><div class="rev-top"><div class="av">S</div><div><div class="who">Sofia L.</div><div class="cred">★ Local Guide · 89 reviews</div></div><div class="stars">★★★★★</div></div><div class="body"><span class="hl">100% touch-free</span>, no brushes. Older car's clear coat <span class="hl">still flawless</span>.</div><span class="tag">Touchless</span></div>
+</div>
+
+<!-- ============ VERSION B ============ -->
+<div class="vh b"><span class="pill">Version B</span> Paint-Safe Verified badge (+ gauge kept as visual)</div>
+<div class="card">
+  <div class="bhero">
+    <div class="shield">🛡️</div>
+    <div>
+      <div class="btitle">Paint-Safe Verified ✓</div>
+      <div class="bsub"><b>91% positive</b> on paint · <b>312 reviews</b> · based on real customer feedback</div>
+      <a class="howlink" href="#">How we verify this ›</a>
+    </div>
+    <div class="bminigauge"><div class="ring"><svg width="62" height="62" viewBox="0 0 62 62"><circle cx="31" cy="31" r="26" fill="none" stroke="#dcfce7" stroke-width="7"/><circle cx="31" cy="31" r="26" fill="none" stroke="#22C55E" stroke-width="7" stroke-linecap="round" stroke-dasharray="163.4" stroke-dashoffset="14.7"/></svg><div class="rn">92</div></div><div class="rl">confidence</div></div>
+  </div>
+  <button class="cta">See what customers say about paint safety ▾</button>
+  <div class="evlabel">▼ evidence (the engagement engine — IDENTICAL to Version A)</div>
+  <div class="ev-split"><div class="pos"></div><div class="neg"></div></div>
+  <div class="senti">
+    <button class="sbtn pos"><span class="ic">👍</span><span class="tx"><b>91% gentle on paint</b>tap to see these</span><span class="cue">Filter ›</span></button>
+    <button class="sbtn neg"><span class="ic">⚠️</span><span class="tx"><b>9% raised concerns</b>tap to read</span><span class="cue">Filter ›</span></button>
+  </div>
+  <div class="pills"><span class="pill2 on">All 34</span><span class="pill2">Paint 34</span><span class="pill2">Touchless 21</span><span class="pill2">Cleanliness 12</span></div>
+  <div class="rev"><div class="rev-top"><div class="av">M</div><div><div class="who">Marcus T.</div><div class="cred">★ Local Guide · 142 reviews</div></div><div class="stars">★★★★★</div></div><div class="body">Two years, my black truck — <span class="hl">never a single scratch</span>. Genuinely <span class="hl">gentle on the paint</span>.</div><span class="tag">Paint Safety</span></div>
+  <div class="rev"><div class="rev-top"><div class="av">S</div><div><div class="who">Sofia L.</div><div class="cred">★ Local Guide · 89 reviews</div></div><div class="stars">★★★★★</div></div><div class="body"><span class="hl">100% touch-free</span>, no brushes. Older car's clear coat <span class="hl">still flawless</span>.</div><span class="tag">Touchless</span></div>
+  <div class="notrated">Listings without enough paint feedback show: <b>“Verified Touchless · not enough paint reviews yet”</b> — never a negative grade on a real business.</div>
+</div>
+
+</div>
+</body>
+</html>
