@@ -34,6 +34,9 @@ const SUPABASE_SERVICE_KEY = env.SUPABASE_SERVICE_ROLE_KEY;
 const GOOGLE_MAPS_API_KEY = env.GOOGLE_PLACES_API_KEY;
 const GOOGLE_URL_SIGNING_SECRET = env.GOOGLE_URL_SIGNING_SECRET;
 const SERPAPI_KEY = env.SERPAPI_KEY;
+// LLM: Gemini key was deactivated ("reported as leaked"); route LLM calls to Claude.
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || env.ANTHROPIC_API_KEY;
+const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
 
 // Touchless review classifier (mirrors scripts/backfill-reviews-thin-listings.mjs)
 const TOUCHLESS_POSITIVE = /\btouchless\b|\btouch[\s-]free\b|\btouchfree\b|\bno[\s-]?touch\b|\blaser\s*wash\b|\blaserwash\b|\bbrushless\b|\bbrush[\s-]?free\b/gi;
@@ -93,45 +96,43 @@ function stripJsonFence(s) {
 }
 
 async function callGemini({ prompt, useSearch = false, imageUrls = [], temperature = 0.2 }) {
-  const parts = [{ text: prompt }];
-
-  // Add images as inline data (fetch + base64)
+  // NOTE: routed to Claude (Anthropic) — Gemini key was deactivated. `useSearch` is
+  // ignored (Claude has no Google grounding here); callers ground via Places/SerpAPI data.
+  if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY missing in env');
+  const content = [];
   for (const url of imageUrls) {
     try {
       const r = await fetch(url);
-      const ct = r.headers.get('content-type') || 'image/jpeg';
+      const ct = (r.headers.get('content-type') || 'image/jpeg').split(';')[0];
       const buf = Buffer.from(await r.arrayBuffer());
-      const b64 = buf.toString('base64');
-      parts.push({ inline_data: { mime_type: ct, data: b64 } });
+      content.push({ type: 'image', source: { type: 'base64', media_type: ct, data: buf.toString('base64') } });
     } catch (e) {
       console.warn(`  ⚠ couldn't fetch image ${url}: ${e.message}`);
     }
   }
+  content.push({ type: 'text', text: prompt });
 
-  const body = {
-    contents: [{ parts }],
-    generationConfig: {
-      temperature,
-      thinkingConfig: { thinkingBudget: 0 },
-    },
-  };
-  if (useSearch) {
-    body.tools = [{ google_search: {} }];
-  }
-
-  const res = await fetch(GEMINI_ENDPOINT, {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: ANTHROPIC_MODEL,
+      max_tokens: 2000,
+      temperature,
+      messages: [{ role: 'user', content }],
+    }),
   });
 
   if (!res.ok) {
     const errText = await res.text().catch(() => 'unknown');
-    throw new Error(`Gemini ${res.status}: ${errText.slice(0, 300)}`);
+    throw new Error(`Claude ${res.status}: ${errText.slice(0, 300)}`);
   }
   const data = await res.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  return text;
+  return (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
 }
 
 async function findPlaceId(listing) {
@@ -412,8 +413,24 @@ async function main() {
     console.log(`  Fetched ${serpapiReviews.length} reviews (filtered server-side by query=touchless)`);
   }
 
-  // Step 1: Gemini grounded search
-  const businessData = await step1_lookupBusiness(listing);
+  // Step 1: synthesize business data from GROUNDED sources (Places + SerpAPI),
+  // not LLM grounding — Gemini search is unavailable and Claude would hallucinate.
+  console.log('\n[1/4] Building business data from Google Places + SerpAPI (grounded)...');
+  const businessData = {
+    phone: placeData?.formatted_phone_number || null,
+    rating: typeof placeData?.rating === 'number' ? placeData.rating : null,
+    review_count: typeof placeData?.user_ratings_total === 'number' ? placeData.user_ratings_total : null,
+    hours: parseHoursFromWeekdayText(placeData?.opening_hours?.weekday_text) || null,
+    google_description: placeData?.editorial_summary?.overview || null,
+    amenities_summary: [],
+    google_maps_url: placeData?.url || null,
+    top_reviews: (serpapiReviews || []).slice(0, 6).map(r => ({
+      author: r.user?.name || null,
+      rating: typeof r.rating === 'number' ? r.rating : null,
+      text: r.snippet || r.extracted_snippet?.original || '',
+      time_description: r.date || null,
+    })).filter(x => x.text && x.text.length > 10),
+  };
   console.log(`  Phone: ${businessData.phone}`);
   console.log(`  Rating: ${businessData.rating} (${businessData.review_count} reviews)`);
   console.log(`  Hours: ${businessData.hours ? Object.keys(businessData.hours).length + ' days' : 'none'}`);
@@ -504,6 +521,42 @@ async function main() {
     if (placeHours && Object.keys(placeHours).length > 0) updates.hours = placeHours;
     if (googlePhotos.length > 0) updates.google_photos_count = googlePhotos.length;
     if (googlePhotos.length > 0) updates.google_photo_url = googlePhotos[0];
+  }
+
+  // Step 3b: amenities — grounded ONLY in Places signals + mined review text.
+  if (!Array.isArray(listing.amenities) || listing.amenities.length === 0) {
+    const amenContext = {
+      google_category: placeData?.types || [],
+      google_description: businessData.google_description,
+      hours: businessData.hours,
+      review_snippets: (serpapiReviews || []).map(r => r.snippet || r.extracted_snippet?.original).filter(Boolean).slice(0, 15),
+    };
+    const amenPrompt = `From the GROUNDED context below for a car wash, return a JSON array of short amenity labels (2-4 words each) that are EXPLICITLY supported by the text. Do NOT invent amenities. Choose only from this vocabulary when supported: "Touch-free automatic wash", "Self-serve wash bays", "Free vacuums", "Open 24 hours", "Unlimited wash club", "Credit cards accepted", "Vending services", "Spot-free rinse", "Undercarriage wash", "Pet/dog wash", "Detailing services". Return [] if none are clearly supported. Context:\n${JSON.stringify(amenContext, null, 2)}\n\nReturn ONLY a JSON array.`;
+    try {
+      const amenText = await callGemini({ prompt: amenPrompt, temperature: 0 });
+      const amen = JSON.parse(stripJsonFence(amenText));
+      if (Array.isArray(amen) && amen.length > 0) updates.amenities = [...new Set(amen.map(String))].slice(0, 8);
+      console.log(`  Amenities: ${(updates.amenities || []).join(', ') || '(none derived)'}`);
+    } catch (e) {
+      console.warn(`  ⚠ amenities step skipped: ${e.message}`);
+    }
+  }
+
+  // Completeness-gated auto-approve (no-partial-listings rule):
+  // hero + hours + amenities + AI description + reviews all present.
+  const finalHours = updates.hours || listing.hours;
+  const finalAmen = updates.amenities || listing.amenities || [];
+  const finalReviews = updates.review_count || listing.review_count || 0;
+  const complete = !!hero && !!finalHours && Array.isArray(finalAmen) && finalAmen.length > 0
+    && !!description && description.length > 50 && finalReviews > 0;
+  if (process.argv.includes('--approve')) {
+    if (complete) {
+      updates.is_approved = true;
+      updates.reviewed_at = new Date().toISOString();
+      console.log('  ✓ Completeness gate PASSED → is_approved=true');
+    } else {
+      console.log(`  ⚠ Completeness gate FAILED → left UNAPPROVED (hero=${!!hero} hours=${!!finalHours} amenities=${finalAmen.length} desc=${description.length} reviews=${finalReviews})`);
+    }
   }
 
   await step4_updateListing(listing.id, updates);

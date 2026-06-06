@@ -224,14 +224,23 @@ console.log(`Auditing ${all.length} is_touchless=true listings`);
 // evaluate() can protect evidence-backed listings (root-cause fix 2026-06-02).
 {
   const ids = all.map(l => l.id);
-  for (let i = 0; i < ids.length; i += 300) {
-    const { data } = await sb.from('review_snippets')
-      .select('listing_id,sentiment')
-      .eq('is_touchless_evidence', true)
-      .in('listing_id', ids.slice(i, i + 300));
-    for (const r of (data || [])) {
-      const e = (REVIEW_EVIDENCE[r.listing_id] ||= { pos: 0, neg: 0 });
-      if (r.sentiment === 'negative') e.neg++; else e.pos++;
+  // Chunk ids AND paginate within each chunk — a flat .in(300 ids) query silently
+  // truncates at Supabase's 1000-row cap, dropping evidence for listings that sort
+  // late (this previously stripped protection from washes like Cat's Car Wash).
+  for (let i = 0; i < ids.length; i += 100) {
+    const chunk = ids.slice(i, i + 100);
+    for (let off = 0; ; off += 1000) {
+      const { data } = await sb.from('review_snippets')
+        .select('listing_id,sentiment')
+        .eq('is_touchless_evidence', true)
+        .in('listing_id', chunk)
+        .order('listing_id', { ascending: true })
+        .range(off, off + 999);
+      for (const r of (data || [])) {
+        const e = (REVIEW_EVIDENCE[r.listing_id] ||= { pos: 0, neg: 0 });
+        if (r.sentiment === 'negative') e.neg++; else e.pos++;
+      }
+      if (!data || data.length < 1000) break;
     }
   }
   console.log(`Loaded review evidence for ${Object.keys(REVIEW_EVIDENCE).length} listings`);
