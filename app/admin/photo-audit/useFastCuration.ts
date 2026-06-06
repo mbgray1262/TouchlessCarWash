@@ -721,6 +721,14 @@ export function useFastCuration(listingId: string) {
 
   // Approve listing (save + mark reviewed_at)
   const approveAndNext = async (onUpdate?: () => void, onNext?: () => void, onClose?: () => void): Promise<void> => {
+    // Guard: a blank city produces an invalid public URL (/state/<code>//<slug>)
+    // that 404s, and the listing renders with no location. Block approval so we
+    // never ship another partial listing like the OSM-name-imported batch.
+    if (listing && (!listing.city || !listing.city.trim())) {
+      alert(`"${listing.name}" has no city — fill in the city/address before approving (a blank city breaks the public listing URL).`);
+      return;
+    }
+
     const ok = await saveAll();
     if (!ok) return;
 

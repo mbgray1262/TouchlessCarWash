@@ -9,6 +9,7 @@ import { autoEnhanceImage } from '../hero-review/autoEnhance';
 import { EQUIPMENT_BRANDS } from '../hero-review/types';
 import { useEquipmentVocabulary } from '../hooks/useEquipmentVocabulary';
 import { getChainBrandImage } from '@/lib/chain-brand-images';
+import { getStateSlug, slugify } from '@/lib/constants';
 
 interface Props {
   listingId: string;
@@ -560,13 +561,19 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
               <p className="text-sm text-gray-500">{listing.city}, {listing.state}</p>
             </div>
             <div className="flex items-center gap-3">
-              <a
-                href={`/state/${listing.state?.toLowerCase()}/${listing.city?.toLowerCase().replace(/\s+/g, '-')}/${listing.slug}`}
-                target="_blank"
-                className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
-              >
-                <ExternalLink className="w-3.5 h-3.5" /> View listing
-              </a>
+              {listing.city && listing.state && listing.slug ? (
+                <a
+                  href={`/state/${getStateSlug(listing.state)}/${slugify(listing.city)}/${listing.slug}`}
+                  target="_blank"
+                  className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" /> View listing
+                </a>
+              ) : (
+                <span className="flex items-center gap-1 text-sm text-gray-400" title="Listing has no city/state/slug — cannot build URL">
+                  <ExternalLink className="w-3.5 h-3.5" /> No public URL
+                </span>
+              )}
               <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-200 text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />
               </button>
