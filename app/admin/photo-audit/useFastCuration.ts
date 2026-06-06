@@ -236,6 +236,16 @@ export function useFastCuration(listingId: string) {
           label: `Hero (${listing.hero_image_source ?? 'rehosted'})`,
           tag: 'hero' as PhotoTag,
         });
+      } else if (listing.hero_image_source === 'fallback') {
+        // Admin previously accepted the generic placeholder (hero_image stays NULL
+        // by DB-trigger design). Show it so the curator sees the listing is handled.
+        existing.push({
+          id: 'fallback-hero',
+          url: FALLBACK_HERO_URL,
+          source: 'existing',
+          label: 'Hero (fallback)',
+          tag: 'hero' as PhotoTag,
+        });
       }
       (listing.photos ?? []).forEach((url, i) => {
         if (url !== listing.hero_image) {
@@ -482,24 +492,33 @@ export function useFastCuration(listingId: string) {
       }
 
       const updateData: Record<string, unknown> = {
-        hero_image: heroUrl,
         photos: Array.from(allPhotos),
         blocked_photos: blockedUrls,
       };
 
+      // Only touch hero_image when there's an explicit hero action. Writing it
+      // unconditionally is unsafe: if a render-timing race leaves listing.hero_image
+      // momentarily null in this closure, we'd clobber a hero that was already
+      // persisted (e.g. the "Use Fallback" placeholder) back to null. Leaving the
+      // column out preserves whatever is in the DB.
       if (heroPhoto && heroUrl === FALLBACK_HERO_URL) {
-        // Generic placeholder — record as 'fallback', not 'manual'.
+        // Generic placeholder. Do NOT write hero_image — the reject_broken_hero_url
+        // DB trigger NULLs the placeholder path (and would null this source with it).
+        // Mark the decision with source='fallback' and leave hero_image NULL.
         updateData.hero_image_source = 'fallback';
       } else if (heroPhoto) {
-        // Always write 'manual' — the user explicitly chose this photo.
-        // Without 'manual', chain brand images (BP, Holiday, Kwik Trip) take priority
-        // over a location-specific hero on the public listing page.
+        updateData.hero_image = heroUrl;
+        // Always write 'manual' — the user explicitly chose this photo. Without
+        // 'manual', chain brand images can override a location-specific hero on
+        // the public listing page.
         updateData.hero_image_source = 'manual';
       } else if (heroRemoved) {
-        // Explicit deletion: also null the source so chain-brand fallback
-        // (and downstream enrichment) can take over cleanly.
+        // Explicit deletion: null both so chain-brand fallback (and downstream
+        // enrichment) can take over cleanly.
+        updateData.hero_image = null;
         updateData.hero_image_source = null;
       }
+      // else: no explicit hero change — leave hero_image/source untouched.
 
       // equipment_photo column doesn't exist yet — store in classification_source for now
       // TODO: add equipment_photo column to listings table if needed
@@ -772,18 +791,21 @@ export function useFastCuration(listingId: string) {
     setListing(prev => prev ? { ...prev, website: newUrl } : prev);
   }, [listing]);
 
-  // Set fallback hero — marks listing as "no suitable hero found, use fallback"
-  // This removes it from the No Hero queue by setting a non-null hero_image
+  // Set fallback hero — marks listing as "no suitable hero found, use the generic
+  // placeholder". NOTE: we do NOT write hero_image here. A DB trigger
+  // (reject_broken_hero_url) silently NULLs hero_image whenever it equals the
+  // placeholder path, so writing it is futile. Instead we mark the decision with
+  // hero_image_source='fallback' (hero_image stays NULL) — a marker the trigger
+  // leaves untouched. The No Hero queue excludes source='fallback', and the public
+  // site already renders the placeholder when hero_image is null.
   const setFallbackHero = useCallback(async () => {
     if (!listing) return;
-    const fallbackUrl = FALLBACK_HERO_URL;
     await supabase.from('listings').update({
-      hero_image: fallbackUrl,
       hero_image_source: 'fallback',
     }).eq('id', listing.id);
-    setListing(prev => prev ? { ...prev, hero_image: fallbackUrl, hero_image_source: 'fallback' } : prev);
+    setListing(prev => prev ? { ...prev, hero_image_source: 'fallback' } : prev);
     // Reflect the fallback in the hero box immediately — demote any existing hero
-    // to gallery and add the fallback as the tagged hero candidate.
+    // to gallery and add the placeholder as the tagged hero candidate (display only).
     setCandidates(prev => {
       const galleryCount = prev.filter(c => c.tag === 'gallery').length;
       const updated = prev.map(c =>
@@ -791,7 +813,7 @@ export function useFastCuration(listingId: string) {
       );
       return [...updated, {
         id: 'fallback-hero',
-        url: fallbackUrl,
+        url: FALLBACK_HERO_URL,
         source: 'existing',
         label: 'Hero (fallback)',
         tag: 'hero' as PhotoTag,

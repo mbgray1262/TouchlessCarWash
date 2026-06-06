@@ -135,10 +135,12 @@ export function usePhotoAudit() {
       supabase.from('listings').select('id', { count: 'exact', head: true })
         .eq('is_touchless', true).not('photo_audited_at', 'is', null),
       supabase.from('listings').select('id', { count: 'exact', head: true })
-        .eq('is_touchless', true).is('hero_image', null),
+        .eq('is_touchless', true).is('hero_image', null)
+        .or('hero_image_source.is.null,hero_image_source.neq.fallback'),
       // Count only unprocessed No Hero listings (for Run All button)
       supabase.from('listings').select('id', { count: 'exact', head: true })
-        .eq('is_touchless', true).is('hero_image', null).is('photo_audited_at', null),
+        .eq('is_touchless', true).is('hero_image', null).is('photo_audited_at', null)
+        .or('hero_image_source.is.null,hero_image_source.neq.fallback'),
       // Held = touchless + not approved (admin review queue)
       supabase.from('listings').select('id', { count: 'exact', head: true })
         .eq('is_touchless', true).eq('is_approved', false),
@@ -191,11 +193,16 @@ export function usePhotoAudit() {
     if (filter === 'no_hero') {
       const sub = noHeroSubFilter; // 'all' | 'non_chain' | 'chain_only'
 
+      // Exclude listings the admin already marked as "use generic fallback"
+      // (hero_image_source='fallback' with hero_image NULL by DB-trigger design).
+      const FALLBACK_NOT = 'hero_image_source.is.null,hero_image_source.neq.fallback';
       let countQuery = supabase.from('listings').select('id', { count: 'exact', head: true })
-        .eq('is_touchless', true).eq('is_approved', true).is('hero_image', null);
+        .eq('is_touchless', true).eq('is_approved', true).is('hero_image', null)
+        .or(FALLBACK_NOT);
       let dataQuery = supabase.from('listings')
         .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
-        .eq('is_touchless', true).eq('is_approved', true).is('hero_image', null);
+        .eq('is_touchless', true).eq('is_approved', true).is('hero_image', null)
+        .or(FALLBACK_NOT);
 
       if (sub === 'non_chain') {
         countQuery = countQuery.is('parent_chain', null);
