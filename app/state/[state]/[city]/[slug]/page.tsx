@@ -1325,11 +1325,24 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
   const streetViewUrl = (await getOfficialStreetViewUrl(listing.latitude, listing.longitude))
     ?? buildPlacePageUrl({
       placeId: listing.google_place_id,
+      name: listing.name,
       address: listing.address,
       city: listing.city,
       state: listing.state,
       zip: listing.zip,
     });
+
+  // "View on Google" deep-link — pinned to the exact place_id so a co-located
+  // business at the same address (e.g. a Grease Monkey sharing the lot) can't
+  // hijack the panel/photos. Falls back to a name+address search otherwise.
+  const viewOnGoogleUrl = buildPlacePageUrl({
+    placeId: listing.google_place_id,
+    name: listing.name,
+    address: listing.address,
+    city: listing.city,
+    state: listing.state,
+    zip: listing.zip,
+  });
 
   const ratingStars = listing.rating > 0 ? (
     <span className="flex items-center gap-1.5">
@@ -1895,27 +1908,15 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                       Get Directions
                     </TrackableLink>
                     <div className="flex gap-2">
-                      {listing.google_place_id ? (
-                        <a
-                          href={`https://www.google.com/maps/place/?q=place_id:${listing.google_place_id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 py-2 rounded-lg transition-colors"
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                          View on Google
-                        </a>
-                      ) : (
-                        <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${listing.name}, ${streetAddress(listing.address, listing.city, listing.state, listing.zip)}, ${listing.city}, ${listing.state} ${listing.zip}`)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 py-2 rounded-lg transition-colors"
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                          View on Google
-                        </a>
-                      )}
+                      <a
+                        href={viewOnGoogleUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 py-2 rounded-lg transition-colors"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        View on Google
+                      </a>
                       <a
                         // streetViewUrl is resolved server-side: pinned to a
                         // Google-official pano_id when one exists at this

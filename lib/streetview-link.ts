@@ -83,14 +83,27 @@ export const getOfficialStreetViewUrl = cache(
  */
 export function buildPlacePageUrl(opts: {
   placeId?: string | null;
+  name?: string | null;
   address?: string | null;
   city?: string | null;
   state?: string | null;
   zip?: string | null;
 }): string {
+  // Build a human-readable query label (also the fallback when there's no
+  // place_id). Including the business name disambiguates co-located
+  // businesses — e.g. a Grease Monkey sharing an address with the car wash.
+  const q = [opts.name, opts.address, opts.city, opts.state, opts.zip]
+    .filter(Boolean)
+    .join(', ');
+  const query = encodeURIComponent(q || opts.name || 'car wash');
+
+  // When we know the exact place_id, use Google's official Maps URL API with
+  // `query_place_id`. This PINS the result to that specific place rather than
+  // running a fuzzy search — critical at shared addresses, where the old
+  // `?q=place_id:…` form (Google treats `q` as a search term) would surface
+  // the more prominent neighbor's panel and photos instead of this listing.
   if (opts.placeId) {
-    return `https://www.google.com/maps/place/?q=place_id:${encodeURIComponent(opts.placeId)}`;
+    return `https://www.google.com/maps/search/?api=1&query=${query}&query_place_id=${encodeURIComponent(opts.placeId)}`;
   }
-  const q = [opts.address, opts.city, opts.state, opts.zip].filter(Boolean).join(', ');
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+  return `https://www.google.com/maps/search/?api=1&query=${query}`;
 }
