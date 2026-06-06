@@ -14,6 +14,7 @@ import { METRO_CONTENT, buildExpertGuide } from '@/lib/metro-content';
 import { OpenStatusBadge } from '@/components/OpenStatusBadge';
 import LogoImage from '@/components/LogoImage';
 import HeroImageFallback from '@/components/HeroImageFallback';
+import BestCardImage from '@/components/BestCardImage';
 import { ProductGrid } from '@/components/ProductGrid';
 import { ProductSpotlight } from '@/components/ProductSpotlight';
 import { DEFAULT_OG_IMAGE, ensureHttps } from '@/lib/seo';
@@ -570,23 +571,7 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
                       <div className="flex flex-col md:flex-row">
                         {/* Rank + Image */}
                         <div className="relative md:w-72 shrink-0">
-                          {cardImage ? (
-                            <div className="relative h-52 md:h-full">
-                              <Image
-                                src={cardImage}
-                                alt={listing.name}
-                                fill
-                                sizes="(max-width: 768px) 100vw, 288px"
-                                className="object-cover group-hover:scale-105 transition-transform duration-300"
-                                unoptimized={!isOptimizedHost(cardImage)}
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-black/30 to-transparent" />
-                            </div>
-                          ) : (
-                            <div className="relative h-52 md:h-full">
-                              <HeroImageFallback variant="card" className="h-full" />
-                            </div>
-                          )}
+                          <BestCardImage src={cardImage} alt={listing.name} />
                           {/* Rank badge */}
                           <div className={`absolute top-3 left-3 w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg shadow-lg ${getRankColor(rank)}`}>
                             {rank}
