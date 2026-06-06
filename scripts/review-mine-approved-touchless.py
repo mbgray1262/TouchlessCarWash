@@ -207,20 +207,18 @@ async def main():
                         'source': 'crawl4ai_gmaps_strengthen',
                     })
 
-                # Save aggregate summary if any keyword aggregates present
+                # NOTE: We intentionally do NOT store keyword aggregates as a
+                # review_snippet. The aggregate text (e.g. 'touch_free=4') is an
+                # internal diagnostic, not a real customer quote, and it leaked
+                # onto public listing pages as a fake "Google reviewer" review
+                # (cleaned up 2026-06-06). Aggregates are still computed above and
+                # logged to the contradictions/diagnostics output only.
                 if aggregates:
-                    agg_text = 'Google Maps "mentioned in reviews" aggregates: ' + ', '.join(f'{k}={v}' for k, v in sorted(aggregates.items(), key=lambda x: -x[1]))
                     touch_sum = aggregates.get('touchless', 0) + aggregates.get('touch_free', 0) + aggregates.get('brushless', 0) + aggregates.get('laser_wash', 0) + aggregates.get('no_brushes', 0)
                     oppose = aggregates.get('tunnel', 0) + aggregates.get('hand_wash', 0) + (aggregates.get('soft_touch', 0) * 2)
                     is_evidence = touch_sum >= 2 and touch_sum > oppose
-                    snippets_to_save.append({
-                        'listing_id': l['id'],
-                        'review_text': agg_text,
-                        'is_touchless_evidence': is_evidence,
-                        'sentiment': 'positive' if is_evidence else 'neutral',
-                        'touchless_keywords': list(aggregates.keys()),
-                        'source': 'crawl4ai_gmaps_aggregates',
-                    })
+                    stats.setdefault('aggregates_seen', 0)
+                    stats['aggregates_seen'] += 1
 
                 if snippets_to_save:
                     try:

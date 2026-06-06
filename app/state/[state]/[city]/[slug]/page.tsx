@@ -278,6 +278,20 @@ async function getReviewSnippets(listingId: string): Promise<ReviewSnippet[]> {
  * complaints (paint_about_touchless='brush') are excluded so the touchless
  * wash isn't blamed for a brush-bay scratch. Mapped to the component's shape.
  */
+// Defense-in-depth: some mining scripts historically stored internal keyword
+// aggregates (e.g. 'Google Maps "mentioned in reviews" aggregates: touch_free=4')
+// in review_text, which then rendered as fake "Google reviewer" quotes. The bad
+// rows were purged 2026-06-06, but this guard keeps any future diagnostic strings
+// out of the public-facing snippet sections regardless of source.
+function isRealCustomerSnippet(r: ReviewSnippet): boolean {
+  const src = r.source || '';
+  if (/aggregates?$/i.test(src)) return false;
+  const txt = r.review_text || '';
+  if (/mentioned in reviews"?\s+aggregates:/i.test(txt)) return false;
+  if (/^[A-Z_]+_AGGREGATES:/i.test(txt)) return false;
+  return true;
+}
+
 async function getPaintModuleSnippets(listingId: string): Promise<PaintSnippet[]> {
   const { data } = await supabase
     .from('review_snippets')
@@ -290,6 +304,7 @@ async function getPaintModuleSnippets(listingId: string): Promise<PaintSnippet[]
   const out: PaintSnippet[] = [];
   for (const r of rows) {
     if (!r.review_text || r.review_text.length < 40) continue;
+    if (!isRealCustomerSnippet(r)) continue;
     const isPaint = r.paint_relevant === true && r.paint_about_touchless !== 'brush';
     const theme: PaintTheme = isPaint ? 'paint' : r.is_touchless_evidence ? 'touchless' : 'other';
     if (theme === 'other') continue; // drop brush-only / unrelated snippets
@@ -727,8 +742,9 @@ function buildLocalBusinessSchema(listing: Listing, canonicalUrl: string, hours:
   // Only include reviews when aggregateRating is also present — Google requires
   // aggregateRating whenever multiple Review objects are present, otherwise it
   // flags the structured data as invalid.
-  if (reviewSnippets.length > 0 && schema.aggregateRating) {
-    schema.review = reviewSnippets.map((snippet) => ({
+  const schemaSnippets = reviewSnippets.filter(isRealCustomerSnippet);
+  if (schemaSnippets.length > 0 && schema.aggregateRating) {
+    schema.review = schemaSnippets.map((snippet) => ({
       '@type': 'Review',
       author: { '@type': 'Person', name: snippet.reviewer_name || 'Anonymous' },
       reviewBody: snippet.review_text,
@@ -1536,7 +1552,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                   neg={listing.touchless_neg ?? 0}
                   mentions={listing.touchless_mentions ?? 0}
                   snippets={reviewSnippets
-                    .filter((r) => r.touchless_about !== 'other_service' && r.review_text && r.review_text.length >= 30)
+                    .filter((r) => r.touchless_about !== 'other_service' && r.review_text && r.review_text.length >= 30 && isRealCustomerSnippet(r))
                     .map((r): TssSnippet => ({
                       id: r.id,
                       text: r.review_text,
