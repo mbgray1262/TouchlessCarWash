@@ -302,12 +302,21 @@ async function getPaintModuleSnippets(listingId: string): Promise<PaintSnippet[]
     .limit(60);
   const rows = (data || []) as ReviewSnippet[];
   const out: PaintSnippet[] = [];
+  const seen = new Set<string>();
   for (const r of rows) {
-    if (!r.review_text || r.review_text.length < 40) continue;
-    if (!isRealCustomerSnippet(r)) continue;
+    if (!r.review_text || !isRealCustomerSnippet(r)) continue;
     const isPaint = r.paint_relevant === true && r.paint_about_touchless !== 'brush';
     const theme: PaintTheme = isPaint ? 'paint' : r.is_touchless_evidence ? 'touchless' : 'other';
     if (theme === 'other') continue; // drop brush-only / unrelated snippets
+    // Paint snippets need enough text to be a meaningful read; short genuine
+    // touchless confirmations (e.g. "Wash is touchless. Very nice") are valid
+    // evidence and must not be filtered out by a paint-oriented length floor.
+    const minLen = theme === 'paint' ? 40 : 12;
+    if (r.review_text.length < minLen) continue;
+    // Dedup identical quotes mined from multiple sources (gmaps + dataforseo etc.)
+    const dedupKey = r.review_text.trim().toLowerCase().replace(/\s+/g, ' ');
+    if (seen.has(dedupKey)) continue;
+    seen.add(dedupKey);
     const sentiment = (isPaint ? r.paint_sentiment : r.sentiment) ?? 'neutral';
     out.push({
       id: r.id,
@@ -1761,8 +1770,11 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                 </div>
               )}
 
-              {/* Touchless Sentiment — simple positive/negative/neutral badge (only show if there are actual reviews) */}
-              {listing.touchless_sentiment && reviewSnippets.length > 0 && (
+              {/* Touchless Sentiment — simple positive/negative/neutral badge. Only
+                  show when there is displayable touchless evidence on the page (a
+                  touchless-themed snippet in the Paint-Safe module), so the badge
+                  never claims reviews the visitor can't actually see. */}
+              {listing.touchless_sentiment && paintSnippets.some((s) => s.theme === 'touchless') && (
                 <div className={`flex items-center gap-2 px-4 py-3 rounded-xl border ${
                   listing.touchless_sentiment === 'positive'
                     ? 'bg-green-50 border-green-200'
