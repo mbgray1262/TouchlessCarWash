@@ -470,7 +470,9 @@ Rules:
       touchless_evidence: evidenceSnippets,
       crawl_snapshot: firecrawlData,
       last_crawled_at: new Date().toISOString(),
-      is_approved: true,
+      // Imported leads are NOT auto-approved — they land in the review/held
+      // queue and only go live after touchless verification + enrichment.
+      is_approved: false,
       is_featured: false,
     };
 

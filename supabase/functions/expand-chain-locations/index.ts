@@ -384,7 +384,9 @@ Rules:
         crawl_status: "pending",
         crawl_notes: `Location imported from chain expansion of "${canonicalChainName}". Needs individual verification.`,
         touchless_evidence: [],
-        is_approved: true,
+        // Imported leads are NOT auto-approved — they land in the review/held
+        // queue and only go live after touchless verification + enrichment.
+        is_approved: false,
         is_featured: false,
       };
 

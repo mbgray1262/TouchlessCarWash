@@ -1001,7 +1001,9 @@ async function buildListingData(
     latitude: lat || null,
     longitude: lng || null,
     is_touchless: isTouchless,
-    is_approved: true,
+    // Discovered leads are NOT auto-approved — they land in the review/held
+    // queue and only go live after touchless verification + enrichment.
+    is_approved: false,
     is_featured: false,
     google_id: details.id,
     google_place_id: details.id?.replace(/^places\//, '') || null,
