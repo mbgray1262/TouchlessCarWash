@@ -341,6 +341,24 @@ export const METRO_AREAS: MetroArea[] = [
   { name: 'Joliet', displayName: 'Joliet, IL', slug: 'joliet', lat: 41.3711, lng: -88.0208, radiusMiles: 20, states: ['IL'], region: 'Midwest' },
   { name: 'Montpelier', displayName: 'Montpelier, VT', slug: 'montpelier', lat: 44.3261, lng: -72.5964, radiusMiles: 19, states: ['VT'], region: 'Northeast' },
   { name: 'Chester', displayName: 'Chester, VT', slug: 'chester', lat: 43.4653, lng: -72.3012, radiusMiles: 23, states: ['VT', 'NH'], region: 'Northeast' },
+
+  // Added 2026-06-06 — held-listing harvest + Google-review-evidence discovery
+  // (explicit touchless/brushless/laser-wash review confirmation) pushed these
+  // previously-uncovered 3-4-wash clusters to 5+ verified touchless listings.
+  // Verified via scripts/_tmp_propose_metros.mjs (uncovered, >=5 within radius)
+  // and member-level QC (scripts/_tmp_qc_metros.mjs) for geocoding + dedup.
+  { name: 'Statesville', displayName: 'Statesville, NC', slug: 'statesville', lat: 35.7745, lng: -80.8888, radiusMiles: 20, states: ['NC'], region: 'Southeast' },
+  { name: 'Clinton', displayName: 'Clinton, IA', slug: 'clinton', lat: 41.8596, lng: -90.3541, radiusMiles: 20, states: ['IA', 'IL'], region: 'Midwest' },
+  { name: 'Wilkes-Barre', displayName: 'Wilkes-Barre, PA', slug: 'wilkes-barre', lat: 41.0701, lng: -75.6437, radiusMiles: 20, states: ['PA'], region: 'Northeast' },
+  { name: 'Tillamook', displayName: 'Tillamook, OR', slug: 'tillamook', lat: 45.4617, lng: -123.8960, radiusMiles: 20, states: ['OR'], region: 'West' },
+  { name: 'Budd Lake', displayName: 'Budd Lake, NJ', slug: 'budd-lake', lat: 40.8615, lng: -74.7186, radiusMiles: 20, states: ['NJ'], region: 'Northeast' },
+  { name: 'Corpus Christi', displayName: 'Corpus Christi, TX', slug: 'corpus-christi', lat: 27.7882, lng: -97.4600, radiusMiles: 20, states: ['TX'], region: 'Southwest' },
+  { name: 'Altoona', displayName: 'Altoona, PA', slug: 'altoona', lat: 40.5529, lng: -78.2722, radiusMiles: 20, states: ['PA'], region: 'Northeast' },
+  { name: 'Terre Haute', displayName: 'Terre Haute, IN', slug: 'terre-haute', lat: 39.5687, lng: -87.1989, radiusMiles: 20, states: ['IN'], region: 'Midwest' },
+  { name: 'Adrian', displayName: 'Adrian, MI', slug: 'adrian', lat: 41.9434, lng: -83.9841, radiusMiles: 20, states: ['MI'], region: 'Midwest' },
+  { name: 'Jackson', displayName: 'Jackson, MI', slug: 'jackson', lat: 42.2618, lng: -84.3841, radiusMiles: 20, states: ['MI'], region: 'Midwest' },
+  { name: 'Vero Beach', displayName: 'Vero Beach, FL', slug: 'vero-beach', lat: 27.6859, lng: -80.4241, radiusMiles: 20, states: ['FL'], region: 'Southeast' },
+  { name: 'Brookings', displayName: 'Brookings, OR', slug: 'brookings', lat: 41.9377, lng: -124.2444, radiusMiles: 20, states: ['OR', 'CA'], region: 'West' },
 ];
 
 // ── Lookup helpers ─────────────────────────────────────────────────────
