@@ -314,6 +314,20 @@ export const METRO_AREAS: MetroArea[] = [
   { name: 'Findlay', displayName: 'Findlay, OH', slug: 'findlay', lat: 41.0628, lng: -83.5471, radiusMiles: 20, states: ['OH'], region: 'Midwest' },
   { name: 'Owensboro', displayName: 'Owensboro, KY', slug: 'owensboro', lat: 37.8566, lng: -87.0702, radiusMiles: 20, states: ['IN', 'KY'], region: 'Southeast' },
   { name: 'Georgetown', displayName: 'Georgetown, DE', slug: 'georgetown', lat: 38.6355, lng: -75.3966, radiusMiles: 20, states: ['DE', 'MD'], region: 'Northeast' },
+  // Added 2026-06-05 — each covers a previously-uncovered cluster of 5+ verified
+  // touchless washes, so each opens a new /best page with real content.
+  { name: 'Lexington', displayName: 'Lexington, KY', slug: 'lexington', lat: 38.0630, lng: -84.5780, radiusMiles: 25, states: ['KY'], region: 'Southeast' },
+  { name: 'Lansing', displayName: 'Lansing, MI', slug: 'lansing', lat: 42.7660, lng: -84.6290, radiusMiles: 25, states: ['MI'], region: 'Midwest' },
+  { name: 'Columbia', displayName: 'Columbia, MO', slug: 'columbia-mo', lat: 38.7680, lng: -92.2640, radiusMiles: 30, states: ['MO'], region: 'Midwest' },
+  { name: 'Midland-Odessa', displayName: 'Midland-Odessa, TX', slug: 'midland-odessa', lat: 31.9820, lng: -102.2060, radiusMiles: 30, states: ['TX'], region: 'Southwest' },
+  { name: 'Melbourne', displayName: 'Melbourne, FL', slug: 'melbourne', lat: 28.1880, lng: -80.6360, radiusMiles: 25, states: ['FL'], region: 'Southeast' },
+  { name: 'Idaho Falls', displayName: 'Idaho Falls, ID', slug: 'idaho-falls', lat: 43.5220, lng: -111.9920, radiusMiles: 25, states: ['ID'], region: 'West' },
+  { name: 'Saratoga Springs', displayName: 'Saratoga Springs, NY', slug: 'saratoga-springs', lat: 43.1760, lng: -73.7020, radiusMiles: 25, states: ['NY'], region: 'Northeast' },
+  { name: 'Muncie', displayName: 'Muncie, IN', slug: 'muncie', lat: 40.1570, lng: -85.4610, radiusMiles: 25, states: ['IN'], region: 'Midwest' },
+  { name: 'Temecula', displayName: 'Temecula, CA', slug: 'temecula', lat: 33.5040, lng: -117.1270, radiusMiles: 20, states: ['CA'], region: 'West' },
+  { name: 'Sterling', displayName: 'Sterling, IL', slug: 'sterling-il', lat: 41.8480, lng: -89.5620, radiusMiles: 25, states: ['IL'], region: 'Midwest' },
+  { name: 'Uniontown', displayName: 'Uniontown, PA', slug: 'uniontown', lat: 40.1100, lng: -79.5520, radiusMiles: 25, states: ['PA'], region: 'Northeast' },
+  { name: 'Finger Lakes', displayName: 'Finger Lakes, NY', slug: 'finger-lakes', lat: 42.9020, lng: -77.0180, radiusMiles: 30, states: ['NY'], region: 'Northeast' },
 ];
 
 // ── Lookup helpers ─────────────────────────────────────────────────────
