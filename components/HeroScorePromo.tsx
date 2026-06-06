@@ -30,7 +30,7 @@ export default function HeroScorePromo() {
   return (
     <a
       href="/touchless-satisfaction-score"
-      className="group mt-6 flex items-center gap-5 sm:gap-6 bg-white/10 hover:bg-white/[0.14] border border-white/25 rounded-2xl p-4 sm:p-5 backdrop-blur-sm transition-colors max-w-xl"
+      className="group mt-6 flex items-center gap-5 sm:gap-6 bg-white/10 hover:bg-white/20 border border-white/25 rounded-2xl p-4 sm:p-5 backdrop-blur-sm transition-colors max-w-xl"
     >
       {/* animated gauge */}
       <div className="relative w-[104px] h-[104px] sm:w-[124px] sm:h-[124px] shrink-0">
@@ -51,7 +51,7 @@ export default function HeroScorePromo() {
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
           <span className="text-[34px] sm:text-[40px] font-extrabold tracking-tight text-white">{SAMPLE}</span>
-          <span className="text-[10px] font-bold text-white/55 mt-0.5">/ 100</span>
+          <span className="text-[10px] font-bold text-white/60 mt-0.5">/ 100</span>
         </div>
       </div>
 
@@ -70,7 +70,7 @@ export default function HeroScorePromo() {
           <span className="text-[13px] font-semibold text-emerald-300 group-hover:underline">
             See how it works ›
           </span>
-          <span className="text-[11px] text-white/45">Example shown — each wash has its own score</span>
+          <span className="text-[11px] text-white/70">Example shown — each wash has its own score</span>
         </span>
       </div>
     </a>
