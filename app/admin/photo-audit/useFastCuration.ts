@@ -8,6 +8,11 @@ import { canonicalizeEquipmentBrand, canonicalizeEquipmentModel } from '../hero-
 export type PhotoTag = 'hero' | 'gallery' | 'equipment' | 'skip' | null;
 export type PhotoSource = 'google_places' | 'google_maps' | 'google_search' | 'bing_search' | 'website' | 'street_view' | 'existing' | 'capture' | 'upload';
 
+// Generic placeholder hero (local asset) used when no real photo exists.
+// Treated specially in saveAll: never rehosted, kept out of the gallery, and
+// recorded with hero_image_source='fallback' (not 'manual').
+export const FALLBACK_HERO_URL = '/images/card-fallback.svg';
+
 export interface CandidatePhoto {
   id: string;
   url: string;
@@ -455,7 +460,8 @@ export function useFastCuration(listingId: string) {
         .filter(Boolean)
         .filter(p => {
           const saveUrl = p!.fullResUrl || p!.url;
-          return !saveUrl.includes('supabase.co');
+          // Local fallback placeholder is not an external image — never rehost it.
+          return !saveUrl.includes('supabase.co') && saveUrl !== FALLBACK_HERO_URL;
         }) as CandidatePhoto[];
       const blockedUrls = [...(listing.blocked_photos ?? []), ...skippedUrls];
 
@@ -465,7 +471,8 @@ export function useFastCuration(listingId: string) {
       // Combine hero + gallery into photos array (hero first if present)
       // Only include photos that were explicitly tagged — don't carry over untagged old photos
       const allPhotos = new Set<string>();
-      if (heroUrl) allPhotos.add(heroUrl);
+      // Keep the generic fallback out of the gallery — it's a hero placeholder only.
+      if (heroUrl && heroUrl !== FALLBACK_HERO_URL) allPhotos.add(heroUrl);
       for (const url of galleryUrls) allPhotos.add(url);
       // Keep existing gallery photos that are still tagged as gallery
       const taggedGalleryUrls = new Set(galleryUrls);
@@ -480,7 +487,10 @@ export function useFastCuration(listingId: string) {
         blocked_photos: blockedUrls,
       };
 
-      if (heroPhoto) {
+      if (heroPhoto && heroUrl === FALLBACK_HERO_URL) {
+        // Generic placeholder — record as 'fallback', not 'manual'.
+        updateData.hero_image_source = 'fallback';
+      } else if (heroPhoto) {
         // Always write 'manual' — the user explicitly chose this photo.
         // Without 'manual', chain brand images (BP, Holiday, Kwik Trip) take priority
         // over a location-specific hero on the public listing page.
@@ -766,12 +776,27 @@ export function useFastCuration(listingId: string) {
   // This removes it from the No Hero queue by setting a non-null hero_image
   const setFallbackHero = useCallback(async () => {
     if (!listing) return;
-    const fallbackUrl = '/images/card-fallback.svg';
+    const fallbackUrl = FALLBACK_HERO_URL;
     await supabase.from('listings').update({
       hero_image: fallbackUrl,
       hero_image_source: 'fallback',
     }).eq('id', listing.id);
     setListing(prev => prev ? { ...prev, hero_image: fallbackUrl, hero_image_source: 'fallback' } : prev);
+    // Reflect the fallback in the hero box immediately — demote any existing hero
+    // to gallery and add the fallback as the tagged hero candidate.
+    setCandidates(prev => {
+      const galleryCount = prev.filter(c => c.tag === 'gallery').length;
+      const updated = prev.map(c =>
+        c.tag === 'hero' ? { ...c, tag: galleryCount < 8 ? 'gallery' as PhotoTag : null } : c,
+      );
+      return [...updated, {
+        id: 'fallback-hero',
+        url: fallbackUrl,
+        source: 'existing',
+        label: 'Hero (fallback)',
+        tag: 'hero' as PhotoTag,
+      }];
+    });
   }, [listing]);
 
   const deleteListing = useCallback(async () => {

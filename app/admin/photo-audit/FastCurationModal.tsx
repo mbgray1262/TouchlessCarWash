@@ -734,7 +734,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                 listingId={listing.id}
                 onHeroDropped={addHeroDirect}
                 onStreetViewOpened={() => { awaitingClipboard.current = true; }}
-                onFallbackHero={async () => { await setFallbackHero(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
+                onFallbackHero={async () => { await setFallbackHero(); onUpdate?.(); }}
                 onClipboardPaste={processClipboardImage}
                 hasHeroImage={!!candidates.find(c => c.tag === 'hero')}
                 chainBrandImageUrl={
