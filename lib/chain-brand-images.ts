@@ -65,6 +65,15 @@ export const CHAIN_BRAND_IMAGES: Record<string, string | string[]> = {
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/48edea94-bbc4-47f5-afa5-1cc1636e037a/hero-cropped-1776872848735.jpg',
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/ce6819ff-909d-412f-9298-af459856bb12/hero-cropped-1776785254452.jpg',
   ],
+  // Kelley's Market — every Kelley's car wash is a PDQ LaserWash (touch-free),
+  // per kelleysmarket.com/the-market/car-wash. Most locations are gas-station
+  // forecourts where auto-hero can't isolate the wash bay, so we fall back to a
+  // rotation of two real, AI-screened Kelley's LaserWash photos (Cortland +
+  // Sterling IL). Replace these URLs to update the brand photo.
+  "Kelley's Market": [
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/e8657e82-047f-497f-88e8-d62bf6625a9b/0.jpg',
+    'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/b9e549ab-99e5-4c04-b9b7-38ca105d8a48/0.jpg',
+  ],
   'Pinnacle 365': [
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/48edea94-bbc4-47f5-afa5-1cc1636e037a/hero-cropped-1776872848735.jpg',
     'https://gteqijdpqjmgxfnyuhvy.supabase.co/storage/v1/object/public/listing-photos/ce6819ff-909d-412f-9298-af459856bb12/hero-cropped-1776785254452.jpg',
