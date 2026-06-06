@@ -328,6 +328,19 @@ export const METRO_AREAS: MetroArea[] = [
   { name: 'Sterling', displayName: 'Sterling, IL', slug: 'sterling-il', lat: 41.8480, lng: -89.5620, radiusMiles: 25, states: ['IL'], region: 'Midwest' },
   { name: 'Uniontown', displayName: 'Uniontown, PA', slug: 'uniontown', lat: 40.1100, lng: -79.5520, radiusMiles: 25, states: ['PA'], region: 'Northeast' },
   { name: 'Finger Lakes', displayName: 'Finger Lakes, NY', slug: 'finger-lakes', lat: 42.9020, lng: -77.0180, radiusMiles: 30, states: ['NY'], region: 'Northeast' },
+  // Added 2026-06-05 (round 2) — smaller uncovered clusters of 5+ touchless washes.
+  { name: 'Fort Worth', displayName: 'Fort Worth, TX', slug: 'fort-worth', lat: 32.8650, lng: -97.4212, radiusMiles: 20, states: ['TX'], region: 'Southwest' },
+  { name: 'Boone', displayName: 'Boone, NC', slug: 'boone', lat: 36.2822, lng: -81.7022, radiusMiles: 18, states: ['NC', 'TN'], region: 'Southeast' },
+  { name: 'Charles Town', displayName: 'Charles Town, WV', slug: 'charles-town', lat: 39.2473, lng: -77.9001, radiusMiles: 23, states: ['WV', 'VA'], region: 'Southeast' },
+  { name: 'Richmond', displayName: 'Richmond, MI', slug: 'richmond-mi', lat: 42.8333, lng: -82.6476, radiusMiles: 21, states: ['MI'], region: 'Midwest' },
+  { name: 'Platteville', displayName: 'Platteville, WI', slug: 'platteville', lat: 42.7282, lng: -90.5279, radiusMiles: 23, states: ['WI', 'IL'], region: 'Midwest' },
+  { name: 'North Branch', displayName: 'North Branch, MN', slug: 'north-branch', lat: 45.5437, lng: -93.2036, radiusMiles: 21, states: ['MN'], region: 'Midwest' },
+  { name: 'Batavia', displayName: 'Batavia, NY', slug: 'batavia', lat: 43.0249, lng: -78.2161, radiusMiles: 18, states: ['NY'], region: 'Northeast' },
+  { name: 'Harvard', displayName: 'Harvard, IL', slug: 'harvard', lat: 42.4253, lng: -88.5213, radiusMiles: 21, states: ['IL', 'WI'], region: 'Midwest' },
+  { name: 'Trenton', displayName: 'Trenton, OH', slug: 'trenton', lat: 39.4557, lng: -84.7427, radiusMiles: 18, states: ['OH', 'IN'], region: 'Midwest' },
+  { name: 'Joliet', displayName: 'Joliet, IL', slug: 'joliet', lat: 41.3711, lng: -88.0208, radiusMiles: 20, states: ['IL'], region: 'Midwest' },
+  { name: 'Montpelier', displayName: 'Montpelier, VT', slug: 'montpelier', lat: 44.3261, lng: -72.5964, radiusMiles: 19, states: ['VT'], region: 'Northeast' },
+  { name: 'Chester', displayName: 'Chester, VT', slug: 'chester', lat: 43.4653, lng: -72.3012, radiusMiles: 23, states: ['VT', 'NH'], region: 'Northeast' },
 ];
 
 // ── Lookup helpers ─────────────────────────────────────────────────────
