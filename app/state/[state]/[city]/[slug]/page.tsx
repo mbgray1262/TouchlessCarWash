@@ -1401,9 +1401,15 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                 <ShieldCheck className="w-3 h-3 mr-1" />Paint-Safe
               </Badge>
             )}
-            <Badge className={`bg-[#22C55E] text-white border-0 shadow-sm ${heroPill}`}>
-              <CheckCircle className="w-3 h-3 mr-1" />Touchless Verified
-            </Badge>
+            {listing.touchless_verified ? (
+              <Badge className={`bg-[#22C55E] text-white border-0 shadow-sm ${heroPill}`}>
+                <CheckCircle className="w-3 h-3 mr-1" />Touchless Verified
+              </Badge>
+            ) : (
+              <Badge className={`bg-gray-100 text-gray-700 border-0 shadow-sm ${heroPill}`}>
+                <CheckCircle className="w-3 h-3 mr-1" />Touchless
+              </Badge>
+            )}
             {listing.is_claimed && (
               <Badge className={`bg-blue-500 text-white border-0 shadow-sm ${heroPill}`}>
                 <ShieldCheck className="w-3 h-3 mr-1" />Verified Owner
