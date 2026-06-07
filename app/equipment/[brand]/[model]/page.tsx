@@ -1,7 +1,11 @@
 import { permanentRedirect } from "next/navigation";
 import { getBrandBySlug, getModelBySlug } from "@/lib/equipment-data";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600; // ISR edge-cache full-body response (was force-dynamic no-store bypass)
+// ISR on-demand: prerender none at build, but mark the route static so each
+// render is cached at the Netlify edge. A dynamic [param] route WITHOUT
+// generateStaticParams is treated as fully dynamic (no-store) and bypasses the CDN.
+export function generateStaticParams() { return []; }
 
 type Props = {
   params: Promise<{ brand: string; model: string }>;

@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { EQUIPMENT_BRAND_DATA, getModelBySlug } from "@/lib/equipment-data";
 import { VideoGallery, GalleryGroup } from "@/components/VideoGallery";
 
-export const dynamic = "force-dynamic"; // see /equipment for context — avoids the Next.js ISR 304-without-body bug on the Netlify CDN.
+export const revalidate = 3600; // ISR edge-cache full-body response (was force-dynamic no-store bypass)
 
 export const metadata: Metadata = {
   title: "Touchless Car Wash Videos — See the Equipment in Action",

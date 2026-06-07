@@ -30,6 +30,10 @@ import {
 
 // ISR via revalidate below — edge-cacheable (was force-dynamic)
 export const revalidate = 3600;
+// ISR on-demand: prerender none at build, but mark the route static so each
+// render is cached at the Netlify edge. A dynamic [param] route WITHOUT
+// generateStaticParams is treated as fully dynamic (no-store) and bypasses the CDN.
+export function generateStaticParams() { return []; }
 
 interface FeaturePageProps {
   params: { state: string; city: string; feature: string };

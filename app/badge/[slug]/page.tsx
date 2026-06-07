@@ -8,6 +8,10 @@ import { BadgeClaimClient } from '@/components/BadgeClaimClient';
 import type { Metadata } from 'next';
 
 export const revalidate = 3600; // 1 hour
+// ISR on-demand: prerender none at build, but mark the route static so each
+// render is cached at the Netlify edge. A dynamic [param] route WITHOUT
+// generateStaticParams is treated as fully dynamic (no-store) and bypasses the CDN.
+export function generateStaticParams() { return []; }
 
 // ── Types ────────────────────────────────────────────────────────────────
 
