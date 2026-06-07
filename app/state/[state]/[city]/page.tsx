@@ -861,7 +861,9 @@ export default async function CityPage({ params }: CityPageProps) {
                 Is a laser car wash the same as a touchless car wash?
               </h3>
               <p className="text-gray-600 text-sm leading-relaxed">
-                Yes. Laser car washes — also called touch-free or no-touch car washes — use high-pressure water jets
+                Yes.{' '}
+                <Link href="/laser-car-wash" className="text-[#0F2744] font-medium hover:underline">Laser car washes</Link>{' '}
+                — also called touch-free or no-touch car washes — use high-pressure water jets
                 and detergents instead of brushes or cloth. The term &quot;laser&quot; refers to the sensor technology
                 used to detect your vehicle&apos;s shape and size, not actual lasers doing the cleaning. The result is
                 the same contactless, scratch-free wash as any other touchless system.

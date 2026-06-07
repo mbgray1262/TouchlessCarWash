@@ -202,6 +202,15 @@ export default async function BrandDetailPage({ params, searchParams }: Props) {
         {/* About section */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-10">
           <p className="text-blue-900">{brand.description}</p>
+          {brand.slug === 'pdq' && (
+            <p className="text-blue-900 text-sm mt-3">
+              Because PDQ&apos;s LaserWash line is so widespread, many people call any touchless wash a
+              &ldquo;laser wash.&rdquo;{' '}
+              <Link href="/laser-car-wash" className="text-blue-600 hover:underline font-medium">
+                Is a laser car wash the same as touchless? &rarr;
+              </Link>
+            </p>
+          )}
           {brand.website && (
             <p className="mt-3">
               <a

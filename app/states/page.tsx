@@ -115,7 +115,9 @@ export default async function StatesPage() {
             Touchless Car Washes by State
           </h1>
           <p className="text-white/80 text-lg max-w-2xl">
-            Browse our complete directory of verified touchless, touch-free, and brushless car washes across all 51 US states. Every location has been verified as a true no-touch car wash. Select your state below to find the nearest touchless car wash.
+            Browse our complete directory of verified touchless, touch-free, brushless, and{' '}
+            <Link href="/laser-car-wash" className="underline decoration-white/40 hover:decoration-white">laser car washes</Link>{' '}
+            across all 51 US states. Every location has been verified as a true no-touch car wash. Select your state below to find the nearest touchless car wash.
           </p>
         </div>
       </div>

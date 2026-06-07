@@ -1600,6 +1600,18 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                 </div>
               )}
 
+              {/* "Laser wash" explainer — shown only for laser-named locations */}
+              {/laser/i.test(listing.name) && (
+                <div className="bg-blue-50 rounded-2xl border border-blue-100 p-5 text-sm text-gray-700 leading-relaxed">
+                  <strong className="text-[#0F2744]">Is a &ldquo;laser wash&rdquo; the same as touchless?</strong>{' '}
+                  Yes — despite the name, a{' '}
+                  <Link href="/laser-car-wash" className="text-[#0F2744] font-medium hover:underline">laser car wash</Link>{' '}
+                  is simply another term for a touchless wash. {listing.name} cleans your vehicle with high-pressure
+                  water and detergents — no brushes ever touch your paint.{' '}
+                  <Link href="/laser-car-wash" className="text-[#0F2744] font-medium hover:underline">Learn what &ldquo;laser wash&rdquo; means →</Link>
+                </div>
+              )}
+
 
               {/* Wash Type & Equipment */}
               {((listing.touchless_wash_types && listing.touchless_wash_types.length > 0) || listing.equipment_brand) && (

@@ -438,6 +438,12 @@ export async function GET() {
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>${baseUrl}/laser-car-wash</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>${baseUrl}/shop</loc>
     <lastmod>${now}</lastmod>
     <changefreq>weekly</changefreq>

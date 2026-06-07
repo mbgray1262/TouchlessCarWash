@@ -88,7 +88,16 @@ export async function generateMetadata(): Promise<Metadata> {
 const faqItems: { question: string; answer: React.ReactNode; schemaAnswer?: string }[] = [
   {
     question: 'What is a touchless, no touch, or contactless car wash?',
-    answer: 'A touchless car wash — also called a no touch car wash, contactless car wash, touch-free, or laser car wash — is an automated drive-through or in-bay wash that uses high-pressure water jets and specialized detergents to clean your vehicle without any physical contact from brushes, cloth, or foam pads. Because nothing touches your car\'s surface, this brushless wash method eliminates the risk of scratches, swirl marks, and paint damage.',
+    schemaAnswer: 'A touchless car wash — also called a no touch car wash, contactless car wash, touch-free, or laser car wash — is an automated drive-through or in-bay wash that uses high-pressure water jets and specialized detergents to clean your vehicle without any physical contact from brushes, cloth, or foam pads. Because nothing touches your car\'s surface, this brushless wash method eliminates the risk of scratches, swirl marks, and paint damage.',
+    answer: (
+      <>
+        A touchless car wash — also called a no touch car wash, contactless car wash, touch-free, or{' '}
+        <Link href="/laser-car-wash" className="text-[#0F2744] font-medium hover:underline">
+          laser car wash
+        </Link>{' '}
+        — is an automated drive-through or in-bay wash that uses high-pressure water jets and specialized detergents to clean your vehicle without any physical contact from brushes, cloth, or foam pads. Because nothing touches your car&apos;s surface, this brushless wash method eliminates the risk of scratches, swirl marks, and paint damage.
+      </>
+    ),
   },
   {
     question: 'Is a touchless car wash the same as an automatic car wash?',
