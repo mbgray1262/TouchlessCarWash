@@ -117,47 +117,6 @@ const BLOCKED_USER_AGENTS = [
   'BLEXBot',
 ];
 
-// ── Edge caching for public, non-personalized pages ────────────────────────
-// Every page is `force-dynamic` (deliberately — it sidesteps the Next.js ISR
-// "304-without-body" bug that kept breaking /blog and /best on the CDN).
-// But force-dynamic makes Next emit `cache-control: no-store`, and netlify.toml
-// [[headers]] do NOT apply to dynamically-rendered routes — so the CDN cache
-// the toml describes was silently bypassed (`cache-status: fwd=bypass`) and
-// EVERY request did a full server render + Supabase query. That's the slow TTFB
-// Ahrefs flagged.
-//
-// Headers set here in middleware ARE honored by Netlify's CDN, so this is where
-// the cache directive has to live. Result: ~500ms TTFB → ~20-50ms on cache
-// hits, plus far fewer Supabase/function invocations. purgeCache() in
-// /api/revalidate still clears these instantly on admin edits.
-//
-// We only cache GET requests with NO query string, because Netlify's default
-// cache key (netlify-vary) ignores arbitrary query params like ?page= / ?model=
-// — caching those would collide variants. Query-driven pages stay uncached
-// (still work, just not edge-accelerated). Personalized/private routes are
-// excluded outright: "/" personalizes by visitor geo (nearest-metro), and
-// /search, /favorites, /add-listing, /contact, /admin, /api are dynamic.
-const CDN_CACHE_VALUE = 'public, s-maxage=3600, stale-while-revalidate=86400, durable';
-
-const NEVER_CACHE_PREFIXES = ['/api', '/admin', '/search', '/favorites', '/add-listing', '/contact'];
-const CACHEABLE_PREFIXES = [
-  '/state', '/best', '/blog', '/chain', '/chains', '/states',
-  '/features', '/equipment', '/badge', '/shop', '/about',
-  '/paint-safe', '/touchless-satisfaction-score', '/laser-car-wash',
-  '/24-hour-touchless-car-wash', '/unlimited-touchless-car-wash',
-  '/dataset', '/compare', '/videos', '/privacy-policy', '/terms-of-service',
-];
-
-function matchesPrefix(pathname: string, prefixes: string[]): boolean {
-  return prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
-}
-
-function isCacheablePath(pathname: string): boolean {
-  if (pathname === '/') return false; // geo-personalized homepage
-  if (matchesPrefix(pathname, NEVER_CACHE_PREFIXES)) return false;
-  return matchesPrefix(pathname, CACHEABLE_PREFIXES);
-}
-
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -218,13 +177,6 @@ export function middleware(request: NextRequest) {
   // would prevent both, which breaks 301 PageRank consolidation).
   if (request.nextUrl.searchParams.has('from')) {
     response.headers.set('X-Robots-Tag', 'noindex, follow');
-  }
-
-  // Engage the Netlify edge cache for public, non-personalized pages (see note
-  // above CDN_CACHE_VALUE). Only GET + no query string, so we never collide
-  // query variants Netlify doesn't key on.
-  if (request.method === 'GET' && request.nextUrl.search === '' && isCacheablePath(pathname)) {
-    response.headers.set('Netlify-CDN-Cache-Control', CDN_CACHE_VALUE);
   }
 
   return response;

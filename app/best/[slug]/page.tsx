@@ -20,8 +20,13 @@ import { ProductSpotlight } from '@/components/ProductSpotlight';
 import { DEFAULT_OG_IMAGE, ensureHttps } from '@/lib/seo';
 import type { Metadata } from 'next';
 
-// Revalidate every 5 minutes — keeps rankings and snippets fresh without hammering the DB
-export const dynamic = 'force-dynamic'; // see /state/.../slug for context — Netlify CDN cache (netlify.toml) handles edge perf; force-dynamic prevents the Next.js ISR etag-based 304-without-body bug that kept breaking /blog and /best on the CDN.
+// ISR: render on demand, cache at the Netlify edge for 1h (serve-stale-while-
+// revalidate via netlify.toml). Replaces force-dynamic, which emitted `no-store`
+// and made Netlify bypass the CDN cache on every request. The old
+// "304-without-body" bug is prevented by the explicit Netlify-CDN-Cache-Control
+// SWR headers in netlify.toml. Admin edits purge + pre-warm via /api/revalidate.
+// [CANARY: validating before site-wide rollout]
+export const revalidate = 3600;
 
 interface BestOfPageProps {
   params: { slug: string };

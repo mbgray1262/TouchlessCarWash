@@ -4,8 +4,14 @@ import { type MetroRegion } from '@/lib/metro-areas';
 import { getQualifyingMetros, type MetroWithCount } from '@/lib/metro-queries';
 import type { Metadata } from 'next';
 
-// Revalidate every 24 hours — pre-rendered but refreshes daily for new metros/counts
-export const dynamic = 'force-dynamic'; // see /state/.../slug for context — Netlify CDN cache (netlify.toml) handles edge perf; force-dynamic prevents the Next.js ISR etag-based 304-without-body bug that kept breaking /blog and /best on the CDN.
+// ISR: render on demand, cache the result at the Netlify edge for 1h (then
+// serve-stale-while-revalidate via netlify.toml). Unlike force-dynamic — which
+// emits `no-store` and made Netlify BYPASS the CDN cache on every request (slow
+// TTFB) — ISR lets the durable edge cache store a full-body response. The old
+// "304-without-body" bug is prevented by the explicit Netlify-CDN-Cache-Control
+// SWR headers in netlify.toml (which DO apply to ISR responses). Admin edits
+// purge + pre-warm via /api/revalidate. [CANARY: validating before site-wide rollout]
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: 'Best Touchless & Brushless Car Washes by Metro Area',
