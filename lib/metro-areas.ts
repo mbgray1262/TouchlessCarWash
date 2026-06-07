@@ -355,6 +355,15 @@ export const METRO_AREAS: MetroArea[] = [
   { name: 'Jackson', displayName: 'Jackson, MI', slug: 'jackson', lat: 42.2618, lng: -84.3841, radiusMiles: 20, states: ['MI'], region: 'Midwest' },
   { name: 'Vero Beach', displayName: 'Vero Beach, FL', slug: 'vero-beach', lat: 27.6859, lng: -80.4241, radiusMiles: 20, states: ['FL'], region: 'Southeast' },
   { name: 'Brookings', displayName: 'Brookings, OR', slug: 'brookings', lat: 41.9377, lng: -124.2444, radiusMiles: 20, states: ['OR', 'CA'], region: 'West' },
+
+  // Added 2026-06-07 — re-audit after the latest listing additions surfaced two
+  // more uncovered clusters that genuinely clear 5 live touchless after the
+  // disliked-review filter + place_id de-duplication (verified per-member).
+  // Boone was briefly removed on 2026-06-06 at 4 live; a clean 5th (Mountain
+  // City TN) confirmed it. Easton needed an accidental Ocean Gateway duplicate
+  // collapsed first; GO! Wash Easton is touchless-confirmed by review.
+  { name: 'Boone', displayName: 'Boone, NC', slug: 'boone', lat: 36.2822, lng: -81.7022, radiusMiles: 20, states: ['NC', 'TN'], region: 'Southeast' },
+  { name: 'Easton', displayName: 'Easton, MD', slug: 'easton', lat: 38.7736, lng: -76.1036, radiusMiles: 20, states: ['MD'], region: 'Northeast' },
 ];
 
 // ── Lookup helpers ─────────────────────────────────────────────────────
