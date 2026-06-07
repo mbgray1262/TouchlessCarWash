@@ -9,7 +9,7 @@ import {
 } from '@/lib/affiliate-products';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600; // ISR: edge-cache full-body response (replaces force-dynamic no-store bypass that caused slow TTFB); 304-bug-safe, validated on /best canary
 
 const SITE_URL = 'https://touchlesscarwashfinder.com';
 const PAGE_PATH = '/shop/best-snow-foam';

@@ -46,7 +46,7 @@ const ListingMap = nextDynamic(() => import('@/components/ListingMap'), { ssr: f
 
 // Force dynamic rendering — no ISR cache layer. Netlify CDN handles edge caching
 // and purgeCache() reliably clears it when admins make edits.
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600; // ISR: edge-cache full-body response (replaces force-dynamic no-store bypass that caused slow TTFB); 304-bug-safe, validated on /best canary
 
 const SITE_URL = 'https://touchlesscarwashfinder.com';
 

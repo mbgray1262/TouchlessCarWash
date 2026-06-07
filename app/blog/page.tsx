@@ -4,7 +4,7 @@ import { ProductsBanner } from '@/components/ProductsBanner';
 import { supabase, type BlogPost } from '@/lib/supabase';
 import type { Metadata } from 'next';
 
-export const dynamic = 'force-dynamic'; // see /state/.../slug for context — Netlify CDN cache (netlify.toml) handles edge perf; force-dynamic prevents the Next.js ISR etag-based 304-without-body bug that kept breaking /blog and /best on the CDN.
+export const revalidate = 3600; // ISR: edge-cache full-body response (replaces force-dynamic no-store bypass that caused slow TTFB); 304-bug-safe, validated on /best canary
 
 export const metadata: Metadata = {
   title: 'Touchless Car Wash Guides & Tips',

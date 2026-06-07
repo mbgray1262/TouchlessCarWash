@@ -28,7 +28,7 @@ import {
   MIN_LISTINGS_FOR_FEATURE_PAGE,
 } from '@/lib/feature-filters';
 
-export const dynamic = 'force-dynamic';
+// ISR via revalidate below — edge-cacheable (was force-dynamic)
 export const revalidate = 3600;
 
 interface FeaturePageProps {

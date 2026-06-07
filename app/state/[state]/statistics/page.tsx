@@ -7,7 +7,7 @@ import type { Metadata } from 'next';
 
 // Force dynamic so the page reflects the current DB state on every request;
 // Netlify CDN s-maxage from netlify.toml handles the per-request cost.
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600; // ISR: edge-cache full-body response (replaces force-dynamic no-store bypass that caused slow TTFB); 304-bug-safe, validated on /best canary
 
 const SITE_URL = 'https://touchlesscarwashfinder.com';
 const ORG_NAME = 'Touchless Car Wash Finder';

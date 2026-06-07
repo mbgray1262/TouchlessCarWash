@@ -4,7 +4,7 @@ import { getNationalChainRankings, CHAIN_REGIONS, CHAIN_LABELS, type RankedChain
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import type { Metadata } from 'next';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600; // ISR: edge-cache full-body response (replaces force-dynamic no-store bypass that caused slow TTFB); 304-bug-safe, validated on /best canary
 
 const SITE_URL = 'https://touchlesscarwashfinder.com';
 const YEAR = 2026;
