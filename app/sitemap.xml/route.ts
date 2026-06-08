@@ -319,13 +319,36 @@ export async function GET() {
     <priority>0.8</priority>
   </url>`);
 
-  // NOTE: We deliberately do NOT emit /features/<slug>/<state> URLs here.
-  // Those pages set their canonical to the master /state/<state> hub (they're
-  // a filtered view of it — see app/features/[slug]/[state]/page.tsx), so
-  // advertising them in the sitemap produces Ahrefs/GSC "Non-canonical page in
-  // sitemap" errors (193 of them as of Jun 2026). A sitemap must only list
-  // self-canonical URLs. These pages are still reachable via internal feature
-  // filters and inherit their SEO value through the canonical to /state/<state>.
+  // Feature × state pages (/features/<slug>/<state>). These are self-canonical
+  // and indexable at/above 3 listings (see app/features/[slug]/[state]/page.tsx,
+  // which noindexes below that), so we mirror that exact threshold here. Uses
+  // the same feature_state_counts RPC the page uses for its noindex gate, so the
+  // sitemap and the per-page robots tag stay in lockstep. Combinations under 3
+  // listings noindex and are omitted.
+  const FEATURE_STATE_MIN = 3;
+  const featureStateData = await Promise.all(
+    FEATURES.map((f) =>
+      supabase
+        .rpc('feature_state_counts', { p_filter_slug: f.slug })
+        .then(({ data }) => ({
+          slug: f.slug,
+          rows: (data as { state: string; count: number }[] | null) ?? [],
+        })),
+    ),
+  );
+  const featureStateUrls: string[] = [];
+  for (const { slug, rows } of featureStateData) {
+    for (const row of rows) {
+      if (!VALID_STATE_CODES.has(row.state)) continue;
+      if (Number(row.count) < FEATURE_STATE_MIN) continue;
+      featureStateUrls.push(`  <url>
+    <loc>${baseUrl}/features/${slug}/${getStateSlug(row.state)}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`);
+    }
+  }
 
   // Equipment pages — index, brand pages, and model pages
   const equipmentUrls: string[] = [];
@@ -518,6 +541,7 @@ export async function GET() {
 ${bestOfUrls.join('\n')}
 ${featureIndexUrl}
 ${featureHubUrls.join('\n')}
+${featureStateUrls.join('\n')}
 ${equipmentUrls.join('\n')}
 ${chainUrls.join('\n')}
 ${stateUrls.join('\n')}

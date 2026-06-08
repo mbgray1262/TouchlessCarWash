@@ -61,12 +61,15 @@ export async function generateMetadata({ params }: FeatureStatePageProps): Promi
   const match = (data as { state: string; count: number }[] | null)?.find((r) => r.state === stateCode);
   const count = match ? Number(match.count) : 0;
 
-  // Canonical points at the master state hub — this page is a filtered view of
-  // /state/<state> (only listings with this feature) and Google was flagging
-  // it as a "Duplicate without user-selected canonical" of /state/<state>.
-  // Pointing the canonical at the master resolves the ambiguity. The page
-  // still renders for users navigating from internal feature filters.
-  const canonical = `${SITE_URL}/state/${params.state}`;
+  // Self-canonical. "Touchless washes with <feature> in <state>" is a real
+  // long-tail query and a genuine subset of /state/<state>, not a duplicate of
+  // it — Google indexes these as distinct URLs regardless of canonical, so we
+  // give each one its own canonical (and list it in the sitemap) above the
+  // 3-listing indexable threshold. Pages under that threshold still noindex via
+  // the robots tag below, keeping the index/canonical/sitemap signals in
+  // lockstep. Canonical intentionally omits ?page= so paginated views fold into
+  // page 1.
+  const canonical = `${SITE_URL}/features/${feature.slug}/${params.state}`;
   return {
     title: feature.stateSeoTitle(stateName, count),
     description: feature.stateSeoDescription(stateName, count),
