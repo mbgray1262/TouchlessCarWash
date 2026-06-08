@@ -20,6 +20,7 @@ interface BestOfRanking {
   metro_name: string;
   rank: number;
   score: number;
+  computed_at: string;
 }
 
 interface RankedListing {
