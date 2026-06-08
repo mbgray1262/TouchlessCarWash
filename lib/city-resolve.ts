@@ -56,6 +56,10 @@ export const getCityTouchlessListings = cache(
       .from('listings')
       .select(`${LISTING_CARD_COLUMNS}, latitude, longitude`)
       .eq('is_touchless', true)
+      // is_approved gate matches the sitemap's listing load: unapproved /
+      // held-for-enrichment listings 308-redirect when visited, so they must
+      // not be shown, counted toward feature-page thresholds, or sitemapped.
+      .eq('is_approved', true)
       .eq('state', stateCode)
       .ilike('city', cityName)
       .order('rating', { ascending: false });

@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { ChevronRight, Database, MapPin, Star, ThumbsUp, ThumbsDown, Minus, MessageSquareQuote, Download, BarChart3, Globe, TrendingUp } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { getStateName, getStateSlug } from '@/lib/constants';
+import { getStateName, getStateSlug, US_STATES } from '@/lib/constants';
+
+const VALID_STATE_CODES = new Set(US_STATES.map((s) => s.code));
 import type { Metadata } from 'next';
 
 export const revalidate = 3600; // 1 hour
@@ -50,6 +52,7 @@ async function getDatasetStats() {
       .from('listings')
       .select('state, rating, review_count, touchless_sentiment')
       .eq('is_touchless', true)
+      .eq('is_approved', true)  // live listings only — match the rest of the site
       .range(offset, offset + 999);
 
     if (!data || data.length === 0) break;
@@ -96,8 +99,11 @@ async function getDatasetStats() {
     else if (listing.touchless_sentiment === 'negative') totalNegative++;
     else if (listing.touchless_sentiment === 'neutral') totalNeutral++;
 
-    // Per-state
+    // Per-state — skip non-US/invalid state codes so we never render a state
+    // card linking to /state/<bad> (which 404s). Belt-and-suspenders alongside
+    // the is_approved filter above.
     const st = listing.state;
+    if (!VALID_STATE_CODES.has(st)) continue;
     if (!stateMap.has(st)) {
       stateMap.set(st, { count: 0, ratingSum: 0, rated: 0, reviewed: 0, positive: 0, negative: 0, neutral: 0 });
     }

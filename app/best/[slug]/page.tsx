@@ -252,10 +252,13 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
   if (!metro) permanentRedirect('/best?from=unknown-metro');
 
   const allListings = await getMetroListings(metro);
-  // Minimum 3 listings to make a meaningful "best-of" page. Below that we
-  // 308 to the metro's primary state hub (or /best index as fallback) —
-  // gives Google a clean redirect signal instead of a 404 for thin metros.
-  if (allListings.length < 3) {
+  // Minimum 5 listings to make a meaningful "best-of" page — MUST match
+  // generateMetadata's `count < 5` guard and getQualifyingMetros() (the set the
+  // sitemap emits). When these drifted (component <3, metadata <5) metros with
+  // 3-4 listings rendered a 200 with NO canonical and no noindex. Below the
+  // threshold we 308 to the metro's primary state hub (clean redirect, not a
+  // canonical-less thin page).
+  if (allListings.length < 5) {
     // Send to the metro's primary state hub if available; else /best index.
     const primaryState = metro.states?.[0];
     const stateSlug = primaryState ? getStateSlug(primaryState) : null;

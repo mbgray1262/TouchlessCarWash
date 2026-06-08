@@ -1,11 +1,13 @@
-import { supabase } from '@/lib/supabase';
+import { supabase, type Listing } from '@/lib/supabase';
 import { US_STATES, getStateSlug, slugify } from '@/lib/constants';
-import { METRO_AREAS, boundingBox, haversineDistance } from '@/lib/metro-areas';
+import { boundingBox, haversineDistance } from '@/lib/metro-areas';
+import { getQualifyingMetros } from '@/lib/metro-queries';
 import { FEATURES } from '@/lib/features';
 import { EQUIPMENT_BRAND_DATA } from '@/lib/equipment-data';
 import { CHAINS } from '@/lib/chains';
 import { CHAIN_REGIONS } from '@/lib/chain-rankings';
 import { hasSubscription, is24h } from '@/lib/state-hub-filters';
+import { FEATURE_FILTERS, MIN_LISTINGS_FOR_FEATURE_PAGE } from '@/lib/feature-filters';
 import { isThinListing } from '@/lib/listing-quality';
 import { NEARBY_RADIUS_MILES, INDEXABLE_MIN_EFFECTIVE } from '@/lib/nearby-augment';
 
@@ -53,6 +55,14 @@ export async function GET() {
   // shared predicates the pages use, keeping the sitemap in lockstep with them.
   const unlimitedStates = new Set<string>();
   const twentyFourHourStates = new Set<string>();
+  // Per-city per-feature match counts for the /state/<state>/<city>/feature/<f>
+  // pages. Those pages go live (200, index, self-canonical) only when >=
+  // MIN_LISTINGS_FOR_FEATURE_PAGE listings in the city match the feature (see
+  // app/state/[state]/[city]/feature/[feature]); below that they 404. We tally
+  // the same population (is_touchless + is_approved, in-city) with the same
+  // FEATURE_FILTERS predicate the page and the city-page chips use, so the
+  // sitemap lists exactly the combinations that return 200. Keyed "STATE||City".
+  const cityFeatureCounts = new Map<string, Map<string, number>>();
   const PAGE_SIZE = 1000;
   let offset = 0;
   while (true) {
@@ -69,7 +79,7 @@ export async function GET() {
       const typed = row as SitemapRow & {
         crawl_snapshot: unknown;
         extracted_data: unknown;
-        hours: Record<string, unknown> | null;
+        hours: Record<string, string> | null;
         amenities: string[] | null;
       };
       allListings.push({
@@ -96,6 +106,23 @@ export async function GET() {
           unlimitedStates.add(typed.state);
         }
         if (is24h(typed.hours)) twentyFourHourStates.add(typed.state);
+
+        // Tally per-city feature matches (same predicate as the feature page).
+        if (typed.city?.trim()) {
+          const matchInput: Pick<Listing, 'amenities' | 'hours' | 'wash_packages'> = {
+            amenities: typed.amenities ?? [],
+            hours: typed.hours,
+            wash_packages: [],
+          };
+          const cityKey = `${typed.state}||${typed.city}`;
+          for (const f of FEATURE_FILTERS) {
+            if (f.matches(matchInput)) {
+              let fm = cityFeatureCounts.get(cityKey);
+              if (!fm) { fm = new Map<string, number>(); cityFeatureCounts.set(cityKey, fm); }
+              fm.set(f.slug, (fm.get(f.slug) ?? 0) + 1);
+            }
+          }
+        }
       }
     }
     if (page.length < PAGE_SIZE) break;
@@ -197,7 +224,12 @@ export async function GET() {
     stateLocationCount.set(l.state, (stateLocationCount.get(l.state) ?? 0) + 1);
   }
 
-  const stateUrls = Array.from(stateSet).map((code) => {
+  // State hub pages (/state/<state>) are indexable for EVERY valid US state /
+  // DC — the page never noindexes and augments with nearby listings, so even a
+  // state with zero in-state listings (DC: served entirely by nearby MD/VA) is
+  // a live, self-canonical page. Emit all of them; the thin-filtered listing
+  // set would wrongly drop DC.
+  const stateUrls = US_STATES.map((s) => s.code).map((code) => {
     const lastmod = stateLastmod.get(code) ?? now;
     return `  <url>
     <loc>${baseUrl}/state/${getStateSlug(code)}</loc>
@@ -296,36 +328,32 @@ export async function GET() {
   </url>`;
   });
 
-  const blogUrls = (blogPosts || []).map((post) => {
-    return `  <url>
+  // Retired blog slugs that 301-redirect elsewhere (see next.config.js
+  // redirects) must not be advertised even though a published_at row lingers.
+  const REDIRECTED_BLOG_SLUGS = new Set(['recommended-products']); // -> /shop
+  const blogUrls = (blogPosts || [])
+    .filter((post) => !REDIRECTED_BLOG_SLUGS.has(post.slug))
+    .map((post) => {
+      return `  <url>
     <loc>${baseUrl}/blog/${post.slug}</loc>
     <lastmod>${post.published_at}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>`;
-  });
+    });
 
-  // Best Of metro area pages — only include metros with 3+ listings (matches the page threshold)
-  const geoListings = listings.filter(l => l.latitude != null && l.longitude != null) as Array<typeof listings[number] & { latitude: number; longitude: number }>;
-  const bestOfUrls: string[] = [];
-  for (const metro of METRO_AREAS) {
-    const box = boundingBox(metro.lat, metro.lng, metro.radiusMiles);
-    let count = 0;
-    for (const l of geoListings) {
-      if (l.latitude >= box.minLat && l.latitude <= box.maxLat && l.longitude >= box.minLng && l.longitude <= box.maxLng) {
-        if (haversineDistance(metro.lat, metro.lng, l.latitude, l.longitude) <= metro.radiusMiles) count++;
-      }
-      if (count >= 3) break; // Early exit — we only need to know ≥3
-    }
-    if (count >= 3) {
-      bestOfUrls.push(`  <url>
+  // Best Of metro pages — use the canonical getQualifyingMetros() (>=5 verified
+  // touchless within radius, predominantly-disliked removed) so the sitemap
+  // lists exactly the metros whose /best/<slug> page renders 200 (index,
+  // self-canonical). The page 308-redirects below 5; the old ad-hoc >=3
+  // thin-filtered count here advertised metros the page redirected away.
+  const qualifyingMetros = await getQualifyingMetros();
+  const bestOfUrls = qualifyingMetros.map((metro) => `  <url>
     <loc>${baseUrl}/best/${metro.slug}</loc>
     <lastmod>${now}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>`);
-    }
-  }
 
   // Feature pages
   const featureIndexUrl = `  <url>
@@ -417,6 +445,17 @@ export async function GET() {
   // emit them in the sitemap (the brand URLs above carry the equipment SEO).
 
   // ── Chain pages ──────────────────────────────────────────────────────────────
+  // The chain hub (/chain/<slug>) noindexes when it has < 5 approved touchless
+  // locations (thinChain = total < 5 in app/chain/[slug]/page.tsx). Mirror that
+  // exactly — count by parent_chain over the same approved-touchless population —
+  // so the sitemap never lists a noindexed thin chain.
+  const CHAIN_HUB_MIN = 5;
+  const chainApprovedCount = new Map<string, number>();
+  for (const l of allListings) {
+    if (l.parent_chain) {
+      chainApprovedCount.set(l.parent_chain, (chainApprovedCount.get(l.parent_chain) ?? 0) + 1);
+    }
+  }
   const chainUrls: string[] = [];
   chainUrls.push(`  <url>
     <loc>${baseUrl}/chains</loc>
@@ -425,6 +464,7 @@ export async function GET() {
     <priority>0.8</priority>
   </url>`);
   for (const chain of CHAINS) {
+    if ((chainApprovedCount.get(chain.name) ?? 0) < CHAIN_HUB_MIN) continue;
     chainUrls.push(`  <url>
     <loc>${baseUrl}/chain/${chain.slug}</loc>
     <lastmod>${now}</lastmod>
@@ -468,6 +508,24 @@ export async function GET() {
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>`);
+
+  // ── Per-city feature pages ────────────────────────────────────────────────
+  // /state/<state>/<city>/feature/<feature> for every combination that meets the
+  // feature page's >= MIN_LISTINGS_FOR_FEATURE_PAGE gate (tallied above).
+  const featureCityUrls: string[] = [];
+  for (const [cityKey, fm] of Array.from(cityFeatureCounts)) {
+    const [stateCode, city] = cityKey.split('||');
+    if (!VALID_STATE_CODES.has(stateCode) || !city) continue;
+    for (const [featureSlug, count] of Array.from(fm)) {
+      if (count < MIN_LISTINGS_FOR_FEATURE_PAGE) continue;
+      featureCityUrls.push(`  <url>
+    <loc>${baseUrl}/state/${getStateSlug(stateCode)}/${slugify(city)}/feature/${featureSlug}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>`);
+    }
+  }
 
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -612,6 +670,7 @@ ${chainUrls.join('\n')}
 ${chainRankingUrls.join('\n')}
 ${unlimitedStateUrls.join('\n')}
 ${twentyFourHourStateUrls.join('\n')}
+${featureCityUrls.join('\n')}
 ${stateUrls.join('\n')}
 ${stateStatsUrls.join('\n')}
 ${cityUrls.join('\n')}
