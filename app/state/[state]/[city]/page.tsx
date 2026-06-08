@@ -3,8 +3,8 @@ import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
-import { US_STATES, getStateName, slugify, getStateSlug } from '@/lib/constants';
+import { supabase, type Listing } from '@/lib/supabase';
+import { getStateName, slugify, getStateSlug } from '@/lib/constants';
 import { CityListingsClient } from '@/components/CityListingsClient';
 import { withPaintSafeChip, PAINT_SAFE_FILTER_ID } from '@/lib/paint-safe-filter';
 import { ListingCard } from '@/components/ListingCard';
@@ -21,6 +21,11 @@ import {
   INDEXABLE_MIN_EFFECTIVE,
 } from '@/lib/nearby-augment';
 import { FEATURE_FILTERS, MIN_LISTINGS_FOR_FEATURE_PAGE } from '@/lib/feature-filters';
+import {
+  getStateCodeFromSlug as getStateCode,
+  resolveCityName,
+  getCityTouchlessListings as getCityListings,
+} from '@/lib/city-resolve';
 import { findMetroForCity } from '@/lib/metro-areas';
 import { getCityContent, buildCityGuide } from '@/lib/city-content';
 import { Trophy } from 'lucide-react';
@@ -49,64 +54,10 @@ interface CityPageProps {
   };
 }
 
-function getStateCode(stateSlug: string): string | null {
-  const state = US_STATES.find((s) => slugify(s.name) === stateSlug);
-  return state ? state.code : null;
-}
-
-/**
- * Resolve a URL slug back to the actual city name stored in the database.
- * The slugify() function is lossy (e.g. "St. Petersburg" → "st-petersburg",
- * "Winston-Salem" → "winston-salem") so we can't reverse it by just capitalizing.
- * Instead, we query distinct city names for the state and find the one whose
- * slugified form matches the URL slug.
- */
-const resolveCityName = cache(async (stateCode: string, citySlug: string): Promise<string | null> => {
-  // Intentionally does NOT filter on is_touchless: we need to resolve the
-  // city name even for cities whose only listings have been reverted. The
-  // downstream getCityListings() applies the touchless filter, and if that
-  // returns empty the page handler performs a soft-404 redirect to the
-  // nearest live city rather than a hard 404.
-  //
-  // The previous approach of selecting all city rows in a state and
-  // scanning them client-side hit Supabase's default 1000-row cap in
-  // large states like TX (3,800+ listings), causing valid-but-rare city
-  // slugs to falsely resolve to null. Instead we candidate-match via
-  // case-insensitive ilike on the first token of the slug, then slug-
-  // compare each candidate server-side. Small, fast, state-scoped.
-  const firstToken = citySlug.split('-')[0];
-  const { data } = await supabase
-    .from('listings')
-    .select('city')
-    .eq('state', stateCode)
-    .ilike('city', `${firstToken}%`)
-    .limit(1000);
-  if (!data) return null;
-
-  const seen = new Set<string>();
-  for (const row of data) {
-    if (seen.has(row.city)) continue;
-    seen.add(row.city);
-    if (slugify(row.city) === citySlug) return row.city;
-  }
-  return null;
-});
-
-// Cached so generateMetadata and component share the same result per request.
-// We fetch latitude/longitude alongside the card columns so we can pick a
-// geographic anchor for the "in or near" augmentation without a second query.
-const getCityListings = cache(async (stateCode: string, cityName: string): Promise<Listing[]> => {
-  const { data, error } = await supabase
-    .from('listings')
-    .select(`${LISTING_CARD_COLUMNS}, latitude, longitude`)
-    .eq('is_touchless', true)
-    .eq('state', stateCode)
-    .ilike('city', cityName)
-    .order('rating', { ascending: false });
-
-  if (error || !data) return [];
-  return data as Listing[];
-});
+// getStateCode (slug→code), resolveCityName, and getCityListings now live in
+// @/lib/city-resolve so the per-city feature pages share the exact same
+// resolution and in-city population — keeping feature-filter chips in lockstep
+// with the feature page's 200/404 gate.
 
 /**
  * Resolve "nearby" augmentation for a city: find approved touchless listings

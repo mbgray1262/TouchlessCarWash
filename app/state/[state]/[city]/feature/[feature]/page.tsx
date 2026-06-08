@@ -12,14 +12,12 @@
  * thin/empty pages dragging down site quality signals.
  */
 
-import { Suspense } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ChevronRight, MapPin } from 'lucide-react';
 import type { Metadata } from 'next';
 
-import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
-import { getStateName, slugify, getStateSlug } from '@/lib/constants';
+import { getStateName, slugify } from '@/lib/constants';
 import { ListingCard } from '@/components/ListingCard';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import {
@@ -27,6 +25,11 @@ import {
   FEATURE_FILTERS_BY_SLUG,
   MIN_LISTINGS_FOR_FEATURE_PAGE,
 } from '@/lib/feature-filters';
+import {
+  getStateCodeFromSlug,
+  resolveCityName,
+  getCityTouchlessListings,
+} from '@/lib/city-resolve';
 
 // ISR via revalidate below — edge-cacheable (was force-dynamic)
 export const revalidate = 3600;
@@ -39,47 +42,23 @@ interface FeaturePageProps {
   params: { state: string; city: string; feature: string };
 }
 
-// ── Data helpers ─────────────────────────────────────────────────────
-async function getCityListings(stateCode: string, cityName: string): Promise<Listing[]> {
-  const all: Listing[] = [];
-  const PAGE = 1000;
-  let page = 0;
-  while (true) {
-    const { data, error } = await supabase
-      .from('listings')
-      .select(LISTING_CARD_COLUMNS)
-      .eq('is_touchless', true)
-      .eq('is_approved', true)
-      .eq('state', stateCode)
-      .ilike('city', cityName)
-      .range(page * PAGE, (page + 1) * PAGE - 1);
-    if (error) return all;
-    if (!data || data.length === 0) break;
-    all.push(...(data as unknown as Listing[]));
-    if (data.length < PAGE) break;
-    page++;
-  }
-  return all;
-}
-
 // ── Metadata ─────────────────────────────────────────────────────────
 export async function generateMetadata({ params }: FeaturePageProps): Promise<Metadata> {
   const filter = FEATURE_FILTERS_BY_SLUG[params.feature];
-  if (!filter) return { title: 'Not Found' };
+  if (!filter) return { title: 'Not Found', robots: { index: false, follow: false } };
 
-  const stateCode = params.state.length === 2
-    ? params.state.toUpperCase()
-    : getStateSlug(params.state).toUpperCase();
+  // Resolve the state slug → code and the city slug → DB city name the same way
+  // the city page does, so this page's 200/404 gate matches the feature-filter
+  // chips the city page renders (shared helpers in @/lib/city-resolve).
+  const stateCode = getStateCodeFromSlug(params.state);
+  if (!stateCode) return { title: 'Not Found', robots: { index: false, follow: false } };
   const stateName = getStateName(stateCode);
-  if (!stateName) return { title: 'Not Found' };
 
-  const cityName = params.city
-    .split('-')
-    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-    .join(' ');
+  const cityName = await resolveCityName(stateCode, params.city);
+  if (!cityName) return { title: 'Not Found', robots: { index: false, follow: false } };
 
-  const matches = await getCityListings(stateCode, cityName).then((listings) =>
-    listings.filter((l) => filter.matches(l)),
+  const matches = (await getCityTouchlessListings(stateCode, cityName)).filter((l) =>
+    filter.matches(l),
   );
 
   if (matches.length < MIN_LISTINGS_FOR_FEATURE_PAGE) {
@@ -110,18 +89,14 @@ export default async function FeaturePage({ params }: FeaturePageProps) {
   const filter = FEATURE_FILTERS_BY_SLUG[params.feature];
   if (!filter) notFound();
 
-  const stateCode = params.state.length === 2
-    ? params.state.toUpperCase()
-    : getStateSlug(params.state).toUpperCase();
+  const stateCode = getStateCodeFromSlug(params.state);
+  if (!stateCode) notFound();
   const stateName = getStateName(stateCode);
-  if (!stateName) notFound();
 
-  const cityName = params.city
-    .split('-')
-    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-    .join(' ');
+  const cityName = await resolveCityName(stateCode, params.city);
+  if (!cityName) notFound();
 
-  const allListings = await getCityListings(stateCode, cityName);
+  const allListings = await getCityTouchlessListings(stateCode, cityName);
   const matched = allListings.filter((l) => filter.matches(l));
 
   // Thin-content guard — if too few matches, treat as 404 (and noindex above).
