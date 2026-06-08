@@ -96,7 +96,7 @@ export default function TouchlessSatisfactionScorePage() {
           <ul className="list-disc pl-5 space-y-2.5 marker:text-[#22C55E]">
             <li><strong className="text-[#0F2744]">Real customer voices.</strong> Every score is built from genuine Google reviews — never invented.</li>
             <li><strong className="text-[#0F2744]">We isolate the touchless wash.</strong> Feedback about other bays is set aside so the score reflects the touchless experience only.</li>
-            <li><strong className="text-[#0F2744]">We show the evidence.</strong> Tap any score to read the actual positive and critical reviews behind it.</li>
+            <li><strong className="text-[#0F2744]">We show the evidence.</strong> Tap any score to read the actual positive reviews and the concerns behind it.</li>
             <li><strong className="text-[#0F2744]">Source &amp; attribution.</strong> Reviews come from Google; we show short excerpts and link back to the originals.</li>
           </ul>
 

@@ -31,7 +31,7 @@ const CRITERIA = [
 const STATES = [
   { label: 'Paint-Safe Verified', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', t: 'The wash met all the criteria above.' },
   { label: 'Not enough reviews yet', cls: 'bg-slate-100 text-slate-600 border-slate-200', t: 'Verified touchless, but not enough paint feedback to judge. Neutral — not a negative mark.' },
-  { label: 'No badge (reviews shown)', cls: 'bg-amber-50 text-amber-700 border-amber-200', t: 'The wash has paint feedback that didn’t meet the bar. We show the real reviews — the good and the critical — and let you decide.' },
+  { label: 'No badge (reviews shown)', cls: 'bg-amber-50 text-amber-700 border-amber-200', t: 'The wash has paint feedback that didn’t meet the bar. We show the real reviews — the praise and the concerns — and let you decide.' },
 ];
 
 const PRINCIPLES = [

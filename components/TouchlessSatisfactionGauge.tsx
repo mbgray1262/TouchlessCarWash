@@ -164,7 +164,7 @@ export default function TouchlessSatisfactionGauge({
             >
               <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
               <span className="text-[11px] text-slate-600 leading-tight">
-                <b className="block text-[14px] text-[#0F2744]">{neg} critical</b>tap to read
+                <b className="block text-[14px] text-[#0F2744]">{neg} concerns</b>tap to read
               </span>
             </button>
           </div>
