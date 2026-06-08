@@ -1284,6 +1284,17 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
       : Promise.resolve([] as ScoreRankItem[]),
   ]);
 
+  // De-dup touchless reviews: the Touchless Satisfaction gauge owns the
+  // "what customers say about the touchless wash" evidence. When the gauge is
+  // shown (listing has a score), the Paint-Safe module must NOT also render
+  // touchless snippets — so feed it paint-only snippets (its hide-empty logic
+  // then suppresses the touchless section + chip). Only when there's no gauge
+  // does the Paint-Safe module surface touchless evidence as the fallback home.
+  const hasTssGauge = listing.touchless_satisfaction_score != null;
+  const paintModuleSnippets = hasTssGauge
+    ? paintSnippets.filter((s) => s.theme === 'paint')
+    : paintSnippets;
+
   // If the current listing is ranked in a metro, fetch the OTHER top-ranked
   // washes from the same metro so we can show them inline as comparison shopping
   // targets. Skipped when not ranked — the section won't render in that case.
@@ -1592,7 +1603,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                 reviewCount={listing.review_count ?? 0}
                 paintPos={listing.paint_pos ?? 0}
                 paintNeg={listing.paint_neg ?? 0}
-                snippets={paintSnippets}
+                snippets={paintModuleSnippets}
               />
               {/* AI-Generated Description */}
               {listing.description && (
@@ -1789,8 +1800,9 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
               {/* Touchless Sentiment — simple positive/negative/neutral badge. Only
                   show when there is displayable touchless evidence on the page (a
                   touchless-themed snippet in the Paint-Safe module), so the badge
-                  never claims reviews the visitor can't actually see. */}
-              {listing.touchless_sentiment && paintSnippets.some((s) => s.theme === 'touchless') && (
+                  never claims reviews the visitor can't actually see. Suppressed
+                  when the gauge is present — it already shows the sentiment split. */}
+              {listing.touchless_sentiment && !hasTssGauge && paintModuleSnippets.some((s) => s.theme === 'touchless') && (
                 <div className={`flex items-center gap-2 px-4 py-3 rounded-xl border ${
                   listing.touchless_sentiment === 'positive'
                     ? 'bg-green-50 border-green-200'

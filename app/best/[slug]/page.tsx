@@ -9,7 +9,7 @@ import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
 import { getStateSlug, slugify } from '@/lib/constants';
 import { METRO_AREAS, getMetroBySlug, haversineDistance, type MetroArea } from '@/lib/metro-areas';
 import { getMetroListings } from '@/lib/metro-queries';
-import { scoreListing, type ScoredListing } from '@/lib/metro-scoring';
+import { scoreListing, isTrophyEligible, type ScoredListing } from '@/lib/metro-scoring';
 import { METRO_CONTENT, buildExpertGuide } from '@/lib/metro-content';
 import { OpenStatusBadge } from '@/components/OpenStatusBadge';
 import LogoImage from '@/components/LogoImage';
@@ -279,7 +279,12 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
       : undefined,
   }));
   scored.sort((a, b) => b.score - a.score);
-  const topListings = scored.slice(0, 10);
+  // Credibility gate (matches the trophy table): a "Best Touchless" winner must
+  // also be credible on Google (rating>=4 & reviews>=20). Credible-first; fall
+  // back to ungated only if a metro has zero credible washes, so the page is
+  // never left empty.
+  const credibleScored = scored.filter((l) => isTrophyEligible(l));
+  const topListings = (credibleScored.length > 0 ? credibleScored : scored).slice(0, 10);
 
   // Keep best_of_rankings in sync so listing detail pages show the same
   // rank number as the position badge on this page. Fire-and-forget.

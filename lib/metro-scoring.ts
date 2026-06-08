@@ -1,13 +1,21 @@
 /**
  * Scoring algorithm for ranking touchless car wash listings.
  *
- * Composite score (0–100) based on:
- *   - Google rating:        30%
- *   - Review volume:        25%  (log-scaled)
- *   - Touchless evidence:   15%  (has review snippets)
- *   - Sentiment quality:    10%  (AI-analyzed review sentiment)
- *   - Data completeness:    10%  (photos, hours, phone, etc.)
- *   - Featured bonus:       10%
+ * Rebased 2026-06-08 onto our PROPRIETARY signals — the Touchless Satisfaction
+ * Score (touchless-specific sentiment) and Paint-Safe (paint-safety) — which
+ * measure the wash experience visitors actually care about, rather than the
+ * Google star rating (confounded by gas/store/staff). Google rating + volume
+ * stay only as a MINOR factor / graceful fallback for washes that don't yet
+ * have enough touchless reviews to earn a score.
+ *
+ * Composite score (0–100):
+ *   - Touchless Quality:    50  (touchless_satisfaction_score; fallback to a
+ *                                capped Google-rating term for unscored washes,
+ *                                so they rank BELOW comparable scored washes but
+ *                                metros with few scored washes still field a top-3)
+ *   - Paint-Safe:           20  (verified badge = full; else granular paint_score)
+ *   - Google rating+volume: 25  (minor factor / fallback)
+ *   - Data completeness:     5
  */
 
 import type { Listing } from '@/lib/supabase';
@@ -17,57 +25,60 @@ export interface ScoredListing extends Listing {
   distanceMiles?: number;
 }
 
+// ── Trophy credibility gate ───────────────────────────────────────────
+// A "Best Touchless" winner must also be credible on Google — a high
+// touchless score next to a 3-star / 2-review listing looks wrong to users.
+// Winners must clear BOTH bars; callers fall back to ungated only if a metro
+// has zero credible washes (so a metro page is never left empty).
+export const MIN_TROPHY_RATING = 4.0;
+export const MIN_TROPHY_REVIEWS = 20;
+
+export function isTrophyEligible(listing: Pick<Listing, 'rating' | 'review_count'>): boolean {
+  return (listing.rating ?? 0) >= MIN_TROPHY_RATING && (listing.review_count ?? 0) >= MIN_TROPHY_REVIEWS;
+}
+
 /**
- * Score a single listing. Returns 0–100.
+ * Score a single listing. Returns 0–100. PROPRIETARY-FIRST (see header).
+ * (touchlessReviewCount kept for call-site compatibility; the Touchless
+ * Satisfaction Score now carries the touchless-quality signal directly.)
  */
 export function scoreListing(
   listing: Listing,
-  opts?: { touchlessReviewCount?: number },
+  _opts?: { touchlessReviewCount?: number },
 ): number {
   let score = 0;
-
-  // ── Rating (30 points max) ──────────────────────────────────────────
   const rating = listing.rating ?? 0;
-  score += (rating / 5) * 30;
 
-  // ── Review volume (25 points max) ───────────────────────────────────
-  // Log-scaled: a listing with ~500 reviews gets the full 25 points.
+  // ── Touchless Quality (50 max) — PRIMARY, proprietary ───────────────
+  const tss = listing.touchless_satisfaction_score;
+  if (tss != null) {
+    score += (tss / 100) * 50;
+  } else {
+    // Unscored fallback: capped Google-rating term (max 30) so an unscored
+    // wash ranks below any "Good" (≥60) scored wash but sparse metros still
+    // produce winners.
+    score += (rating / 5) * 30;
+  }
+
+  // ── Paint-Safe (20 max) — proprietary ───────────────────────────────
+  if (listing.paint_safe_verified) {
+    score += 20;
+  } else if (listing.paint_score != null) {
+    score += Math.min(Math.max(listing.paint_score, 0), 100) / 100 * 15; // capped < verified badge
+  }
+
+  // ── Google rating + volume (25 max) — MINOR factor / fallback ───────
+  score += (rating / 5) * 15;
   const reviewCount = listing.review_count ?? 0;
-  const reviewScore = Math.min(Math.log10(reviewCount + 1) / Math.log10(500), 1);
-  score += reviewScore * 25;
+  score += Math.min(Math.log10(reviewCount + 1) / Math.log10(500), 1) * 10;
 
-  // ── Touchless evidence (15 points max) ──────────────────────────────
-  // If the listing has touchless-related review snippets, award full points.
-  // Partial credit for listings with extraction done but no evidence (at least checked).
-  const trCount = opts?.touchlessReviewCount ?? 0;
-  if (trCount >= 3) {
-    score += 15;
-  } else if (trCount >= 1) {
-    score += 10;
-  }
-  // 0 points if no touchless review evidence
-
-  // ── Touchless sentiment (10 points max) ─────────────────────────────
-  // Simple positive/negative/neutral from touchless review analysis.
-  // Positive = 10, Neutral/unknown = 5 (default), Negative = 0.
-  const sentiment = listing.touchless_sentiment;
-  if (sentiment === 'positive') score += 10;
-  else if (sentiment === 'negative') score += 0;
-  else score += 5; // neutral or null — don't penalize before backfill
-
-  // ── Data completeness (10 points max) ───────────────────────────────
+  // ── Data completeness (5 max) ───────────────────────────────────────
   let completeness = 0;
-  if (listing.hero_image || listing.google_photo_url) completeness += 3; // Has photo
-  if (listing.hours && Object.keys(listing.hours).length > 0) completeness += 2; // Has hours
-  if (listing.phone) completeness += 2; // Has phone
-  if (listing.amenities && listing.amenities.length > 0) completeness += 2; // Has amenities
-  if (listing.website) completeness += 1; // Has website
+  if (listing.hero_image || listing.google_photo_url) completeness += 2;
+  if (listing.hours && Object.keys(listing.hours).length > 0) completeness += 1;
+  if (listing.phone) completeness += 1;
+  if (listing.amenities && listing.amenities.length > 0) completeness += 1;
   score += completeness;
-
-  // ── Featured bonus (10 points max) ──────────────────────────────────
-  if (listing.is_featured) {
-    score += 10;
-  }
 
   return Math.round(score * 10) / 10; // One decimal place
 }

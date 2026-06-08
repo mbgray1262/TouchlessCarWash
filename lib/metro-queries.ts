@@ -13,7 +13,7 @@ import { isDislikedTouchless } from '@/lib/touchless-quality';
 
 // Columns needed for scoring + display on the Best-Of page.
 export const BEST_OF_COLUMNS =
-  'id, name, slug, city, state, address, phone, website, rating, review_count, hero_image, google_photo_url, street_view_url, logo_photo, google_logo_url, amenities, touchless_wash_types, extracted_data, hours, is_touchless, is_featured, latitude, longitude, touchless_sentiment';
+  'id, name, slug, city, state, address, phone, website, rating, review_count, hero_image, google_photo_url, street_view_url, logo_photo, google_logo_url, amenities, touchless_wash_types, extracted_data, hours, is_touchless, is_featured, latitude, longitude, touchless_sentiment, touchless_satisfaction_score, paint_safe_verified, paint_score';
 
 /**
  * Returns the set of listing IDs whose touchless reviews are predominantly
