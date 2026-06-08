@@ -121,10 +121,19 @@ async function syncBestOfRankings(
   metroDisplayName: string,
   topListings: ScoredListing[],
 ): Promise<void> {
+  // best_of_rankings has RLS that only allows the service role to write. If the
+  // service-role key isn't present in this runtime (the case on Netlify), the
+  // write would fall back to the anon key and be rejected by RLS on every
+  // request — spamming the Postgres logs with "new row violates row-level
+  // security policy". The compute-rankings edge function (real service role)
+  // keeps this table fresh, so skip the redundant page-side sync rather than
+  // hammering the DB with doomed anon writes.
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) return;
   try {
     const adminClient = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      serviceKey,
     );
     const now = new Date().toISOString();
     const rows = topListings.map((l, i) => ({
