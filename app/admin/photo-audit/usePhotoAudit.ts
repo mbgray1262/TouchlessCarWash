@@ -32,6 +32,11 @@ export interface AuditResult {
   // modal. Set by markClosed() to closed_permanently_admin or
   // closed_temporarily_admin.
   listing_classification_source?: string | null;
+  // Best-Of trophy context (populated only on the 'best_of' filter): the
+  // listing's best (lowest) rank across all metros it places in, plus a
+  // human-readable list of every "Metro #rank" trophy it holds.
+  best_of_rank?: number;
+  best_of_labels?: string[];
 }
 
 export interface BatchJob {
@@ -76,7 +81,7 @@ export interface LowResListing {
   hero_image_source: string | null;
 }
 
-export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup' | 'no_hero' | 'low_res' | 'held' | 'unscanned' | 'second_look';
+export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup' | 'no_hero' | 'low_res' | 'held' | 'unscanned' | 'second_look' | 'best_of';
 
 const POLL_INTERVAL = 3000; // 3 seconds — fast enough to show per-listing progress
 const PAGE_SIZE = 25;
@@ -112,6 +117,9 @@ export function usePhotoAudit() {
   const [activeJob, setActiveJob] = useState<BatchJob | null>(null);
   const [viewFilter, setViewFilter] = useState<ViewFilter>('all');
   const [unreviewedOnly, setUnreviewedOnly] = useState(false);
+  // Free-text search for the "All" tab — matches listing name or URL slug.
+  // Empty string means no filter.
+  const [searchQuery, setSearchQuery] = useState('');
   // Sub-filter for the "No Hero" tab — 'all' shows every listing with null hero_image,
   // 'non_chain' hides chain listings (they render a brand image so admin doesn't need
   // to curate them), 'chain_only' shows just chain listings.
@@ -121,8 +129,13 @@ export function usePhotoAudit() {
   const [filteredTotal, setFilteredTotal] = useState(0);
   const [heldCount, setHeldCount] = useState(0);
   const [secondLookCount, setSecondLookCount] = useState(0);
+  const [bestOfCount, setBestOfCount] = useState(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const continuingRef = useRef(false);
+  // Per-session cache of the deduped trophy-winner list (best rank + labels
+  // per listing). Built once from best_of_rankings; reused for both the tab
+  // count and pagination so we don't re-scan the table on every page turn.
+  const trophyCacheRef = useRef<Array<{ listing_id: string; bestRank: number; labels: string[] }> | null>(null);
 
   const [noHeroUnprocessed, setNoHeroUnprocessed] = useState(0);
 
@@ -177,6 +190,37 @@ export function usePhotoAudit() {
     if (data) {
       setStats(data as AuditStats);
     }
+  }, []);
+
+  // Build the deduped list of Best-Of trophy winners — every listing that holds
+  // a top-3 (gold/silver/bronze) rank in best_of_rankings, same definition the
+  // public badge + outreach QA gate use. Paginates past the 1000-row SELECT cap.
+  // Result is cached on trophyCacheRef and sorted by best rank, then metro.
+  const fetchTrophyListings = useCallback(async (force = false) => {
+    if (trophyCacheRef.current && !force) return trophyCacheRef.current;
+    const byListing = new Map<string, { bestRank: number; labels: string[] }>();
+    for (let off = 0; ; off += 1000) {
+      const { data } = await supabase
+        .from('best_of_rankings')
+        .select('listing_id, metro_name, rank')
+        .lte('rank', 3)
+        .order('listing_id', { ascending: true })
+        .range(off, off + 999);
+      if (!data || data.length === 0) break;
+      for (const r of data as Array<{ listing_id: string; metro_name: string; rank: number }>) {
+        const cur = byListing.get(r.listing_id) ?? { bestRank: 99, labels: [] };
+        cur.bestRank = Math.min(cur.bestRank, r.rank);
+        cur.labels.push(`${r.metro_name} #${r.rank}`);
+        byListing.set(r.listing_id, cur);
+      }
+      if (data.length < 1000) break;
+    }
+    const arr = Array.from(byListing.entries()).map(([listing_id, v]) => ({ listing_id, ...v }));
+    // Highest honor first (rank 1 → top), then alphabetically by first trophy.
+    arr.sort((a, b) => a.bestRank - b.bestRank || (a.labels[0] ?? '').localeCompare(b.labels[0] ?? ''));
+    trophyCacheRef.current = arr;
+    setBestOfCount(arr.length);
+    return arr;
   }, []);
 
   // Load a single page of results using the server-side RPC.
@@ -289,7 +333,7 @@ export function usePhotoAudit() {
         .eq('is_touchless', true);
       let dataQuery = supabase
         .from('listings')
-        .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
+        .select('id, name, slug, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
         .eq('is_touchless', true);
 
       // When "Unreviewed only" is checked, hide listings that have already been
@@ -297,6 +341,23 @@ export function usePhotoAudit() {
       if (unreviewed) {
         countQuery = countQuery.is('photo_audited_at', null);
         dataQuery = dataQuery.is('photo_audited_at', null);
+      }
+
+      // Free-text search — match the listing name or its URL slug. Supports
+      // pasting a full listing URL: the last path segment is used as the slug
+      // term. Strip characters that have special meaning in PostgREST's `.or()`
+      // grammar (comma/parens/asterisk) so they can't break the filter.
+      const rawSearch = searchQuery.trim();
+      if (rawSearch) {
+        const sanitize = (s: string) => s.replace(/[,()*]/g, ' ').trim();
+        const nameTerm = sanitize(rawSearch);
+        const slugSource = rawSearch.includes('/')
+          ? (rawSearch.replace(/[?#].*$/, '').split('/').filter(Boolean).pop() ?? rawSearch)
+          : rawSearch;
+        const slugTerm = sanitize(slugSource);
+        const orFilter = `name.ilike.%${nameTerm}%,slug.ilike.%${slugTerm}%`;
+        countQuery = countQuery.or(orFilter);
+        dataQuery = dataQuery.or(orFilter);
       }
 
       const { count: totalAll } = await countQuery;
@@ -317,6 +378,7 @@ export function usePhotoAudit() {
           id: `all-${l.id}`,
           listing_id: l.id,
           listing_name: l.name,
+          listing_slug: l.slug,
           listing_city: l.city,
           listing_state: l.state,
           listing_hero: l.hero_image,
@@ -525,6 +587,66 @@ export function usePhotoAudit() {
       return;
     }
 
+    // "best_of" filter: every Best-Of trophy winner (top-3 rank in any metro).
+    // Manual hero-quality review queue — these are the listings the public
+    // badge + outreach link to, so their heroes must be high quality.
+    if (filter === 'best_of') {
+      const trophies = await fetchTrophyListings();
+      const pageSlice = trophies.slice(offset, offset + PAGE_SIZE);
+      const ids = pageSlice.map(t => t.listing_id);
+
+      const byId = new Map<string, Record<string, unknown>>();
+      if (ids.length) {
+        const { data: listings } = await supabase
+          .from('listings')
+          .select('id, name, slug, city, state, hero_image, hero_image_source, hero_is_low_res, photos, equipment_brand, equipment_model, parent_chain')
+          .in('id', ids);
+        for (const l of listings ?? []) byId.set(l.id as string, l as Record<string, unknown>);
+      }
+
+      const allResults: AuditResult[] = [];
+      for (const t of pageSlice) {
+        const l = byId.get(t.listing_id);
+        if (!l) continue;
+        const hasHero = !!l.hero_image;
+        const lowRes = !!l.hero_is_low_res;
+        // Quality signal drives the row's warning pill: no hero or low-res =
+        // needs attention; otherwise it reads as good until manually checked.
+        const quality = !hasHero ? 'missing' : lowRes ? 'poor' : 'good';
+        allResults.push({
+          id: `bestof-${t.listing_id}`,
+          listing_id: t.listing_id,
+          listing_name: l.name as string,
+          listing_slug: l.slug as string,
+          listing_city: l.city as string,
+          listing_state: l.state as string,
+          listing_hero: (l.hero_image as string) ?? null,
+          hero_quality: quality,
+          equipment_brand: (l.equipment_brand as string) ?? null,
+          equipment_model: (l.equipment_model as string) ?? null,
+          equipment_confidence: null,
+          equipment_source_photo: null,
+          suggested_hero_url: null,
+          suggested_hero_reason: t.labels.join(' · '),
+          photos_to_remove: [],
+          reviewed: false,
+          applied: hasHero,
+          created_at: '',
+          raw_response: null,
+          google_photos_added: 0,
+          google_photos_screened: 0,
+          listing_parent_chain: (l.parent_chain as string) ?? null,
+          best_of_rank: t.bestRank,
+          best_of_labels: t.labels,
+        });
+      }
+
+      setResults(allResults);
+      setFilteredTotal(trophies.length);
+      setLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase.rpc('get_photo_audit_page', {
       p_filter: filter,
       p_offset: offset,
@@ -549,7 +671,7 @@ export function usePhotoAudit() {
       setFilteredTotal(pageData.total ?? 0);
     }
     setLoading(false);
-  }, [noHeroSubFilter]);
+  }, [noHeroSubFilter, searchQuery, fetchTrophyListings]);
 
   const LOW_RES_PAGE_SIZE = 50;
 
@@ -819,7 +941,10 @@ export function usePhotoAudit() {
   useEffect(() => {
     loadStats();
     loadQueueStats();
-  }, [loadStats, loadQueueStats]);
+    // Prime the trophy-winner count so the Best-Of tab shows a number before
+    // it's clicked. fetchTrophyListings caches, so opening the tab is instant.
+    fetchTrophyListings().catch(() => {});
+  }, [loadStats, loadQueueStats, fetchTrophyListings]);
 
   // ─── Run batch (creates a server-side job) ────────────────────
 
@@ -943,6 +1068,11 @@ export function usePhotoAudit() {
     viewFilter,
     unreviewedOnly,
     setUnreviewedOnly,
+    searchQuery,
+    setSearch: (q: string) => {
+      setSearchQuery(q);
+      setPage(1);
+    },
     page,
     filteredTotal,
     totalPages,
@@ -959,6 +1089,7 @@ export function usePhotoAudit() {
     noHeroUnprocessed,
     heldCount,
     secondLookCount,
+    bestOfCount,
     // No Hero tab sub-filter ('all' | 'non_chain' | 'chain_only')
     noHeroSubFilter,
     setNoHeroSubFilter: (sub: 'all' | 'non_chain' | 'chain_only') => {

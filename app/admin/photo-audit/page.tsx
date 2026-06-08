@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { usePhotoAudit, AuditResult, ViewFilter, LowResListing } from './usePhotoAudit';
 import { supabase } from '@/lib/supabase';
-import { Camera, Wrench, Trash2, Play, Loader2, Check, X, Undo2, ChevronDown, ChevronUp, ExternalLink, Filter, ChevronLeft, ChevronRight, ScanLine } from 'lucide-react';
+import { Camera, Wrench, Trash2, Play, Loader2, Check, X, Undo2, ChevronDown, ChevronUp, ExternalLink, Filter, ChevronLeft, ChevronRight, ScanLine, Search, Trophy } from 'lucide-react';
 import { getStateSlug, slugify } from '@/lib/constants';
 import { FastCurationModal } from './FastCurationModal';
 import { getChainBrandImage } from '@/lib/chain-brand-images';
@@ -326,14 +326,77 @@ function LowResCard({ listing, onEdit, onDismiss }: { listing: LowResListing; on
   );
 }
 
+// Medal colors for the gold/silver/bronze trophy pill.
+const TROPHY_COLORS: Record<number, string> = {
+  1: 'bg-amber-100 text-amber-800',
+  2: 'bg-gray-200 text-gray-700',
+  3: 'bg-orange-100 text-orange-800',
+};
+
+function BestOfRow({ result, onOpenEditor }: { result: AuditResult; onOpenEditor: () => void }) {
+  const labels = result.best_of_labels ?? [];
+  const rank = result.best_of_rank ?? 99;
+  const noHero = !result.listing_hero;
+  const lowRes = result.hero_quality === 'poor';
+
+  return (
+    <div className={`flex items-center gap-4 px-4 py-3 border-b border-gray-100 last:border-0 hover:bg-gray-50 ${
+      noHero ? 'bg-red-50 border-l-4 border-l-red-400' : lowRes ? 'bg-amber-50 border-l-4 border-l-amber-400' : ''
+    }`}>
+      {result.listing_hero ? (
+        <img
+          src={result.listing_hero}
+          alt={result.listing_name}
+          className="w-20 h-14 rounded object-cover flex-shrink-0 cursor-pointer border border-gray-200"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onClick={onOpenEditor}
+        />
+      ) : (
+        <button
+          onClick={onOpenEditor}
+          className="w-20 h-14 rounded bg-gray-100 border border-dashed border-gray-300 flex items-center justify-center text-[10px] font-semibold text-gray-400 uppercase flex-shrink-0 hover:bg-gray-200"
+        >
+          No Hero
+        </button>
+      )}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${TROPHY_COLORS[rank] ?? 'bg-teal-100 text-teal-700'}`}>
+            <Trophy className="w-3 h-3" /> {rank <= 3 ? `#${rank}` : `Top ${rank}`}
+          </span>
+          <button onClick={onOpenEditor} className="text-sm font-medium text-gray-800 truncate hover:text-orange-600 transition-colors text-left">
+            {result.listing_name}
+          </button>
+          <ListingLink result={result} />
+          {noHero && <span className="text-xs px-2 py-0.5 rounded-full bg-red-500 text-white font-medium">NO HERO</span>}
+          {lowRes && <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500 text-white font-medium">LOW RES</span>}
+        </div>
+        <p className="text-xs text-gray-500">{result.listing_city}, {result.listing_state}</p>
+        {labels.length > 0 && (
+          <p className="text-[11px] text-gray-400 truncate mt-0.5" title={labels.join(' · ')}>
+            🏆 {labels.slice(0, 3).join(' · ')}{labels.length > 3 ? ` · +${labels.length - 3} more` : ''}
+          </p>
+        )}
+      </div>
+      <button
+        onClick={onOpenEditor}
+        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-orange-500 hover:bg-orange-600 text-white flex-shrink-0"
+      >
+        Review Hero
+      </button>
+    </div>
+  );
+}
+
 export default function PhotoAuditPage() {
   const {
     results, loading, running, runProgress, stats, queueStats,
     includeGooglePhotos, setIncludeGooglePhotos, activeJob,
-    viewFilter, unreviewedOnly, setUnreviewedOnly, page, filteredTotal, totalPages, pageSize,
+    viewFilter, unreviewedOnly, setUnreviewedOnly, searchQuery, setSearch, page, filteredTotal, totalPages, pageSize,
     changeFilter, changePage,
     runBatch, applyEquipment, rejectResult, applyAllHighConfidence, undoApply, reload,
-    noHeroCount, noHeroUnprocessed, heldCount, secondLookCount, removeFromResults,
+    noHeroCount, noHeroUnprocessed, heldCount, secondLookCount, bestOfCount, removeFromResults,
     noHeroSubFilter, setNoHeroSubFilter, markAllChainListingsAudited,
     lowResListings, lowResTotal, lowResPage, lowResTotalPages, changeLowResPage,
     dismissLowRes, scanForLowRes, scanProgress,
@@ -502,6 +565,7 @@ export default function PhotoAuditPage() {
               { key: 'equipment' as ViewFilter, label: `Equipment (${stats.equipment_total})` },
               { key: 'heroes' as ViewFilter, label: `Poor Heroes (${stats.heroes_total})` },
               { key: 'cleanup' as ViewFilter, label: `Cleanup (${stats.cleanup_total})` },
+              { key: 'best_of' as ViewFilter, label: `🏆 Best-Of Winners (${bestOfCount})` },
               { key: 'no_hero' as ViewFilter, label: `No hero picked (${viewFilter === 'no_hero' ? filteredTotal : noHeroCount})` },
               { key: 'low_res' as ViewFilter, label: `Low Res${stats.low_res_total > 0 ? ` (${stats.low_res_total})` : ''}` },
               { key: 'held' as ViewFilter, label: `Held (${viewFilter === 'held' ? filteredTotal : heldCount})` },
@@ -525,7 +589,28 @@ export default function PhotoAuditPage() {
               </button>
             ))}
           </div>
-          {viewFilter !== 'no_hero' && (
+          {viewFilter === 'all' && (
+            <div className="relative ml-2">
+              <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search name or URL…"
+                className="w-64 pl-8 pr-7 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:border-orange-400"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearch('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  title="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          )}
+          {viewFilter !== 'no_hero' && viewFilter !== 'best_of' && (
             <label className="flex items-center gap-1.5 text-xs cursor-pointer ml-2">
               <input
                 type="checkbox"
@@ -637,6 +722,7 @@ export default function PhotoAuditPage() {
           <>
             {(viewFilter === 'heroes' ? results.map(r => <HeroRow key={r.id} result={r} />) :
               viewFilter === 'cleanup' ? results.map(r => <CleanupRow key={r.id} result={r} />) :
+              viewFilter === 'best_of' ? results.map(r => <BestOfRow key={r.id} result={r} onOpenEditor={() => openEditor(r.listing_id)} />) :
               viewFilter === 'no_hero' ? results.map(r => (
                 <div key={r.id} className={`border-b border-gray-100 last:border-0 ${
                   r.hero_quality === 'pending_approval' ? 'bg-blue-50 border-l-4 border-l-blue-500' :
