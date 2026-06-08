@@ -333,14 +333,21 @@ const TROPHY_COLORS: Record<number, string> = {
   3: 'bg-orange-100 text-orange-800',
 };
 
-function BestOfRow({ result, onOpenEditor }: { result: AuditResult; onOpenEditor: () => void }) {
+function BestOfRow({ result, onOpenEditor, onMarkReviewed, onUnmarkReviewed }: {
+  result: AuditResult;
+  onOpenEditor: () => void;
+  onMarkReviewed: () => void;
+  onUnmarkReviewed: () => void;
+}) {
   const labels = result.best_of_labels ?? [];
   const rank = result.best_of_rank ?? 99;
   const noHero = !result.listing_hero;
   const lowRes = result.hero_quality === 'poor';
+  const reviewed = result.reviewed;
 
   return (
     <div className={`flex items-center gap-4 px-4 py-3 border-b border-gray-100 last:border-0 hover:bg-gray-50 ${
+      reviewed ? 'opacity-60' :
       noHero ? 'bg-red-50 border-l-4 border-l-red-400' : lowRes ? 'bg-amber-50 border-l-4 border-l-amber-400' : ''
     }`}>
       {result.listing_hero ? (
@@ -371,6 +378,11 @@ function BestOfRow({ result, onOpenEditor }: { result: AuditResult; onOpenEditor
           <ListingLink result={result} />
           {noHero && <span className="text-xs px-2 py-0.5 rounded-full bg-red-500 text-white font-medium">NO HERO</span>}
           {lowRes && <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500 text-white font-medium">LOW RES</span>}
+          {reviewed && (
+            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">
+              <Check className="w-3 h-3" /> Reviewed
+            </span>
+          )}
         </div>
         <p className="text-xs text-gray-500">{result.listing_city}, {result.listing_state}</p>
         {labels.length > 0 && (
@@ -379,12 +391,31 @@ function BestOfRow({ result, onOpenEditor }: { result: AuditResult; onOpenEditor
           </p>
         )}
       </div>
-      <button
-        onClick={onOpenEditor}
-        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-orange-500 hover:bg-orange-600 text-white flex-shrink-0"
-      >
-        Review Hero
-      </button>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <button
+          onClick={onOpenEditor}
+          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-orange-500 hover:bg-orange-600 text-white"
+        >
+          {noHero || lowRes ? 'Fix Hero' : 'Review Hero'}
+        </button>
+        {reviewed ? (
+          <button
+            onClick={onUnmarkReviewed}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-200 hover:bg-gray-300 text-gray-700"
+            title="Move back to the To Review queue"
+          >
+            <Undo2 className="w-3.5 h-3.5" /> Undo
+          </button>
+        ) : (
+          <button
+            onClick={onMarkReviewed}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-green-600 hover:bg-green-700 text-white"
+            title="Hero looks good — mark reviewed and remove from the queue"
+          >
+            <Check className="w-3.5 h-3.5" /> Looks Good
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -397,6 +428,7 @@ export default function PhotoAuditPage() {
     changeFilter, changePage,
     runBatch, applyEquipment, rejectResult, applyAllHighConfidence, undoApply, reload,
     noHeroCount, noHeroUnprocessed, heldCount, secondLookCount, bestOfCount, removeFromResults,
+    bestOfReviewedCount, bestOfTotal, bestOfSubFilter, setBestOfSubFilter, markBestOfReviewed, unmarkBestOfReviewed,
     noHeroSubFilter, setNoHeroSubFilter, markAllChainListingsAudited,
     lowResListings, lowResTotal, lowResPage, lowResTotalPages, changeLowResPage,
     dismissLowRes, scanForLowRes, scanProgress,
@@ -650,6 +682,25 @@ export default function PhotoAuditPage() {
               </button>
             </div>
           )}
+          {viewFilter === 'best_of' && (
+            <div className="flex items-center gap-2 ml-2 flex-wrap">
+              <span className="text-xs text-gray-500">Show:</span>
+              {([
+                { key: 'to_review' as const, label: `To Review (${bestOfCount})`, desc: 'Trophy winners whose hero you have not checked yet this pass.' },
+                { key: 'reviewed' as const, label: `Reviewed (${bestOfReviewedCount})`, desc: 'Winners you have already marked reviewed.' },
+                { key: 'all' as const, label: `All (${bestOfTotal})`, desc: 'Every trophy winner, reviewed or not.' },
+              ]).map(o => (
+                <button
+                  key={o.key}
+                  onClick={() => setBestOfSubFilter(o.key)}
+                  title={o.desc}
+                  className={`px-2.5 py-1 rounded text-xs font-medium ${bestOfSubFilter === o.key ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          )}
           {stats.equipment > 0 && viewFilter !== 'low_res' && (
             <button
               onClick={applyAllHighConfidence}
@@ -722,7 +773,15 @@ export default function PhotoAuditPage() {
           <>
             {(viewFilter === 'heroes' ? results.map(r => <HeroRow key={r.id} result={r} />) :
               viewFilter === 'cleanup' ? results.map(r => <CleanupRow key={r.id} result={r} />) :
-              viewFilter === 'best_of' ? results.map(r => <BestOfRow key={r.id} result={r} onOpenEditor={() => openEditor(r.listing_id)} />) :
+              viewFilter === 'best_of' ? results.map(r => (
+                <BestOfRow
+                  key={r.id}
+                  result={r}
+                  onOpenEditor={() => openEditor(r.listing_id)}
+                  onMarkReviewed={() => markBestOfReviewed(r.listing_id)}
+                  onUnmarkReviewed={() => unmarkBestOfReviewed(r.listing_id)}
+                />
+              )) :
               viewFilter === 'no_hero' ? results.map(r => (
                 <div key={r.id} className={`border-b border-gray-100 last:border-0 ${
                   r.hero_quality === 'pending_approval' ? 'bg-blue-50 border-l-4 border-l-blue-500' :
@@ -922,6 +981,11 @@ export default function PhotoAuditPage() {
             // from the queue so the count decrements and the user doesn't see it again.
             if ((viewFilter === 'no_hero' || viewFilter === 'unscanned') && editorListingId) {
               removeFromResults(editorListingId);
+            }
+            // On the Best-Of tab, approving/saving a winner counts as having
+            // hero-reviewed it: persist the mark so it leaves the To Review queue.
+            if (viewFilter === 'best_of' && editorListingId && bestOfSubFilter !== 'reviewed') {
+              markBestOfReviewed(editorListingId);
             }
             setTimeout(() => reload(), 500);
           }}

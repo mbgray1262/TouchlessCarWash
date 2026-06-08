@@ -130,6 +130,11 @@ export function usePhotoAudit() {
   const [heldCount, setHeldCount] = useState(0);
   const [secondLookCount, setSecondLookCount] = useState(0);
   const [bestOfCount, setBestOfCount] = useState(0);
+  const [bestOfReviewedCount, setBestOfReviewedCount] = useState(0);
+  const [bestOfTotal, setBestOfTotal] = useState(0);
+  // Best-Of tab sub-filter: 'to_review' (default — winners not yet hero-checked),
+  // 'reviewed' (already checked this pass), or 'all'.
+  const [bestOfSubFilter, setBestOfSubFilter] = useState<'to_review' | 'reviewed' | 'all'>('to_review');
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const continuingRef = useRef(false);
   // Per-session cache of the deduped trophy-winner list (best rank + labels
@@ -219,9 +224,34 @@ export function usePhotoAudit() {
     // Highest honor first (rank 1 → top), then alphabetically by first trophy.
     arr.sort((a, b) => a.bestRank - b.bestRank || (a.labels[0] ?? '').localeCompare(b.labels[0] ?? ''));
     trophyCacheRef.current = arr;
-    setBestOfCount(arr.length);
+    setBestOfTotal(arr.length);
     return arr;
   }, []);
+
+  // Which of the given listing IDs have been hero-reviewed this pass (i.e. have
+  // best_of_hero_reviewed_at set). Chunked to stay under the 1000-row cap.
+  const getBestOfReviewedSet = useCallback(async (ids: string[]): Promise<Set<string>> => {
+    const reviewed = new Set<string>();
+    for (let i = 0; i < ids.length; i += 300) {
+      const { data } = await supabase
+        .from('listings')
+        .select('id')
+        .in('id', ids.slice(i, i + 300))
+        .not('best_of_hero_reviewed_at', 'is', null);
+      for (const r of data ?? []) reviewed.add(r.id as string);
+    }
+    return reviewed;
+  }, []);
+
+  // Refresh the Best-Of tab counters (total / reviewed / remaining-to-review)
+  // without loading a page of rows. Used on mount and after marking actions.
+  const refreshBestOfCounts = useCallback(async () => {
+    const trophies = await fetchTrophyListings();
+    const reviewed = await getBestOfReviewedSet(trophies.map(t => t.listing_id));
+    setBestOfTotal(trophies.length);
+    setBestOfReviewedCount(reviewed.size);
+    setBestOfCount(trophies.length - reviewed.size); // remaining to review
+  }, [fetchTrophyListings, getBestOfReviewedSet]);
 
   // Load a single page of results using the server-side RPC.
   // Note: `noHeroSubFilter` is read from component state below (captured via closure);
@@ -592,7 +622,21 @@ export function usePhotoAudit() {
     // badge + outreach link to, so their heroes must be high quality.
     if (filter === 'best_of') {
       const trophies = await fetchTrophyListings();
-      const pageSlice = trophies.slice(offset, offset + PAGE_SIZE);
+      // Hero-review status for the whole winner set so counts + pagination are
+      // correct (not just the current page).
+      const reviewedSet = await getBestOfReviewedSet(trophies.map(t => t.listing_id));
+      setBestOfTotal(trophies.length);
+      setBestOfReviewedCount(reviewedSet.size);
+      setBestOfCount(trophies.length - reviewedSet.size);
+
+      const sub = bestOfSubFilter;
+      const filtered = sub === 'to_review'
+        ? trophies.filter(t => !reviewedSet.has(t.listing_id))
+        : sub === 'reviewed'
+          ? trophies.filter(t => reviewedSet.has(t.listing_id))
+          : trophies;
+
+      const pageSlice = filtered.slice(offset, offset + PAGE_SIZE);
       const ids = pageSlice.map(t => t.listing_id);
 
       const byId = new Map<string, Record<string, unknown>>();
@@ -629,7 +673,7 @@ export function usePhotoAudit() {
           suggested_hero_url: null,
           suggested_hero_reason: t.labels.join(' · '),
           photos_to_remove: [],
-          reviewed: false,
+          reviewed: reviewedSet.has(t.listing_id),
           applied: hasHero,
           created_at: '',
           raw_response: null,
@@ -642,7 +686,7 @@ export function usePhotoAudit() {
       }
 
       setResults(allResults);
-      setFilteredTotal(trophies.length);
+      setFilteredTotal(filtered.length);
       setLoading(false);
       return;
     }
@@ -671,7 +715,7 @@ export function usePhotoAudit() {
       setFilteredTotal(pageData.total ?? 0);
     }
     setLoading(false);
-  }, [noHeroSubFilter, searchQuery, fetchTrophyListings]);
+  }, [noHeroSubFilter, searchQuery, fetchTrophyListings, getBestOfReviewedSet, bestOfSubFilter]);
 
   const LOW_RES_PAGE_SIZE = 50;
 
@@ -941,10 +985,10 @@ export function usePhotoAudit() {
   useEffect(() => {
     loadStats();
     loadQueueStats();
-    // Prime the trophy-winner count so the Best-Of tab shows a number before
-    // it's clicked. fetchTrophyListings caches, so opening the tab is instant.
-    fetchTrophyListings().catch(() => {});
-  }, [loadStats, loadQueueStats, fetchTrophyListings]);
+    // Prime the trophy-winner counts so the Best-Of tab shows the remaining-to-
+    // review number before it's clicked. Caches, so opening the tab is instant.
+    refreshBestOfCounts().catch(() => {});
+  }, [loadStats, loadQueueStats, refreshBestOfCounts]);
 
   // ─── Run batch (creates a server-side job) ────────────────────
 
@@ -1053,6 +1097,38 @@ export function usePhotoAudit() {
     loadStats();
   }, [loadStats]);
 
+  // Mark a Best-Of winner as hero-reviewed this pass. Persists via
+  // best_of_hero_reviewed_at so it stays out of the "To Review" queue after a
+  // refresh, removes it from the current list, and decrements the counters.
+  const markBestOfReviewed = useCallback(async (listingId: string) => {
+    await supabase.from('listings')
+      .update({ best_of_hero_reviewed_at: new Date().toISOString() })
+      .eq('id', listingId);
+    if (bestOfSubFilter !== 'reviewed') {
+      setResults(prev => prev.filter(r => r.listing_id !== listingId));
+      setFilteredTotal(prev => Math.max(0, prev - 1));
+    } else {
+      setResults(prev => prev.map(r => r.listing_id === listingId ? { ...r, reviewed: true } : r));
+    }
+    setBestOfCount(prev => Math.max(0, prev - 1));
+    setBestOfReviewedCount(prev => prev + 1);
+  }, [bestOfSubFilter]);
+
+  // Undo a Best-Of review mark (returns the winner to the "To Review" queue).
+  const unmarkBestOfReviewed = useCallback(async (listingId: string) => {
+    await supabase.from('listings')
+      .update({ best_of_hero_reviewed_at: null })
+      .eq('id', listingId);
+    if (bestOfSubFilter === 'reviewed') {
+      setResults(prev => prev.filter(r => r.listing_id !== listingId));
+      setFilteredTotal(prev => Math.max(0, prev - 1));
+    } else {
+      setResults(prev => prev.map(r => r.listing_id === listingId ? { ...r, reviewed: false } : r));
+    }
+    setBestOfCount(prev => prev + 1);
+    setBestOfReviewedCount(prev => Math.max(0, prev - 1));
+  }, [bestOfSubFilter]);
+
   const totalPages = Math.max(1, Math.ceil(filteredTotal / PAGE_SIZE));
 
   return {
@@ -1090,6 +1166,15 @@ export function usePhotoAudit() {
     heldCount,
     secondLookCount,
     bestOfCount,
+    bestOfReviewedCount,
+    bestOfTotal,
+    bestOfSubFilter,
+    setBestOfSubFilter: (sub: 'to_review' | 'reviewed' | 'all') => {
+      setBestOfSubFilter(sub);
+      setPage(1);
+    },
+    markBestOfReviewed,
+    unmarkBestOfReviewed,
     // No Hero tab sub-filter ('all' | 'non_chain' | 'chain_only')
     noHeroSubFilter,
     setNoHeroSubFilter: (sub: 'all' | 'non_chain' | 'chain_only') => {
