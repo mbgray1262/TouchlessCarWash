@@ -52,7 +52,7 @@ const getListingBySlug = cache(async (slug: string) => {
 const getRankings = cache(async (listingId: string) => {
   const { data } = await supabase
     .from('best_of_rankings')
-    .select('metro_slug, metro_name, rank, score')
+    .select('metro_slug, metro_name, rank, score, computed_at')
     .eq('listing_id', listingId)
     .order('rank', { ascending: true });
   // Only include rankings within top 10 — rank > 10 has no badge
@@ -139,7 +139,9 @@ export default async function BadgeClaimPage({
   }
 
   const top = rankings[0];
-  const year = new Date().getFullYear();
+  // Freeze to the award year (computed_at), not the live current year, so the
+  // claimed badge's wording never silently flips to a new year.
+  const year = top.computed_at ? new Date(top.computed_at).getFullYear() : new Date().getFullYear();
   const listingUrl = buildListingUrl(listing);
   const listingPath = `/state/${getStateSlug(listing.state)}/${slugify(listing.city)}/${listing.slug}`;
 

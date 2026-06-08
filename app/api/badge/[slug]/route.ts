@@ -31,7 +31,7 @@ export async function GET(
   // 2. Fetch best ranking (lowest rank number = best position)
   const { data: rankings } = await supabase
     .from('best_of_rankings')
-    .select('metro_slug, metro_name, rank')
+    .select('metro_slug, metro_name, rank, computed_at')
     .eq('listing_id', listing.id)
     .order('rank', { ascending: true })
     .limit(1);
@@ -47,7 +47,12 @@ export async function GET(
     return new NextResponse('Listing rank is outside top 10', { status: 404 });
   }
 
-  const year = new Date().getFullYear();
+  // Freeze the badge to the year it was AWARDED (computed_at), not the live
+  // current year — an award badge an owner embeds must not silently flip to a
+  // new year. Falls back to current year only if computed_at is somehow missing.
+  const year = ranking.computed_at
+    ? new Date(ranking.computed_at).getFullYear()
+    : new Date().getFullYear();
 
   // 3. Generate appropriate SVG
   //    Rank 1–3 → gold/silver/bronze positional badge
