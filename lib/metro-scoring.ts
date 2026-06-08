@@ -25,16 +25,24 @@ export interface ScoredListing extends Listing {
   distanceMiles?: number;
 }
 
-// ── Trophy credibility gate ───────────────────────────────────────────
-// A "Best Touchless" winner must also be credible on Google — a high
-// touchless score next to a 3-star / 2-review listing looks wrong to users.
-// Winners must clear BOTH bars; callers fall back to ungated only if a metro
-// has zero credible washes (so a metro page is never left empty).
+// ── Trophy eligibility gate ───────────────────────────────────────────
+// A "Best Touchless" winner must (1) have our proprietary Touchless Quality
+// Score — no score means we can't say it's a satisfying touchless wash, so it
+// shouldn't be crowned — AND (2) be credible on Google (a high score next to a
+// 3-star / 2-review listing looks wrong). No ungated fallback: a metro with no
+// eligible washes simply has no winners (and no /best page) rather than crowning
+// a thin/unscored listing. "Not every best-of page needs trophy winners."
 export const MIN_TROPHY_RATING = 4.0;
 export const MIN_TROPHY_REVIEWS = 20;
 
-export function isTrophyEligible(listing: Pick<Listing, 'rating' | 'review_count'>): boolean {
-  return (listing.rating ?? 0) >= MIN_TROPHY_RATING && (listing.review_count ?? 0) >= MIN_TROPHY_REVIEWS;
+export function isTrophyEligible(
+  listing: { rating?: number | null; review_count?: number | null; touchless_satisfaction_score?: number | null },
+): boolean {
+  return (
+    listing.touchless_satisfaction_score != null &&
+    (listing.rating ?? 0) >= MIN_TROPHY_RATING &&
+    (listing.review_count ?? 0) >= MIN_TROPHY_REVIEWS
+  );
 }
 
 /**

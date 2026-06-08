@@ -170,18 +170,22 @@ export async function generateMetadata({ params }: BestOfPageProps): Promise<Met
   if (!metro) return { title: 'Not Found' };
 
   const listings = await getMetroListings(metro);
-  const count = Math.min(listings.length, 10);
+  // Count only trophy-eligible winners (scored + credible) — matches what the
+  // page actually crowns, so the title's number never overstates.
+  const count = Math.min(listings.filter(isTrophyEligible).length, 10);
   const year = new Date().getFullYear();
 
-  if (count < 5) return { title: 'Not Found' };
+  if (count < 1) return { title: 'Not Found' };
 
   const month = new Date().toLocaleString('default', { month: 'long' });
   // Concrete count + ranking signal + freshness date — three CTR levers
-  // (specificity, authority, recency). Drop "& Brushless" to fit pixel
-  // budget and lead with the count, which lifts CTR more than power
-  // words alone.
-  const title = `${count} Best Touchless Car Washes in the ${metro.name} Area — Ranked ${month} ${year}`;
-  const description = `The ${count} top-rated touchless car washes across the greater ${metro.name} area, ranked by verified Google reviews, customer ratings, and touchless-evidence confirmation. Updated ${month} ${year}.`;
+  // (specificity, authority, recency).
+  const title = count === 1
+    ? `The Best Touchless Car Wash in the ${metro.name} Area — ${month} ${year}`
+    : `${count} Best Touchless Car Washes in the ${metro.name} Area — Ranked ${month} ${year}`;
+  const description = count === 1
+    ? `The top touchless car wash in the greater ${metro.name} area, ranked by our Touchless Satisfaction Score, Paint-Safe verification, and customer reviews. Updated ${month} ${year}.`
+    : `The ${count} top touchless car washes across the greater ${metro.name} area, ranked by our Touchless Satisfaction Score, Paint-Safe verification, and verified customer reviews. Updated ${month} ${year}.`;
 
   return {
     title,
@@ -279,12 +283,17 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
       : undefined,
   }));
   scored.sort((a, b) => b.score - a.score);
-  // Credibility gate (matches the trophy table): a "Best Touchless" winner must
-  // also be credible on Google (rating>=4 & reviews>=20). Credible-first; fall
-  // back to ungated only if a metro has zero credible washes, so the page is
-  // never left empty.
-  const credibleScored = scored.filter((l) => isTrophyEligible(l));
-  const topListings = (credibleScored.length > 0 ? credibleScored : scored).slice(0, 10);
+  // Trophy-eligible only: a "Best Touchless" winner must have our Touchless
+  // Quality Score AND be credible on Google (rating>=4 & reviews>=20). No ungated
+  // fallback — if a metro has no genuine winner to crown, we don't publish an
+  // empty "best of" page (redirect below; getQualifyingMetros keeps the sitemap
+  // in lockstep so this is never a sitemapped URL).
+  const topListings = scored.filter((l) => isTrophyEligible(l)).slice(0, 10);
+  if (topListings.length === 0) {
+    const primaryState = metro.states?.[0];
+    const stateSlug = primaryState ? getStateSlug(primaryState) : null;
+    permanentRedirect(stateSlug ? `/state/${stateSlug}?from=no-winners` : '/best?from=no-winners');
+  }
 
   // Keep best_of_rankings in sync so listing detail pages show the same
   // rank number as the position badge on this page. Fire-and-forget.

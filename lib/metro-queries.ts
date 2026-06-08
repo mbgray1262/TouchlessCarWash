@@ -10,6 +10,7 @@ import { cache } from 'react';
 import { supabase, type Listing } from '@/lib/supabase';
 import { METRO_AREAS, boundingBox, haversineDistance, type MetroArea } from '@/lib/metro-areas';
 import { isDislikedTouchless } from '@/lib/touchless-quality';
+import { isTrophyEligible } from '@/lib/metro-scoring';
 
 // Columns needed for scoring + display on the Best-Of page.
 export const BEST_OF_COLUMNS =
@@ -97,21 +98,23 @@ export type MetroWithCount = MetroArea & { listingCount: number };
  * index page AND the admin "Best Of Metros" stat, so the dashboard number
  * always equals the number of cards rendered on /best.
  */
+type QMListing = { id: string; latitude: number; longitude: number; rating: number | null; review_count: number | null; touchless_satisfaction_score: number | null };
+
 export async function getQualifyingMetros(): Promise<MetroWithCount[]> {
   const PAGE_SIZE = 1000;
-  const allListings: { id: string; latitude: number; longitude: number }[] = [];
+  const allListings: QMListing[] = [];
   let offset = 0;
   while (true) {
     const { data, error } = await supabase
       .from('listings')
-      .select('id, latitude, longitude')
+      .select('id, latitude, longitude, rating, review_count, touchless_satisfaction_score')
       .eq('is_touchless', true)
       .eq('is_approved', true)
       .not('latitude', 'is', null)
       .not('longitude', 'is', null)
       .range(offset, offset + PAGE_SIZE - 1);
     if (error || !data || data.length === 0) break;
-    allListings.push(...(data as { id: string; latitude: number; longitude: number }[]));
+    allListings.push(...(data as QMListing[]));
     if (data.length < PAGE_SIZE) break;
     offset += PAGE_SIZE;
   }
@@ -145,6 +148,7 @@ export async function getQualifyingMetros(): Promise<MetroWithCount[]> {
   for (const metro of METRO_AREAS) {
     const box = boundingBox(metro.lat, metro.lng, metro.radiusMiles);
     let count = 0;
+    let eligible = 0; // trophy-eligible (scored + credible) — must be >=1 to crown a winner
     for (const listing of listings) {
       if (
         listing.latitude >= box.minLat &&
@@ -153,10 +157,16 @@ export async function getQualifyingMetros(): Promise<MetroWithCount[]> {
         listing.longitude <= box.maxLng
       ) {
         const dist = haversineDistance(metro.lat, metro.lng, listing.latitude, listing.longitude);
-        if (dist <= metro.radiusMiles) count++;
+        if (dist <= metro.radiusMiles) {
+          count++;
+          if (isTrophyEligible(listing)) eligible++;
+        }
       }
     }
-    if (count >= 5) results.push({ ...metro, listingCount: count });
+    // A metro gets a /best page only if it has enough touchless washes (>=5) AND
+    // at least one genuine winner (scored + credible). Keeps the sitemap in lockstep
+    // with the page, which redirects when there are no eligible winners to crown.
+    if (count >= 5 && eligible >= 1) results.push({ ...metro, listingCount: count });
   }
   return results;
 }

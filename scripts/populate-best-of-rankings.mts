@@ -112,11 +112,15 @@ for (const metro of METRO_AREAS) {
     continue;
   }
 
-  // Credibility gate: winners must also be credible on Google (rating>=4 &
-  // reviews>=20). Credible-first; fall back to ungated only if a metro has
-  // zero credible washes, so no metro is left without a winner list.
-  const credible = eligible.filter((l: any) => isTrophyEligible(l));
-  const pool = credible.length > 0 ? credible : eligible;
+  // Trophy gate: winners must have a Touchless Quality Score AND be credible on
+  // Google (rating>=4 & reviews>=20). NO ungated fallback — a metro with no
+  // eligible washes simply gets no winners (and no /best page).
+  const pool = eligible.filter((l: any) => isTrophyEligible(l));
+  if (pool.length === 0) {
+    skipped.push(metro.slug);
+    metrosCleared++;
+    continue;
+  }
 
   const scored = pool
     .map((l: any) => ({
