@@ -81,6 +81,12 @@ export async function generateMetadata({
   return {
     title,
     description,
+    // noindex: this is a "claim your badge" conversion page for the wash owner,
+    // not search content — it duplicates the ranking already covered by the
+    // indexable /best/<metro> pages. Kept out of the index (and the sitemap) so
+    // it doesn't compete with the canonical ranking pages. follow:true so the
+    // outbound links to the listing/ranking pages still pass equity.
+    robots: { index: false, follow: true },
     alternates: {
       canonical: `https://touchlesscarwashfinder.com/badge/${listing.slug}`,
     },

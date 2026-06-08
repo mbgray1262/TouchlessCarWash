@@ -35,6 +35,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
+    // noindex: "claim your badge" conversion page for the chain owner, not
+    // search content — it duplicates the rankings already covered by the
+    // indexable /best/chains and /best/chains/<region> pages. Kept out of the
+    // index (and the sitemap) so it doesn't compete with those canonical
+    // ranking pages. follow:true so its outbound links still pass equity.
+    robots: { index: false, follow: true },
     alternates: { canonical: `${SITE_URL}/badge/chain/${slug}` },
     openGraph: { title, description, url: `${SITE_URL}/badge/chain/${slug}`, type: 'website' },
   };

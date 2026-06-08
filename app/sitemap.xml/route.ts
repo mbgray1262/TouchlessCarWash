@@ -4,6 +4,8 @@ import { METRO_AREAS, boundingBox, haversineDistance } from '@/lib/metro-areas';
 import { FEATURES } from '@/lib/features';
 import { EQUIPMENT_BRAND_DATA } from '@/lib/equipment-data';
 import { CHAINS } from '@/lib/chains';
+import { CHAIN_REGIONS } from '@/lib/chain-rankings';
+import { hasSubscription, is24h } from '@/lib/state-hub-filters';
 import { isThinListing } from '@/lib/listing-quality';
 import { NEARBY_RADIUS_MILES, INDEXABLE_MIN_EFFECTIVE } from '@/lib/nearby-augment';
 
@@ -42,12 +44,21 @@ export async function GET() {
     has_extracted_data?: boolean;
   };
   const allListings: SitemapRow[] = [];
+  // State codes that have >=1 listing qualifying the unlimited / 24-hour state
+  // hub pages. Those pages notFound() when their state has zero qualifying
+  // listings (see app/unlimited-touchless-car-wash/[state] and
+  // app/24-hour-touchless-car-wash/[state]), and are otherwise index +
+  // self-canonical — so we emit a sitemap URL for exactly the qualifying states.
+  // Computed from the raw rows here (which carry hours/amenities) using the same
+  // shared predicates the pages use, keeping the sitemap in lockstep with them.
+  const unlimitedStates = new Set<string>();
+  const twentyFourHourStates = new Set<string>();
   const PAGE_SIZE = 1000;
   let offset = 0;
   while (true) {
     const { data: page } = await supabase
       .from('listings')
-      .select('id, slug, city, state, created_at, updated_at, latitude, longitude, rating, review_count, is_claimed, is_featured, parent_chain, google_description, crawl_snapshot, extracted_data')
+      .select('id, slug, city, state, created_at, updated_at, latitude, longitude, rating, review_count, is_claimed, is_featured, parent_chain, google_description, hours, amenities, crawl_snapshot, extracted_data')
       .eq('is_touchless', true)
       .eq('is_approved', true)  // exclude held/pending-enrichment listings that 308 instead of 200
       .range(offset, offset + PAGE_SIZE - 1);
@@ -55,7 +66,12 @@ export async function GET() {
     // Convert the heavy JSON fields to boolean flags immediately so we don't
     // keep megabytes of snapshot/extracted JSON in memory for every listing.
     for (const row of page) {
-      const typed = row as SitemapRow & { crawl_snapshot: unknown; extracted_data: unknown };
+      const typed = row as SitemapRow & {
+        crawl_snapshot: unknown;
+        extracted_data: unknown;
+        hours: Record<string, unknown> | null;
+        amenities: string[] | null;
+      };
       allListings.push({
         id: typed.id,
         slug: typed.slug,
@@ -74,6 +90,13 @@ export async function GET() {
         has_crawl_snapshot: typed.crawl_snapshot != null,
         has_extracted_data: typed.extracted_data != null,
       });
+      // Accumulate qualifying states for the unlimited / 24-hour hub pages.
+      if (VALID_STATE_CODES.has(typed.state)) {
+        if (hasSubscription({ parent_chain: typed.parent_chain, amenities: typed.amenities })) {
+          unlimitedStates.add(typed.state);
+        }
+        if (is24h(typed.hours)) twentyFourHourStates.add(typed.state);
+      }
     }
     if (page.length < PAGE_SIZE) break;
     offset += PAGE_SIZE;
@@ -410,6 +433,42 @@ export async function GET() {
   </url>`);
   }
 
+  // ── Chain ranking pages ──────────────────────────────────────────────────
+  // /best/chains (national Top 10) + /best/chains/<region> (5 regions). Both are
+  // always index + self-canonical (the region page only notFound()s on an
+  // unknown region slug), so every CHAIN_REGIONS entry is advertised.
+  const chainRankingUrls: string[] = [];
+  chainRankingUrls.push(`  <url>
+    <loc>${baseUrl}/best/chains</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`);
+  for (const region of CHAIN_REGIONS) {
+    chainRankingUrls.push(`  <url>
+    <loc>${baseUrl}/best/chains/${region.slug}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`);
+  }
+
+  // ── Unlimited / 24-hour state hub pages ───────────────────────────────────
+  // Emitted only for states with >=1 qualifying listing (matching each page's
+  // notFound() guard), computed above into unlimitedStates / twentyFourHourStates.
+  const unlimitedStateUrls = Array.from(unlimitedStates).map((code) => `  <url>
+    <loc>${baseUrl}/unlimited-touchless-car-wash/${getStateSlug(code)}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`);
+  const twentyFourHourStateUrls = Array.from(twentyFourHourStates).map((code) => `  <url>
+    <loc>${baseUrl}/24-hour-touchless-car-wash/${getStateSlug(code)}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`);
+
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
@@ -465,6 +524,12 @@ export async function GET() {
     <lastmod>${now}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/touchless-satisfaction-score</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>${baseUrl}/shop</loc>
@@ -544,6 +609,9 @@ ${featureHubUrls.join('\n')}
 ${featureStateUrls.join('\n')}
 ${equipmentUrls.join('\n')}
 ${chainUrls.join('\n')}
+${chainRankingUrls.join('\n')}
+${unlimitedStateUrls.join('\n')}
+${twentyFourHourStateUrls.join('\n')}
 ${stateUrls.join('\n')}
 ${stateStatsUrls.join('\n')}
 ${cityUrls.join('\n')}

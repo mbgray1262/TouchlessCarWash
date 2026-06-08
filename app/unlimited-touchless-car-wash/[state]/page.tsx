@@ -6,25 +6,13 @@ import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants';
 import { CHAINS } from '@/lib/chains';
 import { getChainSubscriptionDisplay } from '@/lib/chain-subscriptions';
+import { UNLIMITED_CHAIN_SLUGS, hasSubscription } from '@/lib/state-hub-filters';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import type { Metadata } from 'next';
 
 export const revalidate = 3600;
 
 const SITE_URL = 'https://touchlesscarwashfinder.com';
-
-const UNLIMITED_CHAIN_SLUGS = new Set([
-  'sheetz', 'delta-sonic', 'drive-and-shine', 'kwik-trip', 'splash-car-wash',
-  'prestige-car-wash', 'flagstop-car-wash', 'foam-and-wash', 'mr-magic-car-wash',
-  'autowash', 'super-wash', 'brown-bear', 'holiday-stationstores', 'salty-dog-car-wash',
-  'power-market', 'extra-mile', 'pinnacle-365',
-]);
-
-const UNLIMITED_CHAIN_NAMES = new Set(
-  CHAINS.filter(c => UNLIMITED_CHAIN_SLUGS.has(c.slug)).map(c => c.name)
-);
-
-const SUB_AMENITY_TERMS = ['subscription', 'membership', 'unlimited', 'monthly'];
 
 function getStateCode(slug: string): string | null {
   const s = US_STATES.find(s => slugify(s.name) === slug);
@@ -54,12 +42,6 @@ async function getAllStateListings(stateCode: string): Promise<Listing[]> {
     offset += BATCH;
   }
   return all;
-}
-
-function hasSubscription(listing: Listing): boolean {
-  if (listing.parent_chain && UNLIMITED_CHAIN_NAMES.has(listing.parent_chain)) return true;
-  const ams = (listing.amenities ?? []).join(' ').toLowerCase();
-  return SUB_AMENITY_TERMS.some(t => ams.includes(t));
 }
 
 export async function generateMetadata({

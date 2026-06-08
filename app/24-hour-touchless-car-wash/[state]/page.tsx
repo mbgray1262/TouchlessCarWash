@@ -4,6 +4,7 @@ import { ChevronRight, Clock } from 'lucide-react';
 import { ListingCard } from '@/components/ListingCard';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants';
+import { is24h } from '@/lib/state-hub-filters';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import type { Metadata } from 'next';
 
@@ -18,13 +19,6 @@ function getStateCode(slug: string): string | null {
 
 export function generateStaticParams() {
   return US_STATES.map(s => ({ state: getStateSlug(s.code) }));
-}
-
-function is24h(hours: Record<string, unknown> | null | undefined): boolean {
-  if (!hours) return false;
-  const vals = Object.values(hours);
-  const nonEmpty = vals.filter((v): v is string => typeof v === 'string' && v.trim() !== '');
-  return nonEmpty.length > 0 && nonEmpty.every(v => v.toLowerCase().includes('open 24 hours'));
 }
 
 /** Fetch all approved touchless listings for a state, paginating past 1000-row cap. */
@@ -59,11 +53,13 @@ export async function generateMetadata({
   const year = new Date().getFullYear();
   const title = `24 Hour Touchless Car Wash in ${stateName} — Open Now (${year})`;
   const description = `Find touchless car washes open 24 hours a day in ${stateName}. Fully automated, brushless, no-contact — available any time of day or night. Verified hours and directions.`;
-  // Canonical points at the master state hub — this page is a filtered view of
-  // /state/<state> (only 24h listings) and Google was flagging it as a
-  // "Duplicate without user-selected canonical" of /state/<state>. Pointing the
-  // canonical at the master resolves the ambiguity.
-  const canonical = `${SITE_URL}/state/${params.state}`;
+  // Self-canonical. "24-hour touchless car wash in <state>" is a distinct,
+  // useful query and a genuine subset of /state/<state>, not a duplicate — and
+  // this page is indexable and listed in the sitemap (mirroring its sister
+  // /unlimited-touchless-car-wash/<state> page). Pointing the canonical here
+  // keeps the index/canonical/sitemap signals consistent instead of leaking
+  // authority to the state hub.
+  const canonical = `${SITE_URL}/24-hour-touchless-car-wash/${params.state}`;
   return {
     title,
     description,
