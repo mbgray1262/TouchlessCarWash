@@ -24,6 +24,12 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Probe production pages
+        env:
+          # Netlify build hook (a redeploy is the ONLY thing that reliably
+          # clears the stuck-304 ISR/durable-cache poisoning — a CDN purge
+          # can't, because the Next.js function layer itself keeps serving the
+          # bare 304). Set in repo Settings > Secrets > Actions.
+          NETLIFY_BUILD_HOOK_URL: ${{ secrets.NETLIFY_BUILD_HOOK_URL }}
         run: |
           set -eu
 
@@ -104,13 +110,62 @@ jobs:
             fi
           done
 
-          if [ "${#STILL_BROKEN[@]}" -gt 0 ]; then
+          if [ "${#STILL_BROKEN[@]}" -eq 0 ]; then
             echo ""
-            echo "::error::Auto-recovery failed for: ${STILL_BROKEN[*]}"
+            echo "All previously broken pages auto-recovered via CDN purge."
+            exit 0
+          fi
+
+          # CDN purge did not clear it. This is the stuck-304 class of bug
+          # where the Next.js ISR layer itself serves a bare 304 (cache-status
+          # shows `"Next.js"; hit ... fwd-status=304`). A purge can't fix that —
+          # only a fresh deploy rebuilds the page with a clean ETag. So trigger
+          # a redeploy via the Netlify build hook, wait for it to ship, recheck.
+          echo ""
+          echo "::warning::CDN purge did not recover: ${STILL_BROKEN[*]}"
+
+          if [ -z "${NETLIFY_BUILD_HOOK_URL:-}" ]; then
+            echo "::error::No NETLIFY_BUILD_HOOK_URL secret set — cannot auto-redeploy."
+            echo "::error::Still broken after purge: ${STILL_BROKEN[*]}"
+            exit 1
+          fi
+
+          echo "Triggering Netlify redeploy (the reliable fix for stuck 304s)..."
+          curl --max-time 30 -s -X POST -d {} "$NETLIFY_BUILD_HOOK_URL" || true
+
+          echo ""
+          echo "Waiting up to 5 min for the redeploy to go live..."
+          RECOVERED=0
+          for attempt in $(seq 1 15); do
+            sleep 20
+            REMAIN=()
+            for path in "${STILL_BROKEN[@]}"; do
+              url="${BASE}${path}?_redeploy=$(date +%s%N)"
+              tmp=$(mktemp)
+              code=$(curl --max-time 30 -sL -A "Mozilla/5.0 (HealthCheck)" \
+                -H "Cache-Control: no-cache" \
+                -o "$tmp" -w "%{http_code}" "$url" || echo "000")
+              size=$(wc -c < "$tmp" | tr -d ' ')
+              rm -f "$tmp"
+              if [ "$code" != "200" ] || [ "$size" -lt 1024 ]; then
+                REMAIN+=("$path")
+              fi
+            done
+            if [ "${#REMAIN[@]}" -eq 0 ]; then
+              echo "All pages healthy after redeploy (attempt $attempt)."
+              RECOVERED=1
+              break
+            fi
+            echo "  still waiting on: ${REMAIN[*]} (attempt $attempt/15)"
+          done
+
+          if [ "$RECOVERED" -ne 1 ]; then
+            echo ""
+            echo "::error::Auto-recovery FAILED even after redeploy: ${REMAIN[*]}"
             echo "Manual investigation needed. The workflow failure email"
             echo "GitHub sends to the repo owner is the alert."
             exit 1
           fi
 
           echo ""
-          echo "All previously broken pages auto-recovered."
+          echo "All previously broken pages auto-recovered via redeploy."
