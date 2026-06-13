@@ -144,6 +144,7 @@ export const METRO_AREAS: MetroArea[] = [
   { name: 'San Diego', displayName: 'San Diego, CA', slug: 'san-diego', lat: 32.7157, lng: -117.1611, radiusMiles: 25, states: ['CA'], region: 'West' },
   { name: 'Sacramento', displayName: 'Sacramento, CA', slug: 'sacramento', lat: 38.5816, lng: -121.4944, radiusMiles: 25, states: ['CA'], region: 'West' },
   { name: 'Seattle', displayName: 'Seattle, WA', slug: 'seattle', lat: 47.6062, lng: -122.3321, radiusMiles: 30, states: ['WA'], region: 'West' },
+  { name: 'Yakima', displayName: 'Yakima, WA', slug: 'yakima', lat: 46.6021, lng: -120.5059, radiusMiles: 25, states: ['WA'], region: 'West' },
   { name: 'Portland', displayName: 'Portland, OR', slug: 'portland', lat: 45.5152, lng: -122.6784, radiusMiles: 25, states: ['OR', 'WA'], region: 'West' },
   { name: 'Denver', displayName: 'Denver, CO', slug: 'denver', lat: 39.7392, lng: -104.9903, radiusMiles: 30, states: ['CO'], region: 'West' },
   { name: 'Colorado Springs', displayName: 'Colorado Springs, CO', slug: 'colorado-springs', lat: 38.8339, lng: -104.8214, radiusMiles: 20, states: ['CO'], region: 'West' },
