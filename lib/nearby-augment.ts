@@ -77,6 +77,45 @@ export function selectNearby<T extends NearbyCandidate & { id: string }>(
 }
 
 /**
+ * Robust nearby selection that is resilient to a single mis-geocoded in-city
+ * listing. A wash whose stored lat/lng don't match its city (the chain
+ * geocode-mismatch class of data bugs) would, if used as the sole proximity
+ * anchor, make the whole city look like it has zero neighbors — wrongly
+ * suppressing its "in or near" augmentation and, through that count, its
+ * indexability. So we try EVERY in-city listing that has coordinates as an
+ * anchor and keep the result set from whichever anchor finds the most
+ * neighbors. Because it maximizes over anchors, the result is independent of
+ * the order `inCity` happens to be in — which is exactly what lets the city
+ * page (orders in-city by rating) and the sitemap (arbitrary DB load order)
+ * reach the IDENTICAL in-or-near count, and therefore the same
+ * in-sitemap⟺indexable verdict.
+ */
+export function bestNearby<T extends NearbyCandidate & { id: string }>(
+  inCity: Array<NearbyCandidate & { id: string }>,
+  candidates: T[],
+  excludeCityName: string,
+  excludeListingIds: Set<string>,
+  radiusMiles: number = NEARBY_RADIUS_MILES,
+  limit: number = NEARBY_LIMIT,
+): Array<T & { _distance: number }> {
+  let best: Array<T & { _distance: number }> = [];
+  for (const a of inCity) {
+    if (a.latitude == null || a.longitude == null) continue;
+    const got = selectNearby(
+      candidates,
+      { lat: Number(a.latitude), lng: Number(a.longitude) },
+      excludeCityName,
+      excludeListingIds,
+      radiusMiles,
+      limit,
+    );
+    if (got.length > best.length) best = got;
+    if (best.length >= limit) break; // can't do better than the cap
+  }
+  return best;
+}
+
+/**
  * Per-request cached fetch of slim proximity rows for all approved touchless
  * listings in a state. Only selects id/city/lat/lng — the minimum needed to
  * run the haversine distance filter. Full card data is fetched separately

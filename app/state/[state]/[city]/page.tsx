@@ -15,8 +15,7 @@ import { getAnyCityCoords, findNearestTouchlessCityPath } from '@/lib/geo-fallba
 import {
   getStateListingsForAugment,
   getListingCardsByIds,
-  pickAnchorFromListings,
-  selectNearby,
+  bestNearby,
   NEARBY_RADIUS_MILES,
   INDEXABLE_MIN_EFFECTIVE,
 } from '@/lib/nearby-augment';
@@ -71,12 +70,15 @@ const getNearbyForCity = cache(
     cityName: string,
     inCity: Listing[],
   ): Promise<Array<Listing & { _distance: number }>> => {
-    const anchor = pickAnchorFromListings(inCity);
-    if (!anchor) return [];
-    // Stage 1: slim proximity scan (id/city/lat/lng only — fast even for TX ~3000 rows)
+    if (inCity.length === 0) return [];
+    // Stage 1: slim proximity scan (id/city/lat/lng only — fast even for TX ~3000 rows).
+    // bestNearby() tries every in-city listing as a proximity anchor and keeps the
+    // richest result, so one mis-geocoded in-city wash can't zero out the city's
+    // neighbors — and it keeps this count identical to the sitemap's (which sees
+    // the same listings in a different order). See lib/nearby-augment.ts.
     const slimListings = await getStateListingsForAugment(stateCode);
     const exclude = new Set(inCity.map((l) => l.id));
-    const proximityResults = selectNearby(slimListings, anchor, cityName, exclude);
+    const proximityResults = bestNearby(inCity, slimListings, cityName, exclude);
     if (proximityResults.length === 0) return [];
     // Stage 2: fetch full card data for only the selected ~8 nearby listings
     const nearbyIds = proximityResults.map((p) => p.id);

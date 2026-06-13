@@ -1,6 +1,5 @@
 import { supabase, type Listing } from '@/lib/supabase';
 import { US_STATES, getStateSlug, slugify } from '@/lib/constants';
-import { boundingBox, haversineDistance } from '@/lib/metro-areas';
 import { getQualifyingMetros } from '@/lib/metro-queries';
 import { FEATURES } from '@/lib/features';
 import { EQUIPMENT_BRAND_DATA } from '@/lib/equipment-data';
@@ -9,7 +8,7 @@ import { CHAIN_REGIONS } from '@/lib/chain-rankings';
 import { hasSubscription, is24h } from '@/lib/state-hub-filters';
 import { FEATURE_FILTERS, MIN_LISTINGS_FOR_FEATURE_PAGE } from '@/lib/feature-filters';
 import { isThinListing } from '@/lib/listing-quality';
-import { NEARBY_RADIUS_MILES, INDEXABLE_MIN_EFFECTIVE } from '@/lib/nearby-augment';
+import { bestNearby, INDEXABLE_MIN_EFFECTIVE } from '@/lib/nearby-augment';
 
 const VALID_STATE_CODES = new Set(US_STATES.map(s => s.code));
 
@@ -263,45 +262,51 @@ export async function GET() {
   // For cities with enough in-city listings on their own this is a cheap
   // length check; thinner cities require a nearby-count pass over the
   // already-loaded listings array (no extra DB calls).
-  const listingsByCity = new Map<string, typeof listings>();
-  for (const l of listings) {
+  // City-hub indexability must mirror the city PAGE exactly, and the page
+  // counts ALL approved-touchless listings — thin ones INCLUDED — toward both
+  // its in-city set (getCityTouchlessListings) and its nearby augmentation
+  // (getNearbyForCity → getStateListingsForAugment). Thin-filtering only hides
+  // a listing's own DETAIL url; a thin listing still renders as a card on the
+  // city hub and still adds real content there. So the hub's
+  // in-sitemap⟺indexable decision is computed over the THIN-INCLUSIVE
+  // population below, NOT the thin-filtered `listings` array used for the
+  // per-listing urls. Using `listings` here dropped cities whose only in-city
+  // listing is thin but which the page still indexes via nearby augmentation
+  // (e.g. North Canaan, CT = 1 thin in-city + 2 nearby in Torrington) →
+  // "indexable page missing from sitemap" drift. Mirrors
+  // app/state/[state]/[city]/page.tsx + lib/nearby-augment.ts.
+  const cityHubListings = allListings.filter((l) => VALID_STATE_CODES.has(l.state));
+  const listingsByCity = new Map<string, typeof cityHubListings>();
+  const hubByState = new Map<string, typeof cityHubListings>();
+  for (const l of cityHubListings) {
     const k = `${l.state}||${l.city}`;
     const arr = listingsByCity.get(k) ?? [];
     arr.push(l);
     listingsByCity.set(k, arr);
+    const st = hubByState.get(l.state) ?? [];
+    st.push(l);
+    hubByState.set(l.state, st);
   }
 
-  function pickCityAnchor(rows: typeof listings): { lat: number; lng: number } | null {
-    for (const r of rows) {
-      if (r.latitude != null && r.longitude != null) {
-        return { lat: Number(r.latitude), lng: Number(r.longitude) };
-      }
-    }
-    return null;
-  }
-
+  // Effective "in or near" count for a city hub — mirrors the city page's
+  // listings.length + getNearbyForCity(...).length. Uses the shared bestNearby()
+  // helper over the same-state thin-inclusive pool, so a mis-geocoded in-city
+  // listing can't suppress the count and the verdict matches the page regardless
+  // of row order (the page orders in-city by rating; we don't). The nearby pool
+  // is the SAME population the page's getStateListingsForAugment loads
+  // (is_touchless + is_approved + same state); bestNearby skips coordless rows.
   function effectiveCityCount(stateCode: string, cityKey: string): number {
     const inCity = listingsByCity.get(cityKey) ?? [];
     if (inCity.length >= INDEXABLE_MIN_EFFECTIVE) return inCity.length;
-    const anchor = pickCityAnchor(inCity);
-    if (!anchor) return inCity.length;
-    const cityName = inCity[0]?.city.toLowerCase().trim();
-    const need = INDEXABLE_MIN_EFFECTIVE - inCity.length;
-    let nearby = 0;
-    for (const l of listings) {
-      if (l.state !== stateCode) continue;
-      if (l.latitude == null || l.longitude == null) continue;
-      if (l.city.toLowerCase().trim() === cityName) continue;
-      const d = haversineDistance(anchor.lat, anchor.lng, Number(l.latitude), Number(l.longitude));
-      if (d <= NEARBY_RADIUS_MILES) {
-        nearby++;
-        if (nearby >= need) break;
-      }
-    }
+    const cityName = inCity[0]?.city ?? '';
+    const excludeIds = new Set(inCity.map((l) => l.id));
+    const nearby = bestNearby(inCity, hubByState.get(stateCode) ?? [], cityName, excludeIds).length;
     return inCity.length + nearby;
   }
 
-  const cityUrls = Array.from(citySet)
+  // Candidate city set is the thin-inclusive one (listingsByCity.keys()), not
+  // the thin-filtered `citySet`, so thin-only-but-augmented cities are eligible.
+  const cityUrls = Array.from(listingsByCity.keys())
     .filter((key) => {
       const [stateCode] = key.split('||');
       return effectiveCityCount(stateCode, key) >= INDEXABLE_MIN_EFFECTIVE;

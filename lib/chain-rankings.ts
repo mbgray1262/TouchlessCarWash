@@ -152,6 +152,14 @@ async function fetchChainRows(stateFilter?: string[]): Promise<RawRow[]> {
       .eq('is_touchless', true)
       .eq('is_approved', true)
       .not('parent_chain', 'is', null)
+      // Stable sort key is REQUIRED for correct .range() pagination: without an
+      // explicit order, Postgres may return rows in a different order on each
+      // page request, so rows get skipped/duplicated across page boundaries once
+      // the result exceeds 1000 rows. That made per-chain locationCount (and thus
+      // the rankings) non-deterministic, which flipped chains across the top-3
+      // badge boundary and produced FLAKY /badge/chain/<slug> 404s + broken
+      // internal links. Ordering by the unique id makes pagination deterministic.
+      .order('id', { ascending: true })
       .range(offset, offset + 999);
     if (stateFilter) q = q.in('state', stateFilter);
     const { data } = await q;

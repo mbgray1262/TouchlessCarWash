@@ -516,11 +516,13 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   const stateName = stateCode ? getStateName(stateCode) : listing.state;
   const topAmenities = (listing.amenities || []).slice(0, 3).join(', ');
   const amenityPart = topAmenities ? ` Touch-free, brushless car wash offering ${topAmenities}.` : '';
-  // Canonical city slug uses slugify() to strip apostrophes & other non-
-  // alphanumeric chars, so Google never sees /coeur-d'alene/... and
-  // /coeur-dalene/... as competing URLs for the same listing.
-  const canonicalCitySlug = slugify(listing.city) || params.city;
-  const canonicalUrl = `${SITE_URL}/state/${params.state}/${canonicalCitySlug}/${params.slug}`;
+  // Canonical URL is built from the listing's OWN state + city (via the same
+  // buildListingUrl() the render path redirects to and that /sitemap.xml emits),
+  // NOT from the request's params. A globally-unique slug resolves under any
+  // /state/<state>/<city>/ prefix, so deriving the canonical from params would
+  // let a wrong-state or apostrophe'd-city URL self-canonicalize to itself and
+  // get flagged "Duplicate, Google chose different canonical than user".
+  const canonicalUrl = `${SITE_URL}${buildListingUrl(listing)}`;
   // Location-specific admin-curated photos ALWAYS beat the generic chain brand image.
   // The brand image is only the fallback when we don't have a human-verified hero.
   // ('chain-brand-auto', 'google-auto', 'streetview-auto', etc. are machine-assigned and
@@ -1163,11 +1165,14 @@ function ReviewSnippetCard({ snippet }: { snippet: ReviewSnippet }) {
   );
 }
 
-function NearbyListingCard({ nearby, stateSlug }: { nearby: Listing; stateSlug: string }) {
-  const citySlug = slugify(nearby.city);
+function NearbyListingCard({ nearby }: { nearby: Listing }) {
+  // Always link via the nearby listing's OWN state — never the current page's.
+  // A wash just across a state border surfaced as "nearby" and linked under the
+  // current page's state produced wrong-state duplicate URLs. buildListingUrl()
+  // mirrors the sitemap's canonical path exactly.
   return (
     <Link
-      href={`/state/${stateSlug}/${citySlug}/${nearby.slug}`}
+      href={buildListingUrl(nearby)}
       className="group flex gap-3 p-3 rounded-xl border border-gray-200 bg-white hover:border-[#22C55E] hover:shadow-sm transition-all"
     >
       <div className="relative shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
@@ -1260,14 +1265,19 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     permanentRedirect(`/${flag}`);
   }
 
-  // Canonical-slug redirect: if the requested URL uses a non-canonical
-  // city slug (e.g. /coeur-d'alene/... when slugify() would produce
-  // /coeur-dalene/...), 308 to the canonical path so Google never indexes
-  // both spellings. Fixes recurring GSC "Duplicate, Google chose
-  // different canonical than user" warnings on cities with apostrophes.
-  const canonicalCitySlug = slugify(listing.city);
-  if (canonicalCitySlug && canonicalCitySlug !== params.city) {
-    permanentRedirect(`/state/${params.state}/${canonicalCitySlug}/${params.slug}`);
+  // Canonical-path redirect: a listing's slug is globally unique, so this page
+  // resolves no matter which /state/<state>/<city>/ prefix is used to reach it.
+  // Only ONE prefix is canonical — the one built from the listing's true state
+  // and canonical city slug, exactly matching what /sitemap.xml emits
+  // (getStateSlug(state) + slugify(city); see app/sitemap.xml/route.ts). Any
+  // other prefix 308-redirects here so Google never indexes a duplicate. This
+  // catches two cases: a WRONG STATE (a cross-state-border "nearby" link that
+  // filed a wash under the current page's state) and a non-canonical CITY-SLUG
+  // spelling (e.g. /coeur-d'alene/ vs /coeur-dalene/). Fixes recurring GSC
+  // "Duplicate, Google chose different canonical than user" warnings.
+  const canonicalPath = buildListingUrl(listing);
+  if (canonicalPath !== `/state/${params.state}/${params.city}/${params.slug}`) {
+    permanentRedirect(canonicalPath);
   }
 
   const [nearbyListings, reviewSnippets, genericReviews, rankings, chainResult, verificationStats, equipmentVideos, paintSnippets, cityScoreRanking] = await Promise.all([
@@ -2049,7 +2059,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {chainResult.listings.map((cl) => (
-                  <NearbyListingCard key={cl.id} nearby={cl} stateSlug={getStateSlug(cl.state)} />
+                  <NearbyListingCard key={cl.id} nearby={cl} />
                 ))}
               </div>
             </div>
@@ -2080,7 +2090,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {metroSiblings.map(({ listing: sibling, rank }) => (
                   <div key={sibling.id} className="relative">
-                    <NearbyListingCard nearby={sibling} stateSlug={getStateSlug(sibling.state)} />
+                    <NearbyListingCard nearby={sibling} />
                     <div className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-400 text-yellow-900 text-[11px] font-bold shadow">
                       <Trophy className="w-2.5 h-2.5" />#{rank}
                     </div>
@@ -2117,7 +2127,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {nearbyListings.map((nearby) => (
-                  <NearbyListingCard key={nearby.id} nearby={nearby} stateSlug={params.state} />
+                  <NearbyListingCard key={nearby.id} nearby={nearby} />
                 ))}
               </div>
               <div className="mt-6 pt-5 border-t border-gray-200 flex items-center justify-between flex-wrap gap-3">
