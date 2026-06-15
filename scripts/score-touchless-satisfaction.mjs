@@ -85,19 +85,28 @@ async function getTargetIds() {
   return ids;
 }
 
+// Noisy sources are excluded from scoring. `gmaps-crawl4ai-md` is whole-page
+// Google Maps markdown scraped by scripts/scrape-gmaps-reviews.py — it captures
+// UI chrome, reviewer headers, and owner responses, not clean review text, so it
+// must never drive a score. The canonical clean source is the browser
+// keyword-search harvest (`gmaps-search-clean`) plus structured pulls (serpapi /
+// dataforseo / google_places).
+const EXCLUDED_SOURCES = new Set(['gmaps-crawl4ai-md']);
+
 /** Aggregate touchless-specific sentiment counts for one listing from review_snippets. */
 async function aggregate(listingId) {
   let pos = 0, neg = 0;
   for (let offset = 0; ; offset += 1000) {
     const { data, error } = await sb
       .from('review_snippets')
-      .select('sentiment, touchless_about')
+      .select('sentiment, touchless_about, source')
       .eq('listing_id', listingId)
       .eq('is_touchless_evidence', true)
       .range(offset, offset + 999);
     if (error) throw error;
     if (!data || data.length === 0) break;
     for (const s of data) {
+      if (EXCLUDED_SOURCES.has(s.source)) continue; // noisy markdown scrape — never score on it
       // exclude evidence the Label step attributed to a non-touchless bay
       if (s.touchless_about === 'other_service' || s.touchless_about === 'unclear') continue;
       if (s.sentiment === 'positive') pos++;
