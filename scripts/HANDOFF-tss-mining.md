@@ -44,3 +44,18 @@ The earlier failures were mostly an **EU cookie-consent wall** (the machine was 
 
 ## Already cleaned up
 - Deleted the 1,047 noisy `gmaps-crawl4ai-md` snippets created by the wrong miner. DB is clean.
+
+---
+## RESOLVED 2026-06-16 — miner rebuilt, made permanent, now runs server-side
+- **Permanent miner: `scripts/mine-touchless-reviews-search.py`** (committed, NOT `_tmp_*`).
+  Keys that unblocked it: (1) RELOAD-until-Reviews-tab loop (Maps loads degraded; reload fixes
+  it — also makes headless work); (2) the reviews Search box moved to `input.LCTIRd` (old
+  aria-label gone), focused via JS + driven with TRUSTED `page.keyboard.type`; (3) insert fixes:
+  `rating` is INTEGER (cast), and dedup `review_id` within each batch (ON CONFLICT can't touch a
+  row twice). Resumable (skips listings with an existing gmaps-search-clean snippet).
+- **Server job: `.github/workflows/mine-touchless-reviews.yml`** — runs the miner on US-based
+  GitHub runners (clears the EU consent wall; confirmed inserting), resumable, auto-resumes every
+  6h (timeout 340m < the 6h cap). No laptop needed. `gh workflow run mine-touchless-reviews.yml`
+  to kick a run; disable the schedule once the backlog is fully mined.
+- STILL TODO after mining: Label (Haiku sentiment + touchless_about on new snippets) →
+  `node scripts/score-touchless-satisfaction.mjs --missing-only` → `npm run build && npm run verify:seo`.
