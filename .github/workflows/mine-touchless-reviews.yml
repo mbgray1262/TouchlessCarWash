@@ -1,21 +1,15 @@
 name: Mine touchless reviews (TSS backlog)
 
 # Server-side runner for the "Review-Mined Score method" step 1.
-# Runs scripts/mine-touchless-reviews-search.py against the Google-Maps reviews
-# tab (US-based GitHub runners clear the EU consent wall). Resumable: the miner
-# skips listings that already have a gmaps-search-clean snippet, so each run
-# continues the backlog. The schedule auto-resumes every 6h until done; disable
-# the schedule (or this workflow) once the backlog is fully mined.
+# PARALLEL SHARDS: a single long run gets throttled by Google after ~150 listings,
+# then sits idle. Instead we fan out into small shards (each ~130 CSV rows on its
+# own runner/IP), sized to stay UNDER the throttle window so every shard stays
+# productive. The whole backlog finishes in ~one wave. Resumable: each shard skips
+# listings that already have a gmaps-search-clean snippet. Repo is public → Actions
+# minutes are free. Schedule re-runs every 6h as a safety net until the backlog is done.
 
 on:
   workflow_dispatch:
-    inputs:
-      limit:
-        description: 'Max listings to mine this run (0 = all remaining)'
-        default: '0'
-      start:
-        description: 'Skip the first N CSV rows (for splitting work)'
-        default: '0'
   schedule:
     - cron: '17 */6 * * *'
 
@@ -25,8 +19,13 @@ concurrency:
 
 jobs:
   mine:
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        shard: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19]
     runs-on: ubuntu-latest
-    timeout-minutes: 340   # under the 6h hard cap; resumable if it hits the limit
+    timeout-minutes: 70
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -36,17 +35,10 @@ jobs:
         run: |
           pip install --quiet playwright
           python -m playwright install --with-deps chromium
-      - name: Mine touchless reviews
+      - name: Mine shard ${{ matrix.shard }}
         run: |
           python3 scripts/mine-touchless-reviews-search.py \
             --csv scripts/tss-mining-targets.csv \
             --headless \
-            --start "${{ github.event.inputs.start || '0' }}" \
-            --limit "${{ github.event.inputs.limit || '0' }}"
-      - name: Upload run log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: mine-log
-          path: scripts/_tmp_harvest_snippets.log
-          if-no-files-found: ignore
+            --start "$(( ${{ matrix.shard }} * 130 ))" \
+            --limit 130
