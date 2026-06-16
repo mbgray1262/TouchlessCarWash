@@ -1,0 +1,52 @@
+name: Mine touchless reviews (TSS backlog)
+
+# Server-side runner for the "Review-Mined Score method" step 1.
+# Runs scripts/mine-touchless-reviews-search.py against the Google-Maps reviews
+# tab (US-based GitHub runners clear the EU consent wall). Resumable: the miner
+# skips listings that already have a gmaps-search-clean snippet, so each run
+# continues the backlog. The schedule auto-resumes every 6h until done; disable
+# the schedule (or this workflow) once the backlog is fully mined.
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Max listings to mine this run (0 = all remaining)'
+        default: '0'
+      start:
+        description: 'Skip the first N CSV rows (for splitting work)'
+        default: '0'
+  schedule:
+    - cron: '17 */6 * * *'
+
+concurrency:
+  group: mine-touchless-reviews
+  cancel-in-progress: false
+
+jobs:
+  mine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340   # under the 6h hard cap; resumable if it hits the limit
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Playwright + Chromium
+        run: |
+          pip install --quiet playwright
+          python -m playwright install --with-deps chromium
+      - name: Mine touchless reviews
+        run: |
+          python3 scripts/mine-touchless-reviews-search.py \
+            --csv scripts/tss-mining-targets.csv \
+            --headless \
+            --start "${{ github.event.inputs.start || '0' }}" \
+            --limit "${{ github.event.inputs.limit || '0' }}"
+      - name: Upload run log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mine-log
+          path: scripts/_tmp_harvest_snippets.log
+          if-no-files-found: ignore
