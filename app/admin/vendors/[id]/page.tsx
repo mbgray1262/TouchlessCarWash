@@ -348,10 +348,21 @@ export default function VendorDetailPage() {
       if (error) throw error;
       setListings((prev) => prev.map((l) => l.id === listing.id ? { ...l, is_touchless: next } : l));
       const label = next === true ? 'Touchless' : next === false ? 'Not Touchless' : 'Unknown';
+      // Flipped to touchless → fire instant review mining (the 'pending' flag set
+      // above is the fallback for the 5-min drain if dispatch is unconfigured).
+      let started = false;
+      if (next === true) {
+        const r = await fetch('/api/mine-listing', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ listingId: listing.id }),
+        }).then((res) => res.json()).catch(() => ({ dispatched: false }));
+        started = !!r?.dispatched;
+      }
       toast({
         title: 'Updated',
         description: next === true
-          ? `${listing.name} set to Touchless — review mining queued (snippets + score populate in a few min)`
+          ? `${listing.name} set to Touchless — review mining ${started ? 'started now (score in ~2-3 min)' : 'queued (~5 min)'}`
           : `${listing.name} set to ${label}`,
       });
 
@@ -385,7 +396,19 @@ export default function VendorDetailPage() {
         .update({ review_mine_status: 'pending' })
         .eq('id', listing.id);
       if (error) throw error;
-      toast({ title: 'Review mining queued', description: `${listing.name} — snippets + score will populate in a few minutes.` });
+      // Fire the instant GitHub Actions run. 'pending' above is the fallback —
+      // if dispatch is unconfigured/fails, the 5-min drain still catches it.
+      const r = await fetch('/api/mine-listing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listingId: listing.id }),
+      }).then((res) => res.json()).catch(() => ({ dispatched: false }));
+      toast({
+        title: r?.dispatched ? 'Review mining started' : 'Review mining queued',
+        description: r?.dispatched
+          ? `${listing.name} — running now; snippets + score populate in ~2-3 min.`
+          : `${listing.name} — will mine on the next drain (~5 min).`,
+      });
     } catch (err) {
       toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to queue mining', variant: 'destructive' });
     } finally {
