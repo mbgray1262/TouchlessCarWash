@@ -42,3 +42,28 @@ jobs:
             --headless \
             --start "$(( ${{ matrix.shard }} * 130 ))" \
             --limit 130
+
+  # Step 2+3 of the Review-Mined Score method: Label the new snippets, then Score.
+  # Runs once after ALL mine shards settle (if: always() → even if some shards failed).
+  finish:
+    needs: mine
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --no-save @supabase/supabase-js
+      - name: Write env (.env.local from secrets)
+        run: |
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=https://gteqijdpqjmgxfnyuhvy.supabase.co"
+            echo "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+            echo "ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}"
+          } > .env.local
+      - name: Label new touchless-evidence snippets
+        run: node scripts/label-touchless-snippets.mjs
+      - name: Score listings missing a score
+        run: node scripts/score-touchless-satisfaction.mjs --missing-only
