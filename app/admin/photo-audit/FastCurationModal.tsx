@@ -27,7 +27,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
     tagPhoto, setAsHero, addToGallery, removeFromGallery, removeHero, skipPhoto,
     addCapture, addUpload, addHeroDirect, replaceUrl, updateWebsite, setFallbackHero,
     saveAll, approveAndNext, classifyEquipment, setEquipment,
-    markNotTouchless, markCantVerify, markClosed, deleteListing,
+    markNotTouchless, markCantVerify, markClosed, deleteListing, heroRemoved,
   } = useFastCuration(listingId);
 
   const [cropPhoto, setCropPhoto] = useState<CandidatePhoto | null>(null);
@@ -740,7 +740,10 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                 chainBrandImageUrl={
                   // Show chain brand image as the "effective hero" when no location-specific
                   // hero has been chosen — matches what the public listing page displays.
-                  !candidates.find(c => c.tag === 'hero') && listing.hero_image_source !== 'manual'
+                  // heroRemoved means the user just clicked "x": the save will null out
+                  // hero_image_source, so bypass the 'manual' guard and preview the brand
+                  // image immediately (otherwise it stays blank until save + reload).
+                  !candidates.find(c => c.tag === 'hero') && (heroRemoved || listing.hero_image_source !== 'manual')
                     ? getChainBrandImage(listing.parent_chain, listing.id)
                     : null
                 }

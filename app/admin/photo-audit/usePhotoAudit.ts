@@ -3,6 +3,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 
+// PostgREST .or() filter that keeps every listing EXCEPT permanently/temporarily
+// closed ones (classification_source starts with "closed_"). Closed listings are
+// un-approved and redirect on the public side, so they never need photo curation
+// and only clutter the review queues. The `is.null` clause is required so listings
+// with a NULL classification_source aren't dropped (NULL NOT ILIKE … is NULL → excluded).
+const NOT_CLOSED = 'classification_source.is.null,classification_source.not.ilike.closed*';
+
 export interface AuditResult {
   id: string;
   listing_id: string;
@@ -159,9 +166,11 @@ export function usePhotoAudit() {
       supabase.from('listings').select('id', { count: 'exact', head: true })
         .eq('is_touchless', true).is('hero_image', null).is('photo_audited_at', null)
         .or('hero_image_source.is.null,hero_image_source.neq.fallback'),
-      // Held = touchless + not approved (admin review queue)
+      // Held = touchless + not approved (admin review queue). Excludes closed
+      // listings to match the held queue itself (see NOT_CLOSED).
       supabase.from('listings').select('id', { count: 'exact', head: true })
-        .eq('is_touchless', true).eq('is_approved', false),
+        .eq('is_touchless', true).eq('is_approved', false)
+        .or(NOT_CLOSED),
       // Second Look = independent (non-chain) listings reverted by the
       // mass-restore that didn't have strong enough touchless signals to
       // re-promote automatically. Excludes ones already audit-confirmed
@@ -442,12 +451,14 @@ export function usePhotoAudit() {
     if (filter === 'unscanned') {
       const { count: totalUnscanned } = await supabase
         .from('listings').select('id', { count: 'exact', head: true })
-        .eq('is_touchless', true).is('photo_audited_at', null);
+        .eq('is_touchless', true).is('photo_audited_at', null)
+        .or(NOT_CLOSED);
 
       const { data: unscannedListings } = await supabase
         .from('listings')
         .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
         .eq('is_touchless', true).is('photo_audited_at', null)
+        .or(NOT_CLOSED)
         // Prioritize: no hero first (need the most attention), then alphabetical
         .order('hero_image', { ascending: true, nullsFirst: true })
         .order('name', { ascending: true })
@@ -498,12 +509,14 @@ export function usePhotoAudit() {
     if (filter === 'held') {
       const { count: totalHeld } = await supabase
         .from('listings').select('id', { count: 'exact', head: true })
-        .eq('is_touchless', true).eq('is_approved', false);
+        .eq('is_touchless', true).eq('is_approved', false)
+        .or(NOT_CLOSED);
 
       const { data: heldListings } = await supabase
         .from('listings')
         .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain, classification_source')
         .eq('is_touchless', true).eq('is_approved', false)
+        .or(NOT_CLOSED)
         // Prioritize: no hero first (they need the most attention), then oldest-touched
         .order('hero_image', { ascending: true, nullsFirst: true })
         .order('photo_audited_at', { ascending: true, nullsFirst: true })

@@ -751,11 +751,18 @@ export function useFastCuration(listingId: string) {
   // Approve listing (save + mark reviewed_at)
   const approveAndNext = async (onUpdate?: () => void, onNext?: () => void, onClose?: () => void): Promise<void> => {
     // Guard: a blank city produces an invalid public URL (/state/<code>//<slug>)
-    // that 404s, and the listing renders with no location. Block approval so we
+    // that 404s, and a blank street address ships a partial listing that renders
+    // with no location (the Bellis Fair case). Block approval on either so we
     // never ship another partial listing like the OSM-name-imported batch.
-    if (listing && (!listing.city || !listing.city.trim())) {
-      alert(`"${listing.name}" has no city — fill in the city/address before approving (a blank city breaks the public listing URL).`);
-      return;
+    if (listing) {
+      const missingCity = !listing.city || !listing.city.trim();
+      const missingStreet = !listing.address || !listing.address.trim();
+      if (missingCity || missingStreet) {
+        const what = [missingStreet && 'street address', missingCity && 'city']
+          .filter(Boolean).join(' and ');
+        alert(`"${listing.name}" has no ${what} — fill it in before approving (a partial listing breaks the public URL and renders with no location).`);
+        return;
+      }
     }
 
     const ok = await saveAll();
@@ -865,5 +872,6 @@ export function useFastCuration(listingId: string) {
     setFallbackHero,
     deleteListing,
     loadListing,
+    heroRemoved,
   };
 }
