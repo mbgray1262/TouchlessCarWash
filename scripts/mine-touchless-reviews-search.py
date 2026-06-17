@@ -31,6 +31,29 @@ SEARCH_QUERY = 'touch OR touchless OR brushless OR laser OR touch-free OR scratc
 TOUCHLESS_RE = re.compile(r'touch[- ]?(?:less|free)|brushless|laser\s*wash|no\s+touch|no\s+brush', re.I)
 PAINT_RE = re.compile(r'\b(scratch\w*|swirl\w*|paint|chip\w*|scuff\w*|damage\w*|dent\w*|peel\w*)\b', re.I)
 
+# Negators that, sitting IMMEDIATELY before a touchless keyword, FLIP its meaning
+# ("not brushless", "isn't touch free", "certainly not touchless", "no longer touch-free").
+# Anchored to end-of-string so only an adjacent negator (optionally + an article) counts —
+# this deliberately does NOT match "never used a touchless wash THAT cleans this well", which
+# is a positive comparison. Bare "no" is excluded because "no-touch"/"no brush" are positive.
+NEG_BEFORE = re.compile(
+    r"\b(not|isn'?t|aren'?t|wasn'?t|weren'?t|ain'?t|no longer|not really|not even|hardly|barely|far from|anything but)"
+    r"\s+(a\s+|really\s+|truly\s+|very\s+|the\s+)?$", re.I)
+
+
+def is_touchless_evidence(text):
+    """True only if a touchless keyword appears that is NOT negated by an adjacent negator.
+    Prevents 'Not brushless'/'not touch free' reviews from being flagged as positive
+    touchless evidence (the negation false-positive class fixed 2026-06-17)."""
+    matches = list(TOUCHLESS_RE.finditer(text))
+    if not matches:
+        return False
+    for m in matches:
+        pre = text[max(0, m.start() - 25):m.start()]
+        if not NEG_BEFORE.search(pre):
+            return True  # at least one un-negated touchless mention
+    return False  # every touchless mention was negated
+
 HAS_TAB_JS = r"""() => { const b=[...document.querySelectorAll('button[role=tab],div[role=tab],button')].find(x=>/^Reviews/.test((x.innerText||'').trim())||/^Reviews for/.test(x.getAttribute('aria-label')||'')); return !!b; }"""
 CLICK_TAB_JS = r"""() => { const b=[...document.querySelectorAll('button[role=tab],div[role=tab],button')].find(x=>/^Reviews/.test((x.innerText||'').trim())||/^Reviews for/.test(x.getAttribute('aria-label')||'')); if(b){b.click(); return true;} return false; }"""
 FOCUS_SEARCH_JS = r"""() => { const i=[...document.querySelectorAll('input.LCTIRd,input[class*=LCTIRd]')].find(x=>x.offsetParent!==null); if(!i)return false; i.focus(); i.value=''; return true; }"""
@@ -114,8 +137,11 @@ async def harvest_one(page, listing, stats):
     rows = []; tl_n = 0; paint_n = 0
     for r in reviews:
         text = r['text']
-        tl = bool(TOUCHLESS_RE.search(text)); paint = bool(PAINT_RE.search(text))
-        if not (tl or paint): continue
+        # kw = mentions a touchless keyword at all (store it either way); tl = un-negated
+        # touchless evidence (negation-aware). A "not brushless" review still gets stored
+        # as a snippet but with is_touchless_evidence=False.
+        kw = bool(TOUCHLESS_RE.search(text)); tl = is_touchless_evidence(text); paint = bool(PAINT_RE.search(text))
+        if not (kw or paint): continue
         if tl: tl_n += 1
         if paint: paint_n += 1
         is_lg, rc, pc = parse_creds(r.get('info'))
@@ -123,7 +149,13 @@ async def harvest_one(page, listing, stats):
         rows.append({
             'listing_id': lid, 'reviewer_name': r.get('name'), 'rating': int(rt) if rt is not None else None,
             'review_text': text[:1500], 'review_date': r.get('date'),
-            'review_id': f"gsc-{lid}-{r['review_id']}", 'source': 'gmaps-search-clean',
+            # Store the BARE Google review id (data-review-id) — the SAME identifier
+            # serpapi/dataforseo store. Do NOT prefix with listing id: a prefix makes
+            # the id globally unique, so the on_conflict=review_id upsert can never
+            # collide with an existing copy of the same review from another source,
+            # producing cross-source duplicates (the "g-"/"gsc-" prefix bug). See
+            # scripts/audit-duplicate-reviews.mjs + project_review_dedup_cross_source memory.
+            'review_id': r['review_id'], 'source': 'gmaps-search-clean',
             'is_touchless_evidence': tl,
             'touchless_keywords': [m.group(0) for m in TOUCHLESS_RE.finditer(text)] or None,
             'reviewer_credentials': r.get('info'), 'reviewer_review_count': rc,

@@ -81,10 +81,13 @@ const norm = (s) =>
     .trim();
 
 // Different mining sources prefix the SAME Google review id differently
-// (e.g. serpapi stores "ChZD...", gmaps-search-clean stores "g-ChZD...").
-// Strip known source prefixes so the underlying review id matches.
+// (serpapi/dataforseo store the bare "ChZD..."/"Ci9D..."; older gmaps-search-clean
+// stored "g-ChZD..."; the rebuilt search miner stored "gsc-<listing-uuid>-ChZD...").
+// Strip every known source prefix so the underlying Google review id matches and
+// cross-source copies collapse into one group.
 const normRid = (rid) =>
   (rid || '')
+    .replace(/^gsc-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i, '')
     .replace(/^g-/, '')
     .trim();
 
