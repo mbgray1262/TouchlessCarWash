@@ -181,20 +181,31 @@ async def main():
     csv_path = opt('--csv', os.path.join(SCRIPT_DIR, 'tss-mining-targets.csv'))
     limit = int(opt('--limit', '0')); start = int(opt('--start', '0'))
     ids_arg = opt('--ids')
+    listing_id_arg = opt('--listing-id')  # one-off: mine a single listing pulled from the DB (no CSV needed)
     global DRY, SCROLLS, RELOADS
     DRY = '--dry' in args; SCROLLS = int(opt('--scrolls', '10')); RELOADS = int(opt('--reloads', '6'))
     headless = '--headless' in args
 
     targets = []
-    with open(csv_path) as f:
-        for row in csv.DictReader(f):
-            if (row.get('google_place_id') or '').startswith('ChIJ'): targets.append(row)
-    if ids_arg: ids = set(ids_arg.split(',')); targets = [t for t in targets if t['id'] in ids]
-    targets = targets[start:]
-    if limit: targets = targets[:limit]
+    if listing_id_arg:
+        # ONE-OFF MODE: pull the single listing straight from the DB (used by the
+        # mine-one-listing workflow when an admin flips a listing to touchless or
+        # creates a new one — it isn't in the static CSV target list).
+        rows = sb('GET', f"/rest/v1/listings?select=id,name,city,state,google_place_id&id=eq.{listing_id_arg}")
+        if rows and isinstance(rows, list):
+            targets = [r for r in rows if (r.get('google_place_id') or '').startswith('ChIJ')]
+        if not targets:
+            log(f'one-off: listing {listing_id_arg} not found or missing google_place_id — nothing to mine'); return
+    else:
+        with open(csv_path) as f:
+            for row in csv.DictReader(f):
+                if (row.get('google_place_id') or '').startswith('ChIJ'): targets.append(row)
+        if ids_arg: ids = set(ids_arg.split(',')); targets = [t for t in targets if t['id'] in ids]
+        targets = targets[start:]
+        if limit: targets = targets[:limit]
 
     done = set()
-    if not ids_arg:
+    if not ids_arg and not listing_id_arg:
         log('checking already-mined (gmaps-search-clean)...')
         all_ids = [t['id'] for t in targets]
         for i in range(0, len(all_ids), 100):

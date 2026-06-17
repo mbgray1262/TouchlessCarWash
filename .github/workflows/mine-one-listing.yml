@@ -1,0 +1,95 @@
+name: Mine one listing (agile, on-demand)
+
+# Agile one-off review mining — the opposite of the 6h backlog batch.
+# Runs the FREE Playwright miner (no DataForSEO) for a SINGLE listing, then
+# labels + scores it, so a wash gets snippets + a Touchless Satisfaction Score
+# right after it's flipped to touchless or created.
+#
+# Two ways it fires:
+#   1. workflow_dispatch with listing_id  -> mine exactly that listing NOW.
+#   2. schedule (every 5 min)             -> drain the queue: any listing the
+#      admin flagged review_mine_status='pending' gets mined, then cleared.
+#      This is how the website triggers it WITHOUT needing a GitHub token —
+#      it just sets the flag (anon key), and this drain picks it up.
+
+on:
+  workflow_dispatch:
+    inputs:
+      listing_id:
+        description: 'Listing UUID to mine now (leave blank to drain the pending queue)'
+        required: false
+        default: ''
+  schedule:
+    - cron: '*/5 * * * *'   # drain the needs-mining queue ~every 5 min
+
+concurrency:
+  group: mine-one-listing
+  cancel-in-progress: false
+
+env:
+  SB_URL: https://gteqijdpqjmgxfnyuhvy.supabase.co
+
+jobs:
+  mine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Playwright + Chromium
+        run: |
+          pip install --quiet playwright
+          python -m playwright install --with-deps chromium
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'   # 22+ has native WebSocket (required by @supabase/supabase-js)
+      - run: npm install --no-save @supabase/supabase-js
+
+      - name: Write env (.env.local from secrets — for label + score steps)
+        run: |
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=${SB_URL}"
+            echo "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+            echo "ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}"
+          } > .env.local
+
+      - name: Resolve target listing IDs
+        id: targets
+        env:
+          SVC: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          INPUT_ID="${{ github.event.inputs.listing_id }}"
+          if [ -n "$INPUT_ID" ]; then
+            echo "ids=$INPUT_ID" >> "$GITHUB_OUTPUT"
+            echo "Dispatch mode: mining $INPUT_ID"
+          else
+            # Drain queue: listings the admin flagged pending (live touchless only)
+            IDS=$(curl -s "${SB_URL}/rest/v1/listings?select=id&review_mine_status=eq.pending&is_touchless=eq.true&is_approved=eq.true&limit=25" \
+              -H "apikey: ${SVC}" -H "Authorization: Bearer ${SVC}" \
+              | python3 -c "import sys,json; print(','.join(r['id'] for r in json.load(sys.stdin)))")
+            echo "ids=$IDS" >> "$GITHUB_OUTPUT"
+            echo "Drain mode: pending = [$IDS]"
+          fi
+
+      - name: Mine -> Label -> Score each target
+        if: steps.targets.outputs.ids != ''
+        env:
+          SVC: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          IFS=',' read -ra ARR <<< "${{ steps.targets.outputs.ids }}"
+          for id in "${ARR[@]}"; do
+            [ -z "$id" ] && continue
+            echo "=== Mining $id ==="
+            python3 scripts/mine-touchless-reviews-search.py --listing-id "$id" --headless --scrolls 18 --reloads 6 || echo "mine failed for $id"
+            node scripts/label-touchless-snippets.mjs --source=gmaps-search-clean --listing="$id" || echo "label failed for $id"
+            node scripts/score-touchless-satisfaction.mjs --ids="$id" || echo "score failed for $id"
+            # Dequeue: mark processed so the drain doesn't re-pick it up
+            curl -s -X PATCH "${SB_URL}/rest/v1/listings?id=eq.$id" \
+              -H "apikey: ${SVC}" -H "Authorization: Bearer ${SVC}" \
+              -H "Content-Type: application/json" -H "Prefer: return=minimal" \
+              -d '{"review_mine_status":"mined"}' || true
+          done

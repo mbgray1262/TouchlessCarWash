@@ -155,6 +155,7 @@ export default function VendorDetailPage() {
   const [addingLocation, setAddingLocation] = useState(false);
   const [togglingTouchless, setTogglingTouchless] = useState<string | null>(null);
   const [deletingLocation, setDeletingLocation] = useState<string | null>(null);
+  const [miningLocation, setMiningLocation] = useState<string | null>(null);
   const [enrichingLocation, setEnrichingLocation] = useState<string | null>(null);
   const [enrichResults, setEnrichResults] = useState<Record<string, { success: boolean; steps: { name: string; status: string; detail?: string }[] }>>({});
   const [editingListing, setEditingListing] = useState<EditableFullListing | null>(null);
@@ -329,6 +330,12 @@ export default function VendorDetailPage() {
         // Admin explicitly marked this Touchless on the Vendors page →
         // publish it. (Keep any existing touchless_verified pill.)
         update.is_approved = true;
+        // Queue agile review mining: the mine-one-listing GitHub Actions
+        // workflow drains review_mine_status='pending' (~every 5 min), runs
+        // the free Playwright miner -> label -> score, then clears the flag.
+        // This is how a just-flipped listing self-completes with snippets +
+        // a Touchless Satisfaction Score without a manual batch run.
+        update.review_mine_status = 'pending';
       } else {
         // Not Touchless or Unknown → unpublish + clear verified pill.
         update.is_approved = false;
@@ -341,7 +348,12 @@ export default function VendorDetailPage() {
       if (error) throw error;
       setListings((prev) => prev.map((l) => l.id === listing.id ? { ...l, is_touchless: next } : l));
       const label = next === true ? 'Touchless' : next === false ? 'Not Touchless' : 'Unknown';
-      toast({ title: 'Updated', description: `${listing.name} set to ${label}` });
+      toast({
+        title: 'Updated',
+        description: next === true
+          ? `${listing.name} set to Touchless — review mining queued (snippets + score populate in a few min)`
+          : `${listing.name} set to ${label}`,
+      });
 
       // Purge Netlify CDN cache for the listing's detail page so the
       // change shows up immediately when the admin clicks through.
@@ -359,6 +371,25 @@ export default function VendorDetailPage() {
       toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to update', variant: 'destructive' });
     } finally {
       setTogglingTouchless(null);
+    }
+  };
+
+  // Manual one-off review mining: flag the listing 'pending' so the
+  // mine-one-listing workflow (drains ~every 5 min) runs the free Playwright
+  // miner -> label -> score for it. Same path the touchless-flip auto-queue uses.
+  const handleMineNow = async (listing: VendorListing) => {
+    setMiningLocation(listing.id);
+    try {
+      const { error } = await supabase
+        .from('listings')
+        .update({ review_mine_status: 'pending' })
+        .eq('id', listing.id);
+      if (error) throw error;
+      toast({ title: 'Review mining queued', description: `${listing.name} — snippets + score will populate in a few minutes.` });
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to queue mining', variant: 'destructive' });
+    } finally {
+      setMiningLocation(null);
     }
   };
 
@@ -1261,6 +1292,24 @@ export default function VendorDetailPage() {
                                     >
                                       <Sparkles className="w-3 h-3" />
                                       Full
+                                    </Badge>
+                                  </button>
+                                  <button
+                                    onClick={() => handleMineNow(listing)}
+                                    disabled={miningLocation === listing.id}
+                                    className="inline-flex items-center"
+                                    title="Mine reviews now: free Playwright harvest → label → Touchless Satisfaction Score (~few min)"
+                                  >
+                                    <Badge
+                                      variant="outline"
+                                      className={`text-xs cursor-pointer transition-colors gap-1 ${
+                                        miningLocation === listing.id
+                                          ? 'opacity-40 cursor-not-allowed'
+                                          : 'border-sky-200 text-sky-700 bg-sky-50 hover:bg-sky-100'
+                                      }`}
+                                    >
+                                      {miningLocation === listing.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCw className="w-3 h-3" />}
+                                      Mine
                                     </Badge>
                                   </button>
                                 </div>

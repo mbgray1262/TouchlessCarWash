@@ -16,6 +16,7 @@ const db = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_
 const arg = (f,d)=>{const a=process.argv.find(x=>x.startsWith(f+'='));return a?a.split('=')[1]:d;};
 const SOURCE = arg('--source','gmaps-search-clean');
 const LIMIT = parseInt(arg('--limit','0'),10);
+const LISTING = arg('--listing',null); // one-off: only label a single listing's unlabeled snippets
 const BATCH = 10, POOL = 6;
 
 const SYS = `You label customer car-wash reviews that mention touchless/brushless/touch-free/laser keywords. For EACH review output two labels:
@@ -37,7 +38,9 @@ async function label(batch) {
 
 // fetch all unlabeled
 let rows=[]; for(let off=0;;off+=1000){
-  const{data}=await db.from('review_snippets').select('id,review_text').eq('source',SOURCE).eq('is_touchless_evidence',true).is('sentiment',null).range(off,off+999);
+  let q=db.from('review_snippets').select('id,review_text').eq('source',SOURCE).eq('is_touchless_evidence',true).is('sentiment',null);
+  if(LISTING) q=q.eq('listing_id',LISTING);
+  const{data}=await q.range(off,off+999);
   if(!data||!data.length)break; rows.push(...data); if(data.length<1000)break;
 }
 if(LIMIT) rows=rows.slice(0,LIMIT);
