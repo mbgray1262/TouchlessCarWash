@@ -200,6 +200,16 @@ export const CHAINS: Chain[] = [
     slug: 'scrubadub',
     description: 'ScrubaDub is a New England car wash chain with {count} locations that offer dedicated touchless (laser wash) bays across Massachusetts, New Hampshire, and Rhode Island. While most ScrubaDub locations are tunnel washes, select sites also operate touchless in-bay automatic systems — those are what we list here.',
   },
+  {
+    name: "Johnny's Markets",
+    slug: 'johnnys-markets',
+    description: "Johnny's Markets is a Michigan convenience-store and fuel chain with {count} touchless car wash locations across the state — from Grand Rapids, Kalamazoo, and Kentwood to Battle Creek, Niles, and Big Rapids. Each location features an automatic touch-free (brushless) wash bay, and several sites also offer self-serve bays alongside fuel and convenience services.",
+  },
+  {
+    name: 'Wash Me!',
+    slug: 'wash-me',
+    description: 'Wash Me! Car Wash is a northern-Colorado chain with {count} automatic touchless (touch-free) car wash locations across Loveland, Longmont, Greeley, and Evans. Their brushless, scratch-free bays consistently earn high Touchless Satisfaction Scores from local drivers.',
+  },
 ];
 
 const bySlug = new Map(CHAINS.map(c => [c.slug, c]));
