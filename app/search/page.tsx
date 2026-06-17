@@ -9,6 +9,7 @@ import { Pagination, PAGE_SIZE } from '@/components/Pagination';
 import { SearchFilters } from '@/components/SearchFilters';
 import { withPaintSafeChip, PAINT_SAFE_FILTER_SLUG } from '@/lib/paint-safe-filter';
 import { METRO_AREAS, haversineDistance, boundingBox, getMetroBySlug, type MetroArea } from '@/lib/metro-areas';
+import { earnsTrophy } from '@/lib/metro-scoring';
 import { MapPin, Map as MapIcon, Trophy, Search, ArrowRight } from 'lucide-react';
 import type { Metadata } from 'next';
 
@@ -679,10 +680,11 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {paginatedListings.map((listing, idx) => (
                 <Fragment key={listing.id}>
+                  {/* "#N Best" trophy chip only when the wash earns it (own TSS ≥ "Good") */}
                   <ListingCard
                     listing={listing}
                     distance={listing.distanceMiles}
-                    rank={metroRanks.get(listing.id)}
+                    rank={earnsTrophy(listing) ? metroRanks.get(listing.id) : undefined}
                   />
                   {/* Inline funnel after the first row (page 1 only) */}
                   {hasBestOf && searchMetro && page === 1 && idx === 2 && listings.length > 3 && (

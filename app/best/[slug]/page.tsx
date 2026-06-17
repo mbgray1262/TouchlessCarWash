@@ -9,7 +9,7 @@ import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
 import { getStateSlug, slugify } from '@/lib/constants';
 import { METRO_AREAS, getMetroBySlug, haversineDistance, type MetroArea } from '@/lib/metro-areas';
 import { getMetroListings } from '@/lib/metro-queries';
-import { scoreListing, isTrophyEligible, type ScoredListing } from '@/lib/metro-scoring';
+import { scoreListing, isTrophyEligible, earnsTrophy, type ScoredListing } from '@/lib/metro-scoring';
 import { METRO_CONTENT, buildExpertGuide } from '@/lib/metro-content';
 import { OpenStatusBadge } from '@/components/OpenStatusBadge';
 import LogoImage from '@/components/LogoImage';
@@ -171,18 +171,31 @@ export async function generateMetadata({ params }: BestOfPageProps): Promise<Met
 
   const listings = await getMetroListings(metro);
   // Count only trophy-eligible winners (scored + credible) — matches what the
-  // page actually crowns, so the title's number never overstates.
-  const count = Math.min(listings.filter(isTrophyEligible).length, 10);
+  // page actually crowns, so the title's number never overstates. Sort by score
+  // (touchlessReviewCount is unused by scoreListing) so we can tell whether the
+  // #1 wash actually EARNS the "Best" superlative (own score ≥ "Good").
+  const eligibleRanked = listings
+    .map((l) => ({ l, s: scoreListing(l) }))
+    .filter((x) => isTrophyEligible(x.l))
+    .sort((a, b) => b.s - a.s);
+  const count = Math.min(eligibleRanked.length, 10);
   const year = new Date().getFullYear();
 
   if (count < 1) return { title: 'Not Found' };
+
+  // "Crowns" = the #1-ranked wash earns a trophy. When it doesn't (its own
+  // Touchless Score is below "Good"), we keep the page + ranked list but drop the
+  // "Best" superlative in favor of a neutral "Top-Rated" frame — so we never call
+  // a Fair/Mixed wash "the Best" in a title. See earnsTrophy.
+  const crowns = earnsTrophy(eligibleRanked[0].l);
+  const superlative = crowns ? 'Best' : 'Top-Rated';
 
   const month = new Date().toLocaleString('default', { month: 'long' });
   // Concrete count + ranking signal + freshness date — three CTR levers
   // (specificity, authority, recency).
   const title = count === 1
-    ? `The Best Touchless Car Wash in the ${metro.name} Area — ${month} ${year}`
-    : `${count} Best Touchless Car Washes in the ${metro.name} Area — Ranked ${month} ${year}`;
+    ? `The ${crowns ? 'Best' : 'Top-Rated'} Touchless Car Wash in the ${metro.name} Area — ${month} ${year}`
+    : `${count} ${superlative} Touchless Car Washes in the ${metro.name} Area — Ranked ${month} ${year}`;
   const description = count === 1
     ? `The top touchless car wash in the greater ${metro.name} area, ranked by our Touchless Satisfaction Score, Paint-Safe verification, and customer reviews. Updated ${month} ${year}.`
     : `The ${count} top touchless car washes across the greater ${metro.name} area, ranked by our Touchless Satisfaction Score, Paint-Safe verification, and verified customer reviews. Updated ${month} ${year}.`;
@@ -314,6 +327,11 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
     ? ratedListings.reduce((sum, l) => sum + Number(l.rating), 0) / ratedListings.length
     : 0;
   const topPick = topListings[0];
+  // Does the #1 wash earn a trophy (own Touchless Score ≥ "Good")? Drives whether
+  // this page reads as a "Best" podium or a neutral "Top-Rated" ranked list. The
+  // list of washes is identical either way — only the trophy framing changes.
+  const crowns = earnsTrophy(topPick);
+  const superlative = crowns ? 'Best' : 'Top-Rated';
 
   const amenityCounts = new Map<string, number>();
   for (const listing of topListings) {
@@ -424,7 +442,7 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
         name: `What is the highest-rated touchless car wash in ${metro.name}?`,
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `${topListings[0].name} in ${topListings[0].city} is our #1 ranked touchless car wash in the ${metro.name} area${topListings[0].rating > 0 ? ` with a ${Number(topListings[0].rating).toFixed(1)}-star rating` : ''}${topListings[0].review_count > 0 ? ` based on ${topListings[0].review_count} Google reviews` : ''}.`,
+          text: `${topListings[0].name} in ${topListings[0].city} is ${crowns ? 'our #1 ranked' : 'the top-rated'} touchless car wash in the ${metro.name} area${topListings[0].rating > 0 ? ` with a ${Number(topListings[0].rating).toFixed(1)}-star rating` : ''}${topListings[0].review_count > 0 ? ` based on ${topListings[0].review_count} Google reviews` : ''}.`,
         },
       }] : []),
       {
@@ -466,14 +484,14 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
         <section className="bg-[#0F2744] text-white py-16 px-4">
           <div className="container mx-auto max-w-4xl text-center">
             <div className="flex items-center justify-center gap-2 mb-4">
-              <Trophy className="w-5 h-5 text-yellow-400" />
+              {crowns && <Trophy className="w-5 h-5 text-yellow-400" />}
               <p className="text-[#22C55E] text-sm font-semibold uppercase tracking-widest">
-                Best Touchless Car Washes
+                {crowns ? 'Best Touchless Car Washes' : 'Top-Rated Touchless Car Washes'}
               </p>
-              <Trophy className="w-5 h-5 text-yellow-400" />
+              {crowns && <Trophy className="w-5 h-5 text-yellow-400" />}
             </div>
             <h1 className="text-3xl md:text-5xl font-bold leading-tight mb-4">
-              {count} Best Touchless & Brushless Car Washes in the {metro.name} Area ({year})
+              {count} {superlative} Touchless & Brushless Car Washes in the {metro.name} Area ({year})
             </h1>
             <p className="text-lg text-blue-100 leading-relaxed max-w-2xl mx-auto">
               Ranked by Google ratings, customer reviews, and verified touchless confirmation.
@@ -603,8 +621,11 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
                         {/* Rank + Image */}
                         <div className="relative md:w-72 shrink-0">
                           <BestCardImage src={cardImage} alt={listing.name} />
-                          {/* Rank badge */}
-                          <div className={`absolute top-3 left-3 w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg shadow-lg ${getRankColor(rank)}`}>
+                          {/* Rank badge — gold/silver/bronze medal only for washes
+                              that earn a trophy (own Touchless Score ≥ "Good"); a
+                              neutral numbered badge otherwise, so a Fair/Mixed wash
+                              keeps its list position without a medal. */}
+                          <div className={`absolute top-3 left-3 w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg shadow-lg ${earnsTrophy(listing) ? getRankColor(rank) : 'bg-slate-200 text-slate-700'}`}>
                             {rank}
                           </div>
                           {/* Logo */}

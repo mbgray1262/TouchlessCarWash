@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { generateBadgeSvg, generateTop10BadgeSvg } from '@/lib/badge-svg';
+import { earnsTrophy } from '@/lib/metro-scoring';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -20,12 +21,18 @@ export async function GET(
   // 1. Fetch listing by slug
   const { data: listing } = await supabase
     .from('listings')
-    .select('id, name, city, state')
+    .select('id, name, city, state, touchless_satisfaction_score')
     .eq('slug', slug)
     .maybeSingle();
 
   if (!listing) {
     return new NextResponse('Listing not found', { status: 404 });
+  }
+
+  // No badge image for a ranked-but-below-"Good" wash (see earnsTrophy): it
+  // keeps its /best listing but doesn't earn a displayable trophy.
+  if (!earnsTrophy(listing)) {
+    return new NextResponse('Listing has not earned a badge', { status: 404 });
   }
 
   // 2. Fetch best ranking (lowest rank number = best position)

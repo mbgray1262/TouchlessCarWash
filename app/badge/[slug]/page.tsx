@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Trophy, Star, MapPin, ExternalLink, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { getStateSlug, slugify } from '@/lib/constants';
+import { earnsTrophy } from '@/lib/metro-scoring';
 import { BadgeClaimClient } from '@/components/BadgeClaimClient';
 import type { Metadata } from 'next';
 
@@ -35,6 +36,7 @@ interface RankedListing {
   hero_image: string | null;
   google_photo_url: string | null;
   website: string | null;
+  touchless_satisfaction_score: number | null;
 }
 
 // ── Data fetching ────────────────────────────────────────────────────────
@@ -43,7 +45,7 @@ const getListingBySlug = cache(async (slug: string) => {
   const { data } = await supabase
     .from('listings')
     .select(
-      'id, name, slug, city, state, address, rating, review_count, hero_image, google_photo_url, website'
+      'id, name, slug, city, state, address, rating, review_count, hero_image, google_photo_url, website, touchless_satisfaction_score'
     )
     .eq('slug', slug)
     .maybeSingle();
@@ -72,7 +74,9 @@ export async function generateMetadata({
   if (!listing) return { title: 'Badge Not Found' };
 
   const rankings = await getRankings(listing.id);
-  if (rankings.length === 0) return { title: 'Badge Not Found' };
+  // No badge for a ranked-but-below-"Good" wash — it keeps its /best listing but
+  // doesn't earn a displayable trophy (see earnsTrophy).
+  if (rankings.length === 0 || !earnsTrophy(listing)) return { title: 'Badge Not Found' };
 
   const top = rankings[0];
   const rankLabel = top.rank <= 3 ? `#${top.rank}` : 'Top 10';
@@ -133,7 +137,9 @@ export default async function BadgeClaimPage({
   // the top 10 in its metro, or never qualified). Redirect to the
   // listing's own detail page — that page handles its own redirect
   // cascade if the listing is now reverted/closed/removed.
-  if (rankings.length === 0) {
+  // No rankings, OR ranked but below "Good" (doesn't earn a displayable trophy):
+  // send the owner to their own listing page rather than a badge they can't claim.
+  if (rankings.length === 0 || !earnsTrophy(listing)) {
     permanentRedirect(
       `/state/${getStateSlug(listing.state)}/${slugify(listing.city) || 'unknown'}/${listing.slug}`,
     );

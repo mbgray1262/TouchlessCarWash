@@ -10,6 +10,14 @@
 
 export const TSS_MIN_MENTIONS = 3;
 
+/**
+ * Floor of the "Good" tier. A wash must score at least this to be a satisfying
+ * touchless wash by our own measure — used as the trophy-DISPLAY gate (see
+ * `earnsTrophy` in lib/metro-scoring.ts) so we never crown a "Fair"/"Mixed"
+ * wash with a #N trophy even when it tops a thin metro.
+ */
+export const GOOD_TIER_MIN = 62;
+
 export type TssTier = {
   label: string;
   /** text/accent color */
@@ -23,7 +31,7 @@ export type TssTier = {
 const BANDS: { min: number; tier: TssTier }[] = [
   { min: 84, tier: { label: 'Excellent', color: '#15803d', bg: '#ecfdf5', arc: '#16a34a' } },
   { min: 76, tier: { label: 'Very Good', color: '#16a34a', bg: '#f0fdf4', arc: '#22C55E' } },
-  { min: 62, tier: { label: 'Good', color: '#4d7c0f', bg: '#f7fee7', arc: '#84cc16' } },
+  { min: GOOD_TIER_MIN, tier: { label: 'Good', color: '#4d7c0f', bg: '#f7fee7', arc: '#84cc16' } },
   { min: 47, tier: { label: 'Fair', color: '#b45309', bg: '#fffbeb', arc: '#f59e0b' } },
   { min: 0, tier: { label: 'Mixed', color: '#64748b', bg: '#f8fafc', arc: '#94a3b8' } },
 ];

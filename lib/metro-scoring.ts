@@ -19,6 +19,7 @@
  */
 
 import type { Listing } from '@/lib/supabase';
+import { GOOD_TIER_MIN } from '@/lib/touchless-satisfaction';
 
 export interface ScoredListing extends Listing {
   score: number;
@@ -43,6 +44,20 @@ export function isTrophyEligible(
     (listing.rating ?? 0) >= MIN_TROPHY_RATING &&
     (listing.review_count ?? 0) >= MIN_TROPHY_REVIEWS
   );
+}
+
+// ── Trophy DISPLAY gate ───────────────────────────────────────────────
+// `isTrophyEligible` decides who goes INTO best_of_rankings (and thus onto the
+// /best directory list + sitemap). `earnsTrophy` is the narrower DISPLAY gate:
+// a ranked wash only wears a #N trophy badge / "#N Best …" endorsement when its
+// own Touchless Satisfaction Score is at least "Good". This keeps the /best page
+// and its ranked list intact (SEO unchanged) while never crowning a "Fair"/"Mixed"
+// wash that merely tops a thin metro. Pages whose top wash misses this bar render
+// as a neutral "Top-Rated …" ranked list instead of a trophy/medal podium.
+export function earnsTrophy(
+  listing: { touchless_satisfaction_score?: number | null },
+): boolean {
+  return (listing.touchless_satisfaction_score ?? -1) >= GOOD_TIER_MIN;
 }
 
 /**

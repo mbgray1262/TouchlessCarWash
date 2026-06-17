@@ -29,6 +29,7 @@ import PaintSafeModule, { type PaintSnippet, type PaintTheme } from '@/component
 import TouchlessSatisfactionGauge, { type TssSnippet } from '@/components/TouchlessSatisfactionGauge';
 import { TouchlessScoreComparison, type ScoreRankItem } from '@/components/TouchlessScoreComparison';
 import { tssTier } from '@/lib/touchless-satisfaction';
+import { earnsTrophy } from '@/lib/metro-scoring';
 import { ListingThumb } from '@/components/ListingThumb';
 import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants';
 import { getAnyCityCoords, findNearestTouchlessCityPath } from '@/lib/geo-fallback';
@@ -481,7 +482,7 @@ const getMetroSiblingRankings = cache(async (
   const ids = rankRows.map(r => r.listing_id as string);
   const { data: listings } = await supabase
     .from('listings')
-    .select('id, name, slug, city, state, address, phone, rating, review_count, hero_image, google_photo_url, street_view_url, logo_photo, google_logo_url, amenities, touchless_wash_types, hours, is_touchless, is_featured, is_claimed, touchless_verified, parent_chain')
+    .select('id, name, slug, city, state, address, phone, rating, review_count, hero_image, google_photo_url, street_view_url, logo_photo, google_logo_url, amenities, touchless_wash_types, hours, is_touchless, is_featured, is_claimed, touchless_verified, parent_chain, touchless_satisfaction_score')
     .in('id', ids);
 
   if (!listings) return [];
@@ -536,26 +537,30 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   // Check for Best Of rankings (top 3 in a metro area)
   const rankings = await getBestOfRankings(listing.id);
   const topRanking = rankings.length > 0 ? rankings[0] : null; // Use the best (lowest) rank
+  // Trophy DISPLAY gate: only listings whose own Touchless Score is ≥ "Good"
+  // wear the "#N Best …" endorsement. A ranked-but-below-Good wash keeps its
+  // /best listing but falls back to the plain (non-trophy) title/description.
+  const trophyRanking = topRanking && earnsTrophy(listing) ? topRanking : null;
 
   // Title CTR optimization:
   //   - Lead with ★ rating prefix when available (proven CTR booster in SERPs)
   //   - Drop "& Brushless" to make room — keyword is redundant with "Touchless"
-  //   - Ranked listings keep the "#N Best" authority signal
+  //   - Trophy-earning listings keep the "#N Best" authority signal
   const titleRatingPrefix = listing.rating > 0
     ? `★ ${Number(listing.rating).toFixed(1)} `
     : '';
-  const title = topRanking
-    ? `#${topRanking.rank} Best Touchless Car Wash in ${topRanking.metro_name} | ${listing.name}`
+  const title = trophyRanking
+    ? `#${trophyRanking.rank} Best Touchless Car Wash in ${trophyRanking.metro_name} | ${listing.name}`
     : `${titleRatingPrefix}${listing.name} | Touchless Car Wash in ${listing.city}, ${listing.state}`;
-  const ogTitle = topRanking
-    ? `#${topRanking.rank} Best Touchless Car Wash in ${topRanking.metro_name} | ${listing.name}`
+  const ogTitle = trophyRanking
+    ? `#${trophyRanking.rank} Best Touchless Car Wash in ${trophyRanking.metro_name} | ${listing.name}`
     : `${titleRatingPrefix}${listing.name} | Touchless Car Wash in ${listing.city}, ${stateName}`;
 
   // Lead with star rating for CTR — Google often shows this in snippet
   const ratingPrefix = listing.rating > 0
     ? `★ ${Number(listing.rating).toFixed(1)}${listing.review_count > 0 ? ` (${listing.review_count} reviews)` : ''} — `
     : '';
-  const rankingPrefix = topRanking ? `#${topRanking.rank} Best Touchless & Brushless Car Wash in ${topRanking.metro_name}. ` : '';
+  const rankingPrefix = trophyRanking ? `#${trophyRanking.rank} Best Touchless & Brushless Car Wash in ${trophyRanking.metro_name}. ` : '';
   const description = truncateDescription(
     `${ratingPrefix}${rankingPrefix}${listing.name} at ${streetAddress(listing.address, listing.city, listing.state, listing.zip)}, ${listing.city}, ${listing.state}.${amenityPart} Hours, directions & more.`
   );
@@ -768,8 +773,10 @@ function buildLocalBusinessSchema(listing: Listing, canonicalUrl: string, hours:
     }));
   }
 
-  // Add awards from Best Of rankings
-  if (rankings.length > 0) {
+  // Add awards from Best Of rankings — only when this wash's own Touchless
+  // Satisfaction Score earns the trophy (see earnsTrophy). A ranked-but-mediocre
+  // wash keeps its /best listing but makes no "#N Best" award claim in schema.
+  if (rankings.length > 0 && earnsTrophy(listing)) {
     const year = new Date().getFullYear();
     schema.award = rankings.map(
       (r) => `#${r.rank} Best Touchless Car Wash in ${r.metro_name} (${year})`,
@@ -1417,6 +1424,10 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
   ) : null;
 
   const topRanking = rankings.length > 0 ? rankings[0] : null;
+  // Trophy DISPLAY gate (see lib/metro-scoring earnsTrophy): the #N trophy chip
+  // and "Claim Your Badge" CTA only show when this wash's own Touchless Score is
+  // ≥ "Good". Below that it keeps its /best listing but wears no trophy.
+  const trophyRanking = topRanking && earnsTrophy(listing) ? topRanking : null;
 
   // One clean, mobile-first hero content block, shared by both the image and
   // no-image hero layouts (previously duplicated). Compact prioritized badges,
@@ -1447,10 +1458,10 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
         )}
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-1.5 mb-2">
-            {topRanking && (
-              <Link href={`/best/${topRanking.metro_slug}`}>
+            {trophyRanking && (
+              <Link href={`/best/${trophyRanking.metro_slug}`}>
                 <Badge className={`bg-yellow-400 text-yellow-900 border-0 shadow-sm hover:bg-yellow-300 transition-colors ${heroPill}`}>
-                  <Trophy className="w-3 h-3 mr-1" />#{topRanking.rank} in {topRanking.metro_name}
+                  <Trophy className="w-3 h-3 mr-1" />#{trophyRanking.rank} in {trophyRanking.metro_name}
                 </Badge>
               </Link>
             )}
@@ -1493,7 +1504,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
             <span className="truncate">{heroShortAddress}</span>
             <span className="flex items-center gap-0.5 text-[#22C55E] font-semibold shrink-0">· Directions<ChevronRight className="w-3.5 h-3.5" /></span>
           </TrackableLink>
-          {topRanking && (
+          {trophyRanking && (
             <div className="mt-3">
               <Link
                 href={`/badge/${listing.slug}`}
@@ -2070,7 +2081,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
               full ranked alternatives inline so users don't have to bounce
               to /best/[metro] to discover them. Each card is its own
               click target (PV/session multiplier). */}
-          {topRanking && metroSiblings.length > 0 && (
+          {trophyRanking && metroSiblings.length > 0 && (
             <div className="mt-10 rounded-2xl border border-yellow-200 bg-gradient-to-br from-yellow-50 to-amber-50 p-5 sm:p-6">
               <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
                 <div className="flex items-center gap-3">
@@ -2079,10 +2090,10 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-[#0F2744]">
-                      More Top-Ranked Touchless Washes in {topRanking.metro_name}
+                      More Top-Ranked Touchless Washes in {trophyRanking.metro_name}
                     </h2>
                     <p className="text-sm text-gray-600 mt-0.5">
-                      {listing.name} ranked #{topRanking.rank}. Here&rsquo;s the rest of the top {Math.min(10, metroSiblings.length + 1)}.
+                      {listing.name} ranked #{trophyRanking.rank}. Here&rsquo;s the rest of the top {Math.min(10, metroSiblings.length + 1)}.
                     </p>
                   </div>
                 </div>
@@ -2091,21 +2102,24 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                 {metroSiblings.map(({ listing: sibling, rank }) => (
                   <div key={sibling.id} className="relative">
                     <NearbyListingCard nearby={sibling} />
-                    <div className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-400 text-yellow-900 text-[11px] font-bold shadow">
-                      <Trophy className="w-2.5 h-2.5" />#{rank}
-                    </div>
+                    {/* Trophy chip only on siblings whose own score earns it (see earnsTrophy) */}
+                    {earnsTrophy(sibling) && (
+                      <div className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-400 text-yellow-900 text-[11px] font-bold shadow">
+                        <Trophy className="w-2.5 h-2.5" />#{rank}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
               <div className="mt-6 pt-5 border-t border-yellow-200 flex items-center justify-between flex-wrap gap-3">
                 <p className="text-sm text-gray-600">
-                  Ranked by Google ratings, customer reviews, and touchless confirmation.
+                  Ranked by our Touchless Satisfaction Score, customer reviews, and touchless confirmation.
                 </p>
                 <Link
-                  href={`/best/${topRanking.metro_slug}`}
+                  href={`/best/${trophyRanking.metro_slug}`}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0F2744] text-white text-sm font-semibold hover:bg-[#1a3a5e] transition-colors"
                 >
-                  View the Full Top 10 in {topRanking.metro_name.split(',')[0]}
+                  View the Full Top 10 in {trophyRanking.metro_name.split(',')[0]}
                   <ChevronRight className="w-4 h-4" />
                 </Link>
               </div>
