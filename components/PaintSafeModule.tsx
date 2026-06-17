@@ -55,7 +55,7 @@ function Stars({ n }: { n: number | null }) {
  * the red highlight when it isn't already part of a positive/negated phrase.
  */
 function highlightPaint(text: string): ReactNode[] {
-  const re = /(\b(?:no|not|never|without|zero|didn'?t|doesn'?t|won'?t|wasn'?t|hasn'?t|haven'?t)\b[\w\s,'-]{0,18}?\b(?:scratch\w*|swirl\w*|damage\w*|mark\w*|harm\w*)|\b(?:gentle|scratch[\s-]?free|swirl[\s-]?free|flawless|pristine|spotless|immaculate|touch[\s-]?free|touchless|brushless)\b|\bno (?:brushes|scratches|swirls|damage|marks)\b|\bpaint (?:looks|is|stayed|came out|still)\w*\s+(?:great|perfect|amazing|fine|good|flawless|immaculate|pristine))|(\b(?:scratch\w*|swirl\w*|damage\w*|chip\w*|scuff\w*|ruin\w*|dent\w*|peel\w*)\b)/gi;
+  const re = /(\b(?:no|not|never|without|zero|didn'?t|doesn'?t|won'?t|wasn'?t|hasn'?t|haven'?t)\b[\w\s,'-]{0,18}?\b(?:scratch\w*|swirl\w*|damage\w*|mark\w*|harm\w*)|\b(?:gentle|scratch[\s-]?free|swirl[\s-]?free|flawless|pristine|spotless|immaculate|touch[\s-]?free|touchless|brushless|no[\s-]?touch(?:ing|es)?|no[\s-]?brush(?:es|ing)?|laser[\s-]?wash)\b|\bno (?:brushes|scratches|swirls|damage|marks)\b|\bpaint (?:looks|is|stayed|came out|still)\w*\s+(?:great|perfect|amazing|fine|good|flawless|immaculate|pristine))|(\b(?:scratch\w*|swirl\w*|damage\w*|chip\w*|scuff\w*|ruin\w*|dent\w*|peel\w*)\b)/gi;
   const nodes: ReactNode[] = [];
   let last = 0, key = 0;
   let m: RegExpExecArray | null;

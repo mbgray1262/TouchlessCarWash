@@ -29,7 +29,7 @@ export interface TssSnippet {
  * a bare negative word ("dirty", "streaks", "scratched") falls through to red.
  */
 function highlightTouchless(text: string): ReactNode[] {
-  const re = /(\b(?:no|not|never|without|zero|didn'?t|doesn'?t|won'?t|wasn'?t|hasn'?t|haven'?t)\b[\w\s,'-]{0,15}?\b(?:scratch\w*|streak\w*|spot\w*|dirt\w*|damage\w*|residue|mark\w*|swirl\w*|miss\w*|smear\w*)|\b(?:spotless|sparkl\w*|shin(?:e|y|ing)|gleaming|immaculate|pristine|flawless|gentle|scratch[\s-]?free|spot[\s-]?free|streak[\s-]?free|touch[\s-]?free|touchless|brushless|clean\w*)\b|\b(?:came?|comes?|come)\s+out\s+(?:so\s+|really\s+|super\s+)?(?:clean\w*|great|perfect|spotless|amazing|nice|shiny|new))|(\b(?:dirty|filthy|streak\w*|streaky|smear\w*|grimy|grime|scratch\w*|swirl\w*|damage\w*|broke\w*|broken|residue|missed)\b)/gi;
+  const re = /(\b(?:no|not|never|without|zero|didn'?t|doesn'?t|won'?t|wasn'?t|hasn'?t|haven'?t)\b[\w\s,'-]{0,15}?\b(?:scratch\w*|streak\w*|spot\w*|dirt\w*|damage\w*|residue|mark\w*|swirl\w*|miss\w*|smear\w*)|\b(?:spotless|sparkl\w*|shin(?:e|y|ing)|gleaming|immaculate|pristine|flawless|gentle|scratch[\s-]?free|spot[\s-]?free|streak[\s-]?free|touch[\s-]?free|touchless|brushless|no[\s-]?touch(?:ing|es)?|no[\s-]?brush(?:es|ing)?|laser[\s-]?wash|clean\w*)\b|\b(?:came?|comes?|come)\s+out\s+(?:so\s+|really\s+|super\s+)?(?:clean\w*|great|perfect|spotless|amazing|nice|shiny|new))|(\b(?:dirty|filthy|streak\w*|streaky|smear\w*|grimy|grime|scratch\w*|swirl\w*|damage\w*|broke\w*|broken|residue|missed)\b)/gi;
   const nodes: ReactNode[] = [];
   let last = 0, key = 0;
   let m: RegExpExecArray | null;
