@@ -210,6 +210,86 @@ export const CHAINS: Chain[] = [
     slug: 'wash-me',
     description: 'Wash Me! Car Wash is a northern-Colorado chain with {count} automatic touchless (touch-free) car wash locations across Loveland, Longmont, Greeley, and Evans. Their brushless, scratch-free bays consistently earn high Touchless Satisfaction Scores from local drivers.',
   },
+  {
+    name: "Kelley's Market",
+    slug: 'kelleys-market',
+    description: "Kelley's Market is a Midwest convenience-store and fuel chain with {count} touchless car wash locations across Illinois and Wisconsin. Each site offers a brushless, touch-free automatic wash alongside fuel and convenience services.",
+  },
+  {
+    name: 'BellStores',
+    slug: 'bellstores',
+    description: 'BellStores is an Ohio convenience-store chain offering Touch Free automatic car washes at {count} locations across the state. Their touchless bays deliver a brushless, scratch-free wash alongside fuel and convenience services.',
+  },
+  {
+    name: 'Super Suds Auto Spa',
+    slug: 'super-suds-auto-spa',
+    description: 'Super Suds Auto Spa operates {count} touchless car wash locations across Ohio, featuring automatic touch-free (brushless) bays for a safe, scratch-free wash.',
+  },
+  {
+    name: 'Precision Wash',
+    slug: 'precision-wash',
+    description: 'Precision Wash is a New York car wash chain with {count} touchless automatic locations, offering brushless, touch-free washing across the state.',
+  },
+  {
+    name: 'Hoffman Car Wash',
+    slug: 'hoffman-car-wash',
+    description: "Hoffman Car Wash is a long-running New York Capital Region car wash chain with {count} locations offering touchless automatic bays. Best known for its full-service and express tunnels, Hoffman also operates touch-free brushless washing at these sites.",
+  },
+  {
+    name: "Zappy's Auto Washes",
+    slug: 'zappys-auto-washes',
+    description: "Zappy's Auto Washes operates {count} touchless car wash locations across Ohio, with automatic touch-free bays for a brushless, scratch-free wash.",
+  },
+  {
+    name: 'Mr Sparkle Car Wash',
+    slug: 'mr-sparkle-car-wash',
+    description: 'Mr Sparkle Car Wash is a Connecticut chain with {count} touchless automatic car wash locations, offering brushless, touch-free washing across the state.',
+  },
+  {
+    name: 'Spritz Car Wash',
+    slug: 'spritz-car-wash',
+    description: 'Spritz Car Wash operates {count} touchless car wash locations in New York, featuring automatic touch-free (brushless) bays for a scratch-free clean.',
+  },
+  {
+    name: "CC's Touchless Car Wash",
+    slug: 'ccs-touchless-car-wash',
+    description: "CC's Touchless Car Wash is a touch-free car wash brand with {count} automatic touchless locations across New Jersey and Pennsylvania — touchless washing is right in the name.",
+  },
+  {
+    name: 'Executive Laser Wash',
+    slug: 'executive-laser-wash',
+    description: 'Executive Laser Wash operates {count} touchless laser-wash locations across Iowa, using automatic touch-free (brushless) LaserWash systems for a scratch-free clean.',
+  },
+  {
+    name: 'Clean Getaway',
+    slug: 'clean-getaway',
+    description: 'Clean Getaway Car Wash is a Tennessee-based chain with {count} touchless automatic car wash locations, offering brushless, touch-free washing primarily across Middle Tennessee.',
+  },
+  {
+    name: 'Chevron',
+    slug: 'chevron',
+    description: 'Select Chevron gas stations offer touchless car washes at {count} locations, concentrated in California and Florida with additional sites in Oregon, Nevada, and Washington. These touch-free automatic bays provide a quick brushless wash alongside fuel.',
+  },
+  {
+    name: "Terrible's",
+    slug: 'terribles',
+    description: "Terrible's is a Nevada-based convenience-store and fuel chain with {count} touchless car wash locations, primarily across Nevada plus California and Arizona. Their touch-free automatic bays offer a brushless, scratch-free wash.",
+  },
+  {
+    name: 'Shell',
+    slug: 'shell',
+    description: 'Select Shell gas stations operate touchless car washes at {count} locations nationwide — from California and the Midwest to the Southeast — offering a brushless, touch-free automatic wash alongside fuel.',
+  },
+  {
+    name: 'Mobil',
+    slug: 'mobil',
+    description: 'Select Mobil gas stations offer touchless car washes at {count} locations across the country, including California, the Northeast, and Florida. These touch-free automatic bays provide a quick brushless wash.',
+  },
+  {
+    name: 'Marathon',
+    slug: 'marathon',
+    description: 'Select Marathon gas stations offer touchless car washes at {count} locations nationwide, led by Florida. Their touch-free automatic bays deliver a brushless, scratch-free wash alongside fuel.',
+  },
 ];
 
 const bySlug = new Map(CHAINS.map(c => [c.slug, c]));
