@@ -557,6 +557,15 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                     Admin Verified
                   </span>
                 )}
+                {listing.touchless_verified === 'chain' && (
+                  <span
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 cursor-help"
+                    title={listing.touchless_evidence ?? 'Verified via chain Touch-Free location list'}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                    Chain Verified
+                  </span>
+                )}
               </div>
               <p className="text-sm text-gray-500">{listing.city}, {listing.state}</p>
             </div>
