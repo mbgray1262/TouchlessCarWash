@@ -58,6 +58,12 @@ interface ListingData {
   // 'closed_temporarily_admin' / other classification labels. Read by
   // FastCurationModal to surface a Closed status badge.
   classification_source: string | null;
+  // Count of review_snippets with is_touchless_evidence=true for this listing.
+  // Loaded alongside the listing so the "User Verified" badge only shows when
+  // there's actual review evidence behind touchless_verified='user_review'
+  // (the flag alone can persist after snippets are deduped/relabeled, or be set
+  // by importers, so it isn't proof of review evidence on its own).
+  touchless_evidence_count?: number;
 }
 
 interface SourceCounts {
@@ -92,12 +98,23 @@ export function useFastCuration(listingId: string) {
 
   // Load listing data
   const loadListing = useCallback(async () => {
-    const { data } = await supabase
-      .from('listings')
-      .select('id, name, city, state, address, zip, slug, latitude, longitude, google_place_id, website, hero_image, hero_image_source, photos, street_view_url, google_photo_url, blocked_photos, equipment_brand, equipment_model, touchless_verified, touchless_evidence, parent_chain, is_approved, is_touchless, crawl_notes, classification_source')
-      .eq('id', listingId)
-      .maybeSingle();
+    const [{ data }, { count: evidenceCount }] = await Promise.all([
+      supabase
+        .from('listings')
+        .select('id, name, city, state, address, zip, slug, latitude, longitude, google_place_id, website, hero_image, hero_image_source, photos, street_view_url, google_photo_url, blocked_photos, equipment_brand, equipment_model, touchless_verified, touchless_evidence, parent_chain, is_approved, is_touchless, crawl_notes, classification_source')
+        .eq('id', listingId)
+        .maybeSingle(),
+      // Real review evidence behind a 'user_review' verification: count of
+      // touchless-evidence snippets. Gates the "User Verified" badge so it never
+      // shows on a listing with no touchless review snippets.
+      supabase
+        .from('review_snippets')
+        .select('id', { count: 'exact', head: true })
+        .eq('listing_id', listingId)
+        .eq('is_touchless_evidence', true),
+    ]);
     if (data) {
+      (data as ListingData).touchless_evidence_count = evidenceCount ?? 0;
       // NOTE: We intentionally do NOT run any browser-side HEAD probes here.
       // A previous version of this code nulled hero_image and filtered photos[]
       // whenever a HEAD fetch failed (CORS, timeout, network blip, extension

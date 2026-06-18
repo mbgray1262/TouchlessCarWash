@@ -542,13 +542,22 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                   }
                   return null;
                 })()}
-                {listing.touchless_verified === 'user_review' && (
+                {listing.touchless_verified === 'user_review' && (listing.touchless_evidence_count ?? 0) > 0 && (
                   <span
                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 cursor-help"
-                    title={listing.touchless_evidence ?? 'Detected from user review'}
+                    title={listing.touchless_evidence ?? `${listing.touchless_evidence_count} touchless review snippet${listing.touchless_evidence_count === 1 ? '' : 's'}`}
                   >
                     <span className="w-2 h-2 rounded-full bg-green-500" />
                     User Verified
+                  </span>
+                )}
+                {listing.touchless_verified === 'user_review' && (listing.touchless_evidence_count ?? 0) === 0 && (
+                  <span
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 cursor-help"
+                    title="Flagged user_review but has no touchless review snippets — not review-verified. Confirm the wash type from photos/Street View."
+                  >
+                    <span className="w-2 h-2 rounded-full bg-gray-400" />
+                    No review evidence
                   </span>
                 )}
                 {listing.touchless_verified === 'admin' && (
