@@ -88,7 +88,7 @@ export interface LowResListing {
   hero_image_source: string | null;
 }
 
-export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup' | 'no_hero' | 'low_res' | 'held' | 'unscanned' | 'second_look' | 'best_of';
+export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup' | 'no_hero' | 'low_res' | 'held' | 'unscanned' | 'second_look' | 'best_of' | 'no_evidence';
 
 const POLL_INTERVAL = 3000; // 3 seconds — fast enough to show per-listing progress
 const PAGE_SIZE = 25;
@@ -500,6 +500,78 @@ export function usePhotoAudit() {
 
       setResults(allResults);
       setFilteredTotal(totalUnscanned ?? 0);
+      setLoading(false);
+      return;
+    }
+
+    // "no_evidence" filter: listings flagged touchless_verified='user_review'
+    // (the "User Verified" badge) that have NO touchless review snippet behind the
+    // flag — the badge is unbacked. One-at-a-time queue to confirm the wash really
+    // is touchless or demote it. Approve & Next stamps photo_audited_at, which drops
+    // the listing from this queue (we only show photo_audited_at IS NULL here).
+    // The "no snippet" test can't be a server-side filter (NOT EXISTS), so we fetch
+    // the candidate set first, then exclude any id that has a touchless-evidence
+    // snippet (chunked .in() to stay under the URL-length limit).
+    if (filter === 'no_evidence') {
+      // Loosely typed to match the other filter blocks (Supabase select results),
+      // so null DB fields coerce into the AuditResult shape the same way.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const candidates: any[] = [];
+      for (let o = 0; ; o += 1000) {
+        const { data } = await supabase
+          .from('listings')
+          .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
+          .eq('touchless_verified', 'user_review').is('photo_audited_at', null)
+          .or(NOT_CLOSED)
+          .order('name', { ascending: true })
+          .range(o, o + 999);
+        if (!data || data.length === 0) break;
+        candidates.push(...data);
+        if (data.length < 1000) break;
+      }
+      const haveEvidence = new Set<string>();
+      const ids = candidates.map(l => l.id);
+      for (let i = 0; i < ids.length; i += 100) {
+        const { data } = await supabase
+          .from('review_snippets')
+          .select('listing_id')
+          .eq('is_touchless_evidence', true)
+          .in('listing_id', ids.slice(i, i + 100));
+        (data ?? []).forEach(s => haveEvidence.add(s.listing_id as string));
+      }
+      const noEvidence = candidates.filter(l => !haveEvidence.has(l.id));
+      const pageRows = noEvidence.slice(offset, offset + PAGE_SIZE);
+
+      const allResults: AuditResult[] = pageRows.map((l): AuditResult => {
+        const hasHero = !!l.hero_image;
+        const hasGallery = (l.photos ?? []).length > 0;
+        return {
+          id: `noev-${l.id}`,
+          listing_id: l.id,
+          listing_name: l.name,
+          listing_city: l.city,
+          listing_state: l.state,
+          listing_hero: l.hero_image,
+          hero_quality: hasHero ? 'has_hero' : hasGallery ? 'has_candidates' : 'missing',
+          equipment_brand: l.equipment_brand,
+          equipment_model: l.equipment_model,
+          equipment_confidence: null,
+          equipment_source_photo: null,
+          suggested_hero_url: null,
+          suggested_hero_reason: '"User Verified" badge with no touchless review snippet — confirm touchless or demote',
+          photos_to_remove: [],
+          reviewed: false,
+          applied: hasHero,
+          created_at: '',
+          raw_response: null,
+          google_photos_added: 0,
+          google_photos_screened: 0,
+          listing_parent_chain: l.parent_chain ?? null,
+        };
+      });
+
+      setResults(allResults);
+      setFilteredTotal(noEvidence.length);
       setLoading(false);
       return;
     }

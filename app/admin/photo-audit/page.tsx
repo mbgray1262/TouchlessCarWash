@@ -603,6 +603,7 @@ export default function PhotoAuditPage() {
               { key: 'held' as ViewFilter, label: `Held (${viewFilter === 'held' ? filteredTotal : heldCount})` },
               { key: 'second_look' as ViewFilter, label: `Second Look (${viewFilter === 'second_look' ? filteredTotal : secondLookCount})` },
               { key: 'unscanned' as ViewFilter, label: `Unscanned (${viewFilter === 'unscanned' ? filteredTotal : queueStats.remaining})` },
+              { key: 'no_evidence' as ViewFilter, label: `No Review Evidence${viewFilter === 'no_evidence' ? ` (${filteredTotal})` : ''}` },
             ]).map(f => (
               <button
                 key={f.key}
@@ -977,9 +978,11 @@ export default function PhotoAuditPage() {
           listingId={editorListingId}
           onClose={() => setEditorListingId(null)}
           onUpdate={() => {
-            // On No Hero or Unscanned tab, immediately remove the approved listing
-            // from the queue so the count decrements and the user doesn't see it again.
-            if ((viewFilter === 'no_hero' || viewFilter === 'unscanned') && editorListingId) {
+            // On No Hero / Unscanned / No-Review-Evidence tabs, immediately remove the
+            // approved listing from the queue so the count decrements and the user
+            // doesn't see it again. (Approve stamps photo_audited_at, which is exactly
+            // what each of these tabs filters on, so it's gone on the next reload too.)
+            if ((viewFilter === 'no_hero' || viewFilter === 'unscanned' || viewFilter === 'no_evidence') && editorListingId) {
               removeFromResults(editorListingId);
             }
             // On the Best-Of tab, approving/saving a winner counts as having
