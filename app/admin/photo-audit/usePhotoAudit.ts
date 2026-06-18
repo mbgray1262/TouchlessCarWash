@@ -521,6 +521,7 @@ export function usePhotoAudit() {
         const { data } = await supabase
           .from('listings')
           .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
+          .eq('is_touchless', true)
           .eq('touchless_verified', 'user_review').is('photo_audited_at', null)
           .or(NOT_CLOSED)
           .order('name', { ascending: true })
