@@ -85,7 +85,9 @@ jobs:
             [ -z "$id" ] && continue
             echo "=== Mining $id ==="
             python3 scripts/mine-touchless-reviews-search.py --listing-id "$id" --headless --scrolls 18 --reloads 6 || echo "mine failed for $id"
-            node scripts/label-touchless-snippets.mjs --source=gmaps-search-clean --listing="$id" || echo "label failed for $id"
+            # AI label: Haiku sets is_touchless_evidence + sentiment + touchless_about in one pass
+            # (the miner's regex is only a keyword pre-filter). Replaces label-touchless-snippets.mjs.
+            node scripts/ai-evaluate-touchless-evidence.mjs --apply --listing="$id" || echo "ai-label failed for $id"
             node scripts/score-touchless-satisfaction.mjs --ids="$id" || echo "score failed for $id"
             # Dequeue: mark processed so the drain doesn't re-pick it up
             curl -s -X PATCH "${SB_URL}/rest/v1/listings?id=eq.$id" \
