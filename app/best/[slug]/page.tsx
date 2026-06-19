@@ -181,7 +181,11 @@ export async function generateMetadata({ params }: BestOfPageProps): Promise<Met
   const count = Math.min(eligibleRanked.length, 10);
   const year = new Date().getFullYear();
 
-  if (count < 1) return { title: 'Not Found' };
+  // No trophy-eligible winner → this metro is NOT in getQualifyingMetros() and
+  // the render path 308-redirects it. Mark noindex too, so that if a stale ISR
+  // copy is ever served as a 200 it can't become an indexed soft-404 (the page
+  // is not in the sitemap). Keeps in-sitemap ⟺ indexable.
+  if (count < 1) return { title: 'Not Found', robots: { index: false, follow: true } };
 
   // "Crowns" = the #1-ranked wash earns a trophy. When it doesn't (its own
   // Touchless Score is below "Good"), we keep the page + ranked list but drop the
