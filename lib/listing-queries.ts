@@ -1,6 +1,7 @@
 import { cache } from 'react';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { PAGE_SIZE } from '@/components/Pagination';
+import { scoreListing } from '@/lib/metro-scoring';
 
 export interface Filter {
   id: number;
@@ -88,22 +89,26 @@ export async function getStateListingsPaginated(
     .from('listings')
     .select(LISTING_CARD_COLUMNS)
     .eq('is_touchless', true)
-    .eq('state', stateCode)
-    .order('rating', { ascending: false });
+    .eq('state', stateCode);
 
   if (qualifiedIds !== null) {
     if (qualifiedIds.length === 0) return [];
     query = query.in('id', qualifiedIds);
   }
 
-  const { data, error } = await query.range(from, to);
+  // "Recommended" = the proprietary, TSS-first scoreListing composite (same
+  // ranking the /best pages use), not raw Google stars. scoreListing isn't a DB
+  // column so we fetch the whole state (max ~364 touchless listings, well under
+  // the 1000 cap), rank in memory, then slice the requested page.
+  const { data, error } = await query.limit(1000);
 
   if (error) {
     console.error('Error fetching state listings:', error);
     return [];
   }
 
-  return (data as Listing[]) || [];
+  const all = ((data as Listing[]) || []).sort((a, b) => scoreListing(b) - scoreListing(a));
+  return all.slice(from, to + 1);
 }
 
 /**

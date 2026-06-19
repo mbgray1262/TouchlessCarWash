@@ -6,6 +6,7 @@ import { ListingCard } from '@/components/ListingCard';
 import { ClientPagination, PAGE_SIZE } from '@/components/Pagination';
 import { SearchFilters } from '@/components/SearchFilters';
 import type { Listing } from '@/lib/supabase';
+import { scoreListing } from '@/lib/metro-scoring';
 
 interface Filter {
   id: number;
@@ -63,10 +64,17 @@ export function CityListingsClient({
   // Optional sort by Touchless Satisfaction Score (unscored fall to the bottom).
   const [sort, setSort] = useState<'recommended' | 'tss'>('recommended');
   const sortedListings = useMemo(() => {
-    if (sort !== 'tss') return filteredListings;
-    return [...filteredListings].sort(
-      (a, b) => (b.touchless_satisfaction_score ?? -1) - (a.touchless_satisfaction_score ?? -1),
-    );
+    if (sort === 'tss') {
+      return [...filteredListings].sort(
+        (a, b) => (b.touchless_satisfaction_score ?? -1) - (a.touchless_satisfaction_score ?? -1),
+      );
+    }
+    // 'recommended' = the proprietary, TSS-first composite (same scoreListing the
+    // /best pages rank with): Touchless Satisfaction Score is the primary factor,
+    // unscored washes fall back to a capped rating term, plus Paint-Safe + review
+    // credibility. So the best *touchless* washes surface first instead of raw
+    // Google stars.
+    return [...filteredListings].sort((a, b) => scoreListing(b) - scoreListing(a));
   }, [filteredListings, sort]);
 
   const hasAnyScore = useMemo(

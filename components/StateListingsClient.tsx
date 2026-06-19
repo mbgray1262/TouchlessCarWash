@@ -8,6 +8,7 @@ import { ListingCard } from '@/components/ListingCard';
 import { ClientPagination, PAGE_SIZE } from '@/components/Pagination';
 import { SearchFilters } from '@/components/SearchFilters';
 import type { Listing } from '@/lib/supabase';
+import { scoreListing } from '@/lib/metro-scoring';
 import { slugify } from '@/lib/constants';
 import { withPaintSafeChip, PAINT_SAFE_FILTER_SLUG } from '@/lib/paint-safe-filter';
 
@@ -137,10 +138,6 @@ export function StateListingsClient({
         dbQuery = dbQuery.eq('paint_safe_verified', true);
       }
 
-      dbQuery = sortTss
-        ? dbQuery.order('touchless_satisfaction_score', { ascending: false, nullsFirst: false }).order('rating', { ascending: false })
-        : dbQuery.order('rating', { ascending: false });
-
       if (qualifiedIds !== null) {
         if (qualifiedIds.length === 0) {
           setListings([]);
@@ -150,9 +147,24 @@ export function StateListingsClient({
         dbQuery = dbQuery.in('id', qualifiedIds);
       }
 
-      const { data, count } = await dbQuery.range(from, to);
-      setListings((data as Listing[]) ?? []);
-      setTotalCount(count ?? 0);
+      if (sortTss) {
+        // TSS is a real column → order + paginate server-side.
+        const { data, count } = await dbQuery
+          .order('touchless_satisfaction_score', { ascending: false, nullsFirst: false })
+          .order('rating', { ascending: false })
+          .range(from, to);
+        setListings((data as Listing[]) ?? []);
+        setTotalCount(count ?? 0);
+      } else {
+        // "Recommended" = the proprietary TSS-first scoreListing composite (same
+        // ranking as /best + the city pages), not raw Google stars. It isn't a DB
+        // column, so fetch the whole state (max ~364 touchless, under the 1000 cap),
+        // rank in memory, then slice the requested page.
+        const { data, count } = await dbQuery.limit(1000);
+        const all = ((data as Listing[]) ?? []).sort((a, b) => scoreListing(b) - scoreListing(a));
+        setListings(all.slice(from, to + 1));
+        setTotalCount(count ?? all.length);
+      }
     } catch (err) {
       console.error('Error fetching listings:', err);
     } finally {
