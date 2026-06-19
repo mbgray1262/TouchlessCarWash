@@ -10,6 +10,7 @@ import { getStateSlug, slugify } from '@/lib/constants';
 import { METRO_AREAS, getMetroBySlug, haversineDistance, type MetroArea } from '@/lib/metro-areas';
 import { getMetroListings } from '@/lib/metro-queries';
 import { scoreListing, isTrophyEligible, earnsTrophy, type ScoredListing } from '@/lib/metro-scoring';
+import { tssTier } from '@/lib/touchless-satisfaction';
 import { METRO_CONTENT, buildExpertGuide } from '@/lib/metro-content';
 import { OpenStatusBadge } from '@/components/OpenStatusBadge';
 import LogoImage from '@/components/LogoImage';
@@ -680,13 +681,32 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
                             )}
                           </div>
 
-                          {/* Paint-Safe Verified chip */}
-                          {listing.paint_safe_verified && (
-                            <div className="mb-3">
-                              <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                <ShieldCheck className="w-3.5 h-3.5" />
-                                Paint-Safe Verified
-                              </span>
+                          {/* Touchless Satisfaction Score + Paint-Safe chips — this
+                              page ranks by TSS, so surface it on the card too
+                              (consistent with the browse/search ListingCard). */}
+                          {(listing.touchless_satisfaction_score != null || listing.paint_safe_verified) && (
+                            <div className="flex flex-wrap items-center gap-2 mb-3">
+                              {listing.touchless_satisfaction_score != null && (() => {
+                                const t = tssTier(listing.touchless_satisfaction_score);
+                                return (
+                                  <span
+                                    className="inline-flex items-center gap-1.5 text-xs font-bold pl-1 pr-2.5 py-1 rounded-full border"
+                                    style={{ color: t.color, backgroundColor: t.bg, borderColor: `${t.color}33` }}
+                                    title="Touchless Satisfaction Score — based on touchless-specific reviews"
+                                  >
+                                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-[11px] font-bold" style={{ backgroundColor: t.arc }}>
+                                      {listing.touchless_satisfaction_score}
+                                    </span>
+                                    {t.label} · Touchless Satisfaction
+                                  </span>
+                                );
+                              })()}
+                              {listing.paint_safe_verified && (
+                                <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  <ShieldCheck className="w-3.5 h-3.5" />
+                                  Paint-Safe Verified
+                                </span>
+                              )}
                             </div>
                           )}
 

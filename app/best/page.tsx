@@ -1,7 +1,8 @@
 import Link from 'next/link';
-import { Trophy, MapPin, ChevronRight } from 'lucide-react';
+import { Trophy, ChevronRight } from 'lucide-react';
 import { type MetroRegion } from '@/lib/metro-areas';
-import { getQualifyingMetros, type MetroWithCount } from '@/lib/metro-queries';
+import { getQualifyingMetros } from '@/lib/metro-queries';
+import { BestMetroSearch } from '@/components/BestMetroSearch';
 import type { Metadata } from 'next';
 
 // ISR: render on demand, cache the result at the Netlify edge for 1h (then
@@ -34,18 +35,9 @@ const REGION_ORDER: MetroRegion[] = ['West', 'Southwest', 'Midwest', 'Southeast'
 export default async function BestOfIndexPage() {
   const metros = await getQualifyingMetros();
 
-  // Group by region
-  const byRegion = new Map<MetroRegion, MetroWithCount[]>();
-  for (const region of REGION_ORDER) {
-    byRegion.set(region, []);
-  }
-  for (const metro of metros) {
-    byRegion.get(metro.region)?.push(metro);
-  }
-  // Sort each region by listing count
-  REGION_ORDER.forEach((region) => {
-    byRegion.get(region)?.sort((a, b) => b.listingCount - a.listingCount);
-  });
+  // Busiest metros first — the search component groups by region for the default
+  // view and shows a flat list while filtering; this order carries into both.
+  metros.sort((a, b) => b.listingCount - a.listingCount);
 
   const totalMetros = metros.length;
 
@@ -99,44 +91,7 @@ export default async function BestOfIndexPage() {
       {/* Metro cards by region */}
       <section className="py-12 px-4 bg-white">
         <div className="container mx-auto max-w-5xl">
-          {REGION_ORDER.map((region) => {
-            const regionMetros = byRegion.get(region) ?? [];
-            if (regionMetros.length === 0) return null;
-
-            return (
-              <div key={region} className="mb-12 last:mb-0">
-                <h2 className="text-2xl font-bold text-[#0F2744] mb-6 pb-2 border-b border-gray-200">
-                  {region}
-                </h2>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {regionMetros.map((metro) => (
-                    <Link
-                      key={metro.slug}
-                      href={`/best/${metro.slug}`}
-                      className="group bg-white rounded-xl p-6 border border-gray-200 hover:border-[#22C55E] hover:shadow-lg transition-all"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="text-lg font-bold text-[#0F2744] group-hover:text-[#22C55E] transition-colors">
-                            {metro.name}
-                          </h3>
-                          <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
-                            <MapPin className="w-3.5 h-3.5" />
-                            <span>{metro.displayName}</span>
-                          </div>
-                        </div>
-                        <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-[#22C55E] transition-colors shrink-0" />
-                      </div>
-                      <div className="mt-3 text-sm">
-                        <span className="font-semibold text-[#0F2744]">{metro.listingCount}</span>
-                        <span className="text-gray-500"> touchless car washes</span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+          <BestMetroSearch metros={metros} regionOrder={REGION_ORDER} />
         </div>
       </section>
 

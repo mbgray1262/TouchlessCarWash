@@ -9,7 +9,7 @@ import { Pagination, PAGE_SIZE } from '@/components/Pagination';
 import { SearchFilters } from '@/components/SearchFilters';
 import { withPaintSafeChip, PAINT_SAFE_FILTER_SLUG } from '@/lib/paint-safe-filter';
 import { METRO_AREAS, haversineDistance, boundingBox, getMetroBySlug, type MetroArea } from '@/lib/metro-areas';
-import { earnsTrophy } from '@/lib/metro-scoring';
+import { earnsTrophy, scoreListing } from '@/lib/metro-scoring';
 import { MapPin, Map as MapIcon, Trophy, Search, ArrowRight } from 'lucide-react';
 import type { Metadata } from 'next';
 
@@ -544,6 +544,11 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     listings = [...listings].sort(
       (a, b) => (b.touchless_satisfaction_score ?? -1) - (a.touchless_satisfaction_score ?? -1),
     );
+  } else if (!resolvedProximity) {
+    // Default "recommended" order for non-location searches = the proprietary
+    // TSS-first scoreListing composite (same as the browse pages + /best), not
+    // raw Google rating. Location ("near me") searches keep nearest-first order.
+    listings = [...listings].sort((a, b) => scoreListing(b) - scoreListing(a));
   }
 
   const totalPages = Math.ceil(listings.length / PAGE_SIZE);
