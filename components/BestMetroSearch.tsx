@@ -20,25 +20,33 @@ export function BestMetroSearch({
   regionOrder: readonly MetroRegion[];
 }) {
   const [q, setQ] = useState('');
+  const [sortBy, setSortBy] = useState<'count' | 'alpha'>('count');
   const query = q.trim().toLowerCase();
+
+  // metros arrive pre-sorted by listing count (desc). 'alpha' re-sorts by name;
+  // either way region grouping (the default view) preserves this order.
+  const ordered = useMemo(
+    () => (sortBy === 'alpha' ? [...metros].sort((a, b) => a.name.localeCompare(b.name)) : metros),
+    [metros, sortBy],
+  );
 
   const filtered = useMemo(() => {
     if (!query) return null;
-    return metros.filter(
+    return ordered.filter(
       (m) =>
         m.name.toLowerCase().includes(query) ||
         m.displayName.toLowerCase().includes(query),
     );
-  }, [metros, query]);
+  }, [ordered, query]);
 
   const byRegion = useMemo(() => {
     const map = new Map<MetroRegion, MetroWithCount[]>();
-    for (const m of metros) {
+    for (const m of ordered) {
       if (!map.has(m.region)) map.set(m.region, []);
       map.get(m.region)!.push(m);
     }
     return map;
-  }, [metros]);
+  }, [ordered]);
 
   const renderCard = (metro: MetroWithCount) => (
     <Link
@@ -67,16 +75,30 @@ export function BestMetroSearch({
 
   return (
     <div>
-      <div className="relative mb-8 max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input
-          type="text"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search metro areas — e.g. Denver, Bay Area, Tampa…"
-          aria-label="Search metro areas"
-          className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 focus:border-[#22C55E] focus:ring-1 focus:ring-[#22C55E] outline-none text-sm"
-        />
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-8">
+        <div className="relative flex-1 sm:max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search metro areas — e.g. Denver, Bay Area, Tampa…"
+            aria-label="Search metro areas"
+            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 focus:border-[#22C55E] focus:ring-1 focus:ring-[#22C55E] outline-none text-sm"
+          />
+        </div>
+        <div className="flex items-center gap-2 text-sm shrink-0">
+          <label htmlFor="metro-sort" className="text-gray-500 whitespace-nowrap">Sort by</label>
+          <select
+            id="metro-sort"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as 'count' | 'alpha')}
+            className="rounded-lg border border-gray-300 py-2.5 px-3 text-sm focus:border-[#22C55E] focus:ring-1 focus:ring-[#22C55E] outline-none bg-white"
+          >
+            <option value="count">Most car washes</option>
+            <option value="alpha">A–Z</option>
+          </select>
+        </div>
       </div>
 
       {filtered ? (
