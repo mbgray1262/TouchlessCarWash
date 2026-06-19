@@ -723,25 +723,27 @@ export function useFastCuration(listingId: string) {
     setSaving(false);
   }, [listing]);
 
-  // Mark as "can't verify" — used when the admin can't locate the
-  // business on Google Maps / Street View and can't make a confident
-  // call either way. Adds an audit marker so the listing falls out of
-  // the Second Look queue (the bucket excludes "re-audit confirmed
-  // correctly demoted" markers; we use a similar marker here so this
-  // listing is treated as "set aside" rather than re-presented every
-  // time the queue reloads). Doesn't change is_touchless or is_approved.
+  // Mark as "can't verify" — the admin can't confirm this is a real touchless
+  // wash (no locatable storefront / evidence). HOLD it: un-approve so it drops
+  // out of the public directory + sitemap (308-redirects), and stamp
+  // photo_audited_at so it leaves the review queues. We keep is_touchless as-is
+  // (we're not asserting it's not touchless — use "Not Touchless" for that) and
+  // keep the place_id (never hard-delete). The crawl note retains the
+  // "re-audit confirmed correctly demoted" phrase the Second Look queue uses to
+  // exclude set-aside listings, so this also works for that queue.
   const markCantVerify = useCallback(async () => {
     if (!listing) return;
     setSaving(true);
-    const today = new Date().toISOString().slice(0, 10);
-    const auditMarker = `[${today}] Manual photo-audit re-audit confirmed correctly demoted: admin could not locate the business on Google Maps / Street View — needs further investigation before it can be re-classified.`;
+    const now = new Date().toISOString();
+    const today = now.slice(0, 10);
+    const auditMarker = `[${today}] Can't verify — admin could not confirm this is a real touchless wash (no locatable storefront / evidence on Google Maps / Street View). Held (un-approved) pending verification; place_id kept. [re-audit confirmed correctly demoted]`;
     const existing = listing.crawl_notes || '';
     const newNotes = /re-audit confirmed correctly demoted/i.test(existing)
       ? existing
       : (existing.slice(0, 4500) + (existing ? '\n\n' : '') + auditMarker);
-    await supabase.from('listings').update({ crawl_notes: newNotes }).eq('id', listing.id);
+    await supabase.from('listings').update({ crawl_notes: newNotes, is_approved: false, photo_audited_at: now }).eq('id', listing.id);
     await supabase.from('photo_audit_results').update({ reviewed: true, applied: true }).eq('listing_id', listing.id);
-    setListing(prev => prev ? { ...prev, crawl_notes: newNotes } : prev);
+    setListing(prev => prev ? { ...prev, crawl_notes: newNotes, is_approved: false } : prev);
     setSaving(false);
   }, [listing]);
 
