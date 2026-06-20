@@ -84,31 +84,25 @@ export function SearchFilters({ filters, activeFilterSlugs, currentQuery, lat, l
 
   if (filters.length === 0) return null;
 
-  // Split into the Paint-Safe Verified chip (rendered first), wash types
-  // (ordered), and amenities (original order).
+  // Paint-Safe is the only lead chip. Wash-type chips ("Touchless Automatic")
+  // were dropped — every listing on the site is touchless-automatic, so the
+  // chip distinguished nothing (and the field is only sparsely tagged, so it
+  // would have hidden valid washes). WASH_TYPE_SET still excludes that slug
+  // from the amenity chips below.
   const paintSafe = filters.find(f => f.slug === PAINT_SAFE_FILTER_SLUG);
-  const washTypes = WASH_TYPE_SLUGS
-    .map(slug => filters.find(f => f.slug === slug))
-    .filter((f): f is Filter => f != null);
   const amenities = filters.filter(
     f => !WASH_TYPE_SET.has(f.slug) && f.slug !== PAINT_SAFE_FILTER_SLUG,
   );
-  const leadCount = (paintSafe ? 1 : 0) + washTypes.length;
 
   function renderChip(f: Filter) {
     const Icon = ICON_MAP[f.icon ?? ''] ?? Sparkles;
     const active = activeSet.has(f.slug);
-    const isWashType = WASH_TYPE_SET.has(f.slug);
     const isPaintSafe = f.slug === PAINT_SAFE_FILTER_SLUG;
+    // All chips share one neutral style now — the special emerald Paint-Safe
+    // styling was dropped so the active state reads consistently across filters.
     const style = active
-      ? isPaintSafe
-        ? 'bg-emerald-600 border-emerald-600 text-white'
-        : 'bg-[#0F2744] border-[#0F2744] text-white'
-      : isPaintSafe
-        ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:border-emerald-500 hover:bg-emerald-100'
-        : isWashType
-          ? 'bg-blue-50 border-blue-200 text-[#0F2744] hover:border-[#0F2744] hover:bg-blue-100'
-          : 'bg-white border-gray-200 text-gray-700 hover:border-[#0F2744] hover:text-[#0F2744]';
+      ? 'bg-[#0F2744] border-[#0F2744] text-white'
+      : 'bg-white border-gray-200 text-gray-700 hover:border-[#0F2744] hover:text-[#0F2744]';
     return (
       <button
         key={f.id}
@@ -116,7 +110,7 @@ export function SearchFilters({ filters, activeFilterSlugs, currentQuery, lat, l
         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${style}`}
       >
         <Icon className="w-3.5 h-3.5" />
-        {f.name}
+        {isPaintSafe ? 'Paint-safe' : f.name}
       </button>
     );
   }
@@ -125,8 +119,7 @@ export function SearchFilters({ filters, activeFilterSlugs, currentQuery, lat, l
     <div className="mb-6">
       <div className="flex flex-wrap items-center gap-2">
         {paintSafe && renderChip(paintSafe)}
-        {washTypes.map(renderChip)}
-        {leadCount > 0 && amenities.length > 0 && (
+        {paintSafe && amenities.length > 0 && (
           <div className="w-px h-6 bg-gray-200 mx-1" />
         )}
         {amenities.map(renderChip)}
