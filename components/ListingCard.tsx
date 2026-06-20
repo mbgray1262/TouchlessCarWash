@@ -48,24 +48,9 @@ interface ListingCardProps {
   rank?: number;
 }
 
-const WASH_TYPE_LABELS: Record<string, string> = {
-  touchless_automatic: 'Touchless Automatic',
-};
-
 export function ListingCard({ listing, href, showVerifiedBadge = false, distance, rank }: ListingCardProps) {
   const defaultHref = `/state/${getStateSlug(listing.state)}/${slugify(listing.city)}/${listing.slug}`;
   const linkHref = href ?? defaultHref;
-
-  // Prefer touchless_wash_types, fallback to amenity-based inference
-  const washTypeLabel = listing.touchless_wash_types && listing.touchless_wash_types.length > 0
-    ? listing.touchless_wash_types.map(wt => WASH_TYPE_LABELS[wt] || wt).join(' · ')
-    : null;
-
-  const washType = washTypeLabel ?? listing.amenities?.find((a) =>
-    /touchless automatic|automatic wash|touchless\/automatic/i.test(a)
-  ) ?? listing.amenities?.find((a) =>
-    /automatic|tunnel|self.serve|express/i.test(a)
-  );
 
   // Shared image-resolution logic (chain brand → hero → google photo → street
   // view). allowStreetView:false on cards — street view URLs often 403 and look
@@ -135,10 +120,6 @@ export function ListingCard({ listing, href, showVerifiedBadge = false, distance
                 <Badge className="bg-[#22C55E] text-white border-0 text-xs">
                   <CheckCircle className="w-3 h-3 mr-1" />Touchless Verified
                 </Badge>
-              ) : washType ? (
-                <Badge className="bg-[#0F2744]/80 text-white border-0 text-xs backdrop-blur-sm">
-                  {washType}
-                </Badge>
               ) : <span />}
               {listing.rating > 0 && (
                 <div className="flex items-center gap-1 bg-black/60 rounded-full px-2.5 py-1 ml-auto">
@@ -179,10 +160,6 @@ export function ListingCard({ listing, href, showVerifiedBadge = false, distance
               {showVerifiedBadge ? (
                 <Badge className="bg-[#22C55E] text-white border-0 text-xs">
                   <CheckCircle className="w-3 h-3 mr-1" />Touchless Verified
-                </Badge>
-              ) : washType ? (
-                <Badge className="bg-[#0F2744]/80 text-white border-0 text-xs backdrop-blur-sm">
-                  {washType}
                 </Badge>
               ) : <span />}
               {listing.rating > 0 && (
