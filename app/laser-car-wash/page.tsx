@@ -1,6 +1,8 @@
 import Link from 'next/link';
-import { ChevronRight, Zap, Search, ShieldCheck, Droplets } from 'lucide-react';
+import { ChevronRight, Zap, Search, ShieldCheck, Droplets, MapPin } from 'lucide-react';
 import { getApprovedTouchlessCount } from '@/lib/listing-queries';
+import { getLaserwashLocations } from '@/lib/laserwash';
+import { US_STATES, getStateSlug, slugify } from '@/lib/constants';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import type { Metadata } from 'next';
 
@@ -11,9 +13,11 @@ const PAGE_PATH = '/laser-car-wash';
 
 export async function generateMetadata(): Promise<Metadata> {
   const year = new Date().getFullYear();
-  const title = `Laser Car Wash vs Touchless: Are They the Same? (${year})`;
+  const lwCount = (await getLaserwashLocations()).length;
+  const countStr = lwCount > 0 ? `${lwCount.toLocaleString()}+ ` : '';
+  const title = `LaserWash Near Me — ${countStr}Touchless Laser Car Wash Locations (${year})`;
   const description =
-    'Yes — a laser car wash is a touchless car wash. Learn where the "laser" name comes from, how a no-touch laser wash actually cleans your car, and find a verified laser/touchless car wash near you.';
+    `Find a LaserWash car wash near you — ${countStr}verified touchless locations running PDQ LaserWash equipment across the US. A laser wash is a touchless (no-touch) car wash; browse every verified LaserWash by state.`;
   return {
     title,
     description,
@@ -32,6 +36,31 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function LaserCarWashGuide() {
   const total = await getApprovedTouchlessCount();
   const totalStr = total > 0 ? total.toLocaleString() : '3,000';
+
+  // Equipment-powered LaserWash directory: every PDQ + touchless-verified wash,
+  // grouped by state (busiest first; within a state, best Touchless Satisfaction
+  // Score first). These are the ~1,200 locations actually running LaserWash gear —
+  // most have generic names ("Kwik Trip", "Classic Car Wash"), so this is the only
+  // place they surface as LaserWash.
+  const lwLocations = await getLaserwashLocations();
+  const lwCount = lwLocations.length;
+  const stateNameByCode = Object.fromEntries(US_STATES.map((s) => [s.code, s.name]));
+  const lwByState = new Map<string, typeof lwLocations>();
+  for (const l of lwLocations) {
+    if (!lwByState.has(l.state)) lwByState.set(l.state, []);
+    lwByState.get(l.state)!.push(l);
+  }
+  const lwStates = Array.from(lwByState.entries())
+    .map(([code, items]) => ({
+      code,
+      name: stateNameByCode[code] ?? code,
+      items: [...items].sort(
+        (a, b) =>
+          (b.touchless_satisfaction_score ?? -1) - (a.touchless_satisfaction_score ?? -1) ||
+          a.name.localeCompare(b.name),
+      ),
+    }))
+    .sort((a, b) => b.items.length - a.items.length || a.name.localeCompare(b.name));
 
   const breadcrumb = {
     '@context': 'https://schema.org',
@@ -91,16 +120,54 @@ export default async function LaserCarWashGuide() {
           <div className="flex items-center gap-3 mb-4">
             <Zap className="w-8 h-8 text-[#22C55E]" />
             <h1 className="text-3xl md:text-5xl font-bold text-white leading-tight">
-              Laser Car Wash vs Touchless: Are They the Same?
+              LaserWash &amp; Laser Car Wash Locations Near You
             </h1>
           </div>
           <p className="text-lg text-blue-100 max-w-3xl">
-            Short answer: <strong className="text-white">yes — a laser car wash <em>is</em> a touchless car wash.</strong>{' '}
-            Same no-touch, brushless cleaning, just a different name. Here&apos;s where the &ldquo;laser&rdquo; label
-            comes from, how it works, and how to find one near you.
+            A laser wash is just another name for a <strong className="text-white">touchless car wash</strong> —
+            same no-touch, brushless clean.{lwCount > 0 ? ` Browse ${lwCount.toLocaleString()} verified LaserWash locations across ${lwStates.length} states below,` : ' Browse verified LaserWash locations below,'}{' '}
+            or learn how they work and why the name stuck.
           </p>
         </div>
       </div>
+
+      {/* Equipment-powered location directory */}
+      {lwCount > 0 && (
+        <section className="bg-gray-50 border-b border-gray-200">
+          <div className="container mx-auto px-4 max-w-5xl py-10">
+            <div className="flex items-center gap-2 mb-2">
+              <MapPin className="w-5 h-5 text-[#22C55E]" />
+              <h2 className="text-2xl font-bold text-[#0F2744]">LaserWash car wash locations by state</h2>
+            </div>
+            <p className="text-gray-600 mb-7 max-w-3xl">
+              {lwCount.toLocaleString()} verified touchless car washes running PDQ LaserWash equipment, across{' '}
+              {lwStates.length} states. Many operate under other names (gas stations, local brands) — every one is
+              a genuine no-touch wash.
+            </p>
+            <div className="space-y-8">
+              {lwStates.map((st) => (
+                <div key={st.code}>
+                  <h3 className="text-lg font-bold text-[#0F2744] mb-3 pb-1.5 border-b border-gray-200">
+                    {st.name}{' '}
+                    <span className="text-gray-400 font-normal text-sm">({st.items.length})</span>
+                  </h3>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1.5">
+                    {st.items.map((l) => (
+                      <Link
+                        key={`${l.slug}-${l.city}`}
+                        href={`/state/${getStateSlug(l.state)}/${slugify(l.city)}/${l.slug}`}
+                        className="text-sm text-gray-700 hover:text-[#22C55E] transition-colors truncate"
+                      >
+                        {l.name} <span className="text-gray-400">· {l.city}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <div className="container mx-auto px-4 max-w-3xl py-10">
 
