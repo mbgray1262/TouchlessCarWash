@@ -101,6 +101,12 @@ async def harvest_one(page, listing, stats):
     lid = listing['id']; pid = listing['google_place_id']; nm = (listing.get('name') or '')[:34]
     url = f'https://www.google.com/maps/place/?q=place_id:{pid}'
     try:
+        # Google Maps place pages serve a ROTATING set of UI variants — the reviews
+        # tab is absent on some loads — so reload-retry until it appears. (The
+        # keyword-search box ALSO rotates AND its obfuscated class rotates over time;
+        # `input.LCTIRd` is currently stale, so we usually fall back to scroll-scrape,
+        # which has adequate recall for our review-count range. See
+        # reference_gmaps_reviews_rotation memory before re-enabling a search-box retry.)
         got = False
         for attempt in range(RELOADS):
             try:
