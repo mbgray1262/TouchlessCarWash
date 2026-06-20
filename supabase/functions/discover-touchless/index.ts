@@ -1096,16 +1096,21 @@ Deno.serve(async (req: Request) => {
         'Tampa', 'Tulsa', 'Arlington', 'New Orleans', 'Wichita',
         'Bakersfield', 'Aurora', 'Anaheim', 'Santa Ana', 'Riverside',
         'Corpus Christi', 'Plano', 'Henderson', 'Newark', 'Irvine',
-        'Jersey City', 'St. Paul', 'Honolulu', 'Wilmington',
+        'Jersey City', 'St Paul', 'Honolulu', 'Wilmington',
         'Manhattan', 'Brooklyn', 'Queens', 'Bronx',
       ];
 
       const cityCountPromises = majorCities.map(async (city) => {
+        // ilike (case-insensitive) + canonical spellings (city names are
+        // normalized in the DB) so a casing/period variant can't make a covered
+        // city falsely report "No listings". Count public coverage only
+        // (approved + touchless), which is what "underserved" should mean.
         const { count } = await supabase
           .from('listings')
           .select('id', { count: 'exact', head: true })
-          .eq('city', city)
-          .eq('is_touchless', true);
+          .ilike('city', city)
+          .eq('is_touchless', true)
+          .eq('is_approved', true);
         return { city, count: count || 0 };
       });
       const cityCountResults = await Promise.all(cityCountPromises);

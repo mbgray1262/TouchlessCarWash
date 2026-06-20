@@ -52,6 +52,34 @@ const nextConfig = {
         destination: '/state/massachusetts/rutland/sentry-suds-car-wash',
         permanent: true,
       },
+      // City-name normalization (2026-06-20): listings consolidated onto one
+      // canonical spelling per city, which empties the old variant slug. 301
+      // those to the canonical city page so no soft-404s / split coverage.
+      {
+        source: '/state/minnesota/saint-paul',
+        destination: '/state/minnesota/st-paul',
+        permanent: true,
+      },
+      {
+        source: '/state/minnesota/saint-cloud',
+        destination: '/state/minnesota/st-cloud',
+        permanent: true,
+      },
+      {
+        source: '/state/minnesota/saint-joseph',
+        destination: '/state/minnesota/st-joseph',
+        permanent: true,
+      },
+      {
+        source: '/state/south-carolina/mt-pleasant',
+        destination: '/state/south-carolina/mount-pleasant',
+        permanent: true,
+      },
+      {
+        source: '/state/wisconsin/mt-horeb',
+        destination: '/state/wisconsin/mount-horeb',
+        permanent: true,
+      },
     ];
   },
   images: {
