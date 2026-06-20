@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Star, MapPin, Phone, CheckCircle, Navigation, ShieldCheck, Heart, GitCompareArrows, Trophy } from 'lucide-react';
+import { Star, MapPin, CheckCircle, Navigation, ShieldCheck, Heart, GitCompareArrows, Trophy, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { type Listing } from '@/lib/supabase';
 import { getStateSlug, slugify } from '@/lib/constants';
@@ -239,9 +239,13 @@ export function ListingCard({ listing, href, showVerifiedBadge = false, distance
           })()}
 
           {listing.paint_safe_verified && (
-            <div className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5 mb-1 w-fit">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              Paint-Safe Verified
+            <div
+              className="inline-flex items-center gap-1 text-xs font-medium text-gray-600 border border-gray-300 rounded-full px-2 py-0.5 mb-1 w-fit cursor-help"
+              title="Paint-safe: we verified this wash is genuinely friction-free — no brushes or cloth that could touch your paint."
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-gray-400" />
+              Paint-safe
+              <Info className="w-3 h-3 text-gray-400" />
             </div>
           )}
 
@@ -249,13 +253,6 @@ export function ListingCard({ listing, href, showVerifiedBadge = false, distance
             <div className="flex items-center gap-1.5 text-sm text-blue-600 font-medium mb-1">
               <Navigation className="w-3.5 h-3.5 shrink-0" />
               <span>{distance.toFixed(1)} mi away</span>
-            </div>
-          )}
-
-          {listing.phone && (
-            <div className="flex items-center gap-1.5 text-sm text-gray-500">
-              <Phone className="w-3.5 h-3.5 shrink-0" />
-              <span>{listing.phone}</span>
             </div>
           )}
 
@@ -275,21 +272,22 @@ export function ListingCard({ listing, href, showVerifiedBadge = false, distance
                 if ((fl.includes('mobile') || fl.includes('app')) && !badges.includes('mobile pay')) badges.push('mobile pay');
               }
             }
-            // Fill remaining slots from amenities
-            const remaining = 4 - badges.length;
+            // Fill remaining slots from amenities — keep grid cards lean (max 2);
+            // the full amenity list lives on the listing detail page.
+            const remaining = 2 - badges.length;
             if (remaining > 0 && listing.amenities?.length) {
               for (const a of listing.amenities) {
-                if (badges.length >= 4) break;
+                if (badges.length >= 2) break;
                 if (typeof a !== 'string') continue;
                 const al = a.toLowerCase();
                 if (!badges.some(b => typeof b === 'string' && b.toLowerCase() === al)) badges.push(a);
               }
             }
-            const totalExtra = (listing.amenities?.length || 0) + (ed?.special_features?.length || 0) - badges.length;
+            const totalExtra = (listing.amenities?.length || 0) + (ed?.special_features?.length || 0) - Math.min(badges.length, 2);
 
             return badges.length > 0 ? (
               <div className="flex flex-wrap gap-1.5 mt-auto pt-3">
-                {badges.slice(0, 4).map((b) => (
+                {badges.slice(0, 2).map((b) => (
                   <Badge key={b} variant="outline" className="text-xs text-gray-600 border-gray-200">
                     {b}
                   </Badge>

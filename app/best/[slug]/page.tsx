@@ -3,7 +3,7 @@ import { permanentRedirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@supabase/supabase-js';
-import { Star, MapPin, Phone, Award, CheckCircle, ChevronRight, Trophy, MessageSquareQuote, Sparkles, ShieldCheck } from 'lucide-react';
+import { Star, MapPin, Phone, Award, CheckCircle, ChevronRight, Trophy, MessageSquareQuote, Sparkles, ShieldCheck, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
 import { getStateSlug, slugify } from '@/lib/constants';
@@ -250,7 +250,7 @@ function HighlightedReviewText({ text, keywords }: { text: string; keywords: str
       {parts.map((part, i) => {
         const isMatch = keywords.some((kw) => kw.toLowerCase() === part.toLowerCase());
         return isMatch ? (
-          <mark key={i} className="bg-green-100 text-green-800 rounded px-0.5 font-medium">{part}</mark>
+          <mark key={i} className="bg-amber-100 text-amber-800 rounded px-0.5 font-medium">{part}</mark>
         ) : (
           <span key={i}>{part}</span>
         );
@@ -702,12 +702,27 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
                                 );
                               })()}
                               {listing.paint_safe_verified && (
-                                <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                  <ShieldCheck className="w-3.5 h-3.5" />
-                                  Paint-Safe Verified
+                                <span
+                                  className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full text-gray-600 border border-gray-300 cursor-help"
+                                  title="Paint-safe: we verified this wash is genuinely friction-free — no brushes or cloth that could touch your paint."
+                                >
+                                  <ShieldCheck className="w-3.5 h-3.5 text-gray-400" />
+                                  Paint-safe
+                                  <Info className="w-3 h-3 text-gray-400" />
                                 </span>
                               )}
                             </div>
+                          )}
+
+                          {/* Touchless mention count — supporting evidence for the
+                              score, kept muted (gray) so it doesn't compete with the
+                              TSS badge above it. */}
+                          {touchlessCount > 0 && (
+                            <p className={`text-xs mb-3 ${
+                              listing.touchless_sentiment === 'negative' ? 'text-red-500' : 'text-gray-500'
+                            }`}>
+                              {touchlessCount} customer{touchlessCount !== 1 ? 's' : ''} {listing.touchless_sentiment === 'negative' ? 'flag the touchless experience' : 'rate the touchless experience positively'}
+                            </p>
                           )}
 
                           {/* Amenity badges */}
@@ -724,16 +739,6 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
                                 </Badge>
                               )}
                             </div>
-                          )}
-
-                          {/* Touchless review count */}
-                          {touchlessCount > 0 && (
-                            <p className={`text-xs font-medium mb-3 flex items-center gap-1.5 ${
-                              listing.touchless_sentiment === 'negative' ? 'text-red-500' : 'text-green-600'
-                            }`}>
-                              {listing.touchless_sentiment === 'negative' ? '👎' : '👍'}
-                              {touchlessCount} customer{touchlessCount !== 1 ? 's' : ''} rate the touchless experience positively
-                            </p>
                           )}
 
                           {/* Review snippet */}
