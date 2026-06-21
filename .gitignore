@@ -61,5 +61,6 @@ supabase/.temp/
 # Scratch / temp / backup artifacts from data-mining sessions (not source)
 scripts/_tmp_*
 scripts/_*.json
+scripts/_*.csv
 scripts/_*.console
 _backup-*.json

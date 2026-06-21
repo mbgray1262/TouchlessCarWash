@@ -1,7 +1,7 @@
 import { cache } from 'react';
 import { notFound, permanentRedirect } from 'next/navigation';
 import Link from 'next/link';
-import { Trophy, Star, MapPin, ExternalLink, ArrowLeft } from 'lucide-react';
+import { Trophy, Star, MapPin, ExternalLink, ArrowLeft, Printer } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { getStateSlug, slugify } from '@/lib/constants';
 import { earnsTrophy } from '@/lib/metro-scoring';
@@ -224,6 +224,20 @@ export default async function BadgeClaimPage({
             metroName={top.metro_name}
             year={year}
           />
+
+          {/* Printable certificate — the lobby companion to the web badge */}
+          <div className="mt-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-blue-50 border border-blue-100 rounded-xl p-6">
+            <div>
+              <h3 className="text-lg font-bold text-[#0F2744] mb-1">Prefer something for your lobby?</h3>
+              <p className="text-sm text-gray-600">Download a printable certificate to frame at your front desk or window.</p>
+            </div>
+            <Link
+              href={`/badge/${listing.slug}/certificate`}
+              className="flex-shrink-0 inline-flex items-center gap-2 bg-[#0F2744] hover:bg-[#0F2744]/90 text-white font-semibold px-5 py-2.5 rounded-lg text-sm transition-colors"
+            >
+              <Printer className="w-4 h-4" /> Get your certificate
+            </Link>
+          </div>
         </div>
       </section>
 
