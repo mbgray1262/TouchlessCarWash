@@ -78,6 +78,9 @@ export default async function CertificatePage({ params }: { params: Promise<{ sl
 
   const top = rankings[0];
   const year = top.computed_at ? new Date(top.computed_at).getFullYear() : new Date().getFullYear();
+  const awardedDate = top.computed_at
+    ? new Date(top.computed_at).toLocaleString('en-US', { month: 'long', year: 'numeric' })
+    : String(year);
   const tss = listing.touchless_satisfaction_score;
   const tier = tss != null ? tssTier(tss) : null;
   const isTop3 = top.rank <= 3;
@@ -156,7 +159,7 @@ export default async function CertificatePage({ params }: { params: Promise<{ sl
 
               <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, paddingTop: 16, borderTop: '1px solid #ECE7DA' }}>
                 <div style={{ textAlign: 'left' }}>
-                  <div style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: 17, color: NAVY, borderBottom: '1px solid #C9C2B2', paddingBottom: 3, marginBottom: 4 }}>Michael, Founder</div>
+                  <div style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontStyle: 'italic', fontSize: 16, color: NAVY, marginBottom: 4 }}>Awarded {awardedDate}</div>
                   <div style={{ fontSize: 11, letterSpacing: '0.06em', color: '#8A8F98' }}>TOUCHLESS CAR WASH FINDER</div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
