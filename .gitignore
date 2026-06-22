@@ -63,4 +63,5 @@ scripts/_tmp_*
 scripts/_*.json
 scripts/_*.csv
 scripts/_*.console
+scripts/_award_*
 _backup-*.json

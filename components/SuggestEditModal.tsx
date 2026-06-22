@@ -19,9 +19,17 @@ type IssueType = (typeof ISSUE_TYPES)[number]['value'];
 interface SuggestEditModalProps {
   listingId: string;
   listingName: string;
+  /** 'subtle' = small grey inline link; 'button' = prominent full-width button (owner card). */
+  variant?: 'subtle' | 'button';
+  triggerLabel?: string;
 }
 
-export default function SuggestEditModal({ listingId, listingName }: SuggestEditModalProps) {
+export default function SuggestEditModal({
+  listingId,
+  listingName,
+  variant = 'subtle',
+  triggerLabel,
+}: SuggestEditModalProps) {
   const [open, setOpen] = useState(false);
   const [issueType, setIssueType] = useState<IssueType | ''>('');
   const [details, setDetails] = useState('');
@@ -75,13 +83,23 @@ export default function SuggestEditModal({ listingId, listingName }: SuggestEdit
 
   return (
     <>
-      <button
-        onClick={handleOpen}
-        className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors mt-3"
-      >
-        <Pencil className="w-3 h-3" />
-        Suggest an edit
-      </button>
+      {variant === 'button' ? (
+        <button
+          onClick={handleOpen}
+          className="flex items-center justify-center gap-2 w-full text-sm font-medium text-[#0F2744] bg-white border border-gray-300 hover:bg-gray-50 py-2.5 rounded-xl transition-colors"
+        >
+          <Pencil className="w-4 h-4" />
+          {triggerLabel ?? 'Suggest a correction'}
+        </button>
+      ) : (
+        <button
+          onClick={handleOpen}
+          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors mt-3"
+        >
+          <Pencil className="w-3 h-3" />
+          {triggerLabel ?? 'Suggest an edit'}
+        </button>
+      )}
 
       {open && (
         <div

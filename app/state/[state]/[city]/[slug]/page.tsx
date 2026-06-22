@@ -7,7 +7,7 @@ import {
   Star, MapPin, Phone, Globe, Clock, CheckCircle, ArrowLeft,
   Sparkles, ExternalLink, ChevronRight, Navigation, HelpCircle,
   CalendarCheck, ChevronDown, Droplet, CreditCard, Zap, MessageSquareQuote, Quote, Trophy, ShieldCheck,
-  ThumbsUp, ThumbsDown, Minus, Gauge
+  ThumbsUp, ThumbsDown, Minus, Gauge, Store
 } from 'lucide-react';
 import LogoImage from '@/components/LogoImage';
 import HeroImageFallback from '@/components/HeroImageFallback';
@@ -443,12 +443,13 @@ interface BestOfRanking {
   metro_name: string;
   rank: number;
   score: number;
+  computed_at: string | null;
 }
 
 const getBestOfRankings = cache(async (listingId: string): Promise<BestOfRanking[]> => {
   const { data } = await supabase
     .from('best_of_rankings')
-    .select('metro_slug, metro_name, rank, score')
+    .select('metro_slug, metro_name, rank, score, computed_at')
     .eq('listing_id', listingId)
     .order('rank', { ascending: true });
 
@@ -1428,6 +1429,10 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
   // and "Claim Your Badge" CTA only show when this wash's own Touchless Score is
   // ≥ "Good". Below that it keeps its /best listing but wears no trophy.
   const trophyRanking = topRanking && earnsTrophy(listing) ? topRanking : null;
+  // Award year derived from the ranking's computed_at (matches the badge page).
+  const awardYear = trophyRanking?.computed_at
+    ? new Date(trophyRanking.computed_at).getFullYear()
+    : new Date().getFullYear();
 
   // One clean, mobile-first hero content block, shared by both the image and
   // no-image hero layouts (previously duplicated). Compact prioritized badges,
@@ -2011,7 +2016,34 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                     </div>
                   </div>
                 )}
-                <SuggestEditModal listingId={listing.id} listingName={listing.name} />
+              </div>
+
+              {/* Owner card: prominent, owner-framed entry point that folds in the
+                  formerly-buried "Suggest an edit" link and (for trophy winners)
+                  the badge/certificate claim. trophyRanking is already gated by
+                  earnsTrophy(listing) above. */}
+              <div className="bg-white rounded-2xl border border-gray-200 p-5">
+                <div className="flex items-center gap-2 mb-1">
+                  <Store className="w-4 h-4 text-[#0F2744]" />
+                  <h2 className="text-sm font-bold text-[#0F2744] uppercase tracking-wide">Own this business?</h2>
+                </div>
+                <p className="text-sm text-gray-500 mb-4">
+                  {trophyRanking
+                    ? 'Keep your listing accurate and claim your award.'
+                    : 'Keep your listing accurate and up to date.'}
+                </p>
+                <div className="flex flex-col gap-2">
+                  {trophyRanking && (
+                    <Link
+                      href={`/badge/${listing.slug}`}
+                      className="flex items-center justify-center gap-2 w-full bg-[#B8902F] text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-[#a37e26] transition-colors shadow-sm"
+                    >
+                      <Trophy className="w-4 h-4" />
+                      Claim your {awardYear} award badge
+                    </Link>
+                  )}
+                  <SuggestEditModal listingId={listing.id} listingName={listing.name} variant="button" />
+                </div>
               </div>
 
               <VerificationPrompt
