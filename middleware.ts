@@ -18,6 +18,9 @@ const BLOCKED_COUNTRIES = new Set([
   // Middle East
   'AE', 'SA', 'QA', 'KW', 'BH', 'OM', 'YE', 'IR', 'IQ', 'SY',
   'LB', 'JO', 'IL', 'PS', 'TR', 'AM', 'AZ', 'GE',
+  // South America — a US-only car-wash directory has no real audience here;
+  // observed traffic is scraper/datacenter noise. Added 2026-06-23.
+  'BR',
 ]);
 
 // Distinguishes a real human browser from a cheap scraper for the geo-block.
