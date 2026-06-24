@@ -45,13 +45,13 @@ import type { Metadata } from 'next';
 
 const ListingMap = nextDynamic(() => import('@/components/ListingMap'), { ssr: false });
 
-// Force dynamic rendering — no ISR cache layer. Netlify CDN handles edge caching
-// and purgeCache() reliably clears it when admins make edits.
-export const revalidate = 3600; // ISR: edge-cache full-body response (replaces force-dynamic no-store bypass that caused slow TTFB); 304-bug-safe, validated on /best canary
-// ISR on-demand: prerender none at build, but mark the route static so each
-// render is cached at the Netlify edge. A dynamic [param] route WITHOUT
-// generateStaticParams is treated as fully dynamic (no-store) and bypasses the CDN.
-export function generateStaticParams() { return []; }
+// Force-dynamic: the origin ALWAYS renders fresh from the DB — no ISR data-snapshot
+// cache that masks admin edits. Fast TTFB still comes from Netlify's edge cache via
+// the Netlify-CDN-Cache-Control header (netlify.toml `/state/*`), and /api/revalidate
+// purges that edge cache on every admin save so edits appear immediately. ISR was the
+// wrong tool here: revalidatePath did not regenerate these on-demand pages, so edits
+// stayed masked by a stale data snapshot for up to an hour.
+export const dynamic = 'force-dynamic';
 
 const SITE_URL = 'https://touchlesscarwashfinder.com';
 

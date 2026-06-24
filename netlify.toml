@@ -10,12 +10,15 @@ SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
 [[plugins]]
 package = "@netlify/plugin-nextjs"
 
-# Listing detail pages: cache at CDN edge for 60s, serve stale up to 24h while revalidating.
-# purgeCache() in /api/revalidate instantly clears these when admins make edits.
+# Listing detail pages: short edge-cache so admin edits become visible quickly.
+# s-maxage is intentionally 60s (not 3600s): purgeCache() does NOT reliably clear
+# Netlify's durable cache here, so edits were invisible for up to an hour. A 60s
+# freshness window makes edits self-heal within ~1 min, while stale-while-revalidate
+# keeps TTFB fast (always a cached body to serve while the edge revalidates).
 [[headers]]
   for = "/state/*"
   [headers.values]
-    Netlify-CDN-Cache-Control = "public, s-maxage=3600, stale-while-revalidate=86400, durable"
+    Netlify-CDN-Cache-Control = "public, s-maxage=60, stale-while-revalidate=86400"
 
 # Top-nav landing pages: same SWR pattern as /state/* to prevent the ETag-
 # based 304 cache poisoning we hit on /best and /blog (April 30 2026).
