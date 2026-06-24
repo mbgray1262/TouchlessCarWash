@@ -254,7 +254,7 @@ export const METRO_AREAS: MetroArea[] = [
   // 526 total) that earlier batches missed. Generated + name-corrected via
   // scripts/generate-qualifying-metros.mjs (anchored on the real metro hub,
   // e.g. Kenosha not "Pleasant Prairie", St. Cloud not "Waite Park").
-  { name: 'Haverhill', displayName: 'Haverhill, MA', slug: 'haverhill', lat: 42.8043, lng: -71.2939, radiusMiles: 20, states: ['MA', 'NH'], region: 'Northeast' },
+  { name: 'Haverhill', displayName: 'Haverhill, MA-NH', slug: 'haverhill', lat: 42.8043, lng: -71.2939, radiusMiles: 20, states: ['MA', 'NH'], region: 'Northeast' },
   { name: 'Kenosha', displayName: 'Kenosha, WI', slug: 'kenosha', lat: 42.5184, lng: -88.1349, radiusMiles: 20, states: ['WI', 'IL'], region: 'Midwest' },
   { name: 'St. Cloud', displayName: 'St. Cloud, MN', slug: 'st-cloud', lat: 45.5773, lng: -94.2376, radiusMiles: 20, states: ['MN'], region: 'Midwest' },
   { name: 'Canton', displayName: 'Canton, OH', slug: 'canton', lat: 40.7220, lng: -81.3685, radiusMiles: 20, states: ['OH'], region: 'Midwest' },
