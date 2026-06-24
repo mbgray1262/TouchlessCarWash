@@ -2,7 +2,6 @@ import { Fragment } from 'react';
 import { permanentRedirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { createClient } from '@supabase/supabase-js';
 import { Star, MapPin, Phone, Award, CheckCircle, ChevronRight, Trophy, MessageSquareQuote, Sparkles, ShieldCheck, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
@@ -116,46 +115,6 @@ function getNearbyMetros(currentSlug: string, limit = 6): MetroArea[] {
 // Keeps best_of_rankings in sync with the live-scored order so that the
 // listing detail page badge ("#2 Best in Denver") always matches what
 // is displayed on this page. Fire-and-forget — never blocks the render.
-
-async function syncBestOfRankings(
-  metroSlug: string,
-  metroDisplayName: string,
-  topListings: ScoredListing[],
-): Promise<void> {
-  // best_of_rankings has RLS that only allows the service role to write. If the
-  // service-role key isn't present in this runtime (the case on Netlify), the
-  // write would fall back to the anon key and be rejected by RLS on every
-  // request — spamming the Postgres logs with "new row violates row-level
-  // security policy". The compute-rankings edge function (real service role)
-  // keeps this table fresh, so skip the redundant page-side sync rather than
-  // hammering the DB with doomed anon writes.
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!serviceKey) return;
-  try {
-    const adminClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      serviceKey,
-    );
-    const now = new Date().toISOString();
-    const rows = topListings.map((l, i) => ({
-      listing_id: l.id,
-      metro_slug: metroSlug,
-      metro_name: metroDisplayName,
-      rank: i + 1,
-      score: l.score,
-      computed_at: now,
-    }));
-
-    // Delete all existing entries for this metro, then insert the fresh top-10.
-    // Simple and race-condition-safe: we only need accuracy for the ~10 rows
-    // that power the badge chips on listing detail pages.
-    await adminClient.from('best_of_rankings').delete().eq('metro_slug', metroSlug);
-    await adminClient.from('best_of_rankings').insert(rows);
-  } catch (err) {
-    // Silently swallow — rank sync is best-effort and must never break the page.
-    console.error('[best-of] rank sync failed for', metroSlug, err);
-  }
-}
 
 // ── Static generation ─────────────────────────────────────────────────
 
@@ -312,10 +271,6 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
     const stateSlug = primaryState ? getStateSlug(primaryState) : null;
     permanentRedirect(stateSlug ? `/state/${stateSlug}?from=no-winners` : '/best?from=no-winners');
   }
-
-  // Keep best_of_rankings in sync so listing detail pages show the same
-  // rank number as the position badge on this page. Fire-and-forget.
-  void syncBestOfRankings(metro.slug, metro.displayName, topListings);
 
   // Fetch review snippets for top listings
   const topIds = topListings.map((l) => l.id);
