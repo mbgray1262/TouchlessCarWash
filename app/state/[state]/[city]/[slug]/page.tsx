@@ -1621,6 +1621,41 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                   cityHref={`/state/${getStateSlug(listing.state)}/${slugify(listing.city)}?sort=tss`}
                 />
               )}
+              {/* Touchless Sentiment summary — sits ABOVE the review evidence below as
+                  a header. Only shown when there is displayable touchless evidence (a
+                  touchless-themed snippet in the Paint-Safe module) so it never claims
+                  reviews the visitor can't see, and suppressed when the gauge is present
+                  (the gauge already shows the sentiment split). */}
+              {listing.touchless_sentiment && !hasTssGauge && paintModuleSnippets.some((s) => s.theme === 'touchless') && (
+                <div className={`flex items-center gap-2 px-4 py-3 rounded-xl border ${
+                  listing.touchless_sentiment === 'positive'
+                    ? 'bg-green-50 border-green-200'
+                    : listing.touchless_sentiment === 'negative'
+                    ? 'bg-red-50 border-red-200'
+                    : 'bg-gray-50 border-gray-200'
+                }`}>
+                  <span className="text-lg">
+                    {listing.touchless_sentiment === 'positive' ? '👍' : listing.touchless_sentiment === 'negative' ? '👎' : '➖'}
+                  </span>
+                  <div>
+                    <span className={`text-sm font-semibold ${
+                      listing.touchless_sentiment === 'positive'
+                        ? 'text-green-700'
+                        : listing.touchless_sentiment === 'negative'
+                        ? 'text-red-700'
+                        : 'text-gray-600'
+                    }`}>
+                      {listing.touchless_sentiment === 'positive'
+                        ? 'Positive touchless reviews'
+                        : listing.touchless_sentiment === 'negative'
+                        ? 'Negative touchless reviews'
+                        : 'Mixed touchless reviews'}
+                    </span>
+                    <p className="text-xs text-gray-400">Based on customer review analysis</p>
+                  </div>
+                </div>
+              )}
+
               {/* Paint-Safe module — verified badge + unified review-evidence drawer
                   (absorbs the old touchless-snippets section). Public badge only; the
                   granular paint_score stays internal for ranking. */}
@@ -1820,41 +1855,6 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                 <div className="bg-white rounded-2xl border border-gray-200 p-6">
                   <h2 className="text-lg font-bold text-[#0F2744] mb-4">Photos</h2>
                   <PhotoGalleryGrid photos={galleryPhotos} listingName={listing.name} />
-                </div>
-              )}
-
-              {/* Touchless Sentiment — simple positive/negative/neutral badge. Only
-                  show when there is displayable touchless evidence on the page (a
-                  touchless-themed snippet in the Paint-Safe module), so the badge
-                  never claims reviews the visitor can't actually see. Suppressed
-                  when the gauge is present — it already shows the sentiment split. */}
-              {listing.touchless_sentiment && !hasTssGauge && paintModuleSnippets.some((s) => s.theme === 'touchless') && (
-                <div className={`flex items-center gap-2 px-4 py-3 rounded-xl border ${
-                  listing.touchless_sentiment === 'positive'
-                    ? 'bg-green-50 border-green-200'
-                    : listing.touchless_sentiment === 'negative'
-                    ? 'bg-red-50 border-red-200'
-                    : 'bg-gray-50 border-gray-200'
-                }`}>
-                  <span className="text-lg">
-                    {listing.touchless_sentiment === 'positive' ? '👍' : listing.touchless_sentiment === 'negative' ? '👎' : '➖'}
-                  </span>
-                  <div>
-                    <span className={`text-sm font-semibold ${
-                      listing.touchless_sentiment === 'positive'
-                        ? 'text-green-700'
-                        : listing.touchless_sentiment === 'negative'
-                        ? 'text-red-700'
-                        : 'text-gray-600'
-                    }`}>
-                      {listing.touchless_sentiment === 'positive'
-                        ? 'Positive touchless reviews'
-                        : listing.touchless_sentiment === 'negative'
-                        ? 'Negative touchless reviews'
-                        : 'Mixed touchless reviews'}
-                    </span>
-                    <p className="text-xs text-gray-400">Based on customer review analysis</p>
-                  </div>
                 </div>
               )}
 
