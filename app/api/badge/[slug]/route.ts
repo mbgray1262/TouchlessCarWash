@@ -69,6 +69,25 @@ export async function GET(
       ? generateBadgeSvg({ rank: ranking.rank, metroName: ranking.metro_name, year, theme, size })
       : generateTop10BadgeSvg({ metroName: ranking.metro_name, year, theme, size });
 
+  // Backlink tracking: record the external site embedding this badge. Best-effort
+  // and wrapped — it must NEVER break or slow the image meaningfully. Dedupes by
+  // (slug, domain); bumps last_seen on repeat loads. Cached badge → fires only on
+  // cache-miss, which is plenty to detect that a site has embedded it.
+  const referer = request.headers.get('referer') || '';
+  if (referer) {
+    try {
+      const host = new URL(referer).hostname.replace(/^www\./, '');
+      if (host && !host.endsWith('touchlesscarwashfinder.com')) {
+        await supabase.from('badge_embeds').upsert(
+          { listing_slug: slug, referer_domain: host, referer_url: referer.slice(0, 500), last_seen: new Date().toISOString() },
+          { onConflict: 'listing_slug,referer_domain' },
+        );
+      }
+    } catch {
+      // ignore — tracking must never break the badge image
+    }
+  }
+
   // 4. Return SVG with caching + CORS headers
   return new NextResponse(svg, {
     headers: {

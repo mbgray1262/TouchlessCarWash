@@ -80,6 +80,7 @@ async function getStats() {
     topFavoritedIdsRes,
     topEngagedIdsRes,
     videoStatsRes,
+    badgeEmbedsRes,
   ] = await Promise.all([
     supabase.from('listings').select('id', { count: 'exact', head: true }),
     // Match the homepage / about-page count — only approved touchless listings.
@@ -109,6 +110,8 @@ async function getStats() {
     supabase.rpc('listing_event_top', { p_event_types: ['favorite'], p_limit: 5 }),
     supabase.rpc('listing_event_top', { p_event_types: ['directions', 'phone', 'website'], p_limit: 5 }),
     supabase.rpc('video_event_stats'),
+    // Badge backlinks — external sites that have embedded a trophy badge.
+    supabase.from('badge_embeds').select('listing_slug, referer_domain, referer_url, first_seen').order('first_seen', { ascending: false }).limit(200),
   ]);
 
   // Tally engagement counts from the RPC result.
@@ -168,6 +171,24 @@ async function getStats() {
   // Net favorites = favorite events - unfavorite events
   const netFavorites = (favoriteEventsRes.count ?? 0) - (unfavoriteEventsRes.count ?? 0);
 
+  // Badge backlinks: resolve each embed's listing slug → wash name for display.
+  type EmbedRow = { listing_slug: string; referer_domain: string; referer_url: string | null; first_seen: string };
+  const embedRows = (badgeEmbedsRes.data ?? []) as EmbedRow[];
+  const embedSlugs = Array.from(new Set(embedRows.map((e) => e.listing_slug)));
+  const { data: embedListings } = embedSlugs.length
+    ? await supabase.from('listings').select('slug, name, city, state').in('slug', embedSlugs)
+    : { data: [] as { slug: string; name: string; city: string; state: string }[] };
+  const embedNameMap = new Map((embedListings ?? []).map((l) => [l.slug, l]));
+  const badgeEmbeds = embedRows.map((e) => {
+    const l = embedNameMap.get(e.listing_slug);
+    return {
+      domain: e.referer_domain,
+      url: e.referer_url,
+      firstSeen: e.first_seen,
+      wash: l ? `${l.name} — ${l.city}, ${l.state}` : e.listing_slug,
+    };
+  });
+
   return {
     totalListings: totalListingsRes.count ?? 0,
     touchlessListings: touchlessListingsRes.count ?? 0,
@@ -196,6 +217,7 @@ async function getStats() {
       : 0,
     topFavoritedListings,
     topEngagedListings,
+    badgeEmbeds,
   };
 }
 
@@ -310,6 +332,43 @@ export default async function AdminStatsPage() {
               <p className="text-sm text-gray-400">No engagement events recorded yet</p>
             )}
           </div>
+        </div>
+
+        {/* Badge Backlinks — external sites that have embedded a trophy badge */}
+        <h2 className="text-lg font-semibold text-[#0F2744] mb-3 mt-8 flex items-center gap-2">
+          <Globe className="w-5 h-5 text-green-600" /> Badge Backlinks
+          <span className="text-sm font-normal text-gray-400">
+            ({stats.badgeEmbeds.length} site{stats.badgeEmbeds.length !== 1 ? 's' : ''})
+          </span>
+        </h2>
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          {stats.badgeEmbeds.length === 0 ? (
+            <p className="text-sm text-gray-400">
+              No sites have embedded a badge yet. They appear here automatically once a
+              wash adds the badge to their website.
+            </p>
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {stats.badgeEmbeds.map((e, i) => (
+                <li key={i} className="py-2.5 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <a
+                      href={e.url ?? `https://${e.domain}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-medium text-blue-600 hover:underline"
+                    >
+                      {e.domain}
+                    </a>
+                    <p className="text-xs text-gray-500 truncate">{e.wash}</p>
+                  </div>
+                  <span className="text-xs text-gray-400 shrink-0">
+                    {new Date(e.firstSeen).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </div>
