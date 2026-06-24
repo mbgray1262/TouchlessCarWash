@@ -15,7 +15,7 @@ package = "@netlify/plugin-nextjs"
 [[headers]]
   for = "/state/*"
   [headers.values]
-    Netlify-CDN-Cache-Control = "public, s-maxage=3600, stale-while-revalidate=86400, durable"
+    Netlify-CDN-Cache-Control = "public, s-maxage=30, stale-while-revalidate=86400, durable"
 
 # Top-nav landing pages: same SWR pattern as /state/* to prevent the ETag-
 # based 304 cache poisoning we hit on /best and /blog (April 30 2026).
