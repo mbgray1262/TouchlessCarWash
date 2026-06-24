@@ -68,3 +68,7 @@ _backup-*.json
 
 # local DB-state backups (throwaway)
 scripts/_*.json
+
+# throwaway analysis scripts
+scripts/_*.mts
+scripts/_*.mjs
