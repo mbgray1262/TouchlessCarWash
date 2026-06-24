@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/supabase';
+import { getStateSlug, slugify } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
 
 const DAY_LABELS: Record<string, string> = {
@@ -23,6 +24,7 @@ const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'satu
 
 export interface EditableListing {
   id: string;
+  slug: string | null;
   name: string;
   address: string;
   city: string;
@@ -89,8 +91,20 @@ export default function EditListingModal({ listing, onClose, onSaved, onDeleted 
       const { error } = await supabase.from('listings').update(updates).eq('id', listing.id);
       if (error) throw error;
 
+      // Bust the CDN/ISR cache for this listing's public page so the edit shows
+      // up immediately instead of being masked by the cached page for up to an
+      // hour. Fire-and-forget — never block or fail the save on this.
+      if (listing.slug && listing.city && listing.state) {
+        const path = `/state/${getStateSlug(listing.state)}/${slugify(listing.city)}/${listing.slug}`;
+        fetch('/api/revalidate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path }),
+        }).catch(() => {});
+      }
+
       onSaved({ ...listing, ...updates });
-      toast({ title: 'Saved', description: `${name} has been updated.` });
+      toast({ title: 'Saved', description: `${name} updated — the live page will refresh shortly.` });
       onClose();
     } catch (err) {
       toast({

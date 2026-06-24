@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle, XCircle, ExternalLink, Calendar, Tag, Mail, MessageSquare } from 'lucide-react';
-import { slugify } from '@/lib/constants';
+import { CheckCircle, XCircle, ExternalLink, Calendar, Mail, MessageSquare, Pencil } from 'lucide-react';
+import { slugify, getStateSlug } from '@/lib/constants';
+import { supabase } from '@/lib/supabase';
+import EditListingModal, { EditableListing } from '@/components/EditListingModal';
 
 const ISSUE_LABELS: Record<string, string> = {
   permanently_closed: 'Permanently closed',
@@ -51,6 +53,24 @@ interface Props {
 export default function SuggestedEditsClient({ initialEdits }: Props) {
   const [edits, setEdits] = useState<Edit[]>(initialEdits);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [editing, setEditing] = useState<EditableListing | null>(null);
+  const [loadingEdit, setLoadingEdit] = useState<string | null>(null);
+
+  // Open the listing editor straight from a suggestion. The page only joins a few
+  // listing columns, so fetch the full editable record on demand.
+  async function openEditor(listingId: string) {
+    setLoadingEdit(listingId);
+    try {
+      const { data } = await supabase
+        .from('listings')
+        .select('id, slug, name, address, city, state, zip, phone, website, hours, amenities, wash_packages, rating, review_count, parent_chain, location_page_url')
+        .eq('id', listingId)
+        .single();
+      if (data) setEditing(data as EditableListing);
+    } finally {
+      setLoadingEdit(null);
+    }
+  }
 
   async function handleAction(editId: string, listingId: string, action: 'approve' | 'dismiss', issueType: string) {
     setActionLoading(editId);
@@ -79,12 +99,11 @@ export default function SuggestedEditsClient({ initialEdits }: Props) {
   }
 
   return (
+    <>
     <div className="space-y-4">
       {edits.map((edit) => {
         const listing = Array.isArray(edit.listings) ? edit.listings[0] ?? null : edit.listings;
-        const stateSlug = listing ? slugify(listing.state) : '';
-        const citySlug = listing ? slugify(listing.city) : '';
-        const listingUrl = listing ? `/car-washes/${stateSlug}/${citySlug}/${listing.slug}` : null;
+        const listingUrl = listing ? `/state/${getStateSlug(listing.state)}/${slugify(listing.city)}/${listing.slug}` : null;
         const isLoading = actionLoading === edit.id;
 
         return (
@@ -131,6 +150,16 @@ export default function SuggestedEditsClient({ initialEdits }: Props) {
               </div>
 
               <div className="flex gap-2 shrink-0">
+                {listing && (
+                  <button
+                    onClick={() => openEditor(listing.id)}
+                    disabled={loadingEdit === listing.id}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-[#0F2744]/20 text-[#0F2744] rounded-lg hover:bg-[#0F2744]/5 disabled:opacity-50 transition-colors"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    {loadingEdit === listing.id ? 'Loading…' : 'Edit'}
+                  </button>
+                )}
                 <button
                   onClick={() => handleAction(edit.id, edit.listing_id, 'approve', edit.issue_type)}
                   disabled={isLoading}
@@ -153,5 +182,14 @@ export default function SuggestedEditsClient({ initialEdits }: Props) {
         );
       })}
     </div>
+    {editing && (
+      <EditListingModal
+        listing={editing}
+        onClose={() => setEditing(null)}
+        onSaved={() => setEditing(null)}
+        onDeleted={() => setEditing(null)}
+      />
+    )}
+    </>
   );
 }
