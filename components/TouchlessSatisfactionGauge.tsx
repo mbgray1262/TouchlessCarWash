@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { ChevronDown, ThumbsUp, AlertTriangle, Gauge as GaugeIcon } from 'lucide-react';
+import { ChevronDown, ThumbsUp, AlertTriangle, Gauge as GaugeIcon, TrendingUp } from 'lucide-react';
 import { tssTier } from '@/lib/touchless-satisfaction';
 
 export interface TssSnippet {
@@ -53,6 +53,7 @@ export default function TouchlessSatisfactionGauge({
   neg,
   mentions,
   snippets,
+  trend = null,
   methodologyHref = '/touchless-satisfaction-score',
 }: {
   score: number;
@@ -60,6 +61,8 @@ export default function TouchlessSatisfactionGauge({
   neg: number;
   mentions: number;
   snippets: TssSnippet[];
+  /** 'improving' shows a positive momentum pill. null = no signal. */
+  trend?: string | null;
   methodologyHref?: string;
 }) {
   const tier = tssTier(score);
@@ -119,8 +122,18 @@ export default function TouchlessSatisfactionGauge({
           <div className="text-[13px] font-bold uppercase tracking-wide text-gray-400 flex items-center gap-1.5">
             <GaugeIcon className="w-4 h-4" /> Touchless Satisfaction Score
           </div>
-          <div className="text-[22px] font-extrabold mt-0.5" style={{ color: tier.color }}>
-            {tier.label}
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            <span className="text-[22px] font-extrabold" style={{ color: tier.color }}>
+              {tier.label}
+            </span>
+            {trend === 'improving' && (
+              <span
+                className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full px-2 py-0.5 text-[11.5px] font-bold"
+                title="Reviews of this touchless wash have gotten noticeably more positive over the last two years."
+              >
+                <TrendingUp className="w-3.5 h-3.5" /> Improving lately
+              </span>
+            )}
           </div>
           <div className="text-[13px] text-slate-600 mt-1">
             Based on <b className="text-[#0F2744]">{mentions}</b> customer {mentions === 1 ? 'review' : 'reviews'} of the

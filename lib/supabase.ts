@@ -84,6 +84,8 @@ export type Listing = {
   touchless_pos?: number | null;
   touchless_neg?: number | null;
   touchless_mentions?: number | null;
+  /** 'improving' = touchless reviews trending more positive lately; else null. */
+  touchless_trend?: string | null;
 };
 
 // Columns needed by ListingCard — avoids fetching heavy fields like description,

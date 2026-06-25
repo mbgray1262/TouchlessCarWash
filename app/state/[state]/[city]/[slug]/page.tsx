@@ -1601,6 +1601,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                   pos={listing.touchless_pos ?? 0}
                   neg={listing.touchless_neg ?? 0}
                   mentions={listing.touchless_mentions ?? 0}
+                  trend={listing.touchless_trend ?? null}
                   snippets={reviewSnippets
                     .filter((r) => r.touchless_about !== 'other_service' && r.review_text && r.review_text.length >= 30 && isRealCustomerSnippet(r))
                     .map((r): TssSnippet => ({

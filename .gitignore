@@ -72,3 +72,4 @@ scripts/_*.json
 # throwaway analysis scripts
 scripts/_*.mts
 scripts/_*.mjs
+scripts/_*.txt

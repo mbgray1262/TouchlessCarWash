@@ -61,20 +61,49 @@ export function computeTss(pos, neg) {
   return Math.round((100 * (pos + PRIOR_WEIGHT * PRIOR_MEAN)) / (mentions + PRIOR_WEIGHT));
 }
 
+// ── "Improving lately" trend constants (writes listings.touchless_trend) ──
+// Positive-only by design: we reward genuine improvement, we never publicly
+// label a wash as declining. A listing is 'improving' only when its TOUCHLESS
+// review sentiment is BOTH meaningfully more positive lately AND now genuinely
+// good — so the badge never celebrates a still-bad wash that merely got less bad.
+const TREND_RECENT_MONTHS = 24;  // "recent" = reviews dated within the last 24 months
+const TREND_MIN_EACH = 4;        // need >= this many pos/neg mentions in EACH window
+const TREND_SWING = 20;          // recent positive-rate must beat older by >= this many points
+const TREND_RECENT_FLOOR = 60;   // recent positive-rate must itself be >= this (now genuinely good)
+
+/** 'improving' or null, from recent-vs-older touchless positive rates. */
+export function computeTrend({ recentPos, recentNeg, olderPos, olderNeg }) {
+  const recentTot = recentPos + recentNeg;
+  const olderTot = olderPos + olderNeg;
+  if (recentTot < TREND_MIN_EACH || olderTot < TREND_MIN_EACH) return null;
+  const recentRate = (100 * recentPos) / recentTot;
+  const olderRate = (100 * olderPos) / olderTot;
+  if (recentRate >= TREND_RECENT_FLOOR && recentRate - olderRate >= TREND_SWING) return 'improving';
+  return null;
+}
+
 // ── args ──
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
 const MODE_ALL = args.includes('--all');
 const idsArg = args.find((a) => a.startsWith('--ids='));
 const IDS = idsArg ? idsArg.split('=')[1].split(',').map((s) => s.trim()).filter(Boolean) : null;
+// --trend-only: recompute ONLY listings.touchless_trend for every already-scored
+// listing, leaving touchless_satisfaction_score and its inputs untouched. Used to
+// backfill the trend signal with zero risk of moving any score or trophy.
+const TREND_ONLY = args.includes('--trend-only');
 // default-safe: only fill in missing scores unless --all or --ids given
-const MISSING_ONLY = args.includes('--missing-only') || (!MODE_ALL && !IDS);
+const MISSING_ONLY = !TREND_ONLY && (args.includes('--missing-only') || (!MODE_ALL && !IDS));
 
 async function getTargetIds() {
   if (IDS) return IDS;
   const ids = [];
   for (let offset = 0; ; offset += 1000) {
-    let q = sb.from('listings').select('id').eq('is_touchless', true).order('id').range(offset, offset + 999);
+    let q = sb.from('listings').select('id').order('id').range(offset, offset + 999);
+    // trend-only targets every listing that already has a published score;
+    // scoring modes target touchless listings (optionally only un-scored ones).
+    if (TREND_ONLY) q = q.not('touchless_satisfaction_score', 'is', null);
+    else q = q.eq('is_touchless', true);
     if (MISSING_ONLY) q = q.is('touchless_satisfaction_score', null);
     const { data, error } = await q;
     if (error) throw error;
@@ -93,13 +122,17 @@ async function getTargetIds() {
 // dataforseo / google_places).
 const EXCLUDED_SOURCES = new Set(['gmaps-crawl4ai-md']);
 
-/** Aggregate touchless-specific sentiment counts for one listing from review_snippets. */
+/** Aggregate touchless-specific sentiment counts for one listing from review_snippets.
+ *  Also splits the same pos/neg evidence into a recent (<= TREND_RECENT_MONTHS)
+ *  and older window by iso_date, for the "improving" trend signal. */
 async function aggregate(listingId) {
   let pos = 0, neg = 0;
+  let recentPos = 0, recentNeg = 0, olderPos = 0, olderNeg = 0;
+  const recentCutoff = Date.now() - TREND_RECENT_MONTHS * 30.44 * 24 * 60 * 60 * 1000;
   for (let offset = 0; ; offset += 1000) {
     const { data, error } = await sb
       .from('review_snippets')
-      .select('sentiment, touchless_about, source')
+      .select('sentiment, touchless_about, source, iso_date')
       .eq('listing_id', listingId)
       .eq('is_touchless_evidence', true)
       .range(offset, offset + 999);
@@ -109,12 +142,19 @@ async function aggregate(listingId) {
       if (EXCLUDED_SOURCES.has(s.source)) continue; // noisy markdown scrape — never score on it
       // exclude evidence the Label step attributed to a non-touchless bay
       if (s.touchless_about === 'other_service' || s.touchless_about === 'unclear') continue;
-      if (s.sentiment === 'positive') pos++;
-      else if (s.sentiment === 'negative') neg++;
+      const isPos = s.sentiment === 'positive';
+      const isNeg = s.sentiment === 'negative';
+      if (isPos) pos++; else if (isNeg) neg++; else continue;
+      // trend windowing — only counts snippets with a parseable date
+      const t = s.iso_date ? Date.parse(s.iso_date) : NaN;
+      if (!Number.isNaN(t)) {
+        if (t >= recentCutoff) { if (isPos) recentPos++; else recentNeg++; }
+        else { if (isPos) olderPos++; else olderNeg++; }
+      }
     }
     if (data.length < 1000) break;
   }
-  return { pos, neg };
+  return { pos, neg, recentPos, recentNeg, olderPos, olderNeg };
 }
 
 async function main() {
@@ -124,40 +164,49 @@ async function main() {
   console.log(`TSS scorer — mode=${mode}, dry_run=${DRY_RUN}, formula=round(100*(pos+${priorTerm})/(pos+neg+${PRIOR_WEIGHT})), gate>=${MIN_MENTIONS}`);
   console.log(`Targets: ${ids.length}`);
 
-  let scored = 0, gated = 0, changed = 0, errors = 0;
+  let scored = 0, gated = 0, changed = 0, errors = 0, improving = 0;
   const dist = { '84+': 0, '76-83': 0, '62-75': 0, '47-61': 0, '<47': 0 };
 
   for (let i = 0; i < ids.length; i++) {
     const id = ids[i];
     try {
-      const { pos, neg } = await aggregate(id);
+      const agg = await aggregate(id);
+      const { pos, neg } = agg;
       const mentions = pos + neg;
       const score = computeTss(pos, neg);
+      const trend = computeTrend(agg);
+      if (trend === 'improving') improving++;
       if (score == null) gated++; else {
         scored++;
         if (score >= 84) dist['84+']++; else if (score >= 76) dist['76-83']++;
         else if (score >= 62) dist['62-75']++; else if (score >= 47) dist['47-61']++; else dist['<47']++;
       }
       if (!DRY_RUN) {
-        const { error } = await sb.from('listings').update({
-          touchless_pos: pos,
-          touchless_neg: neg,
-          touchless_mentions: mentions,
-          touchless_satisfaction_score: score,
-          tss_scored_at: new Date().toISOString(),
-        }).eq('id', id);
+        // --trend-only writes ONLY the trend flag (never touches the score/inputs).
+        const payload = TREND_ONLY
+          ? { touchless_trend: trend }
+          : {
+              touchless_pos: pos,
+              touchless_neg: neg,
+              touchless_mentions: mentions,
+              touchless_satisfaction_score: score,
+              touchless_trend: trend,
+              tss_scored_at: new Date().toISOString(),
+            };
+        const { error } = await sb.from('listings').update(payload).eq('id', id);
         if (error) { errors++; console.log(`  ERR ${id.slice(0, 8)}: ${error.message}`); continue; }
         changed++;
       }
     } catch (e) { errors++; console.log(`  ERR ${id.slice(0, 8)}: ${e.message}`); }
-    if ((i + 1) % 100 === 0) console.log(`  …${i + 1}/${ids.length} (scored ${scored}, gated ${gated})`);
+    if ((i + 1) % 100 === 0) console.log(`  …${i + 1}/${ids.length} (scored ${scored}, gated ${gated}, improving ${improving})`);
   }
 
   console.log(`\n=== DONE ===`);
   console.log(`scored (>=${MIN_MENTIONS} mentions): ${scored}`);
   console.log(`gated (left NULL): ${gated}`);
-  console.log(`written: ${DRY_RUN ? '0 (dry-run)' : changed}  errors: ${errors}`);
-  console.log(`score distribution: Excellent(84+)=${dist['84+']} VeryGood(76-83)=${dist['76-83']} Good(62-75)=${dist['62-75']} Fair(47-61)=${dist['47-61']} Mixed(<47)=${dist['<47']}`);
+  console.log(`written: ${DRY_RUN ? '0 (dry-run)' : changed}${TREND_ONLY ? ' (trend-only — scores untouched)' : ''}  errors: ${errors}`);
+  console.log(`"improving lately" trend: ${improving}`);
+  if (!TREND_ONLY) console.log(`score distribution: Excellent(84+)=${dist['84+']} VeryGood(76-83)=${dist['76-83']} Good(62-75)=${dist['62-75']} Fair(47-61)=${dist['47-61']} Mixed(<47)=${dist['<47']}`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
