@@ -8,13 +8,22 @@
  * stay only as a MINOR factor / graceful fallback for washes that don't yet
  * have enough touchless reviews to earn a score.
  *
+ * Re-weighted 2026-06-25 to make the Touchless Satisfaction Score genuinely
+ * DECISIVE. The previous split let the Paint-Safe verified badge (flat 20) plus
+ * raw review volume override a clearly-higher touchless score — so an
+ * "Excellent" (86) wash could rank BELOW a "Good" (68) one (Cincinnati: Four
+ * Seasons vs Woody's). For a site whose identity IS the touchless score, the #1
+ * wash must be the best TOUCHLESS wash. Volume (rewards big busy chains, not
+ * touchless quality) and the paint-safe cliff are trimmed; TSS carries 60.
+ *
  * Composite score (0–100):
- *   - Touchless Quality:    50  (touchless_satisfaction_score; fallback to a
+ *   - Touchless Quality:    60  (touchless_satisfaction_score; fallback to a
  *                                capped Google-rating term for unscored washes,
  *                                so they rank BELOW comparable scored washes but
  *                                metros with few scored washes still field a top-3)
- *   - Paint-Safe:           20  (verified badge = full; else granular paint_score)
- *   - Google rating+volume: 25  (minor factor / fallback)
+ *   - Paint-Safe:           15  (verified badge = full; else granular paint_score)
+ *   - Google rating:        12  (minor factor)
+ *   - Review volume:         8  (minor tie-breaker, log-scaled)
  *   - Data completeness:     5
  */
 
@@ -72,10 +81,10 @@ export function scoreListing(
   let score = 0;
   const rating = listing.rating ?? 0;
 
-  // ── Touchless Quality (50 max) — PRIMARY, proprietary ───────────────
+  // ── Touchless Quality (60 max) — PRIMARY, proprietary, DECISIVE ─────
   const tss = listing.touchless_satisfaction_score;
   if (tss != null) {
-    score += (tss / 100) * 50;
+    score += (tss / 100) * 60;
   } else {
     // Unscored fallback: capped Google-rating term (max 30) so an unscored
     // wash ranks below any "Good" (≥60) scored wash but sparse metros still
@@ -83,17 +92,19 @@ export function scoreListing(
     score += (rating / 5) * 30;
   }
 
-  // ── Paint-Safe (20 max) — proprietary ───────────────────────────────
+  // ── Paint-Safe (15 max) — proprietary ───────────────────────────────
   if (listing.paint_safe_verified) {
-    score += 20;
+    score += 15;
   } else if (listing.paint_score != null) {
-    score += Math.min(Math.max(listing.paint_score, 0), 100) / 100 * 15; // capped < verified badge
+    score += Math.min(Math.max(listing.paint_score, 0), 100) / 100 * 12; // capped < verified badge
   }
 
-  // ── Google rating + volume (25 max) — MINOR factor / fallback ───────
-  score += (rating / 5) * 15;
+  // ── Google rating (12 max) — MINOR factor ───────────────────────────
+  score += (rating / 5) * 12;
+
+  // ── Review volume (8 max) — MINOR tie-breaker (log-scaled) ──────────
   const reviewCount = listing.review_count ?? 0;
-  score += Math.min(Math.log10(reviewCount + 1) / Math.log10(500), 1) * 10;
+  score += Math.min(Math.log10(reviewCount + 1) / Math.log10(500), 1) * 8;
 
   // ── Data completeness (5 max) ───────────────────────────────────────
   let completeness = 0;
