@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { getStateSlug, slugify } from '@/lib/constants';
 import { earnsTrophy } from '@/lib/metro-scoring';
 import { BadgeClaimClient } from '@/components/BadgeClaimClient';
+import { BadgeShareClient } from '@/components/BadgeShareClient';
 import type { Metadata } from 'next';
 
 export const revalidate = 3600; // 1 hour
@@ -217,6 +218,16 @@ export default async function BadgeClaimPage({
           </p>
 
           <BadgeClaimClient
+            listingSlug={listing.slug}
+            listingName={listing.name}
+            listingUrl={listingUrl}
+            rank={top.rank}
+            metroName={top.metro_name}
+            year={year}
+          />
+
+          {/* Share your win — one-click social posting (drives referral traffic) */}
+          <BadgeShareClient
             listingSlug={listing.slug}
             listingName={listing.name}
             listingUrl={listingUrl}
