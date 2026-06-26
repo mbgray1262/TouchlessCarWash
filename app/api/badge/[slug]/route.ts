@@ -77,7 +77,14 @@ export async function GET(
   if (referer) {
     try {
       const host = new URL(referer).hostname.replace(/^www\./, '');
-      if (host && !host.endsWith('touchlesscarwashfinder.com')) {
+      // Only record real, public, external hosts. Excludes our own site,
+      // localhost / single-label hosts, *.local, and loopback/private IPs so a
+      // local dev/preview load never creates a phantom "backlink".
+      const isPrivate = !host.includes('.') // localhost & other single-label hosts
+        || host.endsWith('.local')
+        || /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host)
+        || host.endsWith('touchlesscarwashfinder.com');
+      if (host && !isPrivate) {
         await supabase.from('badge_embeds').upsert(
           { listing_slug: slug, referer_domain: host, referer_url: referer.slice(0, 500), last_seen: new Date().toISOString() },
           { onConflict: 'listing_slug,referer_domain' },
