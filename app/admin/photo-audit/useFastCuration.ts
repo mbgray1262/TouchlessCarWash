@@ -767,6 +767,36 @@ export function useFastCuration(listingId: string) {
     setSaving(false);
   }, [listing]);
 
+  // Mark "Not a Car Wash" — the entity isn't a real consumer car-wash location
+  // at all (e.g. an equipment MANUFACTURER / HQ, an office, or an unrelated
+  // business that got imported). Distinct from "Not Touchless" (a real wash that
+  // isn't touchless) and "Closed" (a real wash that shut down). Unapprove so it
+  // 308-redirects out of the public directory + sitemap, set is_touchless=false,
+  // and stamp a distinct classification_source so it's recorded and won't be
+  // re-imported/re-approved. Keeps the row + place_id (never hard-delete);
+  // reversible. The "re-audit confirmed correctly demoted" marker drops it from
+  // the Second Look queue too.
+  const markNotACarWash = useCallback(async () => {
+    if (!listing) return;
+    setSaving(true);
+    const now = new Date().toISOString();
+    const note = `[${now.slice(0, 10)}] Marked NOT A CAR WASH via photo-audit admin — not a real consumer car-wash location (e.g. an equipment manufacturer/HQ, office, or unrelated business). Unapproved (URL 308-redirects); place_id kept; reversible. [re-audit confirmed correctly demoted]`;
+    const existing = listing.crawl_notes || '';
+    const newNotes = /re-audit confirmed correctly demoted/i.test(existing)
+      ? existing
+      : (existing.slice(0, 4500) + (existing ? '\n\n' : '') + note);
+    await supabase.from('listings').update({
+      is_approved: false,
+      is_touchless: false,
+      classification_source: 'not_a_carwash_admin',
+      crawl_notes: newNotes,
+      photo_audited_at: now,
+    }).eq('id', listing.id);
+    await supabase.from('photo_audit_results').update({ reviewed: true, applied: true }).eq('listing_id', listing.id);
+    setListing(prev => prev ? { ...prev, is_approved: false, is_touchless: false, classification_source: 'not_a_carwash_admin', crawl_notes: newNotes } : prev);
+    setSaving(false);
+  }, [listing]);
+
   // Approve listing (save + mark reviewed_at)
   const approveAndNext = async (onUpdate?: () => void, onNext?: () => void, onClose?: () => void): Promise<void> => {
     // Guard: a blank city produces an invalid public URL (/state/<code>//<slug>)
@@ -886,6 +916,7 @@ export function useFastCuration(listingId: string) {
     markTouchless,
     markCantVerify,
     markNotTouchless,
+    markNotACarWash,
     markClosed,
     updateWebsite,
     setFallbackHero,

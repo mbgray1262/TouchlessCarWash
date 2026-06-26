@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useCallback, useState, useRef } from 'react';
-import { X, ExternalLink, Check, CheckCheck, Ban, Trash2, Sparkles, Loader2, Plus, RefreshCw, Upload, HelpCircle } from 'lucide-react';
+import { X, ExternalLink, Check, CheckCheck, Ban, Trash2, Sparkles, Loader2, Plus, RefreshCw, Upload, HelpCircle, Building2 } from 'lucide-react';
 import { useFastCuration, type CandidatePhoto } from './useFastCuration';
 import { PhotoGrid } from './PhotoGrid';
 import { CropModal } from '../hero-review/CropModal';
@@ -27,7 +27,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
     tagPhoto, setAsHero, addToGallery, removeFromGallery, removeHero, skipPhoto,
     addCapture, addUpload, addHeroDirect, replaceUrl, updateWebsite, setFallbackHero,
     saveAll, approveAndNext, classifyEquipment, setEquipment,
-    markNotTouchless, markCantVerify, markClosed, deleteListing, heroRemoved,
+    markNotTouchless, markCantVerify, markNotACarWash, markClosed, deleteListing, heroRemoved,
   } = useFastCuration(listingId);
 
   const [cropPhoto, setCropPhoto] = useState<CandidatePhoto | null>(null);
@@ -900,6 +900,17 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
               title="Can't locate the business on Google Maps / Street View. Sets it aside for later — won't reappear in the Second Look queue."
             >
               <HelpCircle className="w-4 h-4" /> Can't Verify
+            </button>
+            <button
+              onClick={async () => {
+                if (!confirm('Mark as NOT A CAR WASH?\n\nUse for entities that aren’t a real consumer car wash at all — e.g. an equipment manufacturer/HQ, an office, or an unrelated business. It will be unapproved (URL 308-redirects) and recorded so it won’t be re-imported. Reversible.')) return;
+                await markNotACarWash(); onUpdate?.(); if (onNext) onNext(); else onClose();
+              }}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 text-sm font-medium disabled:opacity-50 border border-purple-200"
+              title="Not a real consumer car wash (equipment manufacturer/HQ, office, or unrelated business). Unapproves + 308-redirects + records it so it won't be re-imported. Reversible."
+            >
+              <Building2 className="w-4 h-4" /> Not a Car Wash
             </button>
             <div className="relative" ref={closedMenuRef}>
               <button
