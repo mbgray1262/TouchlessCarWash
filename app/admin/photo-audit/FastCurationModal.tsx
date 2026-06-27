@@ -974,7 +974,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                 }`}
                 title={listing.website || 'No website on file'}
               >
-                🌐 {listing.website ? 'Website' : 'No site'}
+                🌐{listing.website ? '' : ' ⚠'}
               </button>
               <div className="absolute bottom-full left-0 mb-1 hidden group-hover:flex gap-1 bg-white border rounded-lg shadow-lg p-1 z-10">
                 <button
@@ -1002,7 +1002,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white hover:bg-gray-100 text-gray-600 border border-gray-200 text-xs"
                 title="Open the business on Google Maps"
               >
-                📍 Maps
+                📍
               </button>
             )}
             <button
@@ -1018,7 +1018,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white hover:bg-gray-100 text-gray-600 border border-gray-200 text-xs"
               title={listing.google_place_id ? 'Open Google reviews for this exact listing' : 'No Google place_id — will search by address (may not match exactly)'}
             >
-              💬 Reviews{!listing.google_place_id ? ' ⚠' : ''}
+              💬{!listing.google_place_id ? ' ⚠' : ''}
             </button>
             <button
               onClick={async () => { if (confirm('Permanently delete this listing? This cannot be undone.')) { await deleteListing(); onUpdate?.(); if (onNext) onNext(); else onClose(); } }}
