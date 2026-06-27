@@ -1050,6 +1050,11 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
               </button>
             )}
 
+            {/* Full-width break: forces "Approve & Next" onto its own row,
+                flush-left, so Skip stays up top next to Back regardless of how
+                many decision buttons widen the row (added "Not a Car Wash"). */}
+            <div className="basis-full h-0" />
+
             {/* === Primary action === Context-adapts: when listing is
                 Not Touchless, this is the "make this touchless and approve
                 in one click" path. When already Touchless, it's the
