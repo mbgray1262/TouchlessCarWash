@@ -875,7 +875,11 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
               These were redundant or rarely-used; their work is covered
               by the primary action (auto-saves + auto-flips) or by
               clicking the verified pill in the header. */}
-          <div className="flex items-center gap-2 px-6 py-3 border-t bg-gray-50 flex-wrap">
+          <div className="flex flex-col gap-2 px-6 py-3 border-t bg-gray-50">
+            {/* Secondary actions (decisions + helpers + Back/Skip) wrap together
+                as one group; the primary Approve button gets its own row below
+                so it's never crowded and Skip always stays up here next to Back. */}
+            <div className="flex items-center gap-2 flex-wrap">
             {/* === Group 1: decisions === */}
             <button
               onClick={async () => { await markNotTouchless(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
@@ -891,7 +895,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 text-sm font-medium disabled:opacity-50 border border-orange-200"
               title={`Tag every listing named "${listing.name}" as Not Touchless — for when an entire chain is confirmed not touchless. Shows a count + sample before applying.`}
             >
-              <Ban className="w-4 h-4" /> Tag Whole Chain
+              <Ban className="w-4 h-4" /> Tag Chain
             </button>
             <button
               onClick={async () => { await markCantVerify(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
@@ -1049,20 +1053,16 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                 Skip →
               </button>
             )}
+            </div>
 
-            {/* Full-width break: forces "Approve & Next" onto its own row,
-                flush-left, so Skip stays up top next to Back regardless of how
-                many decision buttons widen the row (added "Not a Car Wash"). */}
-            <div className="basis-full h-0" />
-
-            {/* === Primary action === Context-adapts: when listing is
-                Not Touchless, this is the "make this touchless and approve
-                in one click" path. When already Touchless, it's the
-                standard approve-photos-and-publish path. */}
+            {/* === Primary action === on its OWN row, flush-left, so it's never
+                crowded by the secondary buttons. Context-adapts: when listing is
+                Not Touchless, this is the "make touchless and approve in one
+                click" path; when already Touchless, the standard approve path. */}
             <button
               onClick={handleApproveAndNext}
               disabled={saving}
-              className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold shadow-sm disabled:opacity-50 transition-colors ${
+              className={`self-start flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold shadow-sm disabled:opacity-50 transition-colors ${
                 listing.is_touchless === false
                   ? 'bg-green-600 hover:bg-green-700 text-white'
                   : 'bg-violet-600 hover:bg-violet-700 text-white'
