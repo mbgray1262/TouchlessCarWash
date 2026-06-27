@@ -1313,8 +1313,24 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
   // touchless snippets — so feed it paint-only snippets (its hide-empty logic
   // then suppresses the touchless section + chip). Only when there's no gauge
   // does the Paint-Safe module surface touchless evidence as the fallback home.
-  const hasTssGauge = listing.touchless_satisfaction_score != null;
-  const paintModuleSnippets = hasTssGauge
+  const touchlessReviewSnippets = reviewSnippets
+    .filter((r) => r.touchless_about !== 'other_service' && r.review_text && r.review_text.length >= 30 && isRealCustomerSnippet(r))
+    .map((r): TssSnippet => ({
+      id: r.id,
+      text: r.review_text,
+      sentiment: r.sentiment ?? null,
+      reviewerName: r.reviewer_name,
+      rating: r.rating,
+      date: r.review_date ?? null,
+    }));
+  // Show the touchless-reviews module whenever there's a score OR at least one
+  // labeled touchless review. The review snippets ALWAYS show; only the 0–100
+  // score gauge waits for the 3-mention confidence gate.
+  const hasTouchlessReviews = touchlessReviewSnippets.some((s) => s.sentiment === 'positive' || s.sentiment === 'negative');
+  const showTouchlessGauge = listing.touchless_satisfaction_score != null || hasTouchlessReviews;
+  // When the touchless module is shown it owns the touchless evidence, so the
+  // Paint-Safe module renders paint-only (no double-showing of touchless reviews).
+  const paintModuleSnippets = showTouchlessGauge
     ? paintSnippets.filter((s) => s.theme === 'paint')
     : paintSnippets;
 
@@ -1604,23 +1620,14 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
             <div className="lg:col-span-2 space-y-6">
               {/* Touchless Satisfaction Score — the headline 0–100 gauge. Shown
                   whenever the listing has enough touchless reviews to score. */}
-              {listing.touchless_satisfaction_score != null && (
+              {showTouchlessGauge && (
                 <TouchlessSatisfactionGauge
-                  score={listing.touchless_satisfaction_score}
+                  score={listing.touchless_satisfaction_score ?? null}
                   pos={listing.touchless_pos ?? 0}
                   neg={listing.touchless_neg ?? 0}
                   mentions={listing.touchless_mentions ?? 0}
                   trend={listing.touchless_trend ?? null}
-                  snippets={reviewSnippets
-                    .filter((r) => r.touchless_about !== 'other_service' && r.review_text && r.review_text.length >= 30 && isRealCustomerSnippet(r))
-                    .map((r): TssSnippet => ({
-                      id: r.id,
-                      text: r.review_text,
-                      sentiment: r.sentiment ?? null,
-                      reviewerName: r.reviewer_name,
-                      rating: r.rating,
-                      date: r.review_date ?? null,
-                    }))}
+                  snippets={touchlessReviewSnippets}
                 />
               )}
               {cityScoreRanking.length >= 2 && (
@@ -1636,7 +1643,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                   touchless-themed snippet in the Paint-Safe module) so it never claims
                   reviews the visitor can't see, and suppressed when the gauge is present
                   (the gauge already shows the sentiment split). */}
-              {listing.touchless_sentiment && !hasTssGauge && paintModuleSnippets.some((s) => s.theme === 'touchless') && (
+              {listing.touchless_sentiment && !showTouchlessGauge && paintModuleSnippets.some((s) => s.theme === 'touchless') && (
                 <div className={`flex items-center gap-2 px-4 py-3 rounded-xl border ${
                   listing.touchless_sentiment === 'positive'
                     ? 'bg-green-50 border-green-200'

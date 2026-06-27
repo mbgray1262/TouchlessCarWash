@@ -56,7 +56,8 @@ export default function TouchlessSatisfactionGauge({
   trend = null,
   methodologyHref = '/touchless-satisfaction-score',
 }: {
-  score: number;
+  /** null = below the 3-mention confidence gate: show the reviews, but no score gauge. */
+  score: number | null;
   pos: number;
   neg: number;
   mentions: number;
@@ -65,8 +66,10 @@ export default function TouchlessSatisfactionGauge({
   trend?: string | null;
   methodologyHref?: string;
 }) {
-  const tier = tssTier(score);
-  const [open, setOpen] = useState(false);
+  const hasScore = score != null;
+  const tier = hasScore ? tssTier(score) : { label: '', color: '#0F2744', bg: '#f8fafc', arc: '#94a3b8' };
+  // No score (1–2 mentions): lead with the reviews, so show them open by default.
+  const [open, setOpen] = useState(score == null);
   const [filter, setFilter] = useState<null | 'positive' | 'negative'>(null);
   const [expanded, setExpanded] = useState(false);
   const INITIAL = 6;
@@ -76,7 +79,7 @@ export default function TouchlessSatisfactionGauge({
   const C = 2 * Math.PI * R; // ~314.16
   const [drawn, setDrawn] = useState(0);
   useEffect(() => {
-    const t = setTimeout(() => setDrawn(score), 180);
+    const t = setTimeout(() => setDrawn(score ?? 0), 180);
     return () => clearTimeout(t);
   }, [score]);
   const offset = C * (1 - drawn / 100);
@@ -93,6 +96,7 @@ export default function TouchlessSatisfactionGauge({
 
   return (
     <section className="bg-white rounded-2xl border-2 p-5 mb-4" style={{ borderColor: tier.arc + '55' }}>
+      {hasScore ? (
       <div className="flex gap-5 items-center">
         {/* gauge */}
         <div className="relative w-[116px] h-[116px] shrink-0">
@@ -144,8 +148,19 @@ export default function TouchlessSatisfactionGauge({
           </a>
         </div>
       </div>
+      ) : (
+        <div>
+          <div className="text-[13px] font-bold uppercase tracking-wide text-gray-400 flex items-center gap-1.5">
+            <GaugeIcon className="w-4 h-4" /> What customers say about the touchless wash
+          </div>
+          <div className="text-[13px] text-slate-600 mt-1">
+            Based on <b className="text-[#0F2744]">{mentions}</b> customer {mentions === 1 ? 'review' : 'reviews'} mentioning the
+            touchless wash. A Touchless Satisfaction Score appears once there are 3 or more.
+          </div>
+        </div>
+      )}
 
-      {clear > 0 && (
+      {clear > 0 && hasScore && (
         <button
           onClick={() => setOpen((o) => !o)}
           className="mt-4 inline-flex items-center gap-2 bg-[#0F2744] hover:bg-[#1e3a5f] text-white rounded-[10px] px-4 py-2.5 text-[13.5px] font-bold transition-colors"
