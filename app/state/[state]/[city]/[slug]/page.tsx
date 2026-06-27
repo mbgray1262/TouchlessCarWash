@@ -1288,7 +1288,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     permanentRedirect(canonicalPath);
   }
 
-  const [nearbyListings, reviewSnippets, genericReviews, rankings, chainResult, verificationStats, equipmentVideos, paintSnippets, cityScoreRanking] = await Promise.all([
+  const [nearbyListings, reviewSnippets, genericReviews, rankings, chainResult, verificationStats, equipmentVideos, paintSnippets, cityScoreRanking, badgeEmbedRes] = await Promise.all([
     getNearbyListings(listing),
     getReviewSnippets(listing.id),
     getGenericReviews(listing.id),
@@ -1300,7 +1300,12 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     listing.touchless_satisfaction_score != null
       ? getCityScoreRanking(listing.state, listing.city)
       : Promise.resolve([] as ScoreRankItem[]),
+    // Has the owner put the badge to use? (claimed the listing OR embedded the
+    // badge on their site — the latter is how Tom's/Black Dog show up). When in
+    // use, the "Claim your badge" CTAs become a "Badge active" acknowledgment.
+    supabase.from('badge_embeds').select('id').eq('listing_slug', listing.slug).limit(1),
   ]);
+  const badgeInUse = listing.is_claimed === true || ((badgeEmbedRes?.data?.length ?? 0) > 0);
 
   // De-dup touchless reviews: the Touchless Satisfaction gauge owns the
   // "what customers say about the touchless wash" evidence. When the gauge is
@@ -1513,9 +1518,13 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
             <div className="mt-3">
               <Link
                 href={`/badge/${listing.slug}`}
-                className="inline-flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-semibold text-xs md:text-sm px-3 py-2 rounded-lg shadow transition-all"
+                className={badgeInUse
+                  ? 'inline-flex items-center gap-2 bg-white/15 hover:bg-white/25 text-white font-semibold text-xs md:text-sm px-3 py-2 rounded-lg border border-white/25 transition-all'
+                  : 'inline-flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-semibold text-xs md:text-sm px-3 py-2 rounded-lg shadow transition-all'}
               >
-                <Trophy className="w-4 h-4" />Claim Your Badge
+                {badgeInUse
+                  ? <><CheckCircle className="w-4 h-4 text-[#22C55E]" />Badge Active</>
+                  : <><Trophy className="w-4 h-4" />Claim Your Badge</>}
               </Link>
             </div>
           )}
@@ -2030,17 +2039,22 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                 </div>
                 <p className="text-sm text-gray-500 mb-4">
                   {trophyRanking
-                    ? 'Keep your listing accurate and claim your award.'
+                    ? (badgeInUse
+                        ? 'Your award badge is active — manage it anytime.'
+                        : 'Keep your listing accurate and claim your award.')
                     : 'Keep your listing accurate and up to date.'}
                 </p>
                 <div className="flex flex-col gap-2">
                   {trophyRanking && (
                     <Link
                       href={`/badge/${listing.slug}`}
-                      className="flex items-center justify-center gap-2 w-full bg-[#B8902F] text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-[#a37e26] transition-colors shadow-sm"
+                      className={badgeInUse
+                        ? 'flex items-center justify-center gap-2 w-full bg-green-50 text-green-700 border border-green-200 text-sm font-semibold py-2.5 rounded-xl hover:bg-green-100 transition-colors'
+                        : 'flex items-center justify-center gap-2 w-full bg-[#B8902F] text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-[#a37e26] transition-colors shadow-sm'}
                     >
-                      <Trophy className="w-4 h-4" />
-                      Claim your {awardYear} award badge
+                      {badgeInUse
+                        ? <><CheckCircle className="w-4 h-4" />Badge active — manage</>
+                        : <><Trophy className="w-4 h-4" />Claim your {awardYear} award badge</>}
                     </Link>
                   )}
                   <SuggestEditModal listingId={listing.id} listingName={listing.name} variant="button" />
