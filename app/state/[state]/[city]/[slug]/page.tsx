@@ -1501,7 +1501,10 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                 <ShieldCheck className="w-3 h-3 mr-1" />Paint-Safe
               </Badge>
             )}
-            {listing.touchless_verified ? (
+            {/* "Touchless Verified" requires backing: a user-review verification
+                must have at least one touchless mention behind it (else the badge
+                is unbacked/misleading); other sources (chain, vendor) stand alone. */}
+            {(listing.touchless_verified && (listing.touchless_verified !== 'user_review' || (listing.touchless_mentions ?? 0) > 0)) ? (
               <Badge className={`bg-[#22C55E] text-white border-0 shadow-sm ${heroPill}`}>
                 <CheckCircle className="w-3 h-3 mr-1" />Touchless Verified
               </Badge>
