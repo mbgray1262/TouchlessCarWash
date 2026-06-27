@@ -8,6 +8,29 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+/**
+ * Clean up the embedding site's hostname for backlink tracking.
+ * - Strips a leading "www.".
+ * - Wix serves embeds from its asset CDN `*.filesusr.com`, which leaks as the
+ *   referer instead of the real site. Decode the published-domain pattern
+ *   (Wix replaces dots with dashes: `www-tomscarwash-com.filesusr.com` →
+ *   `tomscarwash.com`), and DROP the editor/preview asset domains whose
+ *   subdomain is a site-ID UUID (`<uuid>.filesusr.com`) — those are noise, not
+ *   a real published backlink. Returns null when the host should not be recorded.
+ */
+function normalizeRefererHost(hostname: string): string | null {
+  const host = hostname.toLowerCase();
+  if (host.endsWith('.filesusr.com')) {
+    const sub = host.slice(0, -'.filesusr.com'.length);
+    // Wix editor/preview asset domain (site-id UUID) — not a published site.
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/.test(sub)) return null;
+    // Published custom domain, dots-as-dashes encoded.
+    const decoded = sub.replace(/-/g, '.').replace(/^www\./, '');
+    return /^[a-z0-9.-]+\.[a-z]{2,}$/.test(decoded) ? decoded : null;
+  }
+  return host.replace(/^www\./, '');
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -76,11 +99,12 @@ export async function GET(
   const referer = request.headers.get('referer') || '';
   if (referer) {
     try {
-      const host = new URL(referer).hostname.replace(/^www\./, '');
+      const host = normalizeRefererHost(new URL(referer).hostname);
       // Only record real, public, external hosts. Excludes our own site,
       // localhost / single-label hosts, *.local, and loopback/private IPs so a
       // local dev/preview load never creates a phantom "backlink".
-      const isPrivate = !host.includes('.') // localhost & other single-label hosts
+      const isPrivate = !host // normalizer dropped it (e.g. a Wix editor/preview asset domain)
+        || !host.includes('.') // localhost & other single-label hosts
         || host.endsWith('.local')
         || /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host)
         || host.endsWith('touchlesscarwashfinder.com');
