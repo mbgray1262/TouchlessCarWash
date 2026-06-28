@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { ChevronDown, ThumbsUp, AlertTriangle, Gauge as GaugeIcon, TrendingUp } from 'lucide-react';
+import { ThumbsUp, AlertTriangle, Gauge as GaugeIcon, TrendingUp } from 'lucide-react';
 import { tssTier } from '@/lib/touchless-satisfaction';
 
 export interface TssSnippet {
@@ -68,11 +68,11 @@ export default function TouchlessSatisfactionGauge({
 }) {
   const hasScore = score != null;
   const tier = hasScore ? tssTier(score) : { label: '', color: '#0F2744', bg: '#f8fafc', arc: '#94a3b8' };
-  // No score (1–2 mentions): lead with the reviews, so show them open by default.
-  const [open, setOpen] = useState(score == null);
   const [filter, setFilter] = useState<null | 'positive' | 'negative'>(null);
   const [expanded, setExpanded] = useState(false);
-  const INITIAL = 6;
+  // Preview-by-default: the reviews drawer is always shown (no click to open);
+  // only the tail beyond the first INITIAL collapses behind "Show all".
+  const INITIAL = 2;
 
   // Animate the arc up on mount.
   const R = 50;
@@ -160,17 +160,7 @@ export default function TouchlessSatisfactionGauge({
         </div>
       )}
 
-      {clear > 0 && hasScore && (
-        <button
-          onClick={() => setOpen((o) => !o)}
-          className="mt-4 inline-flex items-center gap-2 bg-[#0F2744] hover:bg-[#1e3a5f] text-white rounded-[10px] px-4 py-2.5 text-[13.5px] font-bold transition-colors"
-        >
-          See what customers say about the touchless wash
-          <ChevronDown className={`w-4 h-4 transition-transform ${open ? 'rotate-180' : ''}`} />
-        </button>
-      )}
-
-      {open && clear > 0 && (
+      {clear > 0 && (
         <div className="mt-4 pt-4 border-t border-gray-200">
           <div className="flex h-3 rounded-full overflow-hidden border border-gray-200">
             <div className="bg-[#22C55E]" style={{ width: `${pctPos}%` }} />

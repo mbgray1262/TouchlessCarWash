@@ -10,7 +10,7 @@
  */
 
 import { useMemo, useState, type ReactNode } from 'react';
-import { ShieldCheck, ChevronDown, ThumbsUp, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, ThumbsUp, AlertTriangle } from 'lucide-react';
 
 export type PaintTheme = 'paint' | 'touchless' | 'cleanliness' | 'other';
 
@@ -123,13 +123,14 @@ export default function PaintSafeModule({
   snippets,
   methodologyHref = '/paint-safe',
 }: PaintSafeModuleProps) {
-  const [open, setOpen] = useState(state === 'has_data_unverified'); // open by default when there's no badge to click
   const [theme, setTheme] = useState<'all' | PaintTheme>('all');
   const [sent, setSent] = useState<null | 'positive' | 'negative'>(null);
   const [sort, setSort] = useState<'helpful' | 'recent'>('helpful');
   const [expanded, setExpanded] = useState(false); // collapse the review list so amenities/photos/FAQ stay reachable
   const [showAllTouchless, setShowAllTouchless] = useState(false); // not-enough state's touchless snippet list
-  const INITIAL = 6;
+  // Preview-by-default: the evidence drawer is always shown; only the tail
+  // beyond the first INITIAL collapses behind "Show all".
+  const INITIAL = 2;
 
   const clear = paintPos + paintNeg;
   const pctPos = clear > 0 ? Math.round((paintPos / clear) * 100) : 0;
@@ -228,19 +229,8 @@ export default function PaintSafeModule({
         </h2>
       )}
 
-      {/* ---- drawer toggle (verified only; never offer a dead button) ---- */}
-      {verified && clear > 0 && (
-        <button
-          onClick={() => setOpen((o) => !o)}
-          className="mt-3 inline-flex items-center gap-2 bg-[#0F2744] hover:bg-[#1e3a5f] text-white rounded-[10px] px-4 py-2.5 text-[13.5px] font-bold transition-colors"
-        >
-          See what customers say about paint safety
-          <ChevronDown className={`w-4 h-4 transition-transform ${open ? 'rotate-180' : ''}`} />
-        </button>
-      )}
-
-      {/* ---- evidence drawer ---- */}
-      {(open || !verified) && clear > 0 && (
+      {/* ---- evidence drawer (preview-by-default: always shown when there's data) ---- */}
+      {clear > 0 && (
         <div className={verified ? 'mt-4 pt-4 border-t border-gray-200' : 'mt-3'}>
           {/* context + split bar — framed against TOTAL reviews so a tiny paint
               sample never reads as an alarming headline percentage. */}
