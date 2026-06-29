@@ -236,11 +236,6 @@ export const CHAINS: Chain[] = [
     description: "Hoffman Car Wash is a long-running New York Capital Region car wash chain with {count} locations offering touchless automatic bays. Best known for its full-service and express tunnels, Hoffman also operates touch-free brushless washing at these sites.",
   },
   {
-    name: "Zappy's Auto Washes",
-    slug: 'zappys-auto-washes',
-    description: "Zappy's Auto Washes operates {count} touchless car wash locations across Ohio, with automatic touch-free bays for a brushless, scratch-free wash.",
-  },
-  {
     name: 'Mr Sparkle Car Wash',
     slug: 'mr-sparkle-car-wash',
     description: 'Mr Sparkle Car Wash is a Connecticut chain with {count} touchless automatic car wash locations, offering brushless, touch-free washing across the state.',
@@ -271,11 +266,6 @@ export const CHAINS: Chain[] = [
     description: 'Select Chevron gas stations offer touchless car washes at {count} locations, concentrated in California and Florida with additional sites in Oregon, Nevada, and Washington. These touch-free automatic bays provide a quick brushless wash alongside fuel.',
   },
   {
-    name: "Terrible's",
-    slug: 'terribles',
-    description: "Terrible's is a Nevada-based convenience-store and fuel chain with {count} touchless car wash locations, primarily across Nevada plus California and Arizona. Their touch-free automatic bays offer a brushless, scratch-free wash.",
-  },
-  {
     name: 'Shell',
     slug: 'shell',
     description: 'Select Shell gas stations operate touchless car washes at {count} locations nationwide — from California and the Midwest to the Southeast — offering a brushless, touch-free automatic wash alongside fuel.',
@@ -289,6 +279,96 @@ export const CHAINS: Chain[] = [
     name: 'Marathon',
     slug: 'marathon',
     description: 'Select Marathon gas stations offer touchless car washes at {count} locations nationwide, led by Florida. Their touch-free automatic bays deliver a brushless, scratch-free wash alongside fuel.',
+  },
+  {
+    name: 'Castle Wash',
+    slug: 'castle-wash',
+    description: 'Castle Wash operates {count} touchless car wash locations across Tennessee, pairing automatic touch-free (brushless) bays with express tunnel and self-service options for a safe, scratch-free wash.',
+  },
+  {
+    name: 'Coastal Carolina Car Wash',
+    slug: 'coastal-carolina-car-wash',
+    description: 'Coastal Carolina Car Wash operates {count} touchless car wash locations in the Carolinas, featuring automatic touch-free (brushless) bays for a safe, scratch-free wash.',
+  },
+  {
+    name: 'United Auto Wash',
+    slug: 'united-auto-wash',
+    description: 'United Auto Wash operates {count} touchless car wash locations across Ohio, featuring automatic touch-free (brushless) bays for a safe, scratch-free wash.',
+  },
+  {
+    name: 'Blue Falls Car Wash',
+    slug: 'blue-falls-car-wash',
+    description: 'Blue Falls Car Wash operates {count} touchless car wash locations with automatic touch-free (brushless) bays for a safe, scratch-free wash.',
+  },
+  {
+    name: 'Soaps N Suds',
+    slug: 'soaps-n-suds',
+    description: 'Soaps N Suds operates {count} touchless car wash locations across Virginia, featuring automatic touch-free (brushless) bays for a safe, scratch-free wash.',
+  },
+  {
+    name: 'Gorilla Car Wash',
+    slug: 'gorilla-car-wash',
+    description: 'Gorilla Car Wash operates {count} touchless car wash locations in Texas, featuring automatic touch-free (brushless) bays for a safe, scratch-free wash.',
+  },
+  {
+    name: 'Super Klean Car Wash',
+    slug: 'super-klean-car-wash',
+    description: 'Super Klean Car Wash operates {count} touchless car wash locations with automatic touch-free (brushless) bays for a safe, scratch-free wash.',
+  },
+  {
+    name: 'Village Car Wash',
+    slug: 'village-car-wash',
+    description: 'Village Car Wash operates {count} touchless car wash locations across Kansas and Missouri, featuring automatic touch-free (brushless) bays for a safe, scratch-free wash.',
+  },
+  {
+    name: 'Posh Wash',
+    slug: 'posh-wash',
+    description: 'Posh Wash operates {count} touchless car wash locations across Massachusetts and Rhode Island, featuring automatic touch-free (brushless) bays for a safe, scratch-free wash.',
+  },
+  {
+    name: 'Soft Touch Auto Wash',
+    slug: 'soft-touch-auto-wash',
+    description: 'Soft Touch Auto Wash operates {count} touchless car wash locations in Massachusetts, featuring automatic touch-free (brushless) bays for a safe, scratch-free wash.',
+  },
+  {
+    name: 'Hometown Car Wash',
+    slug: 'hometown-car-wash',
+    description: 'Hometown Car Wash operates {count} touchless car wash locations with automatic touch-free (brushless) bays for a safe, scratch-free wash.',
+  },
+  {
+    name: 'Exxon',
+    slug: 'exxon',
+    description: 'Exxon-branded fuel stations offer Touch Free touchless car washes at {count} locations, with brushless automatic bays for a safe, scratch-free wash alongside fuel and convenience services.',
+  },
+  {
+    name: 'Sunoco',
+    slug: 'sunoco',
+    description: 'Sunoco-branded fuel stations offer Touch Free touchless car washes at {count} locations, with brushless automatic bays for a safe, scratch-free wash alongside fuel and convenience services.',
+  },
+  {
+    name: '76',
+    slug: '76',
+    description: '76-branded fuel stations offer Touch Free touchless car washes at {count} locations, with brushless automatic bays for a safe, scratch-free wash alongside fuel and convenience services.',
+  },
+  {
+    name: 'Speedway',
+    slug: 'speedway',
+    description: 'Speedway offers Touch Free touchless car washes at {count} locations, with brushless automatic bays for a safe, scratch-free wash alongside fuel and convenience services.',
+  },
+  {
+    name: 'Phillips 66',
+    slug: 'phillips-66',
+    description: 'Phillips 66-branded fuel stations offer Touch Free touchless car washes at {count} locations, with brushless automatic bays for a safe, scratch-free wash alongside fuel and convenience services.',
+  },
+  {
+    name: 'Valero',
+    slug: 'valero',
+    description: 'Valero-branded fuel stations offer Touch Free touchless car washes at {count} locations, with brushless automatic bays for a safe, scratch-free wash alongside fuel and convenience services.',
+  },
+  {
+    name: 'ARCO',
+    slug: 'arco',
+    description: 'ARCO-branded fuel stations offer Touch Free touchless car washes at {count} locations, with brushless automatic bays for a safe, scratch-free wash alongside fuel and convenience services.',
   },
 ];
 
