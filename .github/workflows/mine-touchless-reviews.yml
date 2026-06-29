@@ -40,8 +40,8 @@ jobs:
           python3 scripts/mine-touchless-reviews-search.py \
             --csv scripts/tss-mining-targets.csv \
             --headless \
-            --start "$(( ${{ matrix.shard }} * 130 ))" \
-            --limit 130
+            --start "$(( ${{ matrix.shard }} * 155 ))" \
+            --limit 155
 
   # Step 2+3 of the Review-Mined Score method: Label the new snippets, then Score.
   # Runs once after ALL mine shards settle (if: always() → even if some shards failed).
