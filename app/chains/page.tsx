@@ -41,13 +41,13 @@ async function getChainStats(): Promise<ChainWithStats[]> {
   // Single paginated query — replaces the previous N-per-chain approach.
   // Only counts approved touchless listings so the page auto-updates as
   // listings are added or removed, and chains below the threshold disappear.
-  const chainMap: Record<string, { count: number; states: Set<string> }> = {};
+  const chainMap: Record<string, { count: number; states: Set<string>; bestHero: string | null; bestHeroReviews: number }> = {};
   const BATCH = 1000;
   let offset = 0;
   while (true) {
     const { data } = await supabase
       .from('listings')
-      .select('parent_chain, state')
+      .select('parent_chain, state, hero_image, review_count')
       .eq('is_touchless', true)
       .eq('is_approved', true)
       .not('parent_chain', 'is', null)
@@ -55,9 +55,15 @@ async function getChainStats(): Promise<ChainWithStats[]> {
     if (!data || data.length === 0) break;
     for (const row of data) {
       if (!row.parent_chain) continue;
-      if (!chainMap[row.parent_chain]) chainMap[row.parent_chain] = { count: 0, states: new Set() };
-      chainMap[row.parent_chain].count++;
-      chainMap[row.parent_chain].states.add(row.state);
+      if (!chainMap[row.parent_chain]) chainMap[row.parent_chain] = { count: 0, states: new Set(), bestHero: null, bestHeroReviews: -1 };
+      const cm = chainMap[row.parent_chain];
+      cm.count++;
+      cm.states.add(row.state);
+      // Fallback chain-card photo: the hero of the most-reviewed member listing
+      // (real, Supabase-hosted facility photos) — used when a chain has no curated
+      // brand image, so every chain card shows a real photo instead of a placeholder.
+      const rc = (row.review_count as number | null) ?? 0;
+      if (row.hero_image && rc > cm.bestHeroReviews) { cm.bestHero = row.hero_image as string; cm.bestHeroReviews = rc; }
     }
     if (data.length < BATCH) break;
     offset += BATCH;
@@ -73,7 +79,7 @@ async function getChainStats(): Promise<ChainWithStats[]> {
       description: renderChainDescription(chain.description, stats.count),
       count: stats.count,
       states: Array.from(stats.states).sort(),
-      heroImage: getChainHeroImage(chain.name),
+      heroImage: getChainHeroImage(chain.name) ?? stats.bestHero,
     });
   }
 

@@ -141,14 +141,14 @@ export interface RankedChain {
 
 // ── Data fetching helpers ─────────────────────────────────────────────
 
-type RawRow = { parent_chain: string; state: string; rating: number | null; review_count: number | null };
+type RawRow = { parent_chain: string; state: string; rating: number | null; review_count: number | null; hero_image: string | null };
 
 async function fetchChainRows(stateFilter?: string[]): Promise<RawRow[]> {
   const all: RawRow[] = [];
   for (let offset = 0; ; offset += 1000) {
     let q = supabase
       .from('listings')
-      .select('parent_chain, state, rating, review_count')
+      .select('parent_chain, state, rating, review_count, hero_image')
       .eq('is_touchless', true)
       .eq('is_approved', true)
       .not('parent_chain', 'is', null)
@@ -171,16 +171,21 @@ async function fetchChainRows(stateFilter?: string[]): Promise<RawRow[]> {
 }
 
 function aggregateRows(rows: RawRow[]): Record<string, {
-  count: number; states: Set<string>; ratings: number[]; totalReviews: number;
+  count: number; states: Set<string>; ratings: number[]; totalReviews: number; bestHero: string | null; bestHeroReviews: number;
 }> {
-  const map: Record<string, { count: number; states: Set<string>; ratings: number[]; totalReviews: number }> = {};
+  const map: Record<string, { count: number; states: Set<string>; ratings: number[]; totalReviews: number; bestHero: string | null; bestHeroReviews: number }> = {};
   for (const row of rows) {
     if (!row.parent_chain) continue;
-    if (!map[row.parent_chain]) map[row.parent_chain] = { count: 0, states: new Set(), ratings: [], totalReviews: 0 };
-    map[row.parent_chain].count++;
-    map[row.parent_chain].states.add(row.state);
-    if (row.rating != null && row.rating > 0) map[row.parent_chain].ratings.push(Number(row.rating));
-    map[row.parent_chain].totalReviews += (row.review_count ?? 0);
+    if (!map[row.parent_chain]) map[row.parent_chain] = { count: 0, states: new Set(), ratings: [], totalReviews: 0, bestHero: null, bestHeroReviews: -1 };
+    const m = map[row.parent_chain];
+    m.count++;
+    m.states.add(row.state);
+    if (row.rating != null && row.rating > 0) m.ratings.push(Number(row.rating));
+    m.totalReviews += (row.review_count ?? 0);
+    // Fallback chain hero: keep the most-reviewed member listing's photo, used
+    // when a chain has no curated brand image (so cards never show a placeholder).
+    const rc = row.review_count ?? 0;
+    if (row.hero_image && rc > m.bestHeroReviews) { m.bestHero = row.hero_image; m.bestHeroReviews = rc; }
   }
   return map;
 }
@@ -204,7 +209,7 @@ function buildRankedList(
       avgRating: avg != null ? Math.round(avg * 10) / 10 : null,
       totalReviews: stats.totalReviews,
       statesPresent: Array.from(stats.states).sort(),
-      heroImage: getChainHeroImage(chain.name),
+      heroImage: getChainHeroImage(chain.name) ?? stats.bestHero,
       description: chain.description.replace(/\{count\}/g, String(stats.count)),
       labels: [],
       awards: [],

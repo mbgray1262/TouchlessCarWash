@@ -370,6 +370,11 @@ export const CHAINS: Chain[] = [
     slug: 'arco',
     description: 'ARCO-branded fuel stations offer Touch Free touchless car washes at {count} locations, with brushless automatic bays for a safe, scratch-free wash alongside fuel and convenience services.',
   },
+  {
+    name: "Haffner's",
+    slug: 'haffners',
+    description: "Haffner's operates {count} touchless car wash locations across Massachusetts, New Hampshire, and Maine, with automatic touch-free (brushless) bays for a safe, scratch-free wash alongside fuel and convenience services.",
+  },
 ];
 
 const bySlug = new Map(CHAINS.map(c => [c.slug, c]));
