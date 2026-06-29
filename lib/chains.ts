@@ -380,6 +380,11 @@ export const CHAINS: Chain[] = [
     slug: 'clean2o',
     description: "Clean2o operates {count} touch-free automatic car wash locations across New York's Capital Region, with brushless bays and unlimited wash-club plans for a safe, scratch-free wash.",
   },
+  {
+    name: 'Delta Sonic',
+    slug: 'delta-sonic',
+    description: 'Delta Sonic operates {count} car wash locations across New York, Illinois, and Pennsylvania that offer a Basic Touch-Less automatic wash — brush-free and paint-safe — alongside their soft-cloth tunnel and full-service options, with unlimited wash-club plans.',
+  },
 ];
 
 const bySlug = new Map(CHAINS.map(c => [c.slug, c]));
