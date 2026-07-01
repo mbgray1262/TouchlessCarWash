@@ -158,6 +158,47 @@ export function BadgeClaimClient({
           </li>
         </ol>
       </div>
+
+      {/* Site-builder (Wix/Squarespace) alternative — the HTML embed above gets
+          sandboxed in an iframe on some builders, which breaks the link + its SEO
+          value. Native image-link instructions produce a real backlink instead. */}
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
+        <h3 className="text-sm font-semibold text-[#0F2744] mb-2 flex items-center gap-2">
+          <span>⚠️</span> Using Wix, Squarespace, or another website builder?
+        </h3>
+        <p className="text-sm text-gray-700 mb-4">
+          Some builders (especially <strong>Wix</strong>) place pasted HTML inside a
+          sandboxed frame, which <strong>breaks the badge&apos;s link</strong> and
+          removes its SEO benefit. If you use a website builder, don&apos;t use the
+          &quot;Embed HTML/Code&quot; tool — add the badge as a normal image instead:
+        </p>
+        <ol className="space-y-3 text-sm text-gray-700">
+          <li className="flex gap-3">
+            <span className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold">1</span>
+            <span>
+              In your editor, choose <strong>Add → Image</strong> and use this image
+              address:
+              <code className="block mt-1.5 bg-white border border-amber-200 rounded px-2 py-1.5 text-xs text-gray-800 break-all select-all">
+                {prodBadgeUrl}
+              </code>
+            </span>
+          </li>
+          <li className="flex gap-3">
+            <span className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold">2</span>
+            <span>
+              Click the image, choose <strong>&quot;Add a link&quot; → Web Address</strong>,
+              and paste your listing URL:
+              <code className="block mt-1.5 bg-white border border-amber-200 rounded px-2 py-1.5 text-xs text-gray-800 break-all select-all">
+                {listingUrl}
+              </code>
+            </span>
+          </li>
+          <li className="flex gap-3">
+            <span className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold">3</span>
+            <span>Publish. The badge will display <em>and</em> link correctly.</span>
+          </li>
+        </ol>
+      </div>
     </div>
   );
 }

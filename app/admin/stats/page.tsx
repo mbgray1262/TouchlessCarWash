@@ -179,6 +179,16 @@ async function getStats() {
     ? await supabase.from('listings').select('slug, name, city, state').in('slug', embedSlugs)
     : { data: [] as { slug: string; name: string; city: string; state: string }[] };
   const embedNameMap = new Map((embedListings ?? []).map((l) => [l.slug, l]));
+  // Site-builder "HTML embed" widgets (esp. Wix) sandbox the pasted badge code
+  // inside an iframe served from the builder's OWN cdn — so the link is credited
+  // to that cdn (not the wash's domain) and clicks 404. Flag those so we can nudge
+  // the wash to re-embed the badge natively. filesusr.com = Wix HTML-embed host.
+  const IFRAME_TRAP_HOSTS = ['filesusr.com', 'wixstatic.com'];
+  // The trap host shows up in the referer_URL (the iframe's own address), while
+  // referer_domain is normalized to the wash's site — so check BOTH. (Tom's:
+  // domain=tomscarwash.com but url=www-tomscarwash-com.filesusr.com.)
+  const isIframeTrapped = (domain: string, url: string | null) =>
+    IFRAME_TRAP_HOSTS.some((h) => `${domain ?? ''} ${url ?? ''}`.toLowerCase().includes(h));
   const badgeEmbeds = embedRows.map((e) => {
     const l = embedNameMap.get(e.listing_slug);
     return {
@@ -186,6 +196,7 @@ async function getStats() {
       url: e.referer_url,
       firstSeen: e.first_seen,
       wash: l ? `${l.name} — ${l.city}, ${l.state}` : e.listing_slug,
+      iframeTrapped: isIframeTrapped(e.referer_domain, e.referer_url),
     };
   });
 
@@ -340,6 +351,11 @@ export default async function AdminStatsPage() {
           <span className="text-sm font-normal text-gray-400">
             ({stats.badgeEmbeds.length} site{stats.badgeEmbeds.length !== 1 ? 's' : ''})
           </span>
+          {stats.badgeEmbeds.filter((e) => e.iframeTrapped).length > 0 && (
+            <span className="text-sm font-normal text-amber-600">
+              · {stats.badgeEmbeds.filter((e) => e.iframeTrapped).length} need fixing
+            </span>
+          )}
         </h2>
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           {stats.badgeEmbeds.length === 0 ? (
@@ -352,14 +368,24 @@ export default async function AdminStatsPage() {
               {stats.badgeEmbeds.map((e, i) => (
                 <li key={i} className="py-2.5 flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <a
-                      href={e.url ?? `https://${e.domain}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm font-medium text-blue-600 hover:underline"
-                    >
-                      {e.domain}
-                    </a>
+                    <span className="flex items-center gap-2 flex-wrap">
+                      <a
+                        href={e.url ?? `https://${e.domain}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-medium text-blue-600 hover:underline"
+                      >
+                        {e.domain}
+                      </a>
+                      {e.iframeTrapped && (
+                        <span
+                          title="This badge is sandboxed inside a site-builder iframe (Wix), so the link is credited to the builder's CDN, not the wash's site, and clicks 404. Ask the wash to re-add it natively (Add Image → set image link)."
+                          className="inline-block rounded bg-amber-100 text-amber-800 text-[10px] font-semibold px-1.5 py-0.5"
+                        >
+                          ⚠ iframe-trapped — needs native re-embed
+                        </span>
+                      )}
+                    </span>
                     <p className="text-xs text-gray-500 truncate">{e.wash}</p>
                   </div>
                   <span className="text-xs text-gray-400 shrink-0">
