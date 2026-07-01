@@ -1,0 +1,449 @@
+{
+  "_comment": "Listings emailed a Best-Of award badge/certificate at locked_tss. score-touchless-satisfaction.mjs MUST NOT recompute these (the score is an external commitment). Generated 2026-06-30 from the award send list. NO PII stored here (public repo).",
+  "locked": [
+    {
+      "id": "8d5e8e93-2193-412e-b7c8-738eb9ec4469",
+      "name": "Black Dog Car Wash,Laconia",
+      "slug": "black-dog-car-wash-276-daniel-webster-hwy-belmont-nh-03220-belmont-new-hampshire",
+      "locked_tss": 96
+    },
+    {
+      "id": "3bd198f4-f074-41fe-b0de-e06a84845695",
+      "name": "Phoenixville Buggy Bath,Philadelphia",
+      "slug": "phoenixville-buggy-bath-1088-w-bridge-st-phoenixville-pa-19460-phoenixville-penn",
+      "locked_tss": 94
+    },
+    {
+      "id": "584d703e-c085-4aed-9b86-261113ba60c2",
+      "name": "North Olmsted Laser Wash,Cleveland",
+      "slug": "north-olmsted-laser-wash",
+      "locked_tss": 93
+    },
+    {
+      "id": "5e412f2f-8ccf-43ce-aa30-609c9678b77a",
+      "name": "Super Klean Car Wash Bixby,Tulsa",
+      "slug": "super-klean-car-wash-bixby-8112-east-111th-st-s-bixby-ok-74008-bixby-oklahoma",
+      "locked_tss": 93
+    },
+    {
+      "id": "045ca70a-cf07-4e44-990f-c434f06b4194",
+      "name": "Stow Laserwash,Akron",
+      "slug": "stow-laserwash-4150-kent-rd-stow-oh-44224-stow-ohio",
+      "locked_tss": 92
+    },
+    {
+      "id": "7508ba41-e634-4fd0-863c-b32ea44fd3e0",
+      "name": "Falls Laserwash,Akron",
+      "slug": "falls-laserwash-1675-portage-trail-cuyahoga-falls-oh-44223-cuyahoga-falls-ohio",
+      "locked_tss": 92
+    },
+    {
+      "id": "7633c0aa-0e37-4e3c-88b0-5fa91299c97b",
+      "name": "Quick Suds Car Wash,Chicago",
+      "slug": "quick-suds-car-wash-chicago-illinois-19315",
+      "locked_tss": 92
+    },
+    {
+      "id": "1ea372d5-ead5-4fa0-8ddd-2f1e49a305bd",
+      "name": "Captain Car Wash,Columbus",
+      "slug": "captain-car-wash-5673-n-hamilton-rd-columbus-oh-43230-columbus-ohio",
+      "locked_tss": 92
+    },
+    {
+      "id": "4aee4e37-3b6f-4a9e-93df-8c1220548ccc",
+      "name": "The Bubble Bath Car & Cart Wash,Atlanta",
+      "slug": "the-bubble-bath-car-cart-wash-peachtree-city-georgia-16343",
+      "locked_tss": 91
+    },
+    {
+      "id": "f26f7c47-601b-41f4-a742-4b57e7f7a07e",
+      "name": "Spotless Carwash,Chicago",
+      "slug": "spotless-carwash-forest-park-illinois-18698",
+      "locked_tss": 91
+    },
+    {
+      "id": "6a90b3f6-3c91-465f-9a69-79daa02b1754",
+      "name": "Buckeye Super Wash,Akron",
+      "slug": "buckeye-super-wash-421-n-court-st-medina-oh-44256-medina-ohio",
+      "locked_tss": 91
+    },
+    {
+      "id": "32b0be04-492c-40ea-87c1-e3d92cff956f",
+      "name": "\"Lutz's \"\"Simply Clean\"\" Touch Free Car Wash\",Buffalo",
+      "slug": "lutzs-simply-clean-touch-free-car-wash-144-french-rd-cheektowaga-ny-14227-cheekt",
+      "locked_tss": 91
+    },
+    {
+      "id": "d61b131a-4c44-40af-912d-26bc00f6f4a2",
+      "name": "Black Dog Car Wash,Haverhill",
+      "slug": "black-dog-car-wash-1-garden-ln-londonderry-nh-03053-londonderry-new-hampshire",
+      "locked_tss": 90
+    },
+    {
+      "id": "6ebc3b6b-2e18-435a-bf18-9f445585705e",
+      "name": "Al's Super Wash | TOUCHLESS Car Wash | Fenton,Fenton",
+      "slug": "als-super-wash-touchless-car-wash-fenton-18505-silver-pkwy-fenton-mi-48430-fento",
+      "locked_tss": 90
+    },
+    {
+      "id": "9a8991ac-c804-4b33-a9e7-ae565129db59",
+      "name": "Tom's Carwash,Philadelphia",
+      "slug": "toms-carwash-750-walnut-st-royersford-pa-19468-royersford-pennsylvania",
+      "locked_tss": 90
+    },
+    {
+      "id": "714ab5c3-c7f9-45ab-8ddb-6e755af3ee1c",
+      "name": "Dawson Oil Company - Car Wash,Sacramento",
+      "slug": "dawson-oil-company-car-wash-rocklin-california-4550",
+      "locked_tss": 90
+    },
+    {
+      "id": "a54f123e-8491-472d-b9dd-a21bfee5feee",
+      "name": "Clean Getaway Auto Wash,Nashville",
+      "slug": "clean-getaway-auto-wash-7008-charlotte-pike-nashville-tn-37209-nashville-tenness",
+      "locked_tss": 89
+    },
+    {
+      "id": "0174b974-2628-47f2-8707-054b7e884e7b",
+      "name": "Roger's Laser Wash,Utica-Rome",
+      "slug": "rogers-laser-wash",
+      "locked_tss": 89
+    },
+    {
+      "id": "edaea46b-14d7-4c8a-ac69-c439248473a4",
+      "name": "Westlake Laser Wash,Cleveland",
+      "slug": "westlake-laser-wash-30760-center-ridge-rd-cleveland-oh-44145-cleveland-ohio",
+      "locked_tss": 89
+    },
+    {
+      "id": "72adbe8e-67c9-4475-8555-430a8a866ccb",
+      "name": "Splash Car Wash llc,Grand Rapids",
+      "slug": "splash-car-wash-llc-2635-120th-ave-holland-mi-49424-holland-michigan",
+      "locked_tss": 89
+    },
+    {
+      "id": "f293b205-f352-4a63-a59a-1b201a324907",
+      "name": "Integra Car Wash,Concord",
+      "slug": "integra-car-wash-t1nttq",
+      "locked_tss": 89
+    },
+    {
+      "id": "86c11363-d8ae-48f0-9170-a0d327fb5127",
+      "name": "Dazzler's Car Wash,Missoula",
+      "slug": "dazzlers-car-wash-2610-radio-way-missoula-mt-59808-missoula-montana",
+      "locked_tss": 89
+    },
+    {
+      "id": "29852da1-46cf-4401-abf2-4e1ddc8795db",
+      "name": "Ben's ScratchFree CarWash Fort Worth,Fort Worth",
+      "slug": "bens-scratchfree-carwash-fort-worth-3130-eagle-ranch-blvd-fort-worth-tx-76179-fo",
+      "locked_tss": 89
+    },
+    {
+      "id": "a591caaa-1934-4bda-b4e4-f33f19149454",
+      "name": "Autowash @ Longmont Car Wash,Longmont",
+      "slug": "autowash-longmont-car-wash-longmont-colorado-9085",
+      "locked_tss": 88
+    },
+    {
+      "id": "a81c8932-83dd-4b29-a951-12afac8ad54b",
+      "name": "Al's Super Wash | TOUCHLESS Car Wash | Dort Hwy,Fenton",
+      "slug": "als-super-wash-touchless-car-wash-dort-hwy-6049-s-dort-hwy-grand-blanc-mi-48439-",
+      "locked_tss": 88
+    },
+    {
+      "id": "9a190dac-1a1b-464d-9cdf-711589b9edba",
+      "name": "Spirit of America Car Wash,Elgin",
+      "slug": "spirit-of-america-car-wash-naperville-illinois-18696",
+      "locked_tss": 88
+    },
+    {
+      "id": "dbddfa26-9cc8-4a34-ac09-e69cc1e26684",
+      "name": "Victory Auto Wash - Lowell,Worcester",
+      "slug": "victory-auto-wash-lowell",
+      "locked_tss": 88
+    },
+    {
+      "id": "93e5a6b3-e71f-41cd-b873-f16f1faa5d4b",
+      "name": "Shammy's Auto Wash,Lexington",
+      "slug": "shammys-auto-wash-lexington-kentucky-22115",
+      "locked_tss": 88
+    },
+    {
+      "id": "93ae0dfd-b53d-4c5f-b49f-0394bac7306c",
+      "name": "Rice Street Car Wash,Minneapolis-St. Paul",
+      "slug": "rice-street-car-wash-1736-rice-st-st-paul-mn-55113-st-paul-minnesota",
+      "locked_tss": 88
+    },
+    {
+      "id": "a2336e24-98a8-48e9-98af-e678d252c7c9",
+      "name": "The Local Car Wash,Asheville",
+      "slug": "the-local-car-wash-1446-patton-ave-asheville-nc-28806-asheville-north-carolina",
+      "locked_tss": 87
+    },
+    {
+      "id": "44101c5f-b2aa-440f-9b54-b4f1cfa17b62",
+      "name": "Bergey's Touchless Car Wash,Philadelphia",
+      "slug": "bergeys-touchless-car-wash-436-harleysville-pike-souderton-pa-18964-souderton-pe",
+      "locked_tss": 87
+    },
+    {
+      "id": "94fedb4e-7542-486b-ad34-1ade1114a47a",
+      "name": "Salty Dog Car Wash - S Nova,New Smyrna Beach",
+      "slug": "salty-dog-car-wash-s-nova-daytona-beach-florida-11388",
+      "locked_tss": 87
+    },
+    {
+      "id": "6b45eaf4-302e-4f5e-98e9-7b670ad85a44",
+      "name": "Four Seasons Auto Wash,Cincinnati",
+      "slug": "four-seasons-auto-wash-florence-kentucky-22001",
+      "locked_tss": 86
+    },
+    {
+      "id": "633fc65b-023b-442e-bbf2-f7079dad5241",
+      "name": "MI Touchless Car Wash - Warren,Detroit",
+      "slug": "mi-touchless-car-wash-warren-5949-e-10-mile-rd-warren-mi-48091-warren-michigan",
+      "locked_tss": 86
+    },
+    {
+      "id": "c87e2dad-491d-4515-a65c-1dd2f63da298",
+      "name": "Station Auto Wash Express,Washington",
+      "slug": "station-auto-wash-express-22064-railcar-dr-sterling-va-20164-sterling-virginia",
+      "locked_tss": 86
+    },
+    {
+      "id": "ca826ae7-fbc4-45af-b476-bfd85713dc4f",
+      "name": "The Wave Auto Wash,Sioux Falls",
+      "slug": "the-wave-auto-wash-4637-w-homefield-dr-sioux-falls-sd-57106-sioux-falls-south-da",
+      "locked_tss": 86
+    },
+    {
+      "id": "331eccf4-3bc7-4f53-a631-fec5c70ca9d7",
+      "name": "MI Touchless Car Wash - Pontiac,Detroit",
+      "slug": "mi-touchless-car-wash-pontiac-1091-joslyn-ave-pontiac-mi-48340-pontiac-michigan",
+      "locked_tss": 86
+    },
+    {
+      "id": "84fb720a-06ef-4965-a7f6-f4172e541e79",
+      "name": "Royal Ozarks Car Wash,St. Louis",
+      "slug": "royal-ozarks-car-wash-1700-ford-ln-st-charles-mo-63303-st-charles-missouri",
+      "locked_tss": 86
+    },
+    {
+      "id": "d3a4c61a-aa39-48e2-9f4e-0f68d0d7835c",
+      "name": "Klean Ride Touchless and Self-Sevice Car Wash,San Antonio",
+      "slug": "klean-ride-touchless-and-self-sevice-car-wash",
+      "locked_tss": 86
+    },
+    {
+      "id": "704f1e40-e16c-4299-b1e4-3ded52db5c0c",
+      "name": "EZ Wash AutoSpa,Allentown",
+      "slug": "ez-wash-autospa-350-s-west-end-blvd-quakertown-pa-18951-quakertown-pennsylvania",
+      "locked_tss": 85
+    },
+    {
+      "id": "31fb6f17-63b1-4b92-b942-b8fcfa414340",
+      "name": "Freedom Wash,Albuquerque",
+      "slug": "freedom-wash-2200-ladera-dr-nw-albuquerque-nm-87120-albuquerque-new-mexico",
+      "locked_tss": 85
+    },
+    {
+      "id": "3f5706c6-bef0-4038-8c38-b6135569a2c8",
+      "name": "ProClean Auto Wash,Denver",
+      "slug": "colorado-car-wash-denver-colorado-8467",
+      "locked_tss": 85
+    },
+    {
+      "id": "684620c3-2bf9-467c-8ca2-fb23fb26d047",
+      "name": "Route 1 Car Wash,Boston",
+      "slug": "route-1-car-wash-481-broadway-saugus-ma-01906-saugus-massachusetts",
+      "locked_tss": 85
+    },
+    {
+      "id": "d8aa8b91-8db6-4c2c-af6f-e781e26385b2",
+      "name": "Kwik Shine Car Wash - TOUCHLESS car wash,Lancaster",
+      "slug": "kwik-shine-car-wash-touchless-car-wash-871-e-main-st-ephrata-pa-17522-ephrata-pe",
+      "locked_tss": 85
+    },
+    {
+      "id": "7b10ab8c-80c9-48a9-a882-a23059db76c3",
+      "name": "Clean Enterprises Quarryville Car Wash,Coatesville",
+      "slug": "clean-enterprises-quarryville-car-wash-323-w-state-st-quarryville-pa-17566-quarr",
+      "locked_tss": 84
+    },
+    {
+      "id": "63d08726-ec9e-4f4f-a07a-2a571538daa6",
+      "name": "Ernie's Touchless Car Wash,Worcester",
+      "slug": "ernies-touchless-car-wash-2",
+      "locked_tss": 84
+    },
+    {
+      "id": "0167f88c-da5c-470c-9420-902635850ffd",
+      "name": "Time To Shine Car Wash,State College",
+      "slug": "time-to-shine-car-wash-10503-us-highway-522-s-1242-w-4th-st-lewistown-pa-17044-l",
+      "locked_tss": 84
+    },
+    {
+      "id": "b3e4f6fc-467e-4415-a40f-80d388f90713",
+      "name": "Spot Free Car Wash - Monrovia,Los Angeles",
+      "slug": "spot-free-car-wash-monrovia-monrovia-california-8181",
+      "locked_tss": 84
+    },
+    {
+      "id": "c2f99144-3121-4369-9ffa-b1cb82e6156f",
+      "name": "Salty Dog Car Wash - E New York,New Smyrna Beach",
+      "slug": "salty-dog-car-wash-e-new-york-deland-florida-11392",
+      "locked_tss": 84
+    },
+    {
+      "id": "7b759c24-eb6c-4c8d-9f02-490bafb63db8",
+      "name": "Champ Touchless Car Wash,Burlington",
+      "slug": "champ-touchless-car-wash",
+      "locked_tss": 84
+    },
+    {
+      "id": "c1d56160-0fa1-4662-aa37-9d111ea8eec2",
+      "name": "Super Klean Car Wash,Tulsa",
+      "slug": "super-klean-car-wash-1",
+      "locked_tss": 83
+    },
+    {
+      "id": "b658be1b-6af4-48b2-87c8-76f526586b16",
+      "name": "Classy Chassis Self-Serve Car Wash - Sprague Ave,Tacoma",
+      "slug": "classy-chassis-self-serve-car-wash-sprague-ave-1211-s-sprague-ave-tacoma-wa-9840",
+      "locked_tss": 83
+    },
+    {
+      "id": "7b517a31-1328-4f8a-ac05-452408d8fc28",
+      "name": "Hyper Express Car Wash | TOUCHLESS Car Wash | Smithville,Wooster",
+      "slug": "hyper-express-car-wash-touchless-car-wash-smithville-128-n-summit-st-smithville-",
+      "locked_tss": 82
+    },
+    {
+      "id": "d23356f5-5d01-41d8-9f9f-3596bc423a85",
+      "name": "Wash World Car Wash,State College",
+      "slug": "wash-world-car-wash-322-boal-ave-boalsburg-pa-16827-boalsburg-pennsylvania",
+      "locked_tss": 82
+    },
+    {
+      "id": "a5f9cffd-f882-45a3-811e-45c08aa7149e",
+      "name": "Autowash @ Thompson Valley Car Wash,Longmont",
+      "slug": "autowash-thompson-valley-car-wash-loveland-colorado-9096",
+      "locked_tss": 82
+    },
+    {
+      "id": "6d014be7-d764-4735-8323-4d7e59e00e30",
+      "name": "Express Car Wash,Lexington",
+      "slug": "express-car-wash-frankfort-kentucky-22076",
+      "locked_tss": 82
+    },
+    {
+      "id": "f5677630-cdf1-4e9e-be31-75f0247e5214",
+      "name": "Super Wash,Janesville",
+      "slug": "super-wash-ebgcg",
+      "locked_tss": 82
+    },
+    {
+      "id": "17eaaa5e-c37a-415a-8646-8a039be6b314",
+      "name": "Arctic Blast Touchless Car Wash,Anchorage",
+      "slug": "arctic-blast-touchless-car-wash-anchorage-alaska-941",
+      "locked_tss": 82
+    },
+    {
+      "id": "aa30c727-1ed0-4cfe-b819-7d85192e44b3",
+      "name": "MegaWash,Richmond",
+      "slug": "megawash-10500-vermeer-pl-ashland-va-23005-ashland-virginia",
+      "locked_tss": 81
+    },
+    {
+      "id": "f4a2fd21-c1f7-4739-951e-64fdaef2b331",
+      "name": "Xtreme Clean Auto Wash,Kalamazoo",
+      "slug": "xtreme-clean-auto-wash-6670-w-main-st-kalamazoo-mi-49009-kalamazoo-michigan",
+      "locked_tss": 81
+    },
+    {
+      "id": "23cebc75-ac06-4997-a166-48ae60615b40",
+      "name": "Champion's AutoWash,Wisconsin Rapids",
+      "slug": "champions-autowash",
+      "locked_tss": 80
+    },
+    {
+      "id": "77202de4-5689-4853-a520-2573df9efc4c",
+      "name": "Xtreme Clean Auto Wash,Kalamazoo",
+      "slug": "xtreme-clean-auto-wash",
+      "locked_tss": 80
+    },
+    {
+      "id": "4425f775-c6dd-466d-8feb-0ab6311f73cf",
+      "name": "Car Wash@821,Warsaw",
+      "slug": "car-wash821-plymouth-indiana-20179",
+      "locked_tss": 80
+    },
+    {
+      "id": "0a75e6f5-f340-4e28-9a92-8e3f5530da64",
+      "name": "AquaMax Carwash,Harrisburg",
+      "slug": "aquamax-carwash-4611-locust-ln-harrisburg-pa-17109-harrisburg-pennsylvania",
+      "locked_tss": 80
+    },
+    {
+      "id": "7a1d8e4d-f2eb-429e-83a9-815b00bd6635",
+      "name": "UNITED CAR WASH LAKE OSWEGO,Portland",
+      "slug": "united-car-wash-lake-oswego-16110-boones-ferry-rd-lake-oswego-or-97035-lake-oswe",
+      "locked_tss": 80
+    },
+    {
+      "id": "4674f791-b7e6-4958-9567-e8f9ded4433f",
+      "name": "Super Wash,\"Quad Cities, IA-IL\"",
+      "slug": "super-wash-moline-illinois-18708",
+      "locked_tss": 80
+    },
+    {
+      "id": "f5be3d99-76ee-4398-a912-18f1915944e3",
+      "name": "Bee Clean Auto Wash-59th,Greeley",
+      "slug": "bee-clean-auto-wash-59th-greeley-colorado-8379",
+      "locked_tss": 80
+    },
+    {
+      "id": "84fcfc80-0c34-4984-a5b4-8787e829bda3",
+      "name": "Prístíne Auto Wash,Utica-Rome",
+      "slug": "prstne-auto-wash-1-arnold-ave-utica-ny-13502-utica-new-york",
+      "locked_tss": 80
+    },
+    {
+      "id": "553b0500-4b5c-491f-b9f8-fde1932babe9",
+      "name": "Blizzard Car Wash,Parkersburg",
+      "slug": "blizzard-car-wash-g8po6w",
+      "locked_tss": 80
+    },
+    {
+      "id": "95a67137-f47e-417d-80b7-d3241c6bfc68",
+      "name": "Kool's Car Wash,Sioux Falls",
+      "slug": "kools-car-wash-2101-n-marion-rd-sioux-falls-sd-57107-sioux-falls-south-dakota",
+      "locked_tss": 80
+    },
+    {
+      "id": "7d0f2bab-923e-44d6-bf71-b11a59b80b06",
+      "name": "Splash Car Wash,Fitchburg",
+      "slug": "splash-car-wash-1163-central-st-leominster-ma-01453-leominster-massachusetts",
+      "locked_tss": 80
+    },
+    {
+      "id": "a1fd163e-c4ca-4d93-bf07-e0df82c09541",
+      "name": "Girard Auto Bath,Warren-Youngstown",
+      "slug": "girard-auto-bath-614-n-state-st-girard-oh-44420-girard-ohio",
+      "locked_tss": 80
+    },
+    {
+      "id": "4e1ca99d-3106-4186-8752-252f26470773",
+      "name": "One Rock Car Wash,Fort Worth",
+      "slug": "one-rock-car-wash-397-fm-1187-aledo-tx-76008-aledo-texas",
+      "locked_tss": 80
+    },
+    {
+      "id": "023bd832-b498-45d0-a472-adf8b87b31d5",
+      "name": "Laziboy Car Wash & Mobile Detailing,Sheboygan",
+      "slug": "laziboy-car-wash-mobile-detailing-1404-eastern-ave-plymouth-wi-53073-plymouth-wi",
+      "locked_tss": 80
+    }
+  ]
+}

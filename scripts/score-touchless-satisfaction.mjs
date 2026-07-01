@@ -96,7 +96,7 @@ const TREND_ONLY = args.includes('--trend-only');
 const MISSING_ONLY = !TREND_ONLY && (args.includes('--missing-only') || (!MODE_ALL && !IDS));
 
 async function getTargetIds() {
-  if (IDS) return IDS;
+  if (IDS) return IDS.filter((id) => !LOCKED_IDS.has(id));
   const ids = [];
   for (let offset = 0; ; offset += 1000) {
     let q = sb.from('listings').select('id').order('id').range(offset, offset + 999);
@@ -111,7 +111,7 @@ async function getTargetIds() {
     ids.push(...data.map((r) => r.id));
     if (data.length < 1000) break;
   }
-  return ids;
+  return ids.filter((id) => !LOCKED_IDS.has(id));
 }
 
 // Noisy sources are excluded from scoring. `gmaps-crawl4ai-md` is whole-page
@@ -121,6 +121,20 @@ async function getTargetIds() {
 // keyword-search harvest (`gmaps-search-clean`) plus structured pulls (serpapi /
 // dataforseo / google_places).
 const EXCLUDED_SOURCES = new Set(['gmaps-crawl4ai-md']);
+
+// ── Score lock ──
+// Listings emailed a Best-Of award badge/certificate at a specific score are
+// LOCKED: their published Touchless Satisfaction Score is a real external
+// commitment and must never be recomputed (mining/dedup/re-score could otherwise
+// drift them). See scripts/score-locked-listings.json (generated from the award
+// send list). The lock applies in EVERY mode — including an explicit --ids that
+// names a locked listing — so nothing can move these scores by accident.
+const LOCKED_IDS = (() => {
+  try {
+    const j = JSON.parse(readFileSync(resolve(repoRoot, 'scripts/score-locked-listings.json'), 'utf8'));
+    return new Set((j.locked || []).map((r) => r.id));
+  } catch { return new Set(); }
+})();
 
 /** Aggregate touchless-specific sentiment counts for one listing from review_snippets.
  *  Also splits the same pos/neg evidence into a recent (<= TREND_RECENT_MONTHS)
@@ -162,7 +176,7 @@ async function main() {
   const mode = IDS ? `ids(${ids.length})` : MISSING_ONLY ? 'missing-only' : 'all';
   const priorTerm = +(PRIOR_WEIGHT * PRIOR_MEAN).toFixed(2); // 4.2
   console.log(`TSS scorer — mode=${mode}, dry_run=${DRY_RUN}, formula=round(100*(pos+${priorTerm})/(pos+neg+${PRIOR_WEIGHT})), gate>=${MIN_MENTIONS}`);
-  console.log(`Targets: ${ids.length}`);
+  console.log(`Targets: ${ids.length}  (score-locked, always skipped: ${LOCKED_IDS.size})`);
 
   let scored = 0, gated = 0, changed = 0, errors = 0, improving = 0;
   const dist = { '84+': 0, '76-83': 0, '62-75': 0, '47-61': 0, '<47': 0 };
