@@ -1,0 +1,28 @@
+name: Blank-page watchdog
+
+# Safety net for the CDN cache-wedge "blank page" bug (a page's brotli variant
+# gets stuck returning a bodyless 304, so real browsers render blank while curl
+# sees 200). Root cause was fixed via generateEtags:false, but this crawls every
+# live page daily exactly like a browser and AUTO-PURGES any that still wedge —
+# so a broken listing self-heals within a day instead of waiting for someone to
+# stumble onto it. The job only FAILS (→ emails the repo owner) if a page is
+# STILL blank after the auto-purge, i.e. something the self-heal couldn't fix.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * *'   # daily 06:00 UTC
+
+jobs:
+  watchdog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'   # native fetch
+      - name: Crawl all live pages (brotli) + auto-purge any blank ones
+        env:
+          REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}   # optional; sent only if set
+        run: node scripts/check-blank-pages.mjs --all --fix

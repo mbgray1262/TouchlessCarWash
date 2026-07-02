@@ -2,6 +2,13 @@
 const nextConfig = {
   // Prevent duplicate URLs from trailing slashes (e.g. /state/texas vs /state/texas/)
   trailingSlash: false,
+  // Disable Next.js ETag generation. With ETags on, Netlify's Durable Cache can
+  // revalidate a compressed (brotli) variant, receive a bodyless 304 from the
+  // Next origin, and then have nothing to serve — so brotli-requesting browsers
+  // (i.e. all of them) get a BLANK PAGE while curl (uncompressed) sees 200.
+  // Netlify does its own edge caching + compression, so losing Next's ETags is
+  // harmless. (Root-cause fix for the 2026-07-02 blank-listing bug.)
+  generateEtags: false,
   eslint: {
     ignoreDuringBuilds: true,
   },
