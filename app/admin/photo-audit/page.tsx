@@ -432,6 +432,7 @@ export default function PhotoAuditPage() {
     noHeroSubFilter, setNoHeroSubFilter, markAllChainListingsAudited,
     lowResListings, lowResTotal, lowResPage, lowResTotalPages, changeLowResPage,
     dismissLowRes, scanForLowRes, scanProgress,
+    equipmentBrand, equipmentBrands, setEquipmentBrand,
   } = usePhotoAudit();
 
   const [batchLimit, setBatchLimit] = useState(100);
@@ -621,6 +622,22 @@ export default function PhotoAuditPage() {
                 {f.label}
               </button>
             ))}
+            {/* Equipment-brand review: pick a maker to review ALL its listings */}
+            <select
+              value={equipmentBrand}
+              onChange={e => setEquipmentBrand(e.target.value)}
+              title="Review every listing tagged with a specific equipment maker (to fix classification errors)"
+              className={`ml-1 px-2 py-1 rounded text-xs font-medium border transition-colors ${
+                viewFilter === 'by_equipment'
+                  ? 'bg-white text-gray-900 border-orange-300 shadow-sm'
+                  : 'text-gray-500 border-gray-200 hover:text-gray-700'
+              }`}
+            >
+              <option value="">🔧 Equipment brand…</option>
+              {equipmentBrands.map(b => (
+                <option key={b.brand} value={b.brand}>{b.brand} ({b.count})</option>
+              ))}
+            </select>
           </div>
           {viewFilter === 'all' && (
             <div className="relative ml-2">

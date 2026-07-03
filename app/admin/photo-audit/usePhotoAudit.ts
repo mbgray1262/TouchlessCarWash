@@ -88,7 +88,7 @@ export interface LowResListing {
   hero_image_source: string | null;
 }
 
-export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup' | 'no_hero' | 'low_res' | 'held' | 'unscanned' | 'second_look' | 'best_of' | 'no_evidence';
+export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup' | 'no_hero' | 'low_res' | 'held' | 'unscanned' | 'second_look' | 'best_of' | 'no_evidence' | 'by_equipment';
 
 const POLL_INTERVAL = 3000; // 3 seconds — fast enough to show per-listing progress
 const PAGE_SIZE = 25;
@@ -131,6 +131,11 @@ export function usePhotoAudit() {
   // 'non_chain' hides chain listings (they render a brand image so admin doesn't need
   // to curate them), 'chain_only' shows just chain listings.
   const [noHeroSubFilter, setNoHeroSubFilter] = useState<'all' | 'non_chain' | 'chain_only'>('non_chain');
+  // Equipment-brand review filter: pick a maker to review ALL its listings for
+  // classification errors (mine or the AI's). equipmentBrands = distinct brands
+  // + counts, for the dropdown.
+  const [equipmentBrand, setEquipmentBrandState] = useState<string>('');
+  const [equipmentBrands, setEquipmentBrands] = useState<{ brand: string; count: number }[]>([]);
   const [page, setPage] = useState(1);
   const [noHeroCount, setNoHeroCount] = useState(0);
   const [filteredTotal, setFilteredTotal] = useState(0);
@@ -366,6 +371,52 @@ export function usePhotoAudit() {
     // "all" filter: show ALL touchless listings (not just AI-scanned ones).
     // Queries the listings table directly so chain-auto-approved + FastCuration-approved
     // listings are included, not just those with photo_audit_results rows.
+    // "by_equipment" filter: every listing tagged with the chosen equipment brand,
+    // regardless of touchless/approval status, so the admin can review + correct
+    // equipment-classification errors (mine or the AI's) one maker at a time.
+    if (filter === 'by_equipment') {
+      if (!equipmentBrand) { setResults([]); setFilteredTotal(0); setLoading(false); return; }
+      const { count: eqCount } = await supabase.from('listings')
+        .select('id', { count: 'exact', head: true }).eq('equipment_brand', equipmentBrand);
+      const { data: eqRows } = await supabase.from('listings')
+        .select('id, name, slug, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, is_touchless, photo_audited_at, parent_chain')
+        .eq('equipment_brand', equipmentBrand)
+        .order('name', { ascending: true })
+        .range(offset, offset + PAGE_SIZE - 1);
+      const eqResults: AuditResult[] = (eqRows ?? []).map((l) => {
+        const hasHero = !!l.hero_image;
+        const hasGallery = (l.photos ?? []).length > 0;
+        return {
+          id: `eq-${l.id}`,
+          listing_id: l.id,
+          listing_name: l.name,
+          listing_slug: l.slug,
+          listing_city: l.city,
+          listing_state: l.state,
+          listing_hero: l.hero_image,
+          hero_quality: hasHero ? 'has_hero' : hasGallery ? 'has_candidates' : 'missing',
+          equipment_brand: l.equipment_brand,
+          equipment_model: l.equipment_model,
+          equipment_confidence: null,
+          equipment_source_photo: null,
+          suggested_hero_url: null,
+          suggested_hero_reason: l.is_touchless ? 'Review equipment tag' : 'NOT touchless — review',
+          photos_to_remove: [],
+          reviewed: !!l.photo_audited_at,
+          applied: false,
+          created_at: '',
+          raw_response: null,
+          google_photos_added: 0,
+          google_photos_screened: 0,
+          listing_parent_chain: l.parent_chain ?? null,
+        } as AuditResult;
+      });
+      setResults(eqResults);
+      setFilteredTotal(eqCount ?? 0);
+      setLoading(false);
+      return;
+    }
+
     if (filter === 'all') {
       let countQuery = supabase
         .from('listings').select('id', { count: 'exact', head: true })
@@ -801,7 +852,7 @@ export function usePhotoAudit() {
       setFilteredTotal(pageData.total ?? 0);
     }
     setLoading(false);
-  }, [noHeroSubFilter, searchQuery, fetchTrophyListings, getBestOfReviewedSet, bestOfSubFilter]);
+  }, [noHeroSubFilter, searchQuery, fetchTrophyListings, getBestOfReviewedSet, bestOfSubFilter, equipmentBrand]);
 
   const LOW_RES_PAGE_SIZE = 50;
 
@@ -939,6 +990,21 @@ export function usePhotoAudit() {
       loadPage(viewFilter, page, unreviewedOnly);
     }
   }, [viewFilter, page, unreviewedOnly, loadPage]);
+
+  // Load the distinct equipment brands (+ counts) for the review dropdown, once.
+  useEffect(() => {
+    (async () => {
+      const tally = new Map<string, number>();
+      for (let o = 0; ; o += 1000) {
+        const { data } = await supabase.from('listings').select('equipment_brand')
+          .not('equipment_brand', 'is', null).range(o, o + 999);
+        if (!data || data.length === 0) break;
+        for (const r of data) { const b = r.equipment_brand as string; if (b) tally.set(b, (tally.get(b) ?? 0) + 1); }
+        if (data.length < 1000) break;
+      }
+      setEquipmentBrands(Array.from(tally, ([brand, count]) => ({ brand, count })).sort((a, b) => b.count - a.count));
+    })();
+  }, []);
 
   // Load low-res page when tab is active or page changes
   useEffect(() => {
@@ -1265,6 +1331,14 @@ export function usePhotoAudit() {
     noHeroSubFilter,
     setNoHeroSubFilter: (sub: 'all' | 'non_chain' | 'chain_only') => {
       setNoHeroSubFilter(sub);
+      setPage(1);
+    },
+    // Equipment-brand review filter (dropdown of makers + counts)
+    equipmentBrand,
+    equipmentBrands,
+    setEquipmentBrand: (brand: string) => {
+      setEquipmentBrandState(brand);
+      setViewFilter(brand ? 'by_equipment' : 'all');
       setPage(1);
     },
     // Bulk-mark all chain listings in the current No Hero query as audited
