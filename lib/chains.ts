@@ -171,6 +171,11 @@ export const CHAINS: Chain[] = [
     description: 'IQ Car Wash operates {count} touchless car wash locations across Oklahoma, Texas, Kansas, and Georgia. Every IQ location features automatic touchless bays with high-pressure water jets for a safe, scratch-free wash.',
   },
   {
+    name: 'Kent Car Wash',
+    slug: 'kent-car-wash',
+    description: 'Kent Car Wash operates {count} car wash locations across the West Texas Permian Basin — in Midland, Odessa, and surrounding towns — as part of the Kent Kwik family. Each site lets you choose between touchless (touch-free) and soft-touch automatic bays, with pre-scrub and courtesy dry service, for a safe, scratch-free wash.',
+  },
+  {
     name: 'Royal Rinse Car Wash',
     slug: 'royal-rinse-car-wash',
     description: 'Royal Rinse Car Wash operates {count} touchless car wash locations across North Carolina, South Carolina, and Virginia — from Goldsboro and Kannapolis up to Williamsburg and Harrisonburg. Every Royal Rinse site features automatic touchless bays.',
