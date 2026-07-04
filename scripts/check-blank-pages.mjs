@@ -20,8 +20,9 @@ const BASE = 'https://touchlesscarwashfinder.com';
 const args = process.argv.slice(2);
 const SAMPLE = args.includes('--all') ? Infinity : Number((args.find(a => a.startsWith('--sample'))?.split(/[= ]/)[1]) || 250);
 const FIX = args.includes('--fix');
-const CONC = 12;
+const CONC = 4; // gentle — a full crawl at high concurrency trips Netlify rate-limiting (429s)
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/537.36 Chrome/126.0 Safari/537.36';
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 async function getText(url) { const r = await fetch(url, { headers: { 'User-Agent': UA } }); return r.ok ? r.text() : ''; }
 
@@ -42,17 +43,28 @@ async function collectUrls() {
   return { listings, rest, total: urls.length };
 }
 
-async function checkOne(url) {
+async function checkOne(url, attempt = 0) {
   try {
     const r = await fetch(url, {
       headers: { 'User-Agent': UA, 'Accept-Encoding': 'br, gzip', 'Accept': 'text/html', 'sec-fetch-mode': 'navigate', 'sec-fetch-dest': 'document' },
       redirect: 'manual',
     });
     if (r.status >= 300 && r.status < 400) return { url, ok: true, note: `redirect ${r.status}` }; // redirects are fine (not a blank page)
+    // 429/403/5xx are rate-limiting / blocking / transient server errors — NOT the blank-page
+    // bug (which is a bodyless 200/304). Back off and retry; if it persists, SKIP (don't flag).
+    if (r.status === 429 || r.status === 403 || r.status >= 500) {
+      if (attempt < 3) { await sleep(2000 * (attempt + 1)); return checkOne(url, attempt + 1); }
+      return { url, ok: true, skipped: true, status: r.status };
+    }
     const body = await r.arrayBuffer();
-    const wedged = r.status === 304 || body.byteLength === 0;
+    // The real blank-page bug: a bodyless 304 ("not modified" with nothing to render) or a
+    // 200 that returns an empty body. Only these count as wedged.
+    const wedged = r.status === 304 || (r.status === 200 && body.byteLength === 0);
     return { url, ok: !wedged, status: r.status, bytes: body.byteLength };
-  } catch (e) { return { url, ok: false, status: 'ERR', note: e.message }; }
+  } catch (e) {
+    if (attempt < 3) { await sleep(2000); return checkOne(url, attempt + 1); }
+    return { url, ok: true, skipped: true, status: 'ERR', note: e.message }; // transient network error — skip, don't fail
+  }
 }
 
 async function pool(items, fn, conc) {
@@ -68,7 +80,8 @@ async function pool(items, fn, conc) {
   console.log(`sitemap URLs: ${total} (listings: ${listings.length}) | checking: ${targets.length} (brotli navigation requests)`);
   const results = await pool(targets, checkOne, CONC);
   const wedged = results.filter(r => !r.ok);
-  console.log(`\n✅ healthy: ${results.length - wedged.length} | ❌ WEDGED (blank-page bug): ${wedged.length}`);
+  const skipped = results.filter(r => r.skipped);
+  console.log(`\n✅ healthy: ${results.length - wedged.length - skipped.length} | ⏭ skipped (429/blocked/transient): ${skipped.length} | ❌ WEDGED (blank-page bug): ${wedged.length}`);
   for (const w of wedged) console.log(`   ❌ ${w.status} ${w.bytes ?? ''} ${w.url}`);
 
   if (!FIX) process.exit(wedged.length ? 1 : 0);
