@@ -88,7 +88,7 @@ export interface LowResListing {
   hero_image_source: string | null;
 }
 
-export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup' | 'no_hero' | 'low_res' | 'held' | 'unscanned' | 'second_look' | 'best_of' | 'no_evidence' | 'by_equipment';
+export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup' | 'no_hero' | 'low_res' | 'held' | 'unscanned' | 'second_look' | 'best_of' | 'no_evidence' | 'by_equipment' | 'tier2_recheck';
 
 const POLL_INTERVAL = 3000; // 3 seconds — fast enough to show per-listing progress
 const PAGE_SIZE = 25;
@@ -371,6 +371,54 @@ export function usePhotoAudit() {
     // "all" filter: show ALL touchless listings (not just AI-scanned ones).
     // Queries the listings table directly so chain-auto-approved + FastCuration-approved
     // listings are included, not just those with photo_audit_results rows.
+    // "tier2_recheck": likely FALSE NEGATIVES from the 2026-06-13 "Tier-2 re-verify"
+    // AI pass — is_touchless=false listings it reverted as "NOT automatic-touchless"
+    // that nonetheless carry a touch-free equipment brand (WashWorld/PDQ/etc). These
+    // are mixed facilities with a touch-free bay that got wrongly excluded. Fetch the
+    // Tier-2-reverted set then client-filter (the crawl_notes text test isn't a clean
+    // server filter) to touch-free-equipment, minus obvious tunnel/hand-wash noise,
+    // so the admin can recover the real ones ("Mark Touchless & Approve").
+    if (filter === 'tier2_recheck') {
+      const TOUCHFREE = /washworld|pdq|petit|mark_?vii|coleman|oasis|istobal|karcher|ryko|autec|laserwash|razor/i;
+      const NOISE = /\bhand\b|detail|el car wash|dirty dog|quick quack|mister car wash|tommy'?s|take 5|\bzips\b|tidal wave|whistle express|tsunami/i;
+      const cands: { id: string; name: string; slug: string; city: string; state: string; hero_image: string | null; hero_image_source: string | null; photos: string[] | null; equipment_brand: string | null; equipment_model: string | null; is_approved: boolean; photo_audited_at: string | null; parent_chain: string | null; crawl_notes: string | null }[] = [];
+      for (let o = 0; ; o += 1000) {
+        const { data } = await supabase
+          .from('listings')
+          .select('id, name, slug, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain, crawl_notes')
+          .eq('is_touchless', false).ilike('crawl_notes', '%Tier-2 re-verify%')
+          .range(o, o + 999);
+        if (!data || data.length === 0) break;
+        cands.push(...(data as typeof cands));
+        if (data.length < 1000) break;
+      }
+      const filtered = cands.filter(l =>
+        /NOT automatic-touchless|left not-touchless|not automatic touchless/i.test(l.crawl_notes || '') &&
+        TOUCHFREE.test(`${l.equipment_brand || ''} ${l.crawl_notes || ''}`) &&
+        !NOISE.test(l.name || '')
+      ).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      const pageRows = filtered.slice(offset, offset + PAGE_SIZE);
+      const rows: AuditResult[] = pageRows.map((l) => {
+        const hasHero = !!l.hero_image;
+        const hasGallery = (l.photos ?? []).length > 0;
+        return {
+          id: `t2-${l.id}`, listing_id: l.id, listing_name: l.name, listing_slug: l.slug,
+          listing_city: l.city, listing_state: l.state, listing_hero: l.hero_image,
+          hero_quality: hasHero ? 'has_hero' : hasGallery ? 'has_candidates' : 'missing',
+          equipment_brand: l.equipment_brand, equipment_model: l.equipment_model,
+          equipment_confidence: null, equipment_source_photo: null, suggested_hero_url: null,
+          suggested_hero_reason: `Touch-free equipment (${l.equipment_brand}) but reverted not-touchless — likely a mixed-facility false negative`,
+          photos_to_remove: [], reviewed: !!l.photo_audited_at, applied: false, created_at: '',
+          raw_response: null, google_photos_added: 0, google_photos_screened: 0,
+          listing_parent_chain: l.parent_chain ?? null,
+        } as AuditResult;
+      });
+      setResults(rows);
+      setFilteredTotal(filtered.length);
+      setLoading(false);
+      return;
+    }
+
     // "by_equipment" filter: every listing tagged with the chosen equipment brand,
     // regardless of touchless/approval status, so the admin can review + correct
     // equipment-classification errors (mine or the AI's) one maker at a time.

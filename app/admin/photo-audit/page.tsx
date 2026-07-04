@@ -605,6 +605,7 @@ export default function PhotoAuditPage() {
               { key: 'second_look' as ViewFilter, label: `Second Look (${viewFilter === 'second_look' ? filteredTotal : secondLookCount})` },
               { key: 'unscanned' as ViewFilter, label: `Unscanned (${viewFilter === 'unscanned' ? filteredTotal : queueStats.remaining})` },
               { key: 'no_evidence' as ViewFilter, label: `No Review Evidence${viewFilter === 'no_evidence' ? ` (${filteredTotal})` : ''}` },
+              { key: 'tier2_recheck' as ViewFilter, label: `♻️ Tier-2 Recheck${viewFilter === 'tier2_recheck' ? ` (${filteredTotal})` : ''}` },
             ]).map(f => (
               <button
                 key={f.key}
