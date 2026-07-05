@@ -775,20 +775,25 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
                         {g.listings.length} wash{g.listings.length === 1 ? '' : 'es'}
                       </span>
                     </div>
-                    <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-1">
+                    <ul className="grid sm:grid-cols-2 gap-3">
                       {g.listings.map((l) => (
                         <li key={l.id}>
                           <Link
                             href={`/state/${getStateSlug(l.state)}/${slugify(l.city)}/${l.slug}`}
-                            className="flex items-center justify-between gap-2 py-2 text-[15px] text-gray-700 hover:text-[#22C55E] transition-colors border-b border-gray-100"
+                            className="group flex items-center justify-between gap-3 bg-white rounded-xl border border-gray-200 shadow-sm px-4 py-3 hover:border-[#22C55E] hover:shadow-md transition-all"
                           >
-                            <span className="truncate">{l.name}</span>
-                            {Number(l.rating) > 0 && (
-                              <span className="flex items-center gap-1 shrink-0 text-sm text-gray-500">
-                                <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
-                                {Number(l.rating).toFixed(1)}
-                              </span>
-                            )}
+                            <span className="truncate font-medium text-[15px] text-[#0F2744] group-hover:text-[#22C55E] transition-colors">
+                              {l.name}
+                            </span>
+                            <span className="flex items-center gap-2 shrink-0">
+                              {Number(l.rating) > 0 && (
+                                <span className="flex items-center gap-1 rounded-full bg-gray-50 px-2 py-0.5 text-sm text-gray-600 group-hover:bg-green-50 transition-colors">
+                                  <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+                                  {Number(l.rating).toFixed(1)}
+                                </span>
+                              )}
+                              <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-[#22C55E] transition-colors" />
+                            </span>
                           </Link>
                         </li>
                       ))}
