@@ -6,7 +6,7 @@
  * as new listings are added. Award categories are assigned dynamically.
  */
 
-import { supabase } from './supabase';
+import { publicListings } from './public-listings';
 import { CHAINS } from './chains';
 import { getChainHeroImage } from './chain-brand-images';
 
@@ -146,11 +146,7 @@ type RawRow = { parent_chain: string; state: string; rating: number | null; revi
 async function fetchChainRows(stateFilter?: string[]): Promise<RawRow[]> {
   const all: RawRow[] = [];
   for (let offset = 0; ; offset += 1000) {
-    let q = supabase
-      .from('listings')
-      .select('parent_chain, state, rating, review_count, hero_image')
-      .eq('is_touchless', true)
-      .eq('is_approved', true)
+    let q = publicListings('parent_chain, state, rating, review_count, hero_image')
       .not('parent_chain', 'is', null)
       // Stable sort key is REQUIRED for correct .range() pagination: without an
       // explicit order, Postgres may return rows in a different order on each

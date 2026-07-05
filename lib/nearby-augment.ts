@@ -12,7 +12,8 @@
  * app/sitemap.xml/route.ts so they share a single per-request cache.
  */
 import { cache } from 'react';
-import { supabase, LISTING_CARD_COLUMNS, type Listing } from './supabase';
+import { LISTING_CARD_COLUMNS, type Listing } from './supabase';
+import { publicListings } from './public-listings';
 import { haversineDistance } from './metro-areas';
 
 // Slim row type used for the proximity scan — only the fields needed to
@@ -124,11 +125,7 @@ export function bestNearby<T extends NearbyCandidate & { id: string }>(
  */
 export const getStateListingsForAugment = cache(
   async (stateCode: string): Promise<ProximityListing[]> => {
-    const { data } = await supabase
-      .from('listings')
-      .select('id, city, latitude, longitude')
-      .eq('is_touchless', true)
-      .eq('is_approved', true)
+    const { data } = await publicListings('id, city, latitude, longitude')
       .eq('state', stateCode)
       .not('latitude', 'is', null)
       .not('longitude', 'is', null)
@@ -145,9 +142,7 @@ export async function getListingCardsByIds(
   ids: string[],
 ): Promise<Array<Listing & { latitude: number | null; longitude: number | null }>> {
   if (ids.length === 0) return [];
-  const { data } = await supabase
-    .from('listings')
-    .select(`${LISTING_CARD_COLUMNS}, latitude, longitude`)
+  const { data } = await publicListings(`${LISTING_CARD_COLUMNS}, latitude, longitude`)
     .in('id', ids);
   return (data as Array<Listing & { latitude: number | null; longitude: number | null }>) ?? [];
 }

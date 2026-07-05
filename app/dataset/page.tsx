@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ChevronRight, Database, MapPin, Star, ThumbsUp, ThumbsDown, Minus, MessageSquareQuote, Download, BarChart3, Globe, TrendingUp } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { publicListings } from '@/lib/public-listings';
 import { getStateName, getStateSlug, US_STATES } from '@/lib/constants';
 
 const VALID_STATE_CODES = new Set(US_STATES.map((s) => s.code));
@@ -48,11 +49,7 @@ async function getDatasetStats() {
   }> = [];
 
   for (let offset = 0; offset < 50000; offset += 1000) {
-    const { data } = await supabase
-      .from('listings')
-      .select('state, rating, review_count, touchless_sentiment')
-      .eq('is_touchless', true)
-      .eq('is_approved', true)  // live listings only — match the rest of the site
+    const { data } = await publicListings('state, rating, review_count, touchless_sentiment')
       .range(offset, offset + 999);
 
     if (!data || data.length === 0) break;

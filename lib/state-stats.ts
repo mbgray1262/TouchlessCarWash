@@ -13,6 +13,7 @@
  * JSON-LD when they want to cite "touchless car wash statistics in [state]".
  */
 import { createClient } from '@supabase/supabase-js';
+import { publicListings } from '@/lib/public-listings';
 
 export const MIN_LOCATIONS_FOR_STATE_STATS_PAGE = 10;
 
@@ -105,12 +106,8 @@ export async function getStateStats(stateCode: string): Promise<StateStats | nul
   const all: ListingRow[] = [];
   let from = 0;
   while (true) {
-    const { data } = await supabase
-      .from('listings')
-      .select('id, name, slug, city, rating, review_count, hours, amenities, wash_packages, parent_chain')
+    const { data } = await publicListings('id, name, slug, city, rating, review_count, hours, amenities, wash_packages, parent_chain')
       .eq('state', stateCode)
-      .eq('is_touchless', true)
-      .eq('is_approved', true)
       .range(from, from + 999);
     if (!data || data.length === 0) break;
     all.push(...(data as ListingRow[]));

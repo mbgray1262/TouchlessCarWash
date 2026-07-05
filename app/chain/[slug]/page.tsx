@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { permanentRedirect } from 'next/navigation';
 import { ChevronRight, MapPin, Trophy } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
+import { LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
+import { publicListings, publicListingsCount } from '@/lib/public-listings';
 import { getStateName, getStateSlug, slugify } from '@/lib/constants';
 import { CHAINS, getChainBySlug, renderChainDescription } from '@/lib/chains';
 import { getChainHeroImage } from '@/lib/chain-brand-images';
@@ -26,12 +27,8 @@ export function generateStaticParams() {
 async function getChainListings(chainName: string): Promise<Listing[]> {
   const all: Listing[] = [];
   for (let offset = 0; offset < 10000; offset += 1000) {
-    const { data } = await supabase
-      .from('listings')
-      .select(LISTING_CARD_COLUMNS)
+    const { data } = await publicListings(LISTING_CARD_COLUMNS)
       .eq('parent_chain', chainName)
-      .eq('is_touchless', true)
-      .eq('is_approved', true)
       .order('state')
       .order('city')
       .order('rating', { ascending: false })
@@ -47,12 +44,7 @@ export async function generateMetadata({ params }: ChainPageProps): Promise<Meta
   const chain = getChainBySlug(params.slug);
   if (!chain) return { title: 'Not Found' };
 
-  const { count } = await supabase
-    .from('listings')
-    .select('*', { count: 'exact', head: true })
-    .eq('parent_chain', chain.name)
-    .eq('is_touchless', true)
-    .eq('is_approved', true);
+  const { count } = await publicListingsCount().eq('parent_chain', chain.name);
 
   const total = count || 0;
   const now = new Date();

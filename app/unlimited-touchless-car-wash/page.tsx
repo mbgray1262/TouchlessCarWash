@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ChevronRight, Check, Sparkles } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/lib/supabase';
+import { publicListings } from '@/lib/public-listings';
 import { CHAINS } from '@/lib/chains';
 import { getChainSubscriptionDisplay } from '@/lib/chain-subscriptions';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
@@ -51,11 +51,8 @@ async function getUnlimitedChains(): Promise<ChainRow[]> {
   const results: ChainRow[] = [];
   for (const chain of CHAINS) {
     if (!UNLIMITED_CHAIN_SLUGS.has(chain.slug)) continue;
-    const { data } = await supabase
-      .from('listings')
-      .select('state')
-      .eq('parent_chain', chain.name)
-      .eq('is_touchless', true);
+    const { data } = await publicListings('state')
+      .eq('parent_chain', chain.name);
     if (!data || data.length === 0) continue;
     const states = Array.from(new Set(data.map(r => r.state))).sort();
     const sub = getChainSubscriptionDisplay(chain.slug);

@@ -1,5 +1,6 @@
 import { cache } from 'react';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
+import { publicListings, publicListingsCount } from '@/lib/public-listings';
 import { PAGE_SIZE } from '@/components/Pagination';
 import { scoreListing } from '@/lib/metro-scoring';
 
@@ -25,10 +26,7 @@ export async function getStateListingIds(stateCode: string): Promise<string[]> {
   let offset = 0;
   const BATCH = 1000;
   while (true) {
-    const { data } = await supabase
-      .from('listings')
-      .select('id')
-      .eq('is_touchless', true)
+    const { data } = await publicListings('id')
       .eq('state', stateCode)
       .range(offset, offset + BATCH - 1);
     if (!data || data.length === 0) break;
@@ -85,11 +83,7 @@ export async function getStateListingsPaginated(
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
 
-  let query = supabase
-    .from('listings')
-    .select(LISTING_CARD_COLUMNS)
-    .eq('is_touchless', true)
-    .eq('state', stateCode);
+  let query = publicListings(LISTING_CARD_COLUMNS).eq('state', stateCode);
 
   if (qualifiedIds !== null) {
     if (qualifiedIds.length === 0) return [];
@@ -120,22 +114,14 @@ export async function getStateListingsPaginated(
  * than the home page).
  */
 export async function getApprovedTouchlessCount(): Promise<number> {
-  const { count, error } = await supabase
-    .from('listings')
-    .select('*', { count: 'exact', head: true })
-    .eq('is_touchless', true)
-    .eq('is_approved', true);
+  const { count, error } = await publicListingsCount();
   return error ? 0 : (count ?? 0);
 }
 
 export async function getStateListingCountFiltered(stateCode: string, qualifiedIds: string[] | null): Promise<number> {
   if (qualifiedIds !== null && qualifiedIds.length === 0) return 0;
 
-  let query = supabase
-    .from('listings')
-    .select('*', { count: 'exact', head: true })
-    .eq('is_touchless', true)
-    .eq('state', stateCode);
+  let query = publicListingsCount().eq('state', stateCode);
 
   if (qualifiedIds !== null) {
     query = query.in('id', qualifiedIds);

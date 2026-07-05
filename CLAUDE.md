@@ -21,6 +21,15 @@ kept in sync **by hand** and drifted — or when two pages computed the same
 threshold from two copies of the logic. The fix is always: **one shared module
 that both the page and the sitemap import.** Existing shared sources of truth:
 
+- `lib/public-listings.ts` — **`publicListings()` / `publicListingsCount()`: the
+  public-visibility rule itself (`is_touchless` + `is_approved`).** Every public
+  read of the `listings` table must go through it — never hand-write those two
+  `.eq()` filters. Intentional exceptions (listing-detail 308 handling,
+  city-name resolution, geo-fallback anchors) carry a comment saying why. The
+  SQL count RPCs (`state_listing_counts`, `feature_state_counts`,
+  `feature_total_count`, `cities_in_state_with_counts`, `get_filter_counts`,
+  `states_with_touchless_listings`) mirror the same rule in the DB — if the
+  visibility rule ever changes, update those in a migration too.
 - `lib/city-resolve.ts` — slug→state code, slug→DB city name, in-city listings.
   Used by `app/state/[state]/[city]` AND `app/state/[state]/[city]/feature/[feature]`.
 - `lib/state-hub-filters.ts` — `hasSubscription` / `is24h` predicates for the

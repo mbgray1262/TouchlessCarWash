@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { publicListings } from '@/lib/public-listings';
 import { getStateName } from '@/lib/constants';
 
 export const revalidate = 3600; // 1 hour
@@ -26,10 +26,7 @@ export async function GET() {
     let allListings: ListingRow[] = [];
 
     for (let offset = 0; offset < 50000; offset += 1000) {
-      const { data, error } = await supabase
-        .from('listings')
-        .select('name, city, state, zip, rating, review_count, touchless_sentiment')
-        .eq('is_touchless', true)
+      const { data, error } = await publicListings('name, city, state, zip, rating, review_count, touchless_sentiment')
         .order('state', { ascending: true })
         .order('city', { ascending: true })
         .order('name', { ascending: true })

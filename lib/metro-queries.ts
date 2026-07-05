@@ -8,6 +8,7 @@
  */
 import { cache } from 'react';
 import { supabase, type Listing } from '@/lib/supabase';
+import { publicListings } from '@/lib/public-listings';
 import { METRO_AREAS, boundingBox, haversineDistance, type MetroArea } from '@/lib/metro-areas';
 import { isDislikedTouchless } from '@/lib/touchless-quality';
 import { isTrophyEligible } from '@/lib/metro-scoring';
@@ -57,11 +58,7 @@ export async function getDislikedTouchlessIds(listingIds: string[]): Promise<Set
 export const getMetroListings = cache(async (metro: MetroArea): Promise<Listing[]> => {
   const box = boundingBox(metro.lat, metro.lng, metro.radiusMiles);
 
-  const { data, error } = await supabase
-    .from('listings')
-    .select(BEST_OF_COLUMNS)
-    .eq('is_touchless', true)
-    .eq('is_approved', true)
+  const { data, error } = await publicListings(BEST_OF_COLUMNS)
     .gte('latitude', box.minLat)
     .lte('latitude', box.maxLat)
     .gte('longitude', box.minLng)
@@ -105,11 +102,7 @@ export async function getQualifyingMetros(): Promise<MetroWithCount[]> {
   const allListings: QMListing[] = [];
   let offset = 0;
   while (true) {
-    const { data, error } = await supabase
-      .from('listings')
-      .select('id, latitude, longitude, rating, review_count, touchless_satisfaction_score')
-      .eq('is_touchless', true)
-      .eq('is_approved', true)
+    const { data, error } = await publicListings('id, latitude, longitude, rating, review_count, touchless_satisfaction_score')
       .not('latitude', 'is', null)
       .not('longitude', 'is', null)
       .range(offset, offset + PAGE_SIZE - 1);

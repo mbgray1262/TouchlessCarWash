@@ -6,7 +6,7 @@
  * count, and generates markdown with real-time data. Mirrors the pattern
  * established by lib/dynamic-blog-top10.ts.
  */
-import { supabase } from '@/lib/supabase';
+import { publicListings } from '@/lib/public-listings';
 import { CHAINS } from '@/lib/chains';
 import { getChainSubscriptionDisplay } from '@/lib/chain-subscriptions';
 
@@ -103,11 +103,8 @@ async function getSubscriptionStats(): Promise<SubscriptionChainStats[]> {
   const stats: SubscriptionChainStats[] = [];
   for (const chain of CHAINS) {
     if (!SUBSCRIPTION_CHAIN_SLUGS.includes(chain.slug)) continue;
-    const { data } = await supabase
-      .from('listings')
-      .select('state, rating, review_count')
-      .eq('parent_chain', chain.name)
-      .eq('is_touchless', true);
+    const { data } = await publicListings('state, rating, review_count')
+      .eq('parent_chain', chain.name);
     if (!data || data.length === 0) continue;
 
     const stateSet = new Set<string>();

@@ -1,5 +1,5 @@
 import { cache } from 'react';
-import { supabase } from '@/lib/supabase';
+import { publicListings } from '@/lib/public-listings';
 
 export type LaserwashLocation = {
   name: string;
@@ -22,11 +22,7 @@ export type LaserwashLocation = {
 export const getLaserwashLocations = cache(async (): Promise<LaserwashLocation[]> => {
   const all: LaserwashLocation[] = [];
   for (let from = 0; ; from += 1000) {
-    const { data, error } = await supabase
-      .from('listings')
-      .select('name, city, state, slug, touchless_satisfaction_score')
-      .eq('is_approved', true)
-      .eq('is_touchless', true)
+    const { data, error } = await publicListings('name, city, state, slug, touchless_satisfaction_score')
       .eq('equipment_brand', 'pdq')
       .order('id')
       .range(from, from + 999);

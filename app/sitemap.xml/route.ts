@@ -1,4 +1,5 @@
 import { supabase, type Listing } from '@/lib/supabase';
+import { publicListings } from '@/lib/public-listings';
 import { US_STATES, getStateSlug, slugify } from '@/lib/constants';
 import { getQualifyingMetros } from '@/lib/metro-queries';
 import { FEATURES } from '@/lib/features';
@@ -65,11 +66,7 @@ export async function GET() {
   const PAGE_SIZE = 1000;
   let offset = 0;
   while (true) {
-    const { data: page } = await supabase
-      .from('listings')
-      .select('id, slug, city, state, created_at, updated_at, latitude, longitude, rating, review_count, is_claimed, is_featured, parent_chain, google_description, hours, amenities, crawl_snapshot, extracted_data')
-      .eq('is_touchless', true)
-      .eq('is_approved', true)  // exclude held/pending-enrichment listings that 308 instead of 200
+    const { data: page } = await publicListings('id, slug, city, state, created_at, updated_at, latitude, longitude, rating, review_count, is_claimed, is_featured, parent_chain, google_description, hours, amenities, crawl_snapshot, extracted_data')
       .range(offset, offset + PAGE_SIZE - 1);
     if (!page || page.length === 0) break;
     // Convert the heavy JSON fields to boolean flags immediately so we don't
@@ -422,11 +419,7 @@ export async function GET() {
   </url>`);
 
   // Get equipment brand counts to only include brands with listings
-  const { data: brandCounts } = await supabase
-    .from('listings')
-    .select('equipment_brand')
-    .eq('is_touchless', true)
-    .eq('is_approved', true)
+  const { data: brandCounts } = await publicListings('equipment_brand')
     .not('equipment_brand', 'is', null);
 
   const brandCountMap = new Map<string, number>();

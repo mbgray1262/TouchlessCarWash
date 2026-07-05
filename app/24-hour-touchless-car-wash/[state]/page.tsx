@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ChevronRight, Clock } from 'lucide-react';
 import { ListingCard } from '@/components/ListingCard';
-import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
+import { LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
+import { publicListings } from '@/lib/public-listings';
 import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants';
 import { is24h } from '@/lib/state-hub-filters';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
@@ -27,11 +28,7 @@ async function getAllStateListings(stateCode: string): Promise<Listing[]> {
   const BATCH = 1000;
   let offset = 0;
   while (true) {
-    const { data } = await supabase
-      .from('listings')
-      .select(LISTING_CARD_COLUMNS)
-      .eq('is_touchless', true)
-      .eq('is_approved', true)
+    const { data } = await publicListings(LISTING_CARD_COLUMNS)
       .eq('state', stateCode)
       .range(offset, offset + BATCH - 1);
     if (!data || data.length === 0) break;

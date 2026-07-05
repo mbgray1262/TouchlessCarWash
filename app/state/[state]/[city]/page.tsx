@@ -4,6 +4,7 @@ import { notFound, permanentRedirect } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase, type Listing } from '@/lib/supabase';
+import { publicListingsCount } from '@/lib/public-listings';
 import { getStateName, slugify, getStateSlug } from '@/lib/constants';
 import { CityListingsClient } from '@/components/CityListingsClient';
 import { withPaintSafeChip, PAINT_SAFE_FILTER_ID } from '@/lib/paint-safe-filter';
@@ -303,12 +304,7 @@ export default async function CityPage({ params }: CityPageProps) {
       const nearest = await findNearestTouchlessCityPath(coords, stateCode);
       if (nearest) permanentRedirect(`${nearest}${flag}`);
     }
-    const { count: stateCount } = await supabase
-      .from('listings')
-      .select('*', { count: 'exact', head: true })
-      .eq('state', stateCode!)
-      .eq('is_touchless', true)
-      .eq('is_approved', true);
+    const { count: stateCount } = await publicListingsCount().eq('state', stateCode!);
     if ((stateCount ?? 0) > 0) {
       permanentRedirect(`/state/${params.state}${flag}`);
     }

@@ -8,6 +8,7 @@ import { ListingCard } from '@/components/ListingCard';
 import { ClientPagination, PAGE_SIZE } from '@/components/Pagination';
 import { SearchFilters } from '@/components/SearchFilters';
 import type { Listing } from '@/lib/supabase';
+import { publicListings } from '@/lib/public-listings';
 import { scoreListing } from '@/lib/metro-scoring';
 import { slugify } from '@/lib/constants';
 import { withPaintSafeChip, PAINT_SAFE_FILTER_SLUG } from '@/lib/paint-safe-filter';
@@ -123,10 +124,7 @@ export function StateListingsClient({
       const from = (rawPage - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
 
-      let dbQuery = supabase
-        .from('listings')
-        .select(LISTING_CARD_COLUMNS, { count: 'exact' })
-        .eq('is_touchless', true)
+      let dbQuery = publicListings(LISTING_CARD_COLUMNS, { count: 'exact' })
         .eq('state', stateCode);
 
       // Free-text search across wash name OR city.

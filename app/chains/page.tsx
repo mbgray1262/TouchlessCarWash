@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ChevronRight, Building2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { supabase } from '@/lib/supabase';
+import { publicListings } from '@/lib/public-listings';
 import { CHAINS, renderChainDescription } from '@/lib/chains';
 import { ProductGrid } from '@/components/ProductGrid';
 import { getChainHeroImage } from '@/lib/chain-brand-images';
@@ -45,11 +45,7 @@ async function getChainStats(): Promise<ChainWithStats[]> {
   const BATCH = 1000;
   let offset = 0;
   while (true) {
-    const { data } = await supabase
-      .from('listings')
-      .select('parent_chain, state, hero_image, review_count')
-      .eq('is_touchless', true)
-      .eq('is_approved', true)
+    const { data } = await publicListings('parent_chain, state, hero_image, review_count')
       .not('parent_chain', 'is', null)
       .range(offset, offset + BATCH - 1);
     if (!data || data.length === 0) break;

@@ -5,6 +5,7 @@
  * and keeps searchers inside the directory instead of bouncing back to SERPs.
  */
 import { supabase } from './supabase';
+import { publicListings } from './public-listings';
 import { slugify, getStateSlug } from './constants';
 import { haversineDistance } from './metro-areas';
 
@@ -50,11 +51,7 @@ export async function findNearestTouchlessCityPath(
   const columns = 'latitude, longitude, city, state';
 
   const runQuery = async (stateFilter: string | null) => {
-    let q = supabase
-      .from('listings')
-      .select(columns)
-      .eq('is_touchless', true)
-      .eq('is_approved', true)
+    let q = publicListings(columns)
       .not('latitude', 'is', null)
       .not('longitude', 'is', null);
     if (stateFilter) q = q.eq('state', stateFilter);

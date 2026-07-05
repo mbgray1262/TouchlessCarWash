@@ -25,6 +25,7 @@ import { TouchlessVideo } from '@/components/TouchlessVideo';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
+import { publicListings, publicListingsCount } from '@/lib/public-listings';
 import PaintSafeModule, { type PaintSnippet, type PaintTheme } from '@/components/PaintSafeModule';
 import TouchlessSatisfactionGauge, { type TssSnippet } from '@/components/TouchlessSatisfactionGauge';
 import { TouchlessScoreComparison, type ScoreRankItem } from '@/components/TouchlessScoreComparison';
@@ -113,6 +114,9 @@ function stripTrailingNumericId(slug: string): string {
  * Returns the canonical URL path for the matching listing, or null.
  */
 async function findListingByPartialSlug(slug: string): Promise<string | null> {
+  // Intentionally NOT gated on is_approved (unlike publicListings): this only
+  // resolves old URLs to a redirect target, and an unapproved target's URL
+  // safely 308s onward to the city hub. Gating it would turn those into 404s.
   // 1. Try the slug as a direct prefix match (existing behaviour)
   const { data: d1 } = await supabase
     .from('listings')
@@ -173,11 +177,7 @@ async function getNearbyListings(listing: Listing, limit = 6): Promise<Listing[]
     const latDelta = radiusMiles / 69;
     const lngDelta = radiusMiles / (69 * Math.cos(listing.latitude * Math.PI / 180));
 
-    const { data } = await supabase
-      .from('listings')
-      .select('id, name, slug, city, state, rating, review_count, address, hero_image, google_photo_url, street_view_url, latitude, longitude, parent_chain, hero_image_source')
-      .eq('is_touchless', true)
-      .eq('is_approved', true)
+    const { data } = await publicListings('id, name, slug, city, state, rating, review_count, address, hero_image, google_photo_url, street_view_url, latitude, longitude, parent_chain, hero_image_source')
       .neq('id', listing.id)
       .gte('latitude', listing.latitude - latDelta)
       .lte('latitude', listing.latitude + latDelta)
@@ -207,11 +207,7 @@ async function getNearbyListings(listing: Listing, limit = 6): Promise<Listing[]
 // Legacy fallback: same-state, sorted by review count. Used when the source
 // listing has no lat/lng (~1.8% of listings) or no listings exist within 100mi.
 async function getNearbyListingsLegacy(listing: Listing, limit = 6): Promise<Listing[]> {
-  const { data } = await supabase
-    .from('listings')
-    .select('id, name, slug, city, state, rating, review_count, address, hero_image, google_photo_url, street_view_url, latitude, longitude, parent_chain, hero_image_source')
-    .eq('is_touchless', true)
-    .eq('is_approved', true)
+  const { data } = await publicListings('id, name, slug, city, state, rating, review_count, address, hero_image, google_photo_url, street_view_url, latitude, longitude, parent_chain, hero_image_source')
     .eq('state', listing.state)
     .neq('id', listing.id)
     .order('review_count', { ascending: false })
@@ -230,10 +226,7 @@ async function getChainListings(listing: Listing, limit = 6): Promise<{ chainNam
 
   const [vendorResult, listingsResult] = await Promise.all([
     supabase.from('vendors').select('canonical_name').eq('id', listing.vendor_id).single(),
-    supabase
-      .from('listings')
-      .select('id, name, slug, city, state, rating, review_count, address, hero_image, google_photo_url, street_view_url, parent_chain, hero_image_source')
-      .eq('is_touchless', true)
+    publicListings('id, name, slug, city, state, rating, review_count, address, hero_image, google_photo_url, street_view_url, parent_chain, hero_image_source')
       .eq('vendor_id', listing.vendor_id)
       .neq('id', listing.id)
       .order('review_count', { ascending: false })
@@ -390,11 +383,7 @@ async function getGenericReviews(listingId: string, limit = 6): Promise<ReviewSn
  * TouchlessVideo component deterministically picks one by listing id.
  */
 async function getCityScoreRanking(state: string, city: string): Promise<ScoreRankItem[]> {
-  const { data } = await supabase
-    .from('listings')
-    .select('id, name, slug, city, state, touchless_satisfaction_score')
-    .eq('is_touchless', true)
-    .eq('is_approved', true)
+  const { data } = await publicListings('id, name, slug, city, state, touchless_satisfaction_score')
     .eq('state', state)
     .ilike('city', city)
     .not('touchless_satisfaction_score', 'is', null)
@@ -481,9 +470,7 @@ const getMetroSiblingRankings = cache(async (
   if (!rankRows || rankRows.length === 0) return [];
 
   const ids = rankRows.map(r => r.listing_id as string);
-  const { data: listings } = await supabase
-    .from('listings')
-    .select('id, name, slug, city, state, address, phone, rating, review_count, hero_image, google_photo_url, street_view_url, logo_photo, google_logo_url, amenities, touchless_wash_types, hours, is_touchless, is_featured, is_claimed, touchless_verified, parent_chain, touchless_satisfaction_score')
+  const { data: listings } = await publicListings('id, name, slug, city, state, address, phone, rating, review_count, hero_image, google_photo_url, street_view_url, logo_photo, google_logo_url, amenities, touchless_wash_types, hours, is_touchless, is_featured, is_claimed, touchless_verified, parent_chain, touchless_satisfaction_score')
     .in('id', ids);
 
   if (!listings) return [];
@@ -1235,13 +1222,9 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     const citySlug = slugify(listing.city) || params.city;
     // Prefer the listing's own city hub (most relevant to the original
     // query), but only if that hub still has approved touchless listings.
-    const { count: cityCount } = await supabase
-      .from('listings')
-      .select('*', { count: 'exact', head: true })
+    const { count: cityCount } = await publicListingsCount()
       .eq('state', listing.state)
-      .eq('city', listing.city)
-      .eq('is_touchless', true)
-      .eq('is_approved', true);
+      .eq('city', listing.city);
     // Closed businesses get a closed-specific banner; everything else
     // (reverted-as-not-touchless, generic removal) gets the generic one.
     const cs = (listing as Listing & { classification_source?: string | null }).classification_source ?? '';
@@ -1261,12 +1244,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
       );
       if (nearest) permanentRedirect(`${nearest}${flag}`);
     }
-    const { count: stateCount } = await supabase
-      .from('listings')
-      .select('*', { count: 'exact', head: true })
-      .eq('state', listing.state)
-      .eq('is_touchless', true)
-      .eq('is_approved', true);
+    const { count: stateCount } = await publicListingsCount().eq('state', listing.state);
     if ((stateCount ?? 0) > 0) {
       permanentRedirect(`/state/${stateSlug}${flag}`);
     }

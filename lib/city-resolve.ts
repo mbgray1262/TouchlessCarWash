@@ -1,5 +1,6 @@
 import { cache } from 'react';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
+import { publicListings } from '@/lib/public-listings';
 import { US_STATES, slugify } from '@/lib/constants';
 
 // Shared slug→state / slug→city / in-city-listings resolvers used by BOTH the
@@ -52,14 +53,7 @@ export const resolveCityName = cache(
  */
 export const getCityTouchlessListings = cache(
   async (stateCode: string, cityName: string): Promise<Listing[]> => {
-    const { data, error } = await supabase
-      .from('listings')
-      .select(`${LISTING_CARD_COLUMNS}, latitude, longitude`)
-      .eq('is_touchless', true)
-      // is_approved gate matches the sitemap's listing load: unapproved /
-      // held-for-enrichment listings 308-redirect when visited, so they must
-      // not be shown, counted toward feature-page thresholds, or sitemapped.
-      .eq('is_approved', true)
+    const { data, error } = await publicListings(`${LISTING_CARD_COLUMNS}, latitude, longitude`)
       .eq('state', stateCode)
       .ilike('city', cityName)
       .order('rating', { ascending: false });

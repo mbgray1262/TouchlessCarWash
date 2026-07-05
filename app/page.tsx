@@ -14,6 +14,7 @@ import { HomeVideoSection } from '@/components/HomeVideoSection';
 import { getTouchlessVideoPool } from '@/lib/videos';
 import { RedirectBanner } from '@/components/RedirectBanner';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
+import { publicListings } from '@/lib/public-listings';
 import { getApprovedTouchlessCount } from '@/lib/listing-queries';
 import { US_STATES, getStateSlug } from '@/lib/constants';
 import { getMetroBySlug } from '@/lib/metro-areas';
@@ -138,10 +139,7 @@ const faqItems: { question: string; answer: React.ReactNode; schemaAnswer?: stri
 ];
 
 async function getFeaturedListings(): Promise<Listing[]> {
-  const { data, error } = await supabase
-    .from('listings')
-    .select(LISTING_CARD_COLUMNS)
-    .eq('is_touchless', true)
+  const { data, error } = await publicListings(LISTING_CARD_COLUMNS)
     .eq('is_featured', true)
     .order('rating', { ascending: false })
     .limit(6);
@@ -155,11 +153,7 @@ async function getFeaturedListings(): Promise<Listing[]> {
 }
 
 async function getTopSatisfactionListings(): Promise<Listing[]> {
-  const { data } = await supabase
-    .from('listings')
-    .select(LISTING_CARD_COLUMNS)
-    .eq('is_touchless', true)
-    .eq('is_approved', true)
+  const { data } = await publicListings(LISTING_CARD_COLUMNS)
     .gte('touchless_mentions', 10)
     .not('touchless_satisfaction_score', 'is', null)
     .order('touchless_satisfaction_score', { ascending: false })

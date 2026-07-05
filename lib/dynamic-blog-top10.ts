@@ -5,7 +5,7 @@
  * generates the markdown content with real-time data. The blog page
  * uses this instead of the static `content` stored in blog_posts.
  */
-import { supabase } from '@/lib/supabase';
+import { publicListings } from '@/lib/public-listings';
 import { CHAINS } from '@/lib/chains';
 
 type ChainStats = {
@@ -75,11 +75,8 @@ async function getChainStats(): Promise<ChainStats[]> {
   // For each chain in CHAINS, fetch location count, states, avg rating, total reviews
   const stats: ChainStats[] = [];
   for (const chain of CHAINS) {
-    const { data } = await supabase
-      .from('listings')
-      .select('state, rating, review_count')
-      .eq('parent_chain', chain.name)
-      .eq('is_touchless', true);
+    const { data } = await publicListings('state, rating, review_count')
+      .eq('parent_chain', chain.name);
 
     if (!data || data.length === 0) continue;
 

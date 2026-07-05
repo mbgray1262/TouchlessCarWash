@@ -6,7 +6,7 @@ import { Search, MapPin, Building2, Trophy } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import HeroScorePromo from '@/components/HeroScorePromo';
-import { supabase } from '@/lib/supabase';
+import { publicListings } from '@/lib/public-listings';
 import { getStateSlug, slugify, US_STATES } from '@/lib/constants';
 import { METRO_AREAS } from '@/lib/metro-areas';
 import { CHAINS } from '@/lib/chains';
@@ -168,9 +168,7 @@ async function fetchListingMatches(term: string): Promise<{ results: ListingResu
     patterns.push(`%${nameTerm.replace(/ and /gi, ' & ')}%`);
   }
 
-  let query = supabase
-    .from('listings')
-    .select('id, name, slug, city, state, review_count, rating', { count: 'exact' });
+  let query = publicListings('id, name, slug, city, state, review_count, rating', { count: 'exact' });
 
   // Apply name filter only if there's a name component
   if (nameTerm) {
@@ -272,11 +270,8 @@ async function matchChains(term: string): Promise<ChainResult[]> {
   // Get touchless counts for each match
   const results = await Promise.all(
     matching.map(async (c) => {
-      const { count } = await supabase
-        .from('listings')
-        .select('*', { count: 'exact', head: true })
-        .eq('parent_chain', c.name)
-        .eq('is_touchless', true);
+      const { count } = await publicListings('*', { count: 'exact', head: true })
+        .eq('parent_chain', c.name);
       return { name: c.name, slug: c.slug, count: count ?? 0 };
     })
   );
@@ -608,11 +603,8 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
         namePatterns.push(`name.ilike.%${nameTerm.replace(/ & /g, '&')}%`);
       }
       // How many listings match? If exactly 1, jump to it. If >1, go to search page.
-      const { data: matches, count: matchCount } = await supabase
-        .from('listings')
-        .select('id, name, slug, city, state', { count: 'exact' })
+      const { data: matches, count: matchCount } = await publicListings('id, name, slug, city, state', { count: 'exact' })
         .or(namePatterns.join(','))
-        .eq('is_touchless', true)
         .order('review_count', { ascending: false, nullsFirst: false })
         .limit(2);
 

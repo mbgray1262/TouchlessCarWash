@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
+import { publicListings } from '@/lib/public-listings';
 import { getStateSlug, slugify, US_STATES } from '@/lib/constants';
 import { ListingCard } from '@/components/ListingCard';
 import { Pagination, PAGE_SIZE } from '@/components/Pagination';
@@ -91,11 +92,8 @@ async function searchListings(
 
     if (qualifiedIds.length === 0) return [];
 
-    let q = supabase
-      .from('listings')
-      .select(LISTING_CARD_COLUMNS)
+    let q = publicListings(LISTING_CARD_COLUMNS)
       .in('id', qualifiedIds)
-      .eq('is_touchless', true)
       .order('rating', { ascending: false });
 
     if (wantsPaintSafe) q = q.eq('paint_safe_verified', true);
@@ -106,10 +104,7 @@ async function searchListings(
     const { data } = await q;
     return (data as Listing[]) ?? [];
   } else {
-    let q = supabase
-      .from('listings')
-      .select(LISTING_CARD_COLUMNS)
-      .eq('is_touchless', true)
+    let q = publicListings(LISTING_CARD_COLUMNS)
       .order('rating', { ascending: false });
 
     if (wantsPaintSafe) q = q.eq('paint_safe_verified', true);
@@ -192,10 +187,7 @@ async function searchByProximity(
   for (const radius of radii) {
     const box = boundingBox(lat, lng, radius);
 
-    let query = supabase
-      .from('listings')
-      .select(PROXIMITY_COLUMNS)
-      .eq('is_touchless', true)
+    let query = publicListings(PROXIMITY_COLUMNS)
       .not('latitude', 'is', null)
       .not('longitude', 'is', null)
       .gte('latitude', box.minLat)
@@ -442,11 +434,7 @@ async function getMetroRankMap(metroSlug: string): Promise<Map<string, number>> 
  */
 async function getMetroListingCount(metro: MetroArea): Promise<number> {
   const box = boundingBox(metro.lat, metro.lng, metro.radiusMiles);
-  const { count } = await supabase
-    .from('listings')
-    .select('id', { count: 'exact', head: true })
-    .eq('is_touchless', true)
-    .eq('is_approved', true)
+  const { count } = await publicListings('id', { count: 'exact', head: true })
     .gte('latitude', box.minLat)
     .lte('latitude', box.maxLat)
     .gte('longitude', box.minLng)

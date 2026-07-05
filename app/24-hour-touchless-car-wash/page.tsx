@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ChevronRight, Clock } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { publicListings } from '@/lib/public-listings';
 import { US_STATES, getStateName, getStateSlug } from '@/lib/constants';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import { ProductGrid } from '@/components/ProductGrid';
@@ -20,11 +20,7 @@ async function get24hCountsByState(): Promise<StateCount[]> {
   const BATCH = 1000;
   let offset = 0;
   while (true) {
-    const { data } = await supabase
-      .from('listings')
-      .select('state, hours')
-      .eq('is_touchless', true)
-      .eq('is_approved', true)
+    const { data } = await publicListings('state, hours')
       .not('hours', 'is', null)
       .range(offset, offset + BATCH - 1);
     if (!data || data.length === 0) break;

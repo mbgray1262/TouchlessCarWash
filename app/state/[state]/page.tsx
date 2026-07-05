@@ -6,6 +6,7 @@ import { METRO_AREAS } from '@/lib/metro-areas';
 import { getMetroListingCount } from '@/lib/metro-queries';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
+import { publicListings, publicListingsCount } from '@/lib/public-listings';
 import { US_STATES, getStateName, getStateSlug, slugify } from '@/lib/constants';
 import { StateListingsClient } from '@/components/StateListingsClient';
 import { RedirectBanner } from '@/components/RedirectBanner';
@@ -57,11 +58,7 @@ export function generateStaticParams() {
 
 // Cached so generateMetadata and component share the same result per request
 const getStateListingCount = cache(async (stateCode: string): Promise<number> => {
-  const { count } = await supabase
-    .from('listings')
-    .select('*', { count: 'exact', head: true })
-    .eq('is_touchless', true)
-    .eq('state', stateCode);
+  const { count } = await publicListingsCount().eq('state', stateCode);
   return count ?? 0;
 });
 
@@ -196,10 +193,7 @@ export default async function StatePage({ params }: StatePageProps) {
       }),
     ),
     // Does this state have any Paint-Safe Verified washes? Gates the chip.
-    supabase
-      .from('listings')
-      .select('id', { count: 'exact', head: true })
-      .eq('is_touchless', true)
+    publicListings('id', { count: 'exact', head: true })
       .eq('state', stateCode)
       .eq('paint_safe_verified', true)
       .then(({ count }) => count ?? 0),
