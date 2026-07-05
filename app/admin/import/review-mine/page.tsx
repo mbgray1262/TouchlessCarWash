@@ -108,13 +108,18 @@ interface TouchlessBreakdown {
   website: number;
 }
 
-/** Fetch breakdown of touchless listings by discovery source */
+/** Fetch breakdown of touchless listings by discovery source.
+ * MUST mirror the homepage's public count (getApprovedTouchlessCount in
+ * lib/listing-queries.ts): is_touchless=true AND is_approved=true. Without the
+ * is_approved filter the banner over-counts by the ~100 touchless rows that are
+ * held (awaiting a hero) or soft-closed, so the "matches homepage" label lied. */
 async function fetchTouchlessBreakdown(): Promise<TouchlessBreakdown> {
+  const APPROVED = 'is_touchless=eq.true&is_approved=eq.true';
   const [total, nameMatch, nameMatchLikely, reviews] = await Promise.all([
-    fetchCount('is_touchless=eq.true'),
-    fetchCount('is_touchless=eq.true&classification_source=eq.name_match'),
-    fetchCount('is_touchless=eq.true&classification_source=eq.name_match_likely'),
-    fetchCount('is_touchless=eq.true&review_mine_status=eq.touchless_found'),
+    fetchCount(APPROVED),
+    fetchCount(`${APPROVED}&classification_source=eq.name_match`),
+    fetchCount(`${APPROVED}&classification_source=eq.name_match_likely`),
+    fetchCount(`${APPROVED}&review_mine_status=eq.touchless_found`),
   ]);
   const nameCombined = nameMatch + nameMatchLikely;
   return {
