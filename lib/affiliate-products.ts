@@ -174,6 +174,55 @@ export const PRODUCTS: Product[] = [
     imageUrl:
       'https://cdn.shopify.com/s/files/1/0742/8938/1681/files/SPI22016-Front-2000x2000.jpg?v=1699306384',
   },
+  // Interior quick-detailer — the "just left a touchless wash, now do the inside"
+  // maintenance wipe-down. CG direct (CJ, ~10%).
+  {
+    id: 'chemguys-innerclean-detailer',
+    brand: 'Chemical Guys',
+    name: 'InnerClean Interior Quick Detailer & Protectant (16oz)',
+    category: 'interior',
+    vendor: 'chemicalguys-cj',
+    chemicalguysUrl:
+      'https://www.chemicalguys.com/products/innerclean-interior-quick-detailer-and-protectant?variant=8738417901873',
+    priceRange: '$12',
+    rating: 4.8,
+    positioning:
+      'A touchless wash cleans the outside — this does the inside. Spray-and-wipe dust, fingerprints, and grime off the dash, console, and trim while leaving UV protection and a clean scent behind.',
+    imageUrl:
+      'https://www.chemicalguys.com/cdn/shop/files/SPI_663-Front.jpg?v=1762198349',
+  },
+  // Air freshener — high-impulse, finishes the interior. CG direct (CJ, ~10%).
+  {
+    id: 'chemguys-new-car-smell',
+    brand: 'Chemical Guys',
+    name: 'New Car Smell Air Freshener (16oz)',
+    category: 'interior',
+    vendor: 'chemicalguys-cj',
+    chemicalguysUrl:
+      'https://www.chemicalguys.com/products/new-car-scent-air-freshener?variant=31333675810001',
+    priceRange: '$11',
+    rating: 4.7,
+    positioning:
+      'One spray and the cabin smells like it just rolled off the showroom floor. Neutralizes odors instead of masking them — the perfect finish after cleaning the interior.',
+    imageUrl:
+      'https://www.chemicalguys.com/cdn/shop/files/AIR_101_16_ced55740-a8bc-4d4f-99d7-17d6ba390cab.jpg',
+  },
+  // Carpet & upholstery deep-clean — seats, floor mats, trunk. CG direct (CJ, ~10%).
+  {
+    id: 'chemguys-fabric-clean',
+    brand: 'Chemical Guys',
+    name: 'Foaming Citrus Fabric Clean Carpet & Upholstery Shampoo (16oz)',
+    category: 'interior',
+    vendor: 'chemicalguys-cj',
+    chemicalguysUrl:
+      'https://www.chemicalguys.com/products/foaming-citrus-fabric-clean-carpet-upholstery-shampoo?variant=40482189418545',
+    priceRange: '$12',
+    rating: 4.7,
+    positioning:
+      'Foaming citrus shampoo that lifts embedded dirt, stains, and odors out of cloth seats, floor mats, and carpet — the part no car wash ever touches.',
+    imageUrl:
+      'https://cdn.shopify.com/s/files/1/0742/8938/1681/files/CWS203-16-Front.jpg',
+  },
 
   // ───── Touchless soaps ─────
   // Products with "Touchless" in the name are flagship for this site — even
@@ -546,10 +595,16 @@ export const SHOP_SECTIONS: { id: string; title: string; subtitle: string; categ
     categories: ['ceramic-protection'],
   },
   {
-    id: 'wheels-interior',
-    title: 'Wheel & Interior Care',
-    subtitle: 'Spray-and-rinse wheel cleaners and quick interior wipes for between-wash maintenance.',
-    categories: ['wheel-care', 'interior'],
+    id: 'interior',
+    title: 'Interior Care',
+    subtitle: 'A touchless wash cleans the outside — these clean the inside. All-surface cleaners, quick detailers, carpet shampoo, and air fresheners for the part no car wash ever touches.',
+    categories: ['interior'],
+  },
+  {
+    id: 'wheels',
+    title: 'Wheel Care',
+    subtitle: 'Spray-and-rinse wheel cleaners that dissolve brake dust with no scrubbing.',
+    categories: ['wheel-care'],
   },
 ];
 
@@ -561,57 +616,63 @@ export const SHOP_SECTIONS: { id: string; title: string; subtitle: string; categ
 // $/sale) with proven Amazon converters and "Touchless"-named soaps (Amazon
 // converts higher + 24h cart-wide attribution + matches search intent). The
 // blend captures both buyer types instead of forcing one store.
+// DIRECTORY PAGES now lead with INTERIOR / complementary care (2026-07-05).
+// Rationale: a directory visitor just decided to DRIVE to a touchless wash —
+// they are explicitly NOT trying to wash their car at home, so exterior DIY
+// gear (foam cannons, pressure washers, soaps) was the worst possible intent
+// match (~$4/mo affiliate over 3 months). A touchless wash only cleans the
+// OUTSIDE, so "now clean the inside" (interior cleaner, detailer, air
+// freshener, carpet shampoo) is the genuinely complementary pitch. All four
+// are Chemical Guys via CJ (~10%, the higher-margin network). The exterior-DIY
+// catalog is retained ONLY on the /shop hub + /shop/best-* article pages
+// (SEO + Monumetric ad inventory) and the equipment audience below.
 export const PLACEMENT_PRESETS = {
-  // Sticky sidebar — image-having products only (small/glanceable unit).
-  // Lead with the proven Meguiar's $20 ceramic wax (high Amazon conversion)
-  // + two high-margin CG items.
+  // Sticky sidebar — small/glanceable unit; the one place a directory visitor
+  // (literally standing at a wash) might convert. Clean → maintain → freshen.
   listing: [
-    'meguiars-hybrid-ceramic-wax',
     'chemguys-total-interior-cleaner',
-    'chemguys-woolly-mammoth-towel',
+    'chemguys-innerclean-detailer',
+    'chemguys-new-car-smell',
   ],
   metroBest: [
-    'meguiars-hybrid-ceramic-wax',
     'chemguys-total-interior-cleaner',
-    'chemguys-woolly-mammoth-towel',
+    'chemguys-innerclean-detailer',
+    'chemguys-new-car-smell',
   ],
-  // Homepage — Swift "Touchless" soap (Amazon SEO match + editor pick) plus
-  // three high-margin CG products spanning soap, snow foam, and ceramic.
+  // Homepage — full interior 4-up: all-surface cleaner, quick detailer, carpet
+  // shampoo, air freshener.
   homepage: [
-    'swift-touchless-shampoo',
-    'chemguys-mr-pink-super-suds',
-    'chemguys-honeydew-snow-foam',
-    'chemguys-hydroslick',
+    'chemguys-total-interior-cleaner',
+    'chemguys-innerclean-detailer',
+    'chemguys-fabric-clean',
+    'chemguys-new-car-smell',
   ],
-  // Equipment audience — the full DIY at-home kit. Pressure washer (Amazon,
-  // core hardware, now earning again) + CG foam cannon + CG snow foam +
-  // Swift touchless soap.
+  // Equipment audience — the ONE genuinely DIY-at-home audience (they're
+  // researching wash EQUIPMENT). Keep the exterior at-home kit: pressure washer
+  // + CG foam cannon + CG snow foam + Swift touchless soap.
   equipment: [
     'sun-joe-spx3000',
     'chemguys-torq-max-foam-8',
     'chemguys-honeydew-snow-foam',
     'swift-touchless-shampoo',
   ],
-  // Chain subscribers — reproduce the touchless experience at home. Optimum
-  // "Touchless" Decon (Amazon SEO, ceramic-safe) + CG soap + CG ceramic.
+  // Chain subscribers — interior care between wash visits.
   chains: [
-    'optimum-touchless-decon',
-    'chemguys-mr-pink-super-suds',
-    'chemguys-hydroslick',
-  ],
-  // Unlimited subscribers — between-wash care. Optimum (touchless SEO) + CG
-  // ceramic + CG drying towel.
-  unlimited: [
-    'optimum-touchless-decon',
-    'chemguys-hydroslick',
-    'chemguys-woolly-mammoth-towel',
-  ],
-  // 24-hour convenience — quick proven converters: Meguiar's wax + CG
-  // interior cleaner + Griot's microfiber towel (4.9, strong Amazon seller).
-  twentyFourHour: [
-    'meguiars-hybrid-ceramic-wax',
     'chemguys-total-interior-cleaner',
-    'griots-microfiber-towel',
+    'chemguys-fabric-clean',
+    'chemguys-innerclean-detailer',
+  ],
+  // Unlimited subscribers — between-wash interior upkeep.
+  unlimited: [
+    'chemguys-innerclean-detailer',
+    'chemguys-new-car-smell',
+    'chemguys-total-interior-cleaner',
+  ],
+  // 24-hour convenience — quick interior refresh.
+  twentyFourHour: [
+    'chemguys-total-interior-cleaner',
+    'chemguys-new-car-smell',
+    'chemguys-innerclean-detailer',
   ],
 } as const satisfies Record<string, readonly string[]>;
 
