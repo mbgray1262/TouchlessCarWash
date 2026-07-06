@@ -95,6 +95,13 @@ export function useFastCuration(listingId: string) {
   const [classifyResult, setClassifyResult] = useState<string | null>(null);
   const [classifyEvidence, setClassifyEvidence] = useState<string | null>(null);
   const prevListingId = useRef<string | null>(null);
+  // URLs the admin has blocked — DB blocked_photos plus any X'd this session.
+  // Kept in a ref (not just state) so discoverPhotos/seeding callbacks always
+  // see the current set without stale-closure issues, ensuring an X'd photo
+  // can never re-enter the candidate list (the "candidates reappear after
+  // Approve & Next" bug: google_photo_url/street_view_url were re-added on
+  // every load without consulting blocked_photos).
+  const blockedUrlsRef = useRef<Set<string>>(new Set());
 
   // Load listing data
   const loadListing = useCallback(async () => {
@@ -115,6 +122,7 @@ export function useFastCuration(listingId: string) {
     ]);
     if (data) {
       (data as ListingData).touchless_evidence_count = evidenceCount ?? 0;
+      blockedUrlsRef.current = new Set((data as ListingData).blocked_photos ?? []);
       // NOTE: We intentionally do NOT run any browser-side HEAD probes here.
       // A previous version of this code nulled hero_image and filtered photos[]
       // whenever a HEAD fetch failed (CORS, timeout, network blip, extension
@@ -194,7 +202,9 @@ export function useFastCuration(listingId: string) {
           }
         })
       );
-      const filteredCandidates = validatedCandidates.filter((c): c is CandidatePhoto => c !== null);
+      const filteredCandidates = validatedCandidates.filter(
+        (c): c is CandidatePhoto => c !== null && !blockedUrlsRef.current.has(c.url),
+      );
 
       // Merge with any pre-loaded candidates (avoid duplicates by URL)
       setCandidates(prev => {
@@ -228,6 +238,7 @@ export function useFastCuration(listingId: string) {
       setListing(null);       // Clear stale listing to prevent old hero from flashing
       setCandidates([]);
       setSkippedUrls([]);
+      blockedUrlsRef.current = new Set();
       setHeroRemoved(false);
       setSourceCounts(null);
       setSelectedId(null);
@@ -279,7 +290,8 @@ export function useFastCuration(listingId: string) {
       // can see them — the public listing page always appends these to the gallery, so
       // they'd show as "surprise" photos if not shown here.
       const existingUrls = new Set([listing.hero_image, ...(listing.photos ?? [])].filter(Boolean));
-      if (listing.google_photo_url && !existingUrls.has(listing.google_photo_url)) {
+      const blocked = blockedUrlsRef.current;
+      if (listing.google_photo_url && !existingUrls.has(listing.google_photo_url) && !blocked.has(listing.google_photo_url)) {
         existing.push({
           id: 'existing-google-photo',
           url: listing.google_photo_url,
@@ -288,7 +300,7 @@ export function useFastCuration(listingId: string) {
           tag: null,
         });
       }
-      if (listing.street_view_url && !existingUrls.has(listing.street_view_url)) {
+      if (listing.street_view_url && !existingUrls.has(listing.street_view_url) && !blocked.has(listing.street_view_url)) {
         existing.push({
           id: 'existing-street-view',
           url: listing.street_view_url,
@@ -358,6 +370,9 @@ export function useFastCuration(listingId: string) {
       const photo = prev.find(c => c.id === photoId);
       if (photo) {
         setSkippedUrls(s => [...s, photo.url]);
+        // Also track in the blocked ref so a re-discovery in the same session
+        // (e.g. clicking "Google Photos" after X'ing) can't resurface it.
+        blockedUrlsRef.current.add(photo.url);
       }
       return prev.filter(c => c.id !== photoId);
     });

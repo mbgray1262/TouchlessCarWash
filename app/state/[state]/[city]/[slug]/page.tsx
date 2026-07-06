@@ -328,8 +328,14 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     ...(listing.google_photo_url ? [listing.google_photo_url] : []),
     ...(listing.street_view_url ? [listing.street_view_url] : []),
   ];
+  // Photos an admin removed in the photo-audit tool (blocked_photos) must not
+  // resurface via the google_photo_url / street_view_url auto-appends. The
+  // current hero is exempt: if it was later re-chosen it wins over an old block.
+  const blockedPhotos = new Set(
+    (listing.blocked_photos ?? []).filter((u) => u !== heroImage),
+  );
   for (const p of candidatePhotos) {
-    if (p && isImageUrl(p) && p !== logoImage && !seenUrls.has(p)) {
+    if (p && isImageUrl(p) && p !== logoImage && !seenUrls.has(p) && !blockedPhotos.has(p)) {
       seenUrls.add(p);
       allGalleryPhotos.push(p);
     }

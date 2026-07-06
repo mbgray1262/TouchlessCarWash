@@ -161,8 +161,10 @@ export function ListingEditorModal({ listingId, onClose, onUpdate, onNext }: Pro
   const heroBase = listing.hero_image;
   // Include google_photo_url and street_view_url in the gallery display — these appear
   // on the public listing page even when not in the photos array, so show them here too.
+  // Blocked (admin-removed) photos stay hidden or they'd reappear on every open.
   const autoPhotos = [listing.google_photo_url, listing.street_view_url]
-    .filter((u): u is string => !!u && u !== heroBase && !allPhotos.includes(u));
+    .filter((u): u is string => !!u && u !== heroBase && !allPhotos.includes(u)
+      && !(listing.blocked_photos ?? []).includes(u));
   const galleryPhotos = [...allPhotos.filter(p => p !== heroBase), ...autoPhotos];
 
   // ─── Actions ────────────────────────────────────────────────────

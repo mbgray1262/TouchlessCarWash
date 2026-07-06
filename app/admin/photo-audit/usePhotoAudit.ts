@@ -424,11 +424,16 @@ export function usePhotoAudit() {
     // equipment-classification errors (mine or the AI's) one maker at a time.
     if (filter === 'by_equipment') {
       if (!equipmentBrand) { setResults([]); setFilteredTotal(0); setLoading(false); return; }
+      // Touchless only — reverted/not-touchless listings don't belong in the
+      // curation view (the dedicated Tier-2 Recheck / Second Look tabs exist
+      // for reviewing those).
       const { count: eqCount } = await supabase.from('listings')
-        .select('id', { count: 'exact', head: true }).eq('equipment_brand', equipmentBrand);
+        .select('id', { count: 'exact', head: true }).eq('equipment_brand', equipmentBrand)
+        .eq('is_touchless', true);
       const { data: eqRows } = await supabase.from('listings')
         .select('id, name, slug, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, is_touchless, photo_audited_at, parent_chain')
         .eq('equipment_brand', equipmentBrand)
+        .eq('is_touchless', true)
         .order('name', { ascending: true })
         .range(offset, offset + PAGE_SIZE - 1);
       const eqResults: AuditResult[] = (eqRows ?? []).map((l) => {
