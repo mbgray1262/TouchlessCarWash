@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/lib/supabase';
+import { getStateSlug, slugify } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
 import { CropModal } from '@/app/admin/hero-review/CropModal';
 import { EQUIPMENT_BRANDS, EQUIPMENT_MODELS } from '@/app/admin/hero-review/types';
@@ -335,6 +336,19 @@ export default function FullEditListingPanel({ listing, open, onClose, onSaved }
 
       const { error } = await supabase.from('listings').update(updates).eq('id', listing.id);
       if (error) throw error;
+
+      // Bust the CDN/ISR cache for this listing's public page so the edit shows
+      // up immediately instead of being masked by the cached page for up to an
+      // hour (the listing page is on a 1-hour ISR window). Fire-and-forget —
+      // never block or fail the save on this.
+      if (listing.slug && listing.city && listing.state) {
+        const path = `/state/${getStateSlug(listing.state)}/${slugify(listing.city)}/${listing.slug}`;
+        fetch('/api/revalidate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path }),
+        }).catch(() => {});
+      }
 
       onSaved({ ...listing, ...updates } as EditableFullListing);
       toast({ title: 'Saved', description: `${form.name} has been updated.` });

@@ -5,9 +5,9 @@ import { revalidatePath } from 'next/cache';
  * On-demand revalidation endpoint for admin tools.
  * POST /api/revalidate { path: "/state/kansas/louisburg/xcel-car-wash-..." }
  *
- * Strategy: listing pages use `dynamic = 'force-dynamic'` (no ISR cache) with
- * Netlify CDN caching via `Netlify-CDN-Cache-Control` headers. On admin edits
- * we purge the Netlify CDN cache so the next visitor gets fresh content.
+ * Strategy: pages use ISR (`revalidate`, mostly 1h) cached at the Netlify edge.
+ * On admin edits we purge the Netlify CDN cache + pre-warm the page so the next
+ * visitor gets fresh content immediately, without waiting on the ISR window.
  */
 export async function POST(request: NextRequest) {
   try {

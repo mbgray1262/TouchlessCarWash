@@ -55,7 +55,16 @@ import { ListingCrossLinks } from './ListingCrossLinks';
 
 // Force dynamic rendering — no ISR cache layer. Netlify CDN handles edge caching
 // and purgeCache() reliably clears it when admins make edits.
-export const revalidate = 30; // short ISR window so admin edits appear within ~30s (was 3600). Same render mode as before — no force-dynamic, no crash risk.
+// 1-hour ISR window, matching every other page. This is the site's
+// highest-traffic page (~5k listing URLs = Google's landing pages); a short
+// window meant it re-rendered via a serverless function up to 120x more often
+// than the rest of the site, and Netlify's function-compute credit usage was
+// doubling month-over-month (60→137→266 GB-Hrs) as SEO traffic grew. Admin
+// edits do NOT wait on this window: every edit surface POSTs to /api/revalidate,
+// which purges the Netlify CDN + pre-warms the page, so changes appear
+// immediately. The window only governs re-rendering for anonymous traffic
+// absent an edit — 1h keeps that compute bounded.
+export const revalidate = 3600;
 // ISR on-demand: prerender none at build, but mark the route static so each
 // render is cached at the Netlify edge. A dynamic [param] route WITHOUT
 // generateStaticParams is treated as fully dynamic (no-store) and bypasses the CDN.
