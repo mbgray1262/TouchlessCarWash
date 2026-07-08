@@ -168,6 +168,7 @@ export const METRO_AREAS: MetroArea[] = [
   { name: 'Greensboro', displayName: 'Greensboro, NC', slug: 'greensboro', lat: 36.0726, lng: -79.7920, radiusMiles: 20, states: ['NC'], region: 'Southeast' },
   { name: 'Fayetteville', displayName: 'Fayetteville, NC', slug: 'fayetteville', lat: 35.0527, lng: -78.8784, radiusMiles: 20, states: ['NC'], region: 'Southeast' },
   { name: 'Wilmington', displayName: 'Wilmington, NC', slug: 'wilmington', lat: 34.2257, lng: -77.9447, radiusMiles: 20, states: ['NC'], region: 'Southeast' },
+  { name: 'Goldsboro', displayName: 'Goldsboro, NC', slug: 'goldsboro', lat: 35.3849, lng: -77.9928, radiusMiles: 20, states: ['NC'], region: 'Southeast' },
   { name: 'Erie', displayName: 'Erie, PA', slug: 'erie', lat: 42.1292, lng: -80.0851, radiusMiles: 20, states: ['PA'], region: 'Northeast' },
   { name: 'York', displayName: 'York, PA', slug: 'york', lat: 39.9626, lng: -76.7277, radiusMiles: 15, states: ['PA'], region: 'Northeast' },
   { name: 'Chambersburg', displayName: 'Chambersburg, PA', slug: 'chambersburg', lat: 39.9376, lng: -77.6611, radiusMiles: 20, states: ['PA'], region: 'Northeast' },
