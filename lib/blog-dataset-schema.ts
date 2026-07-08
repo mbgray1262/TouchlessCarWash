@@ -36,6 +36,9 @@ export function getBlogDatasetJsonLd(input: DatasetInput): Record<string, unknow
   if (input.slug === 'best-touchless-car-wash-chains-ranked') {
     return chainRankingDataset(input);
   }
+  if (input.slug === 'touchless-car-wash-satisfaction-by-state') {
+    return stateRankingDataset(input);
+  }
   if (input.slug !== 'touchless-car-wash-statistics') return null;
 
   const url = `${SITE_URL}/blog/${input.slug}`;
@@ -308,6 +311,51 @@ function chainRankingDataset(input: DatasetInput): Record<string, unknown> {
     measurementTechnique: [
       'Natural-language classification of Google review snippets for touchless-wash sentiment',
       'Per-location Touchless Satisfaction Score averaged by parent chain (min 8 locations)',
+    ],
+    variableMeasured,
+    distribution: [{ '@type': 'DataDownload', encodingFormat: 'text/html', contentUrl: url }],
+  };
+}
+
+/**
+ * Dataset markup for the state-by-state satisfaction ranking
+ * (/blog/touchless-car-wash-satisfaction-by-state). Headline facts as citable
+ * PropertyValues, anchored to in-page sections. Values are a periodic snapshot;
+ * the on-page table itself is regenerated live on each revalidate.
+ */
+function stateRankingDataset(input: DatasetInput): Record<string, unknown> {
+  const url = `${SITE_URL}/blog/${input.slug}`;
+  const variableMeasured = [
+    { '@type': 'PropertyValue', name: 'States ranked by touchless car wash satisfaction', value: 36, unitText: 'states', url: `${url}#touchless-car-wash-satisfaction-ranked-by-state` },
+    { '@type': 'PropertyValue', name: 'National average Touchless Satisfaction Score', value: 70, unitText: 'out of 100', url: `${url}#key-findings` },
+    { '@type': 'PropertyValue', name: 'Highest-scoring state (Nebraska) Touchless Satisfaction Score', value: 75, unitText: 'out of 100', url: `${url}#touchless-car-wash-satisfaction-ranked-by-state` },
+    { '@type': 'PropertyValue', name: 'Lowest-scoring ranked state (Maryland) Touchless Satisfaction Score', value: 63, unitText: 'out of 100', url: `${url}#touchless-car-wash-satisfaction-ranked-by-state` },
+  ];
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Dataset',
+    name: input.title,
+    description: input.description,
+    url,
+    sameAs: url,
+    license: 'https://creativecommons.org/licenses/by/4.0/',
+    isAccessibleForFree: true,
+    datePublished: input.datePublished,
+    dateModified: input.dateModified,
+    keywords: [
+      'touchless car wash satisfaction by state',
+      'best states touchless car wash',
+      'car wash satisfaction ranking',
+      'touchless satisfaction score',
+      'car wash study',
+    ],
+    creator: { '@type': 'Organization', name: ORG_NAME, url: SITE_URL },
+    publisher: { '@type': 'Organization', name: ORG_NAME, url: SITE_URL },
+    spatialCoverage: { '@type': 'Place', name: 'United States' },
+    temporalCoverage: '2024-01-01/2026-07-08',
+    measurementTechnique: [
+      'Natural-language classification of Google review snippets for touchless-wash sentiment',
+      'Per-location Touchless Satisfaction Score averaged by state (min 20 scored washes)',
     ],
     variableMeasured,
     distribution: [{ '@type': 'DataDownload', encodingFormat: 'text/html', contentUrl: url }],

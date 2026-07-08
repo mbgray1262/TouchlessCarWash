@@ -453,10 +453,10 @@ export default async function CityPage({ params }: CityPageProps) {
     mainEntity: [
       {
         '@type': 'Question',
-        name: `How many touchless car washes are in ${cityName}?`,
+        name: `Are there touchless car washes in ${cityName}?`,
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `There are ${allListings.length} verified touchless car wash${allListings.length !== 1 ? 'es' : ''} in ${cityName}, ${stateName}.`,
+          text: `Yes. There ${allListings.length === 1 ? 'is' : 'are'} ${allListings.length} verified touchless car wash${allListings.length !== 1 ? 'es' : ''} in ${cityName}, ${stateName} — all brushless, so nothing physically touches your vehicle's paint.`,
         },
       },
       {
@@ -485,6 +485,14 @@ export default async function CityPage({ params }: CityPageProps) {
         acceptedAnswer: {
           '@type': 'Answer',
           text: 'Yes. Touchless car washes use high-pressure water jets and specialized detergents instead of physical brushes or cloth. This eliminates the risk of swirl marks, micro-scratches, and paint damage that can occur with traditional brush-based washes, making them the safest automated wash option for all paint types, clear coats, ceramic coatings, and PPF. Owners of Tesla, BMW, Mercedes-Benz, Lexus, Audi, and other luxury vehicles choose touchless washes to protect their finish.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'What are the disadvantages of a touchless car wash?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: "Touchless car washes trade a little cleaning power for zero paint contact. Because no brushes agitate the surface, heavy caked-on mud, bird droppings, or bug residue may need a pre-soak or a second pass. They rely on stronger detergents and high-pressure water, often cost slightly more than a basic brush tunnel wash, and usually skip hand-drying, so water spots can form if you don't dry promptly (many locations offer air blowers). For most drivers the trade-off is worth it — you avoid the swirl marks and micro-scratches that spinning brushes can leave.",
         },
       },
       {
@@ -758,10 +766,10 @@ export default async function CityPage({ params }: CityPageProps) {
           <div className="space-y-5">
             <div className="p-5 bg-gray-50 rounded-xl border border-gray-200">
               <h3 className="font-semibold text-[#0F2744] mb-2">
-                How many touchless car washes are in {cityName}?
+                Are there touchless car washes in {cityName}?
               </h3>
               <p className="text-gray-600 text-sm leading-relaxed">
-                There are <strong>{allListings.length}</strong> verified touchless car wash{allListings.length !== 1 ? 'es' : ''} in {cityName}, {stateName}.
+                Yes. There {allListings.length === 1 ? 'is' : 'are'} <strong>{allListings.length}</strong> verified touchless car wash{allListings.length !== 1 ? 'es' : ''} in {cityName}, {stateName} — all brushless, so nothing physically touches your vehicle&apos;s paint.
               </p>
             </div>
 
@@ -793,6 +801,24 @@ export default async function CityPage({ params }: CityPageProps) {
                 occur with traditional brush-based washes — making them the safest automated wash option for all paint
                 types, clear coats, ceramic coatings, and PPF. Owners of Tesla, BMW, Mercedes-Benz, Lexus, Audi, and
                 other high-end vehicles choose touchless washes specifically to protect their finish.
+              </p>
+            </div>
+
+            <div className="p-5 bg-gray-50 rounded-xl border border-gray-200">
+              <h3 className="font-semibold text-[#0F2744] mb-2">
+                What are the disadvantages of a touchless car wash?
+              </h3>
+              <p className="text-gray-600 text-sm leading-relaxed mb-3">
+                Touchless washes trade a little cleaning power for zero paint contact. The main trade-offs:
+              </p>
+              <ul className="list-disc pl-5 space-y-1.5 text-gray-600 text-sm leading-relaxed">
+                <li>Heavy caked-on mud, bird droppings, or bug residue may need a pre-soak or a second pass, since no brushes agitate the surface.</li>
+                <li>They rely on stronger detergents and high-pressure water to clean without contact.</li>
+                <li>They often cost slightly more than a basic brush tunnel wash.</li>
+                <li>Most skip hand-drying, so water spots can form if you don&apos;t dry promptly — though many locations offer air blowers.</li>
+              </ul>
+              <p className="text-gray-600 text-sm leading-relaxed mt-3">
+                For most drivers the trade-off is worth it: you avoid the swirl marks and micro-scratches that spinning brushes can leave.
               </p>
             </div>
 

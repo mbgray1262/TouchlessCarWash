@@ -7,6 +7,7 @@ import { supabase, type BlogPost } from '@/lib/supabase';
 import { US_STATES, slugify } from '@/lib/constants';
 import { generateTop10ChainsContent } from '@/lib/dynamic-blog-top10';
 import { generateSubscriptionsContent } from '@/lib/dynamic-blog-subscriptions';
+import { generateStateRankingsContent } from '@/lib/dynamic-blog-state-rankings';
 import { getTakeaways } from '@/lib/blog-takeaways';
 import { getHowTo } from '@/lib/blog-howto-steps';
 import { getBlogDatasetJsonLd } from '@/lib/blog-dataset-schema';
@@ -308,6 +309,8 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     content = await generateTop10ChainsContent();
   } else if (post.slug === 'best-touchless-car-wash-subscriptions-2026') {
     content = await generateSubscriptionsContent();
+  } else if (post.slug === 'touchless-car-wash-satisfaction-by-state') {
+    content = await generateStateRankingsContent();
   } else {
     content = post.content;
   }
