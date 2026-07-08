@@ -156,7 +156,7 @@ export default async function TwentyFourHourHub() {
         {/* Mid-content product spotlight */}
         <div className="mb-10">
           <ProductSpotlight
-            productId="chemguys-interior-wipes"
+            productId="chemguys-innerclean-detailer"
             eyebrow="Late-Night Essential"
           />
         </div>

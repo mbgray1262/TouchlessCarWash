@@ -128,6 +128,16 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/24-hour-touchless-car-wash" className="text-white/70 hover:text-[#22C55E] transition-colors py-1.5 inline-block">
+                  24-Hour Car Washes
+                </Link>
+              </li>
+              <li>
+                <Link href="/unlimited-touchless-car-wash" className="text-white/70 hover:text-[#22C55E] transition-colors py-1.5 inline-block">
+                  Unlimited Plans
+                </Link>
+              </li>
+              <li>
                 <Link href="/shop" className="text-white/70 hover:text-[#22C55E] transition-colors py-1.5 inline-block">
                   Shop Touchless Gear
                 </Link>
