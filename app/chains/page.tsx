@@ -3,7 +3,6 @@ import { ChevronRight, Building2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { publicListings } from '@/lib/public-listings';
 import { CHAINS, renderChainDescription } from '@/lib/chains';
-import { ProductGrid } from '@/components/ProductGrid';
 import { getChainHeroImage } from '@/lib/chain-brand-images';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import type { Metadata } from 'next';
@@ -182,13 +181,6 @@ export default async function ChainsPage() {
           ))}
         </div>
 
-        {/* Affiliate Products — between-wash care for chain subscribers */}
-        <ProductGrid
-          preset="chains"
-          variant="card"
-          bg="gray"
-          subtitle="Got a monthly unlimited plan? These pair well with frequent touchless washing."
-        />
       </div>
     </div>
   );

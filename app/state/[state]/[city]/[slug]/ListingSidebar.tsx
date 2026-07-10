@@ -13,7 +13,6 @@ import SuggestEditModal from '@/components/SuggestEditModal';
 import VerificationPrompt, { type VerificationStats } from '@/components/VerificationPrompt';
 import { TrackableLink } from '@/components/TrackableLink';
 import { HoursStatusBadge } from '@/components/HoursStatusBadge';
-import { ProductSidebar } from '@/components/ProductSidebar';
 import { Button } from '@/components/ui/button';
 import type { Listing } from '@/lib/supabase';
 import { streetAddress, hasStreetAddress } from '@/lib/utils';
@@ -222,8 +221,6 @@ export function ListingSidebar({
           More in {cityName}
         </Link>
       </Button>
-
-      <ProductSidebar preset="listing" title="Touchless Gear" />
     </div>
   );
 }

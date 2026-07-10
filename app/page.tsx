@@ -3,7 +3,6 @@ import { headers } from 'next/headers';
 import { ProductsBanner } from '@/components/ProductsBanner';
 import { NearbyMetroBanner } from '@/components/NearbyMetroBanner';
 import { decodeNetlifyGeo, nearestMetro } from '@/lib/nearest-metro';
-import { ProductGrid } from '@/components/ProductGrid';
 import { Star, MapPin, CheckCircle, TrendingUp, Search, Droplet, ArrowRight } from 'lucide-react';
 import HeroSection from '@/components/HeroSection';
 import { Card, CardContent } from '@/components/ui/card';
@@ -381,17 +380,6 @@ export default async function Home({ searchParams }: { searchParams?: { geo?: st
       )}
 
       <HomeVideoSection videos={homeVideos} />
-
-      <section className="py-14 px-4 bg-gray-50 border-y border-gray-200">
-        <div className="container mx-auto max-w-6xl">
-          <ProductGrid
-            preset="homepage"
-            variant="card"
-            bg="transparent"
-            subtitle="Going to a touchless wash? These are the four things our editors actually use to make the wash last longer."
-          />
-        </div>
-      </section>
 
       <section id="browse-states" className="py-16 bg-background">
         <div className="container mx-auto px-4">

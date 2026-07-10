@@ -4,8 +4,6 @@ import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/lib/supabase";
 import { EQUIPMENT_BRAND_DATA, getBrandLabel } from "@/lib/equipment-data";
-import { ProductGrid } from "@/components/ProductGrid";
-import { ProductSpotlight } from "@/components/ProductSpotlight";
 
 export const revalidate = 3600; // ISR: edge-cache full-body response (replaces force-dynamic no-store bypass that caused slow TTFB); 304-bug-safe, validated on /best canary
 
@@ -126,14 +124,6 @@ export default async function EquipmentIndexPage() {
           </Link>
         </div>
 
-        {/* Mid-content product spotlight */}
-        <div className="mb-10">
-          <ProductSpotlight
-            productId="swift-touchless-shampoo"
-            eyebrow="DIY at Home"
-          />
-        </div>
-
         {/* Brand grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
           {brandsWithListings.map((brand) => {
@@ -173,16 +163,6 @@ export default async function EquipmentIndexPage() {
             );
           })}
         </div>
-
-        {/* Affiliate Products — DIY home touchless setup */}
-        <section className="mb-12">
-          <ProductGrid
-            preset="equipment"
-            variant="card"
-            bg="gray"
-            subtitle="Want to run touchless washes at home between commercial visits? Here's the gear that gets it done."
-          />
-        </section>
 
         {/* FAQ */}
         <section>

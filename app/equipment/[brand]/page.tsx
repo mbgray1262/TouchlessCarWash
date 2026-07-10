@@ -11,7 +11,6 @@ import {
   getModelsByBrand,
 } from "@/lib/equipment-data";
 import { slugify, US_STATES } from "@/lib/constants";
-import { ProductGrid } from "@/components/ProductGrid";
 import { EquipmentModelVideo } from "@/components/EquipmentModelVideo";
 
 export const dynamic = 'force-dynamic'; // see /state/.../slug for context — Netlify CDN cache (netlify.toml) handles edge perf; force-dynamic prevents the Next.js ISR etag-based 304-without-body bug that kept breaking /blog and /best on the CDN.
@@ -375,16 +374,6 @@ export default async function BrandDetailPage({ params, searchParams }: Props) {
             </div>
           </section>
         )}
-
-        {/* Affiliate Products — home DIY setup */}
-        <section className="mb-12">
-          <ProductGrid
-            preset="equipment"
-            variant="card"
-            bg="gray"
-            subtitle="Building your own touchless setup at home? Start here."
-          />
-        </section>
 
         {/* FAQ */}
         <section>

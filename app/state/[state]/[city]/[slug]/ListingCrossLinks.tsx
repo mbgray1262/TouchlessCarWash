@@ -5,7 +5,6 @@
  */
 import Link from 'next/link';
 import { ChevronRight, CalendarCheck, Trophy } from 'lucide-react';
-import { ProductGrid } from '@/components/ProductGrid';
 import { RelatedReading } from '@/components/RelatedReading';
 import type { Listing } from '@/lib/supabase';
 import { earnsTrophy } from '@/lib/metro-scoring';
@@ -134,11 +133,6 @@ export function ListingCrossLinks({
           </div>
         </div>
       )}
-
-      {/* Affiliate Products — inline recommendations for car care */}
-      <div className="mt-10">
-        <ProductGrid preset="listing" variant="compact" bg="gray" />
-      </div>
 
       <RelatedReading />
 

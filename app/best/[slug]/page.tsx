@@ -15,8 +15,6 @@ import { OpenStatusBadge } from '@/components/OpenStatusBadge';
 import LogoImage from '@/components/LogoImage';
 import HeroImageFallback from '@/components/HeroImageFallback';
 import BestCardImage from '@/components/BestCardImage';
-import { ProductGrid } from '@/components/ProductGrid';
-import { ProductSpotlight } from '@/components/ProductSpotlight';
 import { DEFAULT_OG_IMAGE, ensureHttps } from '@/lib/seo';
 import type { Metadata } from 'next';
 
@@ -721,12 +719,6 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
                       </div>
                     </article>
                   </Link>
-                  {idx === 2 && (
-                    <ProductSpotlight
-                      productId="swift-touchless-shampoo"
-                      eyebrow="Editor Pick"
-                    />
-                  )}
                   </Fragment>
                 );
               })}
@@ -957,12 +949,6 @@ export default async function BestOfMetroPage({ params }: BestOfPageProps) {
           </div>
         </section>
 
-        {/* Affiliate Products */}
-        <section className="py-12 px-4 bg-gray-50 border-t border-gray-200">
-          <div className="container mx-auto max-w-6xl">
-            <ProductGrid preset="metroBest" variant="card" bg="transparent" />
-          </div>
-        </section>
       </main>
     </>
   );

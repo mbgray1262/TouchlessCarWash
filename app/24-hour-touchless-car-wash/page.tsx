@@ -3,8 +3,6 @@ import { ChevronRight, Clock } from 'lucide-react';
 import { publicListings } from '@/lib/public-listings';
 import { US_STATES, getStateName, getStateSlug } from '@/lib/constants';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
-import { ProductGrid } from '@/components/ProductGrid';
-import { ProductSpotlight } from '@/components/ProductSpotlight';
 import type { Metadata } from 'next';
 
 export const revalidate = 3600;
@@ -153,14 +151,6 @@ export default async function TwentyFourHourHub() {
           </p>
         </div>
 
-        {/* Mid-content product spotlight */}
-        <div className="mb-10">
-          <ProductSpotlight
-            productId="chemguys-innerclean-detailer"
-            eyebrow="Late-Night Essential"
-          />
-        </div>
-
         {/* State grid */}
         <div className="mb-12">
           <h2 className="text-2xl font-bold text-foreground mb-2">Browse 24-hour touchless car washes by state</h2>
@@ -210,15 +200,6 @@ export default async function TwentyFourHourHub() {
           </div>
         </div>
 
-        {/* Affiliate Products — late-night quick care */}
-        <div className="mb-10">
-          <ProductGrid
-            preset="twentyFourHour"
-            variant="card"
-            bg="gray"
-            subtitle="Quick essentials for late-night washes — toss them in your glovebox."
-          />
-        </div>
 
         {/* Cross-link */}
         <div className="p-6 bg-[#0F2744] rounded-2xl text-center">
