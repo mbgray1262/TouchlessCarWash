@@ -571,6 +571,34 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                   }
                   return null;
                 })()}
+                {/* Cross-type indicator — this physical wash also serves the OTHER
+                    wash type. Both types share ONE hero image + one photo set, so
+                    this warns the curator to pick a hero that represents both
+                    (a facility/exterior shot), not a type-specific bay photo. */}
+                {isSelfServe && listing.is_touchless === true && (
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium cursor-help ${
+                      listing.is_approved === true ? 'bg-sky-100 text-sky-700' : 'bg-slate-100 text-slate-600'
+                    }`}
+                    title={
+                      listing.is_approved === true
+                        ? 'Also a LIVE touchless wash. The hero image is shared with the live touchless page — pick a facility/exterior shot that represents both wash types, not a self-serve-only photo.'
+                        : 'Also classified touchless (not yet live). The hero is shared across both wash types — pick a photo that represents both.'
+                    }
+                  >
+                    <span className={`w-2 h-2 rounded-full ${listing.is_approved === true ? 'bg-sky-500' : 'bg-slate-400'}`} />
+                    {listing.is_approved === true ? 'Also Live Touchless' : 'Also Touchless'}
+                  </span>
+                )}
+                {!isSelfServe && listing.is_self_service === true && (
+                  <span
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-700 cursor-help"
+                    title="Also a self-serve wash. The hero image is shared across both wash types — pick a facility/exterior shot that represents both, not a touchless-bay-only photo."
+                  >
+                    <span className="w-2 h-2 rounded-full bg-teal-500" />
+                    Also Self-Serve
+                  </span>
+                )}
                 {listing.touchless_verified === 'user_review' && (listing.touchless_evidence_count ?? 0) > 0 && (
                   <span
                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 cursor-help"
