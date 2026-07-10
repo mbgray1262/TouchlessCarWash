@@ -757,6 +757,18 @@ export function useFastCuration(listingId: string) {
     setSaving(false);
   }, [listing]);
 
+  // Cross-tag as self-serve — mirror of markTouchless for the other direction.
+  // Used when reviewing a touchless listing that turns out to ALSO have self-serve
+  // bays. Adds is_self_service=true (marked source='admin_review' so it counts as
+  // a confirmed self-serve tag), keeps is_touchless / is_approved untouched.
+  const markSelfServe = useCallback(async () => {
+    if (!listing) return;
+    setSaving(true);
+    await supabase.from('listings').update({ is_self_service: true, self_service_source: 'admin_review' }).eq('id', listing.id);
+    setListing(prev => prev ? { ...prev, is_self_service: true } : prev);
+    setSaving(false);
+  }, [listing]);
+
   // Mark as "can't verify" — the admin can't confirm this is a real touchless
   // wash (no locatable storefront / evidence). HOLD it: un-approve so it drops
   // out of the public directory + sitemap (308-redirects), and stamp
@@ -1004,6 +1016,7 @@ export function useFastCuration(listingId: string) {
     setEquipment,
     toggleTouchlessVerified,
     markTouchless,
+    markSelfServe,
     markCantVerify,
     markNotTouchless,
     markNotACarWash,

@@ -32,6 +32,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
     addCapture, addUpload, addHeroDirect, addGalleryDirect, replaceUrl, updateWebsite, setFallbackHero,
     saveAll, approveAndNext, approveSelfServeAndNext, markNotSelfServe, classifyEquipment, setEquipment,
     markNotTouchless, markCantVerify, markNotACarWash, markClosed, deleteListing, heroRemoved,
+    markTouchless, markSelfServe,
   } = useFastCuration(listingId);
   const isSelfServe = washType === 'self_serve';
 
@@ -1008,6 +1009,38 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                   <Ban className="w-4 h-4" /> Tag Chain
                 </button>
               </>
+            )}
+            {/* Cross-tag: this listing ALSO serves the other wash type. Adds the
+                other flag without disturbing the current one or advancing, so the
+                badge updates in place. Only shown when the other flag isn't set. */}
+            {isSelfServe && listing.is_touchless !== true && (
+              <button
+                onClick={async () => {
+                  const goLive = listing.is_approved === true;
+                  if (!confirm(`Also tag "${listing.name}" as TOUCHLESS?\n\nKeeps its self-serve tag. ${goLive
+                    ? 'It is already approved, so it will appear on the public touchless directory (and in the touchless review queue).'
+                    : 'It will need touchless approval before appearing on the public touchless directory.'}`)) return;
+                  await markTouchless();
+                }}
+                disabled={saving}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-sky-100 hover:bg-sky-200 text-sky-700 text-sm font-medium disabled:opacity-50 border border-sky-200"
+                title="This wash is ALSO touchless. Adds the touchless tag (keeps self-serve) so it enters the touchless directory / review queue."
+              >
+                <Plus className="w-4 h-4" /> Also Touchless
+              </button>
+            )}
+            {!isSelfServe && listing.is_self_service !== true && (
+              <button
+                onClick={async () => {
+                  if (!confirm(`Also tag "${listing.name}" as SELF-SERVE?\n\nKeeps its touchless tag. Self-serve is not public yet, so this only stages it for the self-serve directory (and its review queue).`)) return;
+                  await markSelfServe();
+                }}
+                disabled={saving}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-teal-100 hover:bg-teal-200 text-teal-700 text-sm font-medium disabled:opacity-50 border border-teal-200"
+                title="This wash ALSO has self-serve bays. Adds the self-serve tag (keeps touchless) so it enters the self-serve directory / review queue."
+              >
+                <Plus className="w-4 h-4" /> Also Self-Serve
+              </button>
             )}
             <button
               onClick={async () => { await markCantVerify(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
