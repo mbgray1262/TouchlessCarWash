@@ -1,0 +1,13 @@
+-- Separate self-serve review tracking, independent of touchless photo_audited_at.
+--
+-- A mixed touchless+self-serve listing already has photo_audited_at set from its
+-- touchless review. Without a separate marker, the self-serve photo-audit queue
+-- would treat those ~1,847 mixed listings as already-reviewed and hide them —
+-- exactly the listings the admin needs to revisit to set a generic facility hero.
+--
+-- self_service_reviewed_at is stamped by approveSelfServeAndNext() in
+-- useFastCuration.ts when the admin confirms a listing in the Self-Service view.
+-- The self-serve queues (All "unreviewed only", Unscanned, and the reviewed-count
+-- stat) key off this column instead of photo_audited_at when the wash-type toggle
+-- is set to Self-Service.
+ALTER TABLE listings ADD COLUMN IF NOT EXISTS self_service_reviewed_at timestamptz;

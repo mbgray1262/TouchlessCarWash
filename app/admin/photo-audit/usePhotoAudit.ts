@@ -163,15 +163,22 @@ export function usePhotoAudit() {
   const [washType, setWashType] = useState<'touchless' | 'self_serve'>('touchless');
   const washColRef = useRef<'is_touchless' | 'is_self_service'>('is_touchless');
   washColRef.current = washType === 'self_serve' ? 'is_self_service' : 'is_touchless';
+  // "Reviewed" marker column, scoped to wash type. Touchless review is tracked by
+  // photo_audited_at; self-serve review is tracked separately by
+  // self_service_reviewed_at (see migration 20260710120000). Queue surfaces that
+  // mean "has this been reviewed for THIS wash type" read reviewedColRef.current
+  // so a mixed listing stays in the self-serve queue until reviewed there too.
+  const reviewedColRef = useRef<'photo_audited_at' | 'self_service_reviewed_at'>('photo_audited_at');
+  reviewedColRef.current = washType === 'self_serve' ? 'self_service_reviewed_at' : 'photo_audited_at';
 
   const loadQueueStats = useCallback(async () => {
     const [totalRes, auditedRes, noHeroRes, noHeroUnprocessedRes, heldRes, secondLookRes] = await Promise.all([
       // Total = ALL touchless listings (including chain brand locations with null hero_image)
       supabase.from('listings').select('id', { count: 'exact', head: true })
         .eq(washColRef.current, true),
-      // Audited = all touchless listings that have been photo_audited (any hero state)
+      // Audited = all listings reviewed for the active wash type (any hero state)
       supabase.from('listings').select('id', { count: 'exact', head: true })
-        .eq(washColRef.current, true).not('photo_audited_at', 'is', null),
+        .eq(washColRef.current, true).not(reviewedColRef.current, 'is', null),
       supabase.from('listings').select('id', { count: 'exact', head: true })
         .eq(washColRef.current, true).is('hero_image', null)
         .or('hero_image_source.is.null,hero_image_source.neq.fallback'),
@@ -487,11 +494,13 @@ export function usePhotoAudit() {
         .select('id, name, slug, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
         .eq(washColRef.current, true);
 
-      // When "Unreviewed only" is checked, hide listings that have already been
-      // photo_audited (either by AI batch or manual FastCuration approval stamp).
+      // When "Unreviewed only" is checked, hide listings already reviewed for the
+      // active wash type (touchless: photo_audited_at; self-serve:
+      // self_service_reviewed_at). Approving in the modal stamps that column, so
+      // the listing drops out of this queue on the next load.
       if (unreviewed) {
-        countQuery = countQuery.is('photo_audited_at', null);
-        dataQuery = dataQuery.is('photo_audited_at', null);
+        countQuery = countQuery.is(reviewedColRef.current, null);
+        dataQuery = dataQuery.is(reviewedColRef.current, null);
       }
 
       // Free-text search — match the listing name or its URL slug. Supports
@@ -563,13 +572,13 @@ export function usePhotoAudit() {
     if (filter === 'unscanned') {
       const { count: totalUnscanned } = await supabase
         .from('listings').select('id', { count: 'exact', head: true })
-        .eq(washColRef.current, true).is('photo_audited_at', null)
+        .eq(washColRef.current, true).is(reviewedColRef.current, null)
         .or(NOT_CLOSED);
 
       const { data: unscannedListings } = await supabase
         .from('listings')
         .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
-        .eq(washColRef.current, true).is('photo_audited_at', null)
+        .eq(washColRef.current, true).is(reviewedColRef.current, null)
         .or(NOT_CLOSED)
         // Prioritize: no hero first (need the most attention), then alphabetical
         .order('hero_image', { ascending: true, nullsFirst: true })

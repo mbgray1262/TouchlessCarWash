@@ -1024,6 +1024,13 @@ export default function PhotoAuditPage() {
             if ((viewFilter === 'no_hero' || viewFilter === 'unscanned' || viewFilter === 'no_evidence') && editorListingId) {
               removeFromResults(editorListingId);
             }
+            // In self-serve mode the All tab is the working queue — approving a
+            // listing stamps self_service_reviewed_at, so drop it from the current
+            // list immediately for progress feedback (it also stays gone on reload
+            // when "Unreviewed only" is checked).
+            if (washType === 'self_serve' && viewFilter === 'all' && editorListingId) {
+              removeFromResults(editorListingId);
+            }
             // On the Best-Of tab, approving/saving a winner counts as having
             // hero-reviewed it: persist the mark so it leaves the To Review queue.
             if (viewFilter === 'best_of' && editorListingId && bestOfSubFilter !== 'reviewed') {

@@ -518,18 +518,18 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                   // instead — approved (curated, will show when the self-serve
                   // directory launches) vs. pending review.
                   if (isSelfServe) {
-                    return isApproved ? (
+                    return listing.self_service_reviewed_at ? (
                       <span
                         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 cursor-help"
-                        title="Self-serve approved. Hidden from the public until the self-serve directory launches."
+                        title="You've reviewed this listing for self-serve. Hidden from the public until the self-serve directory launches."
                       >
                         <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                        Self-Serve Approved
+                        Self-Serve Reviewed
                       </span>
                     ) : (
                       <span
                         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 cursor-help"
-                        title="Self-serve — not yet reviewed."
+                        title="Not yet reviewed for self-serve."
                       >
                         <span className="w-2 h-2 rounded-full bg-amber-500" />
                         Self-Serve · Pending

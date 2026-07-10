@@ -54,6 +54,7 @@ interface ListingData {
   is_approved: boolean | null;
   is_touchless: boolean | null;
   is_self_service: boolean | null;
+  self_service_reviewed_at: string | null;
   crawl_notes: string | null;
   // Set by markClosed() to one of 'closed_permanently_admin' /
   // 'closed_temporarily_admin' / other classification labels. Read by
@@ -109,7 +110,7 @@ export function useFastCuration(listingId: string) {
     const [{ data }, { count: evidenceCount }] = await Promise.all([
       supabase
         .from('listings')
-        .select('id, name, city, state, address, zip, slug, latitude, longitude, google_place_id, website, hero_image, hero_image_source, photos, street_view_url, google_photo_url, blocked_photos, equipment_brand, equipment_model, touchless_verified, touchless_evidence, parent_chain, is_approved, is_touchless, is_self_service, crawl_notes, classification_source')
+        .select('id, name, city, state, address, zip, slug, latitude, longitude, google_place_id, website, hero_image, hero_image_source, photos, street_view_url, google_photo_url, blocked_photos, equipment_brand, equipment_model, touchless_verified, touchless_evidence, parent_chain, is_approved, is_touchless, is_self_service, self_service_reviewed_at, crawl_notes, classification_source')
         .eq('id', listingId)
         .maybeSingle(),
       // Real review evidence behind a 'user_review' verification: count of
@@ -880,11 +881,15 @@ export function useFastCuration(listingId: string) {
 
     if (listing) {
       const now = new Date().toISOString();
+      // Stamp self_service_reviewed_at (NOT photo_audited_at) — self-serve review
+      // is tracked independently of touchless review, so approving a mixed listing
+      // here never disturbs its touchless queue state, and a touchless-reviewed
+      // listing still surfaces in the self-serve queue until reviewed here too.
       const update: Record<string, unknown> = {
-        reviewed_at: now, photo_audited_at: now, is_approved: true, is_self_service: true,
+        reviewed_at: now, self_service_reviewed_at: now, is_approved: true, is_self_service: true,
       };
       await supabase.from('listings').update(update).eq('id', listing.id);
-      setListing(prev => prev ? { ...prev, is_approved: true, is_self_service: true } : prev);
+      setListing(prev => prev ? { ...prev, is_approved: true, is_self_service: true, self_service_reviewed_at: now } : prev);
     }
 
     onUpdate?.();
