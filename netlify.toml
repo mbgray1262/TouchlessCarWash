@@ -100,6 +100,16 @@ package = "@netlify/plugin-nextjs"
   [headers.values]
     Netlify-CDN-Cache-Control = "public, s-maxage=1800, stale-while-revalidate=86400, durable"
 
+# ads.txt → Monumetric-hosted file (hybrid/custom-site install). Monumetric
+# maintains this file on their end; the 301 keeps our ads.txt always current
+# without manual edits. force=true so it wins even if a static /ads.txt returns.
+# Method per Monumetric's own guidance (301 recommended).
+[[redirects]]
+  from = "/ads.txt"
+  to = "https://monu.delivery/adstxt/3/e/b2b8b0-9b01-4c4f-bca0-6a5b305299a6.txt"
+  status = 301
+  force = true
+
 # Old listing slug that was incorrectly matching a Florida listing — send to Austin city page
 [[redirects]]
   from = "/state/texas/austin/laser-carwash"
