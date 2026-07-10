@@ -438,7 +438,6 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
           stateName={stateName}
           cityName={cityName}
           trophyRanking={trophyRanking}
-          badgeInUse={badgeInUse}
           heroImage={heroImage}
           logoImage={logoImage}
           heroObjectPosition={heroObjectPosition}

@@ -25,7 +25,6 @@ interface ListingHeroProps {
   stateName: string;
   cityName: string;
   trophyRanking: BestOfRanking | null;
-  badgeInUse: boolean;
   heroImage: string | null;
   logoImage: string | null;
   heroObjectPosition: string;
@@ -38,7 +37,6 @@ export function ListingHero({
   stateName,
   cityName,
   trophyRanking,
-  badgeInUse,
   heroImage,
   logoImage,
   heroObjectPosition,
@@ -143,20 +141,6 @@ export function ListingHero({
             <span className="truncate">{heroShortAddress}</span>
             <span className="flex items-center gap-0.5 text-[#22C55E] font-semibold shrink-0">· Directions<ChevronRight className="w-3.5 h-3.5" /></span>
           </TrackableLink>
-          {trophyRanking && (
-            <div className="mt-3">
-              <Link
-                href={`/badge/${listing.slug}`}
-                className={badgeInUse
-                  ? 'inline-flex items-center gap-2 bg-white/15 hover:bg-white/25 text-white font-semibold text-xs md:text-sm px-3 py-2 rounded-lg border border-white/25 transition-all'
-                  : 'inline-flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-semibold text-xs md:text-sm px-3 py-2 rounded-lg shadow transition-all'}
-              >
-                {badgeInUse
-                  ? <><CheckCircle className="w-4 h-4 text-[#22C55E]" />Badge Active</>
-                  : <><Trophy className="w-4 h-4" />Claim Your Badge</>}
-              </Link>
-            </div>
-          )}
         </div>
       </div>
     </>
