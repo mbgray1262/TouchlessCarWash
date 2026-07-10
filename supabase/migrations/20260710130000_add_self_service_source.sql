@@ -1,0 +1,13 @@
+-- Provenance for the self-serve classification, so is_self_service can mean
+-- "confirmed self-serve" (not just "matched a fuzzy Google text search").
+--
+--   google_category    – Google's own business category / subtypes say self-serve
+--   name               – the wash's name self-identifies (Self Serve / Coin-Op / Wand)
+--   website            – the wash's own website / crawl snapshot text says self-serve
+--   vision             – confirmed by a vision pass over its photos (later step)
+--   harvest_unconfirmed – matched the "self service car wash" text search only, no
+--                         confirmation yet; is_self_service is set FALSE for these but
+--                         the marker lets the vision pass find and promote the real ones
+--   junk               – Google categorizes it as gas station / laundromat / detailer /
+--                         oil-change / repair — not a self-serve wash; is_self_service=false
+ALTER TABLE listings ADD COLUMN IF NOT EXISTS self_service_source text;
