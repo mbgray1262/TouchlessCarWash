@@ -424,6 +424,23 @@ export function useFastCuration(listingId: string) {
     });
   }, []);
 
+  // Add a pasted/uploaded photo DIRECTLY to the gallery (natural orientation, no
+  // 16:9 crop) — the paste-target='gallery' path. Never touches the hero, so the
+  // admin can set a hero and add several gallery shots in one pass. Caps at 8.
+  const addGalleryDirect = useCallback((url: string) => {
+    setCandidates(prev => {
+      const galleryCount = prev.filter(c => c.tag === 'gallery').length;
+      if (galleryCount >= 8) return prev;
+      return [...prev, {
+        id: `gallery-drop-${Date.now()}`,
+        url,
+        source: 'upload',
+        label: 'Uploaded (gallery)',
+        tag: 'gallery' as PhotoTag,
+      }];
+    });
+  }, []);
+
   // Replace a candidate URL (after crop/enhance)
   const replaceUrl = useCallback((photoId: string, newUrl: string) => {
     setCandidates(prev => prev.map(c =>
@@ -976,6 +993,7 @@ export function useFastCuration(listingId: string) {
     addCapture,
     addUpload,
     addHeroDirect,
+    addGalleryDirect,
     replaceUrl,
     saveAll,
     approveAndNext,

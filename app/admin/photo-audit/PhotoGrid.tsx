@@ -33,6 +33,9 @@ interface PhotoGridProps {
   chainBrandName?: string;
   // Clipboard paste handler (called when user clicks the empty hero area)
   onClipboardPaste?: (blob: Blob) => void;
+  // Paste-target toggle: where the next pasted/captured screenshot goes.
+  pasteTarget?: 'hero' | 'gallery';
+  onPasteTargetChange?: (t: 'hero' | 'gallery') => void;
 }
 
 const SOURCE_BADGES: Record<string, { label: string; color: string }> = {
@@ -53,6 +56,7 @@ export function PhotoGrid({
   onCrop, onEnhance, discovering, enhancingId, enhancedIds = [], equipmentSlot,
   streetViewUrl, googlePhotosUrl, listingId, onHeroDropped, onStreetViewOpened, onFallbackHero, hasHeroImage,
   chainBrandImageUrl, chainBrandName, onClipboardPaste,
+  pasteTarget = 'hero', onPasteTargetChange,
 }: PhotoGridProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [heroDragging, setHeroDragging] = useState(false);
@@ -158,6 +162,32 @@ export function PhotoGrid({
           <Star className="w-4 h-4 text-amber-500" />
           <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Hero Image</h3>
           <div className="ml-auto flex items-center gap-2">
+            {/* Paste-target toggle — decides where the NEXT pasted/captured
+                screenshot lands. Hero auto-crops to 16:9; Gallery keeps the
+                screenshot's natural orientation (tall wand-bay shots stay tall). */}
+            {onPasteTargetChange && (
+              <div className="flex items-center gap-1.5 mr-1 pr-2 border-r border-gray-200">
+                <span className="text-[11px] text-gray-400 font-semibold uppercase tracking-wide">Paste to</span>
+                <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-xs font-medium">
+                  <button
+                    type="button"
+                    onClick={() => onPasteTargetChange('hero')}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 transition-colors ${pasteTarget === 'hero' ? 'bg-amber-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
+                    title="Pasted/captured screenshots become the HERO, auto-cropped to 16:9"
+                  >
+                    <Star className="w-3.5 h-3.5" /> Hero
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onPasteTargetChange('gallery')}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 transition-colors ${pasteTarget === 'gallery' ? 'bg-teal-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
+                    title="Pasted/captured screenshots are ADDED to the gallery at natural orientation (tall or wide) — never touches the hero"
+                  >
+                    <ImageIcon className="w-3.5 h-3.5" /> Gallery
+                  </button>
+                </div>
+              </div>
+            )}
             {onFallbackHero && !hasHeroImage && (
               <button
                 onClick={onFallbackHero}
@@ -174,7 +204,7 @@ export function PhotoGrid({
                 rel="noopener noreferrer"
                 onClick={() => onStreetViewOpened?.()}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium transition-colors"
-                title="Browse Google Maps photos, screenshot one (⌘+Ctrl+Shift+4), then switch back — hero is set automatically"
+                title="Browse Google Maps photos, screenshot one (⌘+Ctrl+Shift+4), then switch back — applied to your selected Paste-to target (Hero or Gallery)"
               >
                 <ImageIcon className="w-3.5 h-3.5" />
                 Google Photos
@@ -187,7 +217,7 @@ export function PhotoGrid({
                 rel="noopener noreferrer"
                 onClick={() => onStreetViewOpened?.()}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium transition-colors"
-                title="Open Street View, take screenshot (⌘+Ctrl+Shift+4), then switch back — hero is set automatically"
+                title="Open Street View, take screenshot (⌘+Ctrl+Shift+4), then switch back — applied to your selected Paste-to target (Hero or Gallery)"
               >
                 <MapPin className="w-3.5 h-3.5" />
                 Street View

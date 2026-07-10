@@ -29,7 +29,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
     selectedId, setSelectedId,
     classifying, classifyResult, classifyEvidence,
     tagPhoto, setAsHero, addToGallery, removeFromGallery, removeHero, skipPhoto,
-    addCapture, addUpload, addHeroDirect, replaceUrl, updateWebsite, setFallbackHero,
+    addCapture, addUpload, addHeroDirect, addGalleryDirect, replaceUrl, updateWebsite, setFallbackHero,
     saveAll, approveAndNext, approveSelfServeAndNext, markNotSelfServe, classifyEquipment, setEquipment,
     markNotTouchless, markCantVerify, markNotACarWash, markClosed, deleteListing, heroRemoved,
   } = useFastCuration(listingId);
@@ -46,6 +46,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
     setEnhancing(null);
     setEnhancedIds([]);
     setCropPhoto(null);
+    setPasteTarget('hero');
   }, [listingId]);
   const [pasteOpen, setPasteOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -55,6 +56,13 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
 
   const [pasteStatus, setPasteStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   const [pasteError, setPasteError] = useState<string>('');
+  // Where a pasted/captured screenshot goes: 'hero' (auto-crop 16:9) or 'gallery'
+  // (keep natural orientation — enables tall self-serve wand-bay shots). Read by
+  // processClipboardImage; toggled in the PhotoGrid hero header. Reset to 'hero'
+  // per listing so each listing starts from the common case.
+  const [pasteTarget, setPasteTarget] = useState<'hero' | 'gallery'>('hero');
+  const pasteTargetRef = useRef<'hero' | 'gallery'>('hero');
+  pasteTargetRef.current = pasteTarget;
   const [dragging, setDragging] = useState(false);
   const dragCounter = useRef(0);
   const awaitingClipboard = useRef(false);
@@ -88,30 +96,53 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
     candidatesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  // Process a clipboard image: auto-crop to 16:9 and set as hero
+  // Process a clipboard image. Two modes based on the paste-target toggle:
+  //   'hero'    — auto-crop to 16:9 and set as hero (the common case)
+  //   'gallery' — keep the screenshot's NATURAL orientation (no 16:9 crop) and
+  //               add it straight to the gallery, so tall self-serve wand-bay
+  //               shots stay tall. Never disturbs the hero.
   const processClipboardImage = useCallback(async (blob: Blob) => {
     if (!listing) return;
+    const target = pasteTargetRef.current;
+
+    // Gallery is capped at 8 — fail fast with a clear message before uploading.
+    if (target === 'gallery' && candidates.filter(c => c.tag === 'gallery').length >= 8) {
+      setPasteStatus('error');
+      setPasteError('Gallery is full (8 photos). Remove one first.');
+      setTimeout(() => setPasteStatus('idle'), 4000);
+      return;
+    }
+
     setPasteStatus('uploading');
     try {
       const bitmap = await createImageBitmap(blob);
       const { width, height } = bitmap;
-      const targetAspect = 16 / 9;
-      const currentAspect = width / height;
-      let srcX = 0, srcY = 0, srcW = width, srcH = height;
-      if (currentAspect > targetAspect) {
-        srcW = Math.round(height * targetAspect);
-        srcX = Math.round((width - srcW) / 2);
-      } else {
-        srcH = Math.round(width / targetAspect);
-        srcY = Math.round((height - srcH) / 2);
-      }
 
-      // Cap canvas output to max 2048px wide to avoid huge PNG uploads (Netlify 4.5MB body limit)
-      const MAX_WIDTH = 2048;
+      let srcX = 0, srcY = 0, srcW = width, srcH = height;
+      if (target === 'hero') {
+        // Center-crop to 16:9.
+        const targetAspect = 16 / 9;
+        const currentAspect = width / height;
+        if (currentAspect > targetAspect) {
+          srcW = Math.round(height * targetAspect);
+          srcX = Math.round((width - srcW) / 2);
+        } else {
+          srcH = Math.round(width / targetAspect);
+          srcY = Math.round((height - srcH) / 2);
+        }
+      }
+      // gallery: srcX/Y/W/H stay full-frame — orientation preserved.
+
+      // Cap the longest side to keep uploads under the Netlify 4.5MB body limit.
+      // (Hero caps width; gallery caps the longest side so portrait shots aren't
+      // needlessly downscaled on their short edge.)
+      const MAX_SIDE = target === 'hero' ? 2048 : 1600;
       let outW = srcW, outH = srcH;
-      if (outW > MAX_WIDTH) {
-        outH = Math.round((MAX_WIDTH / outW) * outH);
-        outW = MAX_WIDTH;
+      const longest = Math.max(srcW, srcH);
+      if (longest > MAX_SIDE) {
+        const s = MAX_SIDE / longest;
+        outW = Math.round(srcW * s);
+        outH = Math.round(srcH * s);
       }
 
       const canvas = document.createElement('canvas');
@@ -120,19 +151,20 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
       const ctx = canvas.getContext('2d')!;
       ctx.drawImage(bitmap, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
 
-      // Use JPEG (80% quality) to avoid huge file sizes; PNG can be 10MB+ for retina screens
-      const cropped = await new Promise<Blob>((resolve, reject) => {
+      // Use JPEG to avoid huge file sizes; PNG can be 10MB+ for retina screens.
+      const processed = await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob(b => b ? resolve(b) : reject(new Error('Canvas empty')), 'image/jpeg', 0.85);
       });
 
       const formData = new FormData();
-      formData.append('file', cropped, 'hero-screenshot.jpg');
-      formData.append('type', 'hero');
+      formData.append('file', processed, target === 'hero' ? 'hero-screenshot.jpg' : 'gallery-screenshot.jpg');
+      formData.append('type', target === 'hero' ? 'hero' : 'gallery');
       formData.append('listingId', listing.id);
       const res = await fetch('/api/upload-image', { method: 'POST', body: formData });
       if (res.ok) {
         const { url } = await res.json();
-        addHeroDirect(url);
+        if (target === 'hero') addHeroDirect(url);
+        else addGalleryDirect(url);
         setPasteStatus('success');
         setPasteError('');
       } else {
@@ -150,7 +182,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
       setPasteError(err instanceof Error ? err.message : 'Failed to process image');
     }
     setTimeout(() => setPasteStatus('idle'), 5000);
-  }, [listing, addHeroDirect]);
+  }, [listing, candidates, addHeroDirect, addGalleryDirect]);
 
   // When tab regains focus after Street View, show banner prompting a click
   useEffect(() => {
@@ -464,7 +496,12 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
           >
             <div className="text-center">
               <div className="text-6xl mb-4">📷</div>
-              <p className="text-2xl font-bold text-white mb-3">Click here to apply screenshot as hero</p>
+              <p className="text-2xl font-bold text-white mb-3">
+                {pasteTarget === 'hero' ? 'Click here to apply screenshot as hero' : 'Click here to add screenshot to gallery'}
+              </p>
+              {pasteTarget === 'gallery' && (
+                <p className="text-sm text-teal-300 font-medium mb-3">Kept at natural orientation — great for tall wand-bay shots</p>
+              )}
               <div className="bg-white/10 rounded-xl px-6 py-4 mb-4 max-w-md mx-auto">
                 <p className="text-sm text-yellow-300 font-medium mb-1">Make sure you used the right shortcut:</p>
                 <p className="text-lg text-white font-mono">⌘ + Ctrl + Shift + 4</p>
@@ -808,6 +845,8 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                 googlePhotosUrl={listing.google_place_id ? `https://www.google.com/maps/place/?q=place_id:${listing.google_place_id}` : undefined}
                 listingId={listing.id}
                 onHeroDropped={addHeroDirect}
+                pasteTarget={pasteTarget}
+                onPasteTargetChange={setPasteTarget}
                 onStreetViewOpened={() => { awaitingClipboard.current = true; }}
                 onFallbackHero={async () => { await setFallbackHero(); onUpdate?.(); }}
                 onClipboardPaste={processClipboardImage}
@@ -1168,8 +1207,8 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
           pasteStatus === 'success' ? 'bg-green-600' :
           'bg-red-600'
         }`}>
-          {pasteStatus === 'uploading' && '⏳ Cropping & setting as hero...'}
-          {pasteStatus === 'success' && '✅ Screenshot set as hero!'}
+          {pasteStatus === 'uploading' && (pasteTarget === 'hero' ? '⏳ Cropping & setting as hero...' : '⏳ Adding to gallery...')}
+          {pasteStatus === 'success' && (pasteTarget === 'hero' ? '✅ Screenshot set as hero!' : '✅ Added to gallery!')}
           {pasteStatus === 'error' && `❌ ${pasteError || 'Failed to upload image'}`}
         </div>
       )}
