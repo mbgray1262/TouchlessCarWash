@@ -53,6 +53,7 @@ interface ListingData {
   parent_chain: string | null;
   is_approved: boolean | null;
   is_touchless: boolean | null;
+  is_self_service: boolean | null;
   crawl_notes: string | null;
   // Set by markClosed() to one of 'closed_permanently_admin' /
   // 'closed_temporarily_admin' / other classification labels. Read by
@@ -108,7 +109,7 @@ export function useFastCuration(listingId: string) {
     const [{ data }, { count: evidenceCount }] = await Promise.all([
       supabase
         .from('listings')
-        .select('id, name, city, state, address, zip, slug, latitude, longitude, google_place_id, website, hero_image, hero_image_source, photos, street_view_url, google_photo_url, blocked_photos, equipment_brand, equipment_model, touchless_verified, touchless_evidence, parent_chain, is_approved, is_touchless, crawl_notes, classification_source')
+        .select('id, name, city, state, address, zip, slug, latitude, longitude, google_place_id, website, hero_image, hero_image_source, photos, street_view_url, google_photo_url, blocked_photos, equipment_brand, equipment_model, touchless_verified, touchless_evidence, parent_chain, is_approved, is_touchless, is_self_service, crawl_notes, classification_source')
         .eq('id', listingId)
         .maybeSingle(),
       // Real review evidence behind a 'user_review' verification: count of
@@ -855,6 +856,55 @@ export function useFastCuration(listingId: string) {
     else onClose?.();
   };
 
+  // Self-serve equivalent of approveAndNext. Confirms the listing IS self-serve
+  // and approves its photos. Mirrors approveAndNext but flips is_self_service
+  // (never is_touchless) — the touchless status is left exactly as-is, so a
+  // mixed touchless+self-serve listing keeps its public touchless standing.
+  // is_approved is set here too, but a self-serve-only listing stays invisible
+  // to the public (the public rule requires is_touchless=true) until the
+  // separate self-serve category gate is switched on.
+  const approveSelfServeAndNext = async (onUpdate?: () => void, onNext?: () => void, onClose?: () => void): Promise<void> => {
+    if (listing) {
+      const missingCity = !listing.city || !listing.city.trim();
+      const missingStreet = !listing.address || !listing.address.trim();
+      if (missingCity || missingStreet) {
+        const what = [missingStreet && 'street address', missingCity && 'city']
+          .filter(Boolean).join(' and ');
+        alert(`"${listing.name}" has no ${what} — fill it in before approving (a partial listing breaks the public URL and renders with no location).`);
+        return;
+      }
+    }
+
+    const ok = await saveAll();
+    if (!ok) return;
+
+    if (listing) {
+      const now = new Date().toISOString();
+      const update: Record<string, unknown> = {
+        reviewed_at: now, photo_audited_at: now, is_approved: true, is_self_service: true,
+      };
+      await supabase.from('listings').update(update).eq('id', listing.id);
+      setListing(prev => prev ? { ...prev, is_approved: true, is_self_service: true } : prev);
+    }
+
+    onUpdate?.();
+    if (onNext) onNext();
+    else onClose?.();
+  };
+
+  // Self-serve equivalent of markNotTouchless. Only removes the self-serve tag
+  // (is_self_service=false) so the listing drops out of the self-serve review
+  // queues. Deliberately does NOT touch is_touchless or is_approved — rejecting
+  // the self-serve classification must never demote or unpublish a touchless
+  // listing that happens to also be tagged self-serve.
+  const markNotSelfServe = useCallback(async () => {
+    if (!listing) return;
+    setSaving(true);
+    await supabase.from('listings').update({ is_self_service: false }).eq('id', listing.id);
+    setListing(prev => prev ? { ...prev, is_self_service: false } : prev);
+    setSaving(false);
+  }, [listing]);
+
   // Delete listing
   const updateWebsite = useCallback(async (newUrl: string | null) => {
     if (!listing) return;
@@ -924,6 +974,8 @@ export function useFastCuration(listingId: string) {
     replaceUrl,
     saveAll,
     approveAndNext,
+    approveSelfServeAndNext,
+    markNotSelfServe,
     discoverPhotos,
     classifyEquipment,
     setEquipment,

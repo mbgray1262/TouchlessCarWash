@@ -17,18 +17,23 @@ interface Props {
   onUpdate?: () => void;
   onNext?: () => void;
   onPrev?: () => void;
+  // Which directory the admin is curating. In 'self_serve' mode the decision
+  // buttons act on is_self_service instead of is_touchless, so approving/rejecting
+  // a self-serve listing never disturbs its touchless status.
+  washType?: 'touchless' | 'self_serve';
 }
 
-export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev }: Props) {
+export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev, washType = 'touchless' }: Props) {
   const {
     listing, loading, candidates, discovering, saving, sourceCounts,
     selectedId, setSelectedId,
     classifying, classifyResult, classifyEvidence,
     tagPhoto, setAsHero, addToGallery, removeFromGallery, removeHero, skipPhoto,
     addCapture, addUpload, addHeroDirect, replaceUrl, updateWebsite, setFallbackHero,
-    saveAll, approveAndNext, classifyEquipment, setEquipment,
+    saveAll, approveAndNext, approveSelfServeAndNext, markNotSelfServe, classifyEquipment, setEquipment,
     markNotTouchless, markCantVerify, markNotACarWash, markClosed, deleteListing, heroRemoved,
   } = useFastCuration(listingId);
+  const isSelfServe = washType === 'self_serve';
 
   const [cropPhoto, setCropPhoto] = useState<CandidatePhoto | null>(null);
   const [enhancing, setEnhancing] = useState<string | null>(null);
@@ -250,7 +255,8 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
   };
 
   const handleApproveAndNext = async () => {
-    await approveAndNext(onUpdate, onNext, onClose);
+    if (isSelfServe) await approveSelfServeAndNext(onUpdate, onNext, onClose);
+    else await approveAndNext(onUpdate, onNext, onClose);
   };
 
   /**
@@ -504,6 +510,29 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                       >
                         <span className={`w-2 h-2 rounded-full ${closedPermanent ? 'bg-red-500' : 'bg-amber-500'}`} />
                         {closedPermanent ? 'Permanently Closed' : 'Temporarily Closed'}
+                      </span>
+                    );
+                  }
+                  // Self-serve mode: the touchless-centric badges below (Not
+                  // Touchless / Held / Live) don't apply. Show self-serve status
+                  // instead — approved (curated, will show when the self-serve
+                  // directory launches) vs. pending review.
+                  if (isSelfServe) {
+                    return isApproved ? (
+                      <span
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 cursor-help"
+                        title="Self-serve approved. Hidden from the public until the self-serve directory launches."
+                      >
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                        Self-Serve Approved
+                      </span>
+                    ) : (
+                      <span
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 cursor-help"
+                        title="Self-serve — not yet reviewed."
+                      >
+                        <span className="w-2 h-2 rounded-full bg-amber-500" />
+                        Self-Serve · Pending
                       </span>
                     );
                   }
@@ -880,23 +909,39 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                 as one group; the primary Approve button gets its own row below
                 so it's never crowded and Skip always stays up here next to Back. */}
             <div className="flex items-center gap-2 flex-wrap">
-            {/* === Group 1: decisions === */}
-            <button
-              onClick={async () => { await markNotTouchless(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
-              disabled={saving}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-100 hover:bg-orange-200 text-orange-700 text-sm font-medium disabled:opacity-50"
-              title="Confirm this listing is not touchless. Removes it from the Second Look queue."
-            >
-              <Ban className="w-4 h-4" /> Not Touchless
-            </button>
-            <button
-              onClick={handleTagChainNotTouchless}
-              disabled={saving}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 text-sm font-medium disabled:opacity-50 border border-orange-200"
-              title={`Tag every listing named "${listing.name}" as Not Touchless — for when an entire chain is confirmed not touchless. Shows a count + sample before applying.`}
-            >
-              <Ban className="w-4 h-4" /> Tag Chain
-            </button>
+            {/* === Group 1: decisions ===
+                In self-serve mode the "not this type" action removes the
+                self-serve tag only (leaves touchless untouched), and the
+                touchless-specific "Tag Chain" bulk-demote is hidden. */}
+            {isSelfServe ? (
+              <button
+                onClick={async () => { await markNotSelfServe(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
+                disabled={saving}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-100 hover:bg-orange-200 text-orange-700 text-sm font-medium disabled:opacity-50"
+                title="This isn't a self-serve wash. Removes the self-serve tag (leaves touchless status untouched) and drops it from the self-serve queue."
+              >
+                <Ban className="w-4 h-4" /> Not Self-Serve
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={async () => { await markNotTouchless(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
+                  disabled={saving}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-100 hover:bg-orange-200 text-orange-700 text-sm font-medium disabled:opacity-50"
+                  title="Confirm this listing is not touchless. Removes it from the Second Look queue."
+                >
+                  <Ban className="w-4 h-4" /> Not Touchless
+                </button>
+                <button
+                  onClick={handleTagChainNotTouchless}
+                  disabled={saving}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 text-sm font-medium disabled:opacity-50 border border-orange-200"
+                  title={`Tag every listing named "${listing.name}" as Not Touchless — for when an entire chain is confirmed not touchless. Shows a count + sample before applying.`}
+                >
+                  <Ban className="w-4 h-4" /> Tag Chain
+                </button>
+              </>
+            )}
             <button
               onClick={async () => { await markCantVerify(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
               disabled={saving}
@@ -1063,22 +1108,26 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
               onClick={handleApproveAndNext}
               disabled={saving}
               className={`self-start flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold shadow-sm disabled:opacity-50 transition-colors ${
-                listing.is_touchless === false
+                isSelfServe || listing.is_touchless === false
                   ? 'bg-green-600 hover:bg-green-700 text-white'
                   : 'bg-violet-600 hover:bg-violet-700 text-white'
               }`}
               title={
-                listing.is_touchless === false
-                  ? 'Mark this listing as Touchless, approve it for the public site, and advance to the next listing.'
-                  : 'Approve this listing for the public site and advance to the next listing.'
+                isSelfServe
+                  ? 'Confirm this listing is self-serve and approve its photos. Leaves touchless status untouched; stays hidden from the public until the self-serve directory launches.'
+                  : listing.is_touchless === false
+                    ? 'Mark this listing as Touchless, approve it for the public site, and advance to the next listing.'
+                    : 'Approve this listing for the public site and advance to the next listing.'
               }
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCheck className="w-4 h-4" />}
               {saving
                 ? 'Saving...'
-                : listing.is_touchless === false
-                  ? 'Mark Touchless & Approve →'
-                  : 'Approve & Next →'}
+                : isSelfServe
+                  ? 'Confirm Self-Serve & Approve →'
+                  : listing.is_touchless === false
+                    ? 'Mark Touchless & Approve →'
+                    : 'Approve & Next →'}
             </button>
           </div>
         </div>

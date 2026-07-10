@@ -1014,6 +1014,7 @@ export default function PhotoAuditPage() {
       {editorListingId && (
         <FastCurationModal
           listingId={editorListingId}
+          washType={washType}
           onClose={() => setEditorListingId(null)}
           onUpdate={() => {
             // On No Hero / Unscanned / No-Review-Evidence tabs, immediately remove the
