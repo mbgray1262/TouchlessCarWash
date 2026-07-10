@@ -424,6 +424,7 @@ export default function PhotoAuditPage() {
   const {
     results, loading, running, runProgress, stats, queueStats,
     includeGooglePhotos, setIncludeGooglePhotos, activeJob,
+    washType, setWashType,
     viewFilter, unreviewedOnly, setUnreviewedOnly, searchQuery, setSearch, page, filteredTotal, totalPages, pageSize,
     changeFilter, changePage,
     runBatch, applyEquipment, rejectResult, applyAllHighConfidence, undoApply, reload,
@@ -584,6 +585,25 @@ export default function PhotoAuditPage() {
               {running && <span className="text-xs text-gray-400 ml-2">(runs in background — you can navigate away)</span>}
             </p>
           </div>
+        )}
+      </div>
+
+      {/* Wash-type scope — which directory the photo tools operate on */}
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Wash type:</span>
+        <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5">
+          {([['touchless', 'Touchless'], ['self_serve', 'Self-Service']] as const).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setWashType(key)}
+              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${washType === key ? 'bg-orange-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {washType === 'self_serve' && (
+          <span className="text-xs text-gray-400">Self-serve set — use the All / No hero / Held / Unscanned tabs to review photos.</span>
         )}
       </div>
 

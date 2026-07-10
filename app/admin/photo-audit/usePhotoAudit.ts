@@ -156,25 +156,33 @@ export function usePhotoAudit() {
 
   const [noHeroUnprocessed, setNoHeroUnprocessed] = useState(0);
 
+  // Wash-type scope for the whole page: 'touchless' (default) or 'self_serve'.
+  // Every direct listing query reads washColRef.current, so switching the toggle
+  // re-scopes all tabs without threading a variable through each callback's deps.
+  // (RPC-backed tabs — Review/Equipment/Heroes/Cleanup/Low-Res — stay touchless.)
+  const [washType, setWashType] = useState<'touchless' | 'self_serve'>('touchless');
+  const washColRef = useRef<'is_touchless' | 'is_self_service'>('is_touchless');
+  washColRef.current = washType === 'self_serve' ? 'is_self_service' : 'is_touchless';
+
   const loadQueueStats = useCallback(async () => {
     const [totalRes, auditedRes, noHeroRes, noHeroUnprocessedRes, heldRes, secondLookRes] = await Promise.all([
       // Total = ALL touchless listings (including chain brand locations with null hero_image)
       supabase.from('listings').select('id', { count: 'exact', head: true })
-        .eq('is_touchless', true),
+        .eq(washColRef.current, true),
       // Audited = all touchless listings that have been photo_audited (any hero state)
       supabase.from('listings').select('id', { count: 'exact', head: true })
-        .eq('is_touchless', true).not('photo_audited_at', 'is', null),
+        .eq(washColRef.current, true).not('photo_audited_at', 'is', null),
       supabase.from('listings').select('id', { count: 'exact', head: true })
-        .eq('is_touchless', true).is('hero_image', null)
+        .eq(washColRef.current, true).is('hero_image', null)
         .or('hero_image_source.is.null,hero_image_source.neq.fallback'),
       // Count only unprocessed No Hero listings (for Run All button)
       supabase.from('listings').select('id', { count: 'exact', head: true })
-        .eq('is_touchless', true).is('hero_image', null).is('photo_audited_at', null)
+        .eq(washColRef.current, true).is('hero_image', null).is('photo_audited_at', null)
         .or('hero_image_source.is.null,hero_image_source.neq.fallback'),
       // Held = touchless + not approved (admin review queue). Excludes closed
       // listings to match the held queue itself (see NOT_CLOSED).
       supabase.from('listings').select('id', { count: 'exact', head: true })
-        .eq('is_touchless', true).eq('is_approved', false)
+        .eq(washColRef.current, true).eq('is_approved', false)
         .or(NOT_CLOSED),
       // Second Look = independent (non-chain) listings reverted by the
       // mass-restore that didn't have strong enough touchless signals to
@@ -285,11 +293,11 @@ export function usePhotoAudit() {
       // (hero_image_source='fallback' with hero_image NULL by DB-trigger design).
       const FALLBACK_NOT = 'hero_image_source.is.null,hero_image_source.neq.fallback';
       let countQuery = supabase.from('listings').select('id', { count: 'exact', head: true })
-        .eq('is_touchless', true).eq('is_approved', true).is('hero_image', null)
+        .eq(washColRef.current, true).eq('is_approved', true).is('hero_image', null)
         .or(FALLBACK_NOT);
       let dataQuery = supabase.from('listings')
         .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
-        .eq('is_touchless', true).eq('is_approved', true).is('hero_image', null)
+        .eq(washColRef.current, true).eq('is_approved', true).is('hero_image', null)
         .or(FALLBACK_NOT);
 
       if (sub === 'non_chain') {
@@ -429,11 +437,11 @@ export function usePhotoAudit() {
       // for reviewing those).
       const { count: eqCount } = await supabase.from('listings')
         .select('id', { count: 'exact', head: true }).eq('equipment_brand', equipmentBrand)
-        .eq('is_touchless', true);
+        .eq(washColRef.current, true);
       const { data: eqRows } = await supabase.from('listings')
         .select('id, name, slug, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, is_touchless, photo_audited_at, parent_chain')
         .eq('equipment_brand', equipmentBrand)
-        .eq('is_touchless', true)
+        .eq(washColRef.current, true)
         .order('name', { ascending: true })
         .range(offset, offset + PAGE_SIZE - 1);
       const eqResults: AuditResult[] = (eqRows ?? []).map((l) => {
@@ -473,11 +481,11 @@ export function usePhotoAudit() {
     if (filter === 'all') {
       let countQuery = supabase
         .from('listings').select('id', { count: 'exact', head: true })
-        .eq('is_touchless', true);
+        .eq(washColRef.current, true);
       let dataQuery = supabase
         .from('listings')
         .select('id, name, slug, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
-        .eq('is_touchless', true);
+        .eq(washColRef.current, true);
 
       // When "Unreviewed only" is checked, hide listings that have already been
       // photo_audited (either by AI batch or manual FastCuration approval stamp).
@@ -555,13 +563,13 @@ export function usePhotoAudit() {
     if (filter === 'unscanned') {
       const { count: totalUnscanned } = await supabase
         .from('listings').select('id', { count: 'exact', head: true })
-        .eq('is_touchless', true).is('photo_audited_at', null)
+        .eq(washColRef.current, true).is('photo_audited_at', null)
         .or(NOT_CLOSED);
 
       const { data: unscannedListings } = await supabase
         .from('listings')
         .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
-        .eq('is_touchless', true).is('photo_audited_at', null)
+        .eq(washColRef.current, true).is('photo_audited_at', null)
         .or(NOT_CLOSED)
         // Prioritize: no hero first (need the most attention), then alphabetical
         .order('hero_image', { ascending: true, nullsFirst: true })
@@ -625,7 +633,7 @@ export function usePhotoAudit() {
         const { data } = await supabase
           .from('listings')
           .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
-          .eq('is_touchless', true)
+          .eq(washColRef.current, true)
           .eq('touchless_verified', 'user_review').is('photo_audited_at', null)
           .or(NOT_CLOSED)
           .order('name', { ascending: true })
@@ -686,13 +694,13 @@ export function usePhotoAudit() {
     if (filter === 'held') {
       const { count: totalHeld } = await supabase
         .from('listings').select('id', { count: 'exact', head: true })
-        .eq('is_touchless', true).eq('is_approved', false)
+        .eq(washColRef.current, true).eq('is_approved', false)
         .or(NOT_CLOSED);
 
       const { data: heldListings } = await supabase
         .from('listings')
         .select('id, name, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain, classification_source')
-        .eq('is_touchless', true).eq('is_approved', false)
+        .eq(washColRef.current, true).eq('is_approved', false)
         .or(NOT_CLOSED)
         // Prioritize: no hero first (they need the most attention), then oldest-touched
         .order('hero_image', { ascending: true, nullsFirst: true })
@@ -945,7 +953,7 @@ export function usePhotoAudit() {
     const { count } = await supabase
       .from('listings')
       .select('id', { count: 'exact', head: true })
-      .eq('is_touchless', true)
+      .eq(washColRef.current, true)
       .not('hero_image', 'is', null)
       .neq('hero_image_source', 'chain_brand')
       .is('hero_is_low_res', null);
@@ -958,14 +966,14 @@ export function usePhotoAudit() {
       await supabase
         .from('listings')
         .update({ hero_is_low_res: null })
-        .eq('is_touchless', true)
+        .eq(washColRef.current, true)
         .not('hero_image', 'is', null)
         .neq('hero_image_source', 'chain_brand');
 
       const { count: freshCount } = await supabase
         .from('listings')
         .select('id', { count: 'exact', head: true })
-        .eq('is_touchless', true)
+        .eq(washColRef.current, true)
         .not('hero_image', 'is', null)
         .neq('hero_image_source', 'chain_brand')
         .is('hero_is_low_res', null);
@@ -983,7 +991,7 @@ export function usePhotoAudit() {
       const { data } = await supabase
         .from('listings')
         .select('id, hero_image')
-        .eq('is_touchless', true)
+        .eq(washColRef.current, true)
         .not('hero_image', 'is', null)
         .neq('hero_image_source', 'chain_brand')
         .is('hero_is_low_res', null)
@@ -1042,7 +1050,7 @@ export function usePhotoAudit() {
     if (viewFilter !== 'low_res') {
       loadPage(viewFilter, page, unreviewedOnly);
     }
-  }, [viewFilter, page, unreviewedOnly, loadPage]);
+  }, [viewFilter, page, unreviewedOnly, loadPage, washType]);
 
   // Load the distinct equipment brands (+ counts) for the review dropdown, once.
   useEffect(() => {
@@ -1193,7 +1201,7 @@ export function usePhotoAudit() {
     // Prime the trophy-winner counts so the Best-Of tab shows the remaining-to-
     // review number before it's clicked. Caches, so opening the tab is instant.
     refreshBestOfCounts().catch(() => {});
-  }, [loadStats, loadQueueStats, refreshBestOfCounts]);
+  }, [loadStats, loadQueueStats, refreshBestOfCounts, washType]);
 
   // ─── Run batch (creates a server-side job) ────────────────────
 
@@ -1346,6 +1354,8 @@ export function usePhotoAudit() {
     stats,
     queueStats,
     activeJob,
+    washType,
+    setWashType,
     viewFilter,
     unreviewedOnly,
     setUnreviewedOnly,
@@ -1400,7 +1410,7 @@ export function usePhotoAudit() {
       const now = new Date().toISOString();
       const { data } = await supabase.from('listings')
         .select('id')
-        .eq('is_touchless', true).eq('is_approved', true).is('hero_image', null)
+        .eq(washColRef.current, true).eq('is_approved', true).is('hero_image', null)
         .not('parent_chain', 'is', null)
         .limit(5000);
       const ids = (data ?? []).map(r => r.id);
