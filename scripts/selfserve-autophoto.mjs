@@ -20,32 +20,34 @@ const MODEL = 'claude-opus-4-8';
 const STATE = (process.argv[2] || 'CA').toUpperCase();
 const LIMIT = parseInt(process.argv[3] || '12', 10);
 const APPLY = process.argv.includes('--apply');
-const MAX_PHOTOS = 10, PHOTO_W = 1280, MIN_BYTES = 5000, PROMOTE_CONF = 0.7, MIN_HERO_SCORE = 4;
+const MAX_PHOTOS = 10, PHOTO_W = 1568, MIN_BYTES = 5000, PROMOTE_CONF = 0.5, MIN_HERO_SCORE = 3;
 
 function rubric(mixed) {
-  return `You are a meticulous ART DIRECTOR curating photos for a premium self-service car wash directory. Quality is EVERYTHING. Do NOT settle for the first acceptable shot — study EVERY candidate, then choose only the genuinely best. It is far better to pick fewer images (or say needs_human) than to include a mediocre, messy, or wrong one.
+  return `You are a skilled photo editor curating images for a self-service car wash directory. Two different standards apply: for the HERO you ALWAYS pick the best available self-serve shot (it need not be perfect); for the GALLERY you are picky and include only genuinely good scenes (never useless filler).
 
-This location is: ${mixed ? 'MIXED — it is ALSO a touchless/automatic wash. Self-serve seekers will view this, so the photos MUST clearly show the self-serve side, never only the automatic bay.' : 'SELF-SERVE ONLY.'}
+This location is: ${mixed ? 'MIXED — it is ALSO a touchless/automatic wash. Self-serve seekers view this page, so the imagery MUST clearly show the self-serve side, never only the automatic bay.' : 'SELF-SERVE ONLY.'}
 
-STEP 1 — Score EVERY image (do not skip any). For each give:
-  - category: facility_multi_bay | facility_exterior | bay_interior | bay_in_use (car being washed by hand) | wand_or_coin_detail | vacuum | touchless_or_automatic_bay | tunnel_interior | brush_or_abrasive | sign_or_price | vehicle_only | car_interior | gas | logo | map | person | food | clutter_or_messy | equipment_no_context | other
-  - self_serve_relevance (0-5): how clearly it shows the self-serve experience (open bays, wand, coin box, a car being hand-washed, the self-serve facility)
-  - visual_quality (0-5): lighting, sharpness, composition, cleanliness of the SCENE, how attractive/inviting it looks
-  - hero_worthy (0-5): would this make a beautiful, inviting hero that instantly says "self-service car wash"? A gorgeous, brightly-lit interior bay shot can score 5 here even if it is not a facility shot.
-  - disqualified (bool) + reason.
+STEP 1 — Score EVERY image (skip none). For each: category, self_serve_relevance (0-5), visual_quality (0-5), hero_worthy (0-5), disqualified (bool) + reason.
 
-STEP 2 — Select like an art director:
-  - HERO = the ONE image with the best combination of visual_quality + hero_worthy + self_serve_relevance. It may be EITHER a facility/exterior shot OR a beautiful interior bay shot — choose whichever is truly the most attractive and self-serve-representative. Strongly prefer clean, bright, sharp, FRONT-ON framing where the bays are clearly visible; reject awkward angles that hide the bays, and reject anything with cars/clutter blocking the view. If NOTHING scores hero_worthy >= 4, set hero_index null and needs_human true.
-  - GALLERY (up to 3, excluding the hero) = the next best DISTINCT, genuinely good self-serve shots (aim for variety: an interior bay, a wand/coin detail, a wide facility). Include FEWER rather than pad with weak shots. A gallery image must have visual_quality >= 3 and be self-serve-relevant.
+STEP 2 — Pick the HERO. ALWAYS choose the single best self-serve shot available, in this PREFERENCE ORDER. It does NOT need to be perfect — pick the best of THIS set as long as it genuinely shows self-serve:
+  1. a clean vehicle being washed / sitting in a bright, well-lit self-serve bay (most inviting — prefer this)
+  2. a bright, front-on wide facility shot showing multiple open self-serve bays
+  3. a clean interior bay with the wand/equipment clearly visible
+  A slightly angled, rear-on, or softer-light version of the above is PERFECTLY FINE if it's the best available and clearly self-serve — take it, don't reject it for imperfection. A prominent front-on/experience shot beats a distant or badly-angled one, but "best available" always wins.
+  ONLY set hero_index null / needs_human true if NONE of the photos show a usable self-serve scene at all (every candidate is a car-only shot, an equipment close-up, or disqualified).
 
-ABSOLUTE DISQUALIFIERS — never choose as hero OR gallery:
-  - ANY brush, cloth strip, mitter curtain, foam-pad, or abrasive contact equipment. This violates our paint-safety brand and is STRICTLY forbidden — even if the photo is otherwise nice.
-  - For a MIXED site: a touchless/automatic in-bay or tunnel shot as the HERO (confuses self-serve seekers). Never let automatic-only imagery be the only thing shown.
-  - Messy/cluttered scenes: towels draped on cars, cars blocking the bays, junk/hoses tangled in the foreground, random equipment close-ups with no context (e.g. a lone tube/hose).
-  - A customer's car as the subject with no clear bay/facility context; car interiors/dashboards; gas pumps; sign/price/logo-only; maps; screenshots; food; people portraits; blurry, dark, low-res, watermarked, or stock images.
+STEP 3 — Pick up to 3 GALLERY images (here BE PICKY): genuine, attractive self-serve SCENES only — interior bays, a car being hand-washed, a bright wide facility, an appealing wand-in-use shot. Aim for variety. RETURN FEWER (even zero) RATHER THAN PAD with weak or useless shots.
+
+NEVER pick as hero OR gallery:
+  - ANY brush, cloth strip, mitter curtain, foam-pad, or abrasive contact equipment — STRICTLY forbidden (violates our paint-safety brand), even if otherwise nice.
+  - Messy/cluttered: towels on cars, cars blocking the bays, tangled hoses in the foreground, junk in frame.
+  - For a MIXED site: an automatic/touchless in-bay or tunnel shot as the hero; never let automatic-only be the only imagery.
+  - A customer's car with no bay/facility context; car interiors/dashboards; gas pumps; maps; screenshots; food; people portraits; blurry, very dark, low-res, watermarked, or stock.
+
+NEVER pick as GALLERY (these are fine to note but are useless filler — reject them from the gallery): a shot whose only value is the building name/sign on a wall; a close-up of a payment/coin/token machine; a bare vacuum canister or a lone hose/tube; empty pavement. (These may still be acceptable as a last-resort HERO only if truly nothing better exists — but never as gallery.)
 
 Return ONLY JSON:
-{"images":[{"index":0,"category":"...","self_serve_relevance":4,"visual_quality":4,"hero_worthy":5,"disqualified":false,"reason":"..."}],"hero_index":2,"gallery_indices":[4,1],"confidence":0.86,"needs_human":false,"reason":"why these picks are the best of the set"}`;
+{"images":[{"index":0,"category":"...","self_serve_relevance":4,"visual_quality":4,"hero_worthy":5,"disqualified":false,"reason":"..."}],"hero_index":2,"gallery_indices":[4,1],"confidence":0.86,"needs_human":false,"reason":"why these are the best of the set"}`;
 }
 
 async function photoRefs(placeId) {
@@ -78,7 +80,7 @@ async function selectPhotos(name, mixed, imgs) {
   const content = [{ type: 'text', text: `${rubric(mixed)}\n\nLocation: ${name}\nCandidates:` }];
   imgs.forEach((g, i) => { content.push({ type: 'text', text: `Image ${i}:` }); content.push({ type: 'image', source: { type: 'base64', media_type: g.mediaType, data: g.base64 } }); });
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'x-api-key': AKEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }, body: JSON.stringify({ model: MODEL, max_tokens: 1500, messages: [{ role: 'user', content }] }), signal: AbortSignal.timeout(60000) });
+    const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'x-api-key': AKEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }, body: JSON.stringify({ model: MODEL, max_tokens: 3500, messages: [{ role: 'user', content }] }), signal: AbortSignal.timeout(90000) });
     if (!res.ok) return { err: `${res.status}: ${(await res.text()).slice(0, 160)}` };
     const j = await res.json();
     return { parsed: xj((j.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n')), usage: j.usage };
@@ -90,12 +92,17 @@ async function selectPhotos(name, mixed, imgs) {
 // and overwriting their hero would change the live site. Self-serve-only listings
 // have no live page (gated), so applying hero+gallery is risk-free. Mixed listings
 // get a separate, careful policy (facility hero that improves both / gallery-only).
-const { data: rows } = await sb.from('listings')
-  .select('id, name, city, state, google_place_id, is_touchless, hero_image, photos')
-  .eq('is_self_service', true).is('self_service_reviewed_at', null)
-  .not('is_touchless', 'is', true)
-  .eq('state', STATE).not('google_place_id', 'is', null)
-  .order('city').limit(LIMIT);
+let rows = [];
+for (let attempt = 0; attempt < 3; attempt++) {
+  const res = await sb.from('listings')
+    .select('id, name, city, state, google_place_id, is_touchless, hero_image, photos')
+    .eq('is_self_service', true).is('self_service_reviewed_at', null)
+    .not('is_touchless', 'is', true)
+    .eq('state', STATE).not('google_place_id', 'is', null)
+    .order('city').limit(LIMIT);
+  if (!res.error && res.data) { rows = res.data; break; } // empty array is valid; retry only on error/null
+  await new Promise(r => setTimeout(r, 1500));
+}
 console.log(`${STATE}: ${rows?.length || 0} listings to process (${APPLY ? 'APPLY' : 'DRY RUN'}), model ${MODEL}\n`);
 
 let applied = 0, flagged = 0, noPhotos = 0, errors = 0, inTok = 0, outTok = 0, photoCalls = 0;
