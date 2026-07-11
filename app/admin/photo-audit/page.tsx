@@ -425,6 +425,7 @@ export default function PhotoAuditPage() {
     results, loading, running, runProgress, stats, queueStats,
     includeGooglePhotos, setIncludeGooglePhotos, activeJob,
     washType, setWashType,
+    stateFilter, setStateFilter, selfServeStateCounts,
     viewFilter, unreviewedOnly, setUnreviewedOnly, searchQuery, setSearch, page, filteredTotal, totalPages, pageSize,
     changeFilter, changePage,
     runBatch, applyEquipment, rejectResult, applyAllHighConfidence, undoApply, reload,
@@ -603,7 +604,21 @@ export default function PhotoAuditPage() {
           ))}
         </div>
         {washType === 'self_serve' && (
-          <span className="text-xs text-gray-400">Self-serve set — use the All / No hero / Held / Unscanned tabs to review photos.</span>
+          <>
+            <span className="ml-2 text-xs font-medium text-gray-500 uppercase tracking-wide">State:</span>
+            <select
+              value={stateFilter}
+              onChange={(e) => setStateFilter(e.target.value)}
+              className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-700 max-w-[220px]"
+              title="Work one state at a time, densest first, so state pages launch with depth. Counts are remaining (unreviewed) self-serve listings."
+            >
+              <option value="">All states ({selfServeStateCounts.reduce((n, s) => n + s.count, 0).toLocaleString()} left)</option>
+              {selfServeStateCounts.map(({ state, count }) => (
+                <option key={state} value={state}>{state} ({count})</option>
+              ))}
+            </select>
+            <span className="text-xs text-gray-400">On the <strong>All</strong> tab, listings are grouped by state → city so whole areas finish together.</span>
+          </>
         )}
       </div>
 

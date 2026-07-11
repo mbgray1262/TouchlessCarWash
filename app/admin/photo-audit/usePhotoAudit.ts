@@ -170,6 +170,14 @@ export function usePhotoAudit() {
   // so a mixed listing stays in the self-serve queue until reviewed there too.
   const reviewedColRef = useRef<'photo_audited_at' | 'self_service_reviewed_at'>('photo_audited_at');
   reviewedColRef.current = washType === 'self_serve' ? 'self_service_reviewed_at' : 'photo_audited_at';
+  // Self-serve launch: work state-by-state (densest first) so state pages gain
+  // depth, instead of scattering approvals alphabetically. stateFilter narrows the
+  // All queue to one state; the self-serve All query also clusters by state/city.
+  const [stateFilter, setStateFilter] = useState<string>('');
+  const stateFilterRef = useRef('');
+  stateFilterRef.current = stateFilter;
+  // Per-state counts of the remaining (unreviewed) self-serve queue, for the picker.
+  const [selfServeStateCounts, setSelfServeStateCounts] = useState<{ state: string; count: number }[]>([]);
 
   const loadQueueStats = useCallback(async () => {
     const [totalRes, auditedRes, noHeroRes, noHeroUnprocessedRes, heldRes, secondLookRes] = await Promise.all([
@@ -520,9 +528,20 @@ export function usePhotoAudit() {
         dataQuery = dataQuery.or(orFilter);
       }
 
+      // Self-serve: optionally narrow to one state, and order geographically
+      // (state → city → name) so whole cities/states get finished together.
+      // Touchless keeps its alphabetical-by-name order.
+      const selfServe = washColRef.current === 'is_self_service';
+      if (selfServe && stateFilterRef.current) {
+        countQuery = countQuery.eq('state', stateFilterRef.current);
+        dataQuery = dataQuery.eq('state', stateFilterRef.current);
+      }
+
       const { count: totalAll } = await countQuery;
-      const { data: allListings } = await dataQuery
-        .order('name', { ascending: true })
+      const orderedData = selfServe
+        ? dataQuery.order('state', { ascending: true }).order('city', { ascending: true }).order('name', { ascending: true })
+        : dataQuery.order('name', { ascending: true });
+      const { data: allListings } = await orderedData
         .range(offset, offset + PAGE_SIZE - 1);
 
       const allResults: AuditResult[] = [];
@@ -1059,7 +1078,34 @@ export function usePhotoAudit() {
     if (viewFilter !== 'low_res') {
       loadPage(viewFilter, page, unreviewedOnly);
     }
-  }, [viewFilter, page, unreviewedOnly, loadPage, washType]);
+  }, [viewFilter, page, unreviewedOnly, loadPage, washType, stateFilter]);
+
+  // Self-serve: compute per-state counts of the remaining (unreviewed) queue so the
+  // state picker can show the densest states first. Runs when entering self-serve.
+  useEffect(() => {
+    if (washType !== 'self_serve') { setSelfServeStateCounts([]); return; }
+    let cancelled = false;
+    (async () => {
+      const tally: Record<string, number> = {};
+      let from = 0;
+      while (true) {
+        const { data } = await supabase.from('listings').select('state')
+          .eq('is_self_service', true).is('self_service_reviewed_at', null)
+          .order('id').range(from, from + 999);
+        if (!data || !data.length) break;
+        data.forEach(r => { const s = (r as { state: string | null }).state || '—'; tally[s] = (tally[s] || 0) + 1; });
+        from += data.length;
+        if (data.length < 1000) break;
+      }
+      if (!cancelled) setSelfServeStateCounts(Object.entries(tally).map(([state, count]) => ({ state, count })).sort((a, b) => b.count - a.count));
+    })();
+    return () => { cancelled = true; };
+  }, [washType]);
+
+  // Reset any state filter when leaving self-serve mode.
+  useEffect(() => { if (washType !== 'self_serve') setStateFilter(''); }, [washType]);
+  // Jump back to the first page whenever the state filter changes.
+  useEffect(() => { setPage(1); }, [stateFilter]);
 
   // Load the distinct equipment brands (+ counts) for the review dropdown, once.
   useEffect(() => {
@@ -1365,6 +1411,9 @@ export function usePhotoAudit() {
     activeJob,
     washType,
     setWashType,
+    stateFilter,
+    setStateFilter,
+    selfServeStateCounts,
     viewFilter,
     unreviewedOnly,
     setUnreviewedOnly,
