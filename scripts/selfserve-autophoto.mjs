@@ -12,15 +12,16 @@
  */
 import { createClient } from '@supabase/supabase-js';
 import { readFileSync } from 'node:fs';
+import sharp from 'sharp';
 
 const env = Object.fromEntries(readFileSync('.env.local', 'utf8').split('\n').filter(l => l.includes('=') && !l.trim().startsWith('#')).map(l => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim().replace(/^["']|["']$/g, '')]; }));
 const sb = createClient(env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 const AKEY = env.ANTHROPIC_API_KEY, GKEY = env.GOOGLE_PLACES_API_KEY;
-const MODEL = 'claude-opus-4-8';
+const MODEL = 'claude-sonnet-5'; // tasteful enough for selection at a fraction of Opus cost
 const STATE = (process.argv[2] || 'CA').toUpperCase();
 const LIMIT = parseInt(process.argv[3] || '12', 10);
 const APPLY = process.argv.includes('--apply');
-const MAX_PHOTOS = 10, PHOTO_W = 1568, MIN_BYTES = 5000, PROMOTE_CONF = 0.5, MIN_HERO_SCORE = 3;
+const MAX_PHOTOS = 6, PHOTO_W = 1024, MIN_BYTES = 5000, PROMOTE_CONF = 0.5, MIN_HERO_SCORE = 3;
 
 function rubric(mixed) {
   return `You are a skilled photo editor curating images for a self-service car wash directory. Two different standards apply: for the HERO you ALWAYS pick the best available self-serve shot (it need not be perfect); for the GALLERY you are picky and include only genuinely good scenes (never useless filler).
@@ -29,12 +30,12 @@ This location is: ${mixed ? 'MIXED — it is ALSO a touchless/automatic wash. Se
 
 STEP 1 — Score EVERY image (skip none). For each: category, self_serve_relevance (0-5), visual_quality (0-5), hero_worthy (0-5), disqualified (bool) + reason.
 
-STEP 2 — Pick the HERO. ALWAYS choose the single best self-serve shot available, in this PREFERENCE ORDER. It does NOT need to be perfect — pick the best of THIS set as long as it genuinely shows self-serve:
-  1. a clean vehicle being washed / sitting in a bright, well-lit self-serve bay (most inviting — prefer this)
-  2. a bright, front-on wide facility shot showing multiple open self-serve bays
-  3. a clean interior bay with the wand/equipment clearly visible
-  A slightly angled, rear-on, or softer-light version of the above is PERFECTLY FINE if it's the best available and clearly self-serve — take it, don't reject it for imperfection. A prominent front-on/experience shot beats a distant or badly-angled one, but "best available" always wins.
-  ONLY set hero_index null / needs_human true if NONE of the photos show a usable self-serve scene at all (every candidate is a car-only shot, an equipment close-up, or disqualified).
+STEP 2 — Pick the HERO: the single most ATTRACTIVE and INFORMATIVE image — one that both looks genuinely nice to a typical visitor AND clearly shows what this self-serve wash looks like. Make a BALANCED, tasteful judgment; do NOT mechanically prefer one type. A great hero can be ANY of these — pick whichever is actually the nicest of THIS set:
+  - a beautifully-lit facility/exterior clearly showing the open self-serve bays (warm golden light or bright even light) — these are OFTEN the best heroes
+  - a clean car in a bright, well-lit self-serve bay
+  - a clear, well-composed wide shot of the bays
+  REWARD: good natural light, clean composition, a clear read of the self-serve bays, sharpness, an inviting feel. PENALIZE: dark/harsh/blown-out light, awkward angles that hide the bays, clutter, or a frame dominated by a single car with little context. Between two decent options, choose the one a typical person would find more attractive.
+  Always pick the best available; set hero_index null / needs_human true ONLY if nothing usably shows the self-serve wash.
 
 STEP 3 — Pick up to 3 GALLERY images (here BE PICKY): genuine, attractive self-serve SCENES only — interior bays, a car being hand-washed, a bright wide facility, an appealing wand-in-use shot. Aim for variety. RETURN FEWER (even zero) RATHER THAN PAD with weak or useless shots.
 
@@ -73,6 +74,17 @@ async function upload(buffer, ct, listingId, slot) {
   const { error } = await sb.storage.from('listing-photos').upload(path, buffer, { contentType: ct, upsert: true });
   if (error) return null;
   return sb.storage.from('listing-photos').getPublicUrl(path).data.publicUrl;
+}
+// Center-crop the hero to 16:9 so it displays cleanly (gallery images keep their
+// natural orientation). Falls back to the original buffer if anything goes wrong.
+async function cropHero16x9(buffer) {
+  try {
+    const m = await sharp(buffer).metadata();
+    const AR = 16 / 9; let cw = m.width, ch = m.height, left = 0, top = 0;
+    if (m.width / m.height > AR) { cw = Math.round(m.height * AR); left = Math.round((m.width - cw) / 2); }
+    else { ch = Math.round(m.width / AR); top = Math.round((m.height - ch) / 2); }
+    return await sharp(buffer).extract({ left, top, width: cw, height: ch }).jpeg({ quality: 85 }).toBuffer();
+  } catch { return buffer; }
 }
 const xj = s => { const a = s.indexOf('{'), b = s.lastIndexOf('}'); if (a < 0 || b < 0) return null; try { return JSON.parse(s.slice(a, b + 1)); } catch { return null; } };
 
@@ -132,7 +144,7 @@ for (const l of rows || []) {
   else {
     console.log(`• ${l.name} (${l.city}) ${tag} — hero #${p.hero_index} ${heroImg?.category} (hero_worthy ${heroImg?.hero_worthy}, quality ${heroImg?.visual_quality}), gallery [${gal.join(',')}] conf ${p.confidence}`);
     if (APPLY) {
-      const heroUrl = await upload(imgs[p.hero_index].buffer, imgs[p.hero_index].mediaType, l.id, 'hero');
+      const heroUrl = await upload(await cropHero16x9(imgs[p.hero_index].buffer), 'image/jpeg', l.id, 'hero');
       const galUrls = [];
       for (const gi of gal) { const u = await upload(imgs[gi].buffer, imgs[gi].mediaType, l.id, `g${gi}`); if (u) galUrls.push(u); }
       if (heroUrl) {
@@ -142,7 +154,7 @@ for (const l of rows || []) {
     } else applied++;
   }
 }
-const cost = (inTok / 1e6) * 5 + (outTok / 1e6) * 25 + photoCalls * 0.007; // Opus ~$5/$25 + Places ~$0.007/call
+const cost = (inTok / 1e6) * 3 + (outTok / 1e6) * 15 + photoCalls * 0.007; // Sonnet ~$3/$15 + Places ~$0.007/call
 console.log(`\n==================== AUTOPHOTO ${STATE} DONE ====================`);
 console.log(`${APPLY ? 'Applied' : 'Would apply'}: ${applied}  |  ⚠ Needs human: ${flagged}  |  too few photos: ${noPhotos}  |  errors: ${errors}`);
-console.log(`Est. cost: ~$${cost.toFixed(2)} (${photoCalls} Google calls + Opus vision)`);
+console.log(`Est. cost: ~$${cost.toFixed(2)} (${photoCalls} Google calls + Sonnet vision)`);
