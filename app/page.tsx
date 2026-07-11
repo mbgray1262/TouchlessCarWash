@@ -14,6 +14,7 @@ import { getTouchlessVideoPool } from '@/lib/videos';
 import { RedirectBanner } from '@/components/RedirectBanner';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { publicListings } from '@/lib/public-listings';
+import { SELF_SERVE_LIVE } from '@/lib/self-serve';
 import { getApprovedTouchlessCount } from '@/lib/listing-queries';
 import { US_STATES, getStateSlug } from '@/lib/constants';
 import { getMetroBySlug } from '@/lib/metro-areas';
@@ -266,6 +267,19 @@ export default async function Home({ searchParams }: { searchParams?: { geo?: st
       />
 
       <HeroSection totalCount={totalCount} />
+
+      {SELF_SERVE_LIVE && (
+        <section className="bg-[#22C55E]/10 border-y border-[#22C55E]/20">
+          <div className="container mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 text-center">
+            <span className="text-sm text-[#0F2744]">
+              Prefer to wash it yourself in a self-serve bay you control?
+            </span>
+            <Link href="/self-serve-car-wash" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#22C55E] hover:underline">
+              Browse self-service car washes <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </section>
+      )}
 
       <section className="bg-[#0F2744] py-12">
         <div className="container mx-auto px-4">

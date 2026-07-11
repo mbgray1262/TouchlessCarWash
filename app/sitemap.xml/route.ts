@@ -1,5 +1,6 @@
 import { supabase, type Listing } from '@/lib/supabase';
 import { publicListings } from '@/lib/public-listings';
+import { SELF_SERVE_LIVE, publicSelfServeListings, selfServeStateTally } from '@/lib/self-serve';
 import { US_STATES, getStateSlug, slugify } from '@/lib/constants';
 import { getQualifyingMetros } from '@/lib/metro-queries';
 import { FEATURES } from '@/lib/features';
@@ -329,6 +330,46 @@ export async function GET() {
     <priority>0.9</priority>
   </url>`;
   });
+
+  // ── Self-serve directory (only emitted when the category is live) ──
+  // Landing + per-state hubs + self-serve-ONLY listing detail pages. Mixed
+  // touchless+self-serve listings are already emitted above via listingUrls, so
+  // we filter to !is_touchless here to avoid duplicate <loc> entries. Mirrors the
+  // exact render/robots gate in lib/self-serve.ts, keeping sitemap ⟺ indexable.
+  let selfServeUrls: string[] = [];
+  if (SELF_SERVE_LIVE) {
+    const [ssTally, ssListingsRes] = await Promise.all([
+      selfServeStateTally(),
+      publicSelfServeListings('slug, state, city, is_touchless, updated_at, created_at').limit(10000),
+    ]);
+    const ssListings = (ssListingsRes.data ?? []) as {
+      slug: string; state: string; city: string | null; is_touchless: boolean | null;
+      updated_at: string | null; created_at: string | null;
+    }[];
+    selfServeUrls.push(`  <url>
+    <loc>${baseUrl}/self-serve-car-wash</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`);
+    for (const { code } of ssTally) {
+      selfServeUrls.push(`  <url>
+    <loc>${baseUrl}/self-serve-car-wash/${getStateSlug(code)}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`);
+    }
+    for (const l of ssListings) {
+      if (l.is_touchless || !l.city?.trim() || !VALID_STATE_CODES.has(l.state)) continue;
+      selfServeUrls.push(`  <url>
+    <loc>${baseUrl}/state/${getStateSlug(l.state)}/${slugify(l.city)}/${l.slug}</loc>
+    <lastmod>${l.updated_at ?? l.created_at ?? now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>`);
+    }
+  }
 
   // Retired blog slugs that 301-redirect elsewhere (see next.config.js
   // redirects) must not be advertised even though a published_at row lingers.
@@ -674,6 +715,7 @@ ${stateStatsUrls.join('\n')}
 ${cityUrls.join('\n')}
 ${listingUrls.join('\n')}
 ${blogUrls.join('\n')}
+${selfServeUrls.join('\n')}
 </urlset>`;
 
   return new Response(sitemap, {

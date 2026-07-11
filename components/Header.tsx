@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useState, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useFavorites } from '@/lib/useFavorites';
+import { SELF_SERVE_LIVE } from '@/lib/self-serve';
 
 /**
  * Inner component that reads searchParams (must be wrapped in Suspense
@@ -64,6 +65,11 @@ export function Header() {
             <Link href="/#browse-states" className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors">
               Browse States
             </Link>
+            {SELF_SERVE_LIVE && (
+              <Link href="/self-serve-car-wash" className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors">
+                Self-Serve
+              </Link>
+            )}
             <Link href="/best" className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors">
               Best Of
             </Link>
@@ -126,6 +132,15 @@ export function Header() {
               >
                 Browse States
               </Link>
+              {SELF_SERVE_LIVE && (
+                <Link
+                  href="/self-serve-car-wash"
+                  className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Self-Serve
+                </Link>
+              )}
               <Link
                 href="/best"
                 className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors"
