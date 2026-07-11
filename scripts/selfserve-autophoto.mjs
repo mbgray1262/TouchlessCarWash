@@ -16,33 +16,36 @@ import { readFileSync } from 'node:fs';
 const env = Object.fromEntries(readFileSync('.env.local', 'utf8').split('\n').filter(l => l.includes('=') && !l.trim().startsWith('#')).map(l => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim().replace(/^["']|["']$/g, '')]; }));
 const sb = createClient(env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 const AKEY = env.ANTHROPIC_API_KEY, GKEY = env.GOOGLE_PLACES_API_KEY;
-const MODEL = 'claude-sonnet-5';
+const MODEL = 'claude-opus-4-8';
 const STATE = (process.argv[2] || 'CA').toUpperCase();
 const LIMIT = parseInt(process.argv[3] || '12', 10);
 const APPLY = process.argv.includes('--apply');
-const MAX_PHOTOS = 8, PHOTO_W = 1280, MIN_BYTES = 5000, PROMOTE_CONF = 0.7;
+const MAX_PHOTOS = 10, PHOTO_W = 1280, MIN_BYTES = 5000, PROMOTE_CONF = 0.7, MIN_HERO_SCORE = 4;
 
 function rubric(mixed) {
-  return `You are the expert photo editor for a SELF-SERVICE car wash directory. You get up to ${MAX_PHOTOS} candidate photos (from the wash's Google listing) for ONE location. Pick the single best HERO and up to 3 GALLERY images. Accuracy and quality are paramount — it is far better to say needs_human than to pick a mediocre or wrong photo.
+  return `You are a meticulous ART DIRECTOR curating photos for a premium self-service car wash directory. Quality is EVERYTHING. Do NOT settle for the first acceptable shot — study EVERY candidate, then choose only the genuinely best. It is far better to pick fewer images (or say needs_human) than to include a mediocre, messy, or wrong one.
 
-This location is: ${mixed ? 'MIXED (it is ALSO a touchless/automatic wash)' : 'SELF-SERVE ONLY'}.
+This location is: ${mixed ? 'MIXED — it is ALSO a touchless/automatic wash. Self-serve seekers will view this, so the photos MUST clearly show the self-serve side, never only the automatic bay.' : 'SELF-SERVE ONLY.'}
 
-Definitions:
-- SELF-SERVE bay: an open/covered stall where the customer washes their own car with a handheld wand/lance; usually a coin/credit box, foam brush, hoses on the wall.
-- FACILITY shot: the building / canopy / multiple bays seen from outside, framed so the wash is the clear subject.
+STEP 1 — Score EVERY image (do not skip any). For each give:
+  - category: facility_multi_bay | facility_exterior | bay_interior | bay_in_use (car being washed by hand) | wand_or_coin_detail | vacuum | touchless_or_automatic_bay | tunnel_interior | brush_or_abrasive | sign_or_price | vehicle_only | car_interior | gas | logo | map | person | food | clutter_or_messy | equipment_no_context | other
+  - self_serve_relevance (0-5): how clearly it shows the self-serve experience (open bays, wand, coin box, a car being hand-washed, the self-serve facility)
+  - visual_quality (0-5): lighting, sharpness, composition, cleanliness of the SCENE, how attractive/inviting it looks
+  - hero_worthy (0-5): would this make a beautiful, inviting hero that instantly says "self-service car wash"? A gorgeous, brightly-lit interior bay shot can score 5 here even if it is not a facility shot.
+  - disqualified (bool) + reason.
 
-HERO rules (choose exactly one index, or null if none is good):
-${mixed
-  ? `- Pick a FACILITY/exterior shot of the whole site (building + bays/canopy). DO NOT pick a close-up of an automatic/touchless bay interior or a tunnel interior — those misrepresent a mixed site. A clean wide exterior is ideal. Must be landscape (crops to 16:9).`
-  : `- Prefer a clean FACILITY shot showing MULTIPLE self-serve bays (exterior/canopy). If none, use a clear, well-lit self-serve BAY shot (stall with wand/coin box, ideally a car being washed). Must be landscape (crops to 16:9).`}
-- NEVER as hero: mostly-a-car photos, dashboards/interiors, gas pumps, sign/price/logo-only, maps/screenshots, food, people portraits, blurry/dark/low-res, watermarked/stock.
+STEP 2 — Select like an art director:
+  - HERO = the ONE image with the best combination of visual_quality + hero_worthy + self_serve_relevance. It may be EITHER a facility/exterior shot OR a beautiful interior bay shot — choose whichever is truly the most attractive and self-serve-representative. Strongly prefer clean, bright, sharp, FRONT-ON framing where the bays are clearly visible; reject awkward angles that hide the bays, and reject anything with cars/clutter blocking the view. If NOTHING scores hero_worthy >= 4, set hero_index null and needs_human true.
+  - GALLERY (up to 3, excluding the hero) = the next best DISTINCT, genuinely good self-serve shots (aim for variety: an interior bay, a wand/coin detail, a wide facility). Include FEWER rather than pad with weak shots. A gallery image must have visual_quality >= 3 and be self-serve-relevant.
 
-GALLERY rules (up to 3, excluding the hero): the best SELF-SERVE shots — bay interiors with wands/coin boxes, a car being washed in a bay, foam brush, clean stalls, vacuum stations. Prefer variety (no near-duplicates). Same quality bans.
-
-For EACH candidate return: index, category (facility_multi_bay|bay_interior|bay_in_use|touchless_bay|tunnel_interior|vacuum|sign_or_price|vehicle|interior|gas|logo|map|person|food|other), quality (1-5), keep (bool), reason (short).
+ABSOLUTE DISQUALIFIERS — never choose as hero OR gallery:
+  - ANY brush, cloth strip, mitter curtain, foam-pad, or abrasive contact equipment. This violates our paint-safety brand and is STRICTLY forbidden — even if the photo is otherwise nice.
+  - For a MIXED site: a touchless/automatic in-bay or tunnel shot as the HERO (confuses self-serve seekers). Never let automatic-only imagery be the only thing shown.
+  - Messy/cluttered scenes: towels draped on cars, cars blocking the bays, junk/hoses tangled in the foreground, random equipment close-ups with no context (e.g. a lone tube/hose).
+  - A customer's car as the subject with no clear bay/facility context; car interiors/dashboards; gas pumps; sign/price/logo-only; maps; screenshots; food; people portraits; blurry, dark, low-res, watermarked, or stock images.
 
 Return ONLY JSON:
-{"images":[{"index":0,"category":"...","quality":3,"keep":true,"reason":"..."}],"hero_index":2,"gallery_indices":[4,1],"confidence":0.86,"needs_human":false,"reason":"..."}`;
+{"images":[{"index":0,"category":"...","self_serve_relevance":4,"visual_quality":4,"hero_worthy":5,"disqualified":false,"reason":"..."}],"hero_index":2,"gallery_indices":[4,1],"confidence":0.86,"needs_human":false,"reason":"why these picks are the best of the set"}`;
 }
 
 async function photoRefs(placeId) {
@@ -107,14 +110,20 @@ for (const l of rows || []) {
   if (r.err) { errors++; console.log(`• ${l.name} — vision error ${r.err}`); continue; }
   inTok += r.usage?.input_tokens || 0; outTok += r.usage?.output_tokens || 0;
   const p = r.parsed || {};
-  const heroOk = p.hero_index != null && imgs[p.hero_index] && (p.images?.find(x => x.index === p.hero_index)?.quality ?? 0) >= 3;
+  const heroImg = p.images?.find(x => x.index === p.hero_index);
+  const heroOk = p.hero_index != null && imgs[p.hero_index] && heroImg && !heroImg.disqualified && (heroImg.hero_worthy ?? 0) >= MIN_HERO_SCORE;
   const good = !p.needs_human && (p.confidence ?? 0) >= PROMOTE_CONF && heroOk;
-  const gal = (p.gallery_indices || []).filter(i => i !== p.hero_index && imgs[i]).slice(0, 3);
+  // Gallery: only distinct, non-disqualified, decent-quality shots (no padding).
+  const gal = (p.gallery_indices || []).filter(i => {
+    if (i === p.hero_index || !imgs[i]) return false;
+    const gi = p.images?.find(x => x.index === i);
+    return gi && !gi.disqualified && (gi.visual_quality ?? 0) >= 3;
+  }).slice(0, 3);
   const tag = `${mixed ? '[mixed]' : '[self]'}`;
 
   if (!good) { flagged++; console.log(`• ${l.name} (${l.city}) ${tag} — ⚠ NEEDS HUMAN (conf ${p.confidence}, ${p.reason || ''})`); }
   else {
-    console.log(`• ${l.name} (${l.city}) ${tag} — hero #${p.hero_index} (${p.images?.find(x => x.index === p.hero_index)?.category}), gallery [${gal.join(',')}] conf ${p.confidence}`);
+    console.log(`• ${l.name} (${l.city}) ${tag} — hero #${p.hero_index} ${heroImg?.category} (hero_worthy ${heroImg?.hero_worthy}, quality ${heroImg?.visual_quality}), gallery [${gal.join(',')}] conf ${p.confidence}`);
     if (APPLY) {
       const heroUrl = await upload(imgs[p.hero_index].buffer, imgs[p.hero_index].mediaType, l.id, 'hero');
       const galUrls = [];
@@ -126,7 +135,7 @@ for (const l of rows || []) {
     } else applied++;
   }
 }
-const cost = (inTok / 1e6) * 3 + (outTok / 1e6) * 15 + photoCalls * 0.007; // Sonnet ~$3/$15 + Places ~$0.007/call
+const cost = (inTok / 1e6) * 5 + (outTok / 1e6) * 25 + photoCalls * 0.007; // Opus ~$5/$25 + Places ~$0.007/call
 console.log(`\n==================== AUTOPHOTO ${STATE} DONE ====================`);
 console.log(`${APPLY ? 'Applied' : 'Would apply'}: ${applied}  |  ⚠ Needs human: ${flagged}  |  too few photos: ${noPhotos}  |  errors: ${errors}`);
-console.log(`Est. cost: ~$${cost.toFixed(2)} (${photoCalls} Google calls + Sonnet vision)`);
+console.log(`Est. cost: ~$${cost.toFixed(2)} (${photoCalls} Google calls + Opus vision)`);
