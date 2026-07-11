@@ -11,6 +11,7 @@
 import { permanentRedirect } from 'next/navigation';
 import { supabase, type Listing } from '@/lib/supabase';
 import { publicListingsCount } from '@/lib/public-listings';
+import { isSelfServePublic } from '@/lib/self-serve';
 import type { TssSnippet } from '@/components/TouchlessSatisfactionGauge';
 import type { ScoreRankItem } from '@/components/TouchlessScoreComparison';
 import { earnsTrophy } from '@/lib/metro-scoring';
@@ -94,7 +95,9 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   // the metadata path Google might still use if it caches the URL during
   // a re-crawl window. Make sure that cached metadata says noindex so the
   // URL drops out of "Duplicate without user-selected canonical" reports.
-  if (!listing.is_touchless || !listing.is_approved) {
+  // Redirect/noindex unless the listing is touchless-public OR (when the category
+  // is live) self-serve-public. isSelfServePublic is always false while gated.
+  if ((!listing.is_touchless || !listing.is_approved) && !isSelfServePublic(listing)) {
     return {
       title: 'Listing Not Available',
       robots: { index: false, follow: true },
@@ -215,7 +218,11 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
   // crawl reputation). Instead 301-redirect to the city hub page, which
   // Google treats as a normal site reorganization and which transfers
   // any accumulated PageRank to the city page.
-  if (!listing.is_touchless || !listing.is_approved) {
+  // Self-serve-only listings render (not redirect) once the category is live;
+  // isSelfServePublic is false while gated so they keep redirecting until launch.
+  // NOTE (pre-launch TODO): the detail template below is touchless-branded — its
+  // self-serve copy/schema adaptation is the remaining task before flipping the switch.
+  if ((!listing.is_touchless || !listing.is_approved) && !isSelfServePublic(listing)) {
     const stateSlug = getStateSlug(listing.state) || params.state;
     const citySlug = slugify(listing.city) || params.city;
     // Prefer the listing's own city hub (most relevant to the original
