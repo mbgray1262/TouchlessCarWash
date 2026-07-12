@@ -32,6 +32,7 @@ const CONCURRENCY = parseInt(process.env.CONCURRENCY || '4', 10);
 const MAX_PHOTOS = 90, MAX_PAGES = 10, PHOTO_W = 1600, VISION_W = 640, MIN_BYTES = 5000, PROMOTE_CONF = 0.5, MIN_HERO_SCORE = 3, GALLERY_MAX = 6;
 let serpCalls = 0;
 const INCLUDE_MIXED = !process.argv.includes('--self-only'); // process mixed listings too (facility-both hero), backed up
+const MIXED_ONLY = process.argv.includes('--mixed-only'); // ONLY mixed (also-touchless) listings — the careful facility pass
 const SKIP_DONE = process.argv.includes('--skip-done'); // skip listings already given a good ai_photo hero (fix only the un-done ones)
 const NAME_FILTER = process.argv.slice(4).find(a => !a.startsWith('--')); // optional name ILIKE for targeted runs
 const MOBILE = /\b(m[oó]vil|mobile|a\s?domicilio|domicilio|at\s?home|to\s?your)\b/i; // mobile washes = no fixed self-serve facility
@@ -213,6 +214,27 @@ async function triageBatch(mixed, visionImgs) {
   return { err: 'retries' };
 }
 
+// For a MIXED facility: does the CURRENT hero already show the self-serve side? If
+// yes we KEEP the curated hero (don't rescreen a good pick) and only enrich the
+// gallery. If it shows ONLY automatic/touchless equipment (or no bay), the mixed pass
+// replaces it with a self-serve/both-bays hero. Michael's refined rule 2026-07-12.
+async function assessHeroSelfServe(buffer) {
+  const vis = await visionCopy(buffer, 'image/jpeg');
+  if (!vis) return null;
+  const prompt = `This is the CURRENT hero image for a car wash that offers BOTH self-service AND automatic/touchless washing. Does THIS image clearly show the SELF-SERVICE side — a walled self-serve wash BAY/stall with a hanging spray wand, a row of such walled stalls, or a vehicle being washed inside one? An image showing ONLY an automatic/tunnel bay, laser/gantry equipment, or just the building/sign/lot with no visible self-serve bay does NOT count. Return ONLY JSON: {"shows_selfserve":true,"note":"..."}`;
+  const content = [{ type: 'text', text: prompt }, { type: 'image', source: { type: 'base64', media_type: vis.mediaType, data: vis.base64 } }];
+  const body = JSON.stringify({ model: MODEL, max_tokens: 300, messages: [{ role: 'user', content }] });
+  for (let a = 0; a < 3; a++) {
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'x-api-key': AKEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }, body, signal: AbortSignal.timeout(60000) });
+      if (!res.ok) { if (res.status === 429 || res.status >= 500) { await new Promise(r => setTimeout(r, 4000)); continue; } return null; }
+      const j = await res.json();
+      return { parsed: xj((j.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n')), usage: j.usage };
+    } catch { if (a < 2) { await new Promise(r => setTimeout(r, 4000)); continue; } return null; }
+  }
+  return null;
+}
+
 const BATCH = 16, SHORTLIST = 14;
 // Look at EVERY photo: if few, one final call; if many, triage all in batches then
 // run the full selection on the best shortlist. Returns {r, used} where `used` is the
@@ -261,6 +283,7 @@ for (let attempt = 0; attempt < 3; attempt++) {
   // live site — we back up the prior hero (reversible) and give them a facility hero
   // that shows BOTH bay types. Pass --self-only to skip them.
   if (!INCLUDE_MIXED) q = q.not('is_touchless', 'is', true);
+  if (MIXED_ONLY) q = q.eq('is_touchless', true); // the careful mixed-facility pass
   if (SKIP_DONE) q = q.or('hero_image_source.is.null,hero_image_source.neq.ai_photo'); // only un-done listings
   if (NAME_FILTER) q = q.ilike('name', `%${NAME_FILTER}%`);
   const res = await q.order('city').limit(LIMIT);
@@ -344,17 +367,38 @@ async function processListing(l) {
   else {
     const ct = p.hero_crop || {};
     const trims = [ct.trim_left, ct.trim_right, ct.trim_top, ct.trim_bottom].some(v => v) ? ` crop{L${ct.trim_left||0} R${ct.trim_right||0} T${ct.trim_top||0} B${ct.trim_bottom||0}}` : '';
-    console.log(`• ${l.name} (${l.city}) ${tag} [${imgs.length}📷] — hero #${p.hero_index} ${heroImg?.category} (hw ${heroImg?.hero_worthy}, q ${heroImg?.visual_quality})${trims}, gallery [${gal.join(',')}] conf ${p.confidence}`);
+    // MIXED refinement (Michael's rule): a mixed facility's hero is shared with its
+    // LIVE touchless page. KEEP the current hero if it already shows the self-serve
+    // side (don't rescreen a good curated pick); REPLACE it only if it's touchless-
+    // only / shows no self-serve bay. Self-serve-only listings always take the AI hero.
+    let keepHero = false, assessNote = '';
+    if (mixed && l.hero_image) {
+      const cur = await fetchImage(l.hero_image);
+      if (cur) {
+        const a = await assessHeroSelfServe(cur);
+        if (a?.usage) { inTok += a.usage.input_tokens || 0; outTok += a.usage.output_tokens || 0; }
+        if (a?.parsed?.shows_selfserve === true) { keepHero = true; assessNote = ' — KEPT current hero (already shows self-serve), gallery enriched'; }
+        else if (a) { assessNote = ' — current hero touchless-only → replacing with self-serve hero'; }
+      }
+    }
+    console.log(`• ${l.name} (${l.city}) ${tag} [${imgs.length}📷] — ${keepHero ? 'hero KEPT' : `hero #${p.hero_index} ${heroImg?.category} (hw ${heroImg?.hero_worthy}, q ${heroImg?.visual_quality})${trims}`}, gallery [${gal.join(',')}] conf ${p.confidence}${assessNote}`);
     if (APPLY) {
-      // Back up the prior hero before overwriting — matters most for MIXED listings
-      // whose hero is shared with the LIVE touchless page (fully reversible).
-      heroBackup.push({ id: l.id, name: l.name, mixed, prev_hero_image: l.hero_image, prev_hero_image_source: l.hero_image_source });
-      const heroUrl = await upload(await cropHero(used[p.hero_index].buffer, p.hero_crop), 'image/jpeg', l.id, 'hero');
+      // Upload the enriched gallery (great self-serve shots) for both keep + replace.
       const galUrls = [];
       for (const gi of gal) { const u = await upload(used[gi].buffer, used[gi].mediaType, l.id, `g${gi}`); if (u) galUrls.push(u); }
-      if (heroUrl) {
-        await sb.from('listings').update({ hero_image: heroUrl, hero_image_source: 'ai_photo', photos: galUrls }).eq('id', l.id);
+      if (keepHero) {
+        // Keep the existing hero; only enrich the gallery (never wipe it to empty).
+        if (galUrls.length) await sb.from('listings').update({ photos: galUrls }).eq('id', l.id);
         applied++;
+      } else {
+        // Back up the prior hero before overwriting — matters most for MIXED listings
+        // whose hero is shared with the LIVE touchless page (fully reversible).
+        heroBackup.push({ id: l.id, name: l.name, mixed, prev_hero_image: l.hero_image, prev_hero_image_source: l.hero_image_source });
+        const heroUrl = await upload(await cropHero(used[p.hero_index].buffer, p.hero_crop), 'image/jpeg', l.id, 'hero');
+        if (heroUrl) {
+          await sb.from('listings').update({ hero_image: heroUrl, hero_image_source: 'ai_photo', photos: galUrls }).eq('id', l.id);
+          applied++;
+        }
       }
     } else applied++;
   }
