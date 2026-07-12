@@ -21,7 +21,9 @@ const MODEL = 'claude-sonnet-5'; // tasteful enough for selection at a fraction 
 const STATE = (process.argv[2] || 'CA').toUpperCase();
 const LIMIT = parseInt(process.argv[3] || '12', 10);
 const APPLY = process.argv.includes('--apply');
-const MAX_PHOTOS = 20, PHOTO_W = 1600, VISION_W = 768, MIN_BYTES = 5000, PROMOTE_CONF = 0.5, MIN_HERO_SCORE = 3, GALLERY_MAX = 6;
+// MAX_PHOTOS is a high safety ceiling, not a real cap — virtually no wash has this
+// many photos, and pagination fetches every page up to MAX_PAGES first.
+const MAX_PHOTOS = 90, MAX_PAGES = 10, PHOTO_W = 1600, VISION_W = 640, MIN_BYTES = 5000, PROMOTE_CONF = 0.5, MIN_HERO_SCORE = 3, GALLERY_MAX = 6;
 let serpCalls = 0;
 const INCLUDE_MIXED = !process.argv.includes('--self-only'); // process mixed listings too (facility-both hero), backed up
 const NAME_FILTER = process.argv.slice(4).find(a => !a.startsWith('--')); // optional name ILIKE for targeted runs
@@ -63,17 +65,30 @@ Return ONLY JSON:
 {"has_self_serve_bay":true,"images":[{"index":0,"category":"...","self_serve_relevance":4,"visual_quality":4,"hero_worthy":5,"disqualified":false,"reason":"..."}],"hero_index":2,"hero_crop":{"trim_left":0,"trim_right":0.2,"trim_top":0.1,"trim_bottom":0},"gallery_indices":[4,1],"confidence":0.86,"needs_human":false,"reason":"why these are the best of the set"}`;
 }
 
-// Get ALL of a place's Google Maps photos via SerpAPI (not the Places API, which
-// hard-caps at 10). 2 quota-searches: place_id -> data_id, then data_id -> photos.
+// Get EVERY one of a place's Google Maps photos via SerpAPI (the Places API
+// hard-caps at 10). place_id -> data_id, then paginate google_maps_photos through
+// ALL pages (follow next_page_token) until the gallery is exhausted — no artificial cap.
 async function serpPhotoUrls(placeId) {
   try {
     const r1 = await fetch(`https://serpapi.com/search.json?engine=google_maps&place_id=${encodeURIComponent(placeId)}&api_key=${SKEY}`, { signal: AbortSignal.timeout(25000) });
     const j1 = await r1.json(); serpCalls++;
     const dataId = j1.place_results?.data_id;
     if (!dataId) return [];
-    const r2 = await fetch(`https://serpapi.com/search.json?engine=google_maps_photos&data_id=${encodeURIComponent(dataId)}&api_key=${SKEY}`, { signal: AbortSignal.timeout(25000) });
-    const j2 = await r2.json(); serpCalls++;
-    return (j2.photos || []).map(p => p.image).filter(u => typeof u === 'string' && u.includes('googleusercontent')).slice(0, MAX_PHOTOS);
+    const out = []; let token = null;
+    for (let page = 0; page < MAX_PAGES; page++) {
+      let url = `https://serpapi.com/search.json?engine=google_maps_photos&data_id=${encodeURIComponent(dataId)}&api_key=${SKEY}`;
+      if (token) url += `&next_page_token=${encodeURIComponent(token)}`;
+      const r = await fetch(url, { signal: AbortSignal.timeout(25000) });
+      const j = await r.json(); serpCalls++;
+      const pagePhotos = (j.photos || []).map(p => p.image).filter(u => typeof u === 'string' && u.includes('googleusercontent'));
+      out.push(...pagePhotos);
+      token = j.serpapi_pagination?.next_page_token;
+      if (!token || !pagePhotos.length) break; // no more pages
+    }
+    // Dedupe (base URL, ignoring size params) while preserving order.
+    const seen = new Set(), uniq = [];
+    for (const u of out) { const k = u.split('=')[0]; if (!seen.has(k)) { seen.add(k); uniq.push(u); } }
+    return uniq.slice(0, MAX_PHOTOS);
   } catch { return []; }
 }
 // Download a googleusercontent photo at high resolution (append =w1600). Free
@@ -123,12 +138,63 @@ const xj = s => { const a = s.indexOf('{'), b = s.lastIndexOf('}'); if (a < 0 ||
 async function selectPhotos(name, mixed, imgs) {
   const content = [{ type: 'text', text: `${rubric(mixed)}\n\nLocation: ${name}\nCandidates:` }];
   imgs.forEach((g, i) => { content.push({ type: 'text', text: `Image ${i}:` }); content.push({ type: 'image', source: { type: 'base64', media_type: g.mediaType, data: g.base64 } }); });
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'x-api-key': AKEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }, body: JSON.stringify({ model: MODEL, max_tokens: 6000, messages: [{ role: 'user', content }] }), signal: AbortSignal.timeout(90000) });
-    if (!res.ok) return { err: `${res.status}: ${(await res.text()).slice(0, 160)}` };
-    const j = await res.json();
-    return { parsed: xj((j.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n')), usage: j.usage };
-  } catch (e) { return { err: e?.message || 'fetch failed' }; }
+  const body = JSON.stringify({ model: MODEL, max_tokens: 12000, messages: [{ role: 'user', content }] });
+  // Large galleries (60-80+ images) make a big, slow request — retry with a long timeout.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'x-api-key': AKEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }, body, signal: AbortSignal.timeout(300000) });
+      if (!res.ok) { if (res.status === 429 || res.status >= 500) { await new Promise(r => setTimeout(r, 4000)); continue; } return { err: `${res.status}: ${(await res.text()).slice(0, 160)}` }; }
+      const j = await res.json();
+      return { parsed: xj((j.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n')), usage: j.usage };
+    } catch (e) { if (attempt < 2) { await new Promise(r => setTimeout(r, 4000)); continue; } return { err: e?.message || 'fetch failed' }; }
+  }
+  return { err: 'exhausted retries' };
+}
+
+// TRIAGE: score every image cheaply (no hero/gallery decision) so we can look at
+// EVERY photo even when a gallery has 60-80 (too many for one final request).
+async function triageBatch(mixed, visionImgs) {
+  const prompt = `Score each candidate photo for a SELF-SERVICE car wash directory (site is ${mixed ? 'MIXED (also automatic/touchless)' : 'self-serve only'}). For EACH image return its index and score 0-5 = how good it would be as a hero/gallery image (5 = a beautiful, clear self-serve WASH BAY or facility shot; 0 = irrelevant/junk). Mark disqualified=true for: any brush/abrasive equipment; automatic/tunnel-only; messy or blocked bays; close-ups of coin/vacuum/sign/machine; a car with no bay context; car interiors; gas; food; maps; blurry/dark. Return ONLY JSON: {"scores":[{"index":0,"score":4,"disqualified":false}]}`;
+  const content = [{ type: 'text', text: prompt }];
+  visionImgs.forEach((g, i) => { content.push({ type: 'text', text: `Image ${i}:` }); content.push({ type: 'image', source: { type: 'base64', media_type: g.mediaType, data: g.base64 } }); });
+  const body = JSON.stringify({ model: MODEL, max_tokens: 4000, messages: [{ role: 'user', content }] });
+  for (let a = 0; a < 3; a++) {
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'x-api-key': AKEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }, body, signal: AbortSignal.timeout(180000) });
+      if (!res.ok) { if (res.status === 429 || res.status >= 500) { await new Promise(r => setTimeout(r, 4000)); continue; } return { err: res.status }; }
+      const j = await res.json();
+      return { parsed: xj((j.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n')), usage: j.usage };
+    } catch { if (a < 2) { await new Promise(r => setTimeout(r, 4000)); continue; } return { err: 'fetch failed' }; }
+  }
+  return { err: 'retries' };
+}
+
+const BATCH = 16, SHORTLIST = 14;
+// Look at EVERY photo: if few, one final call; if many, triage all in batches then
+// run the full selection on the best shortlist. Returns {r, used} where `used` is the
+// image array the returned indices refer to (for storage).
+async function analyzeAll(name, mixed, imgs) {
+  let inTok = 0, outTok = 0;
+  if (imgs.length <= BATCH + 6) {
+    const vis = []; for (const g of imgs) vis.push(await visionCopy(g.buffer, g.mediaType));
+    const r = await selectPhotos(name, mixed, vis);
+    return { r, used: imgs };
+  }
+  const scores = []; // {gi, score}
+  for (let s = 0; s < imgs.length; s += BATCH) {
+    const batch = imgs.slice(s, s + BATCH);
+    const vis = []; for (const g of batch) vis.push(await visionCopy(g.buffer, g.mediaType));
+    const t = await triageBatch(mixed, vis);
+    inTok += t.usage?.input_tokens || 0; outTok += t.usage?.output_tokens || 0;
+    for (const sc of (t.parsed?.scores || [])) if (!sc.disqualified && sc.index != null && batch[sc.index]) scores.push({ gi: s + sc.index, score: sc.score ?? 0 });
+  }
+  scores.sort((a, b) => b.score - a.score);
+  const shortlistGI = scores.slice(0, SHORTLIST).map(x => x.gi);
+  const used = shortlistGI.map(gi => imgs[gi]);
+  if (used.length < 2) return { r: { parsed: { has_self_serve_bay: false } }, used, triageTok: { inTok, outTok } };
+  const vis = []; for (const g of used) vis.push(await visionCopy(g.buffer, g.mediaType));
+  const r = await selectPhotos(name, mixed, vis);
+  return { r, used, triageTok: { inTok, outTok } };
 }
 
 // target listings
@@ -166,13 +232,12 @@ for (const l of rows || []) {
   for (const u of urls) { const d = await downloadUrl(u); if (d) imgs.push(d); if (imgs.length >= MAX_PHOTOS) break; }
   if (imgs.length < 2) { noPhotos++; console.log(`• ${l.name} (${l.city}) — only ${imgs.length} usable photos, skipped`); continue; }
 
-  const visionImgs = [];
-  for (const g of imgs) visionImgs.push(await visionCopy(g.buffer, g.mediaType));
-  const r = await selectPhotos(l.name, mixed, visionImgs);
+  const { r, used, triageTok } = await analyzeAll(l.name, mixed, imgs);
+  if (triageTok) { inTok += triageTok.inTok; outTok += triageTok.outTok; }
   if (r.err) { errors++; console.log(`• ${l.name} — vision error ${r.err}`); continue; }
   inTok += r.usage?.input_tokens || 0; outTok += r.usage?.output_tokens || 0;
   const p = r.parsed || {};
-  if (process.env.DEBUG_JSON) console.log(`\n=== ${l.name} (${imgs.length} photos) ===\n` + JSON.stringify(p, null, 2) + '\n');
+  if (process.env.DEBUG_JSON) console.log(`\n=== ${l.name} (${imgs.length} looked at, ${used.length} finalists) ===\n` + JSON.stringify(p, null, 2) + '\n');
   // VERIFY (Michael's rule): if NO photo shows a genuine self-serve wash bay, this
   // isn't a self-serve wash — demote it so it never reaches the review queue.
   if (p.has_self_serve_bay === false) {
@@ -182,11 +247,11 @@ for (const l of rows || []) {
     continue;
   }
   const heroImg = p.images?.find(x => x.index === p.hero_index);
-  const heroOk = p.hero_index != null && imgs[p.hero_index] && heroImg && !heroImg.disqualified && (heroImg.hero_worthy ?? 0) >= MIN_HERO_SCORE;
+  const heroOk = p.hero_index != null && used[p.hero_index] && heroImg && !heroImg.disqualified && (heroImg.hero_worthy ?? 0) >= MIN_HERO_SCORE;
   const good = !p.needs_human && (p.confidence ?? 0) >= PROMOTE_CONF && heroOk;
   // Gallery: only distinct, non-disqualified, decent-quality shots (no padding).
   const gal = (p.gallery_indices || []).filter(i => {
-    if (i === p.hero_index || !imgs[i]) return false;
+    if (i === p.hero_index || !used[i]) return false;
     const gi = p.images?.find(x => x.index === i);
     return gi && !gi.disqualified && (gi.visual_quality ?? 0) >= 3;
   }).slice(0, GALLERY_MAX);
@@ -196,14 +261,14 @@ for (const l of rows || []) {
   else {
     const ct = p.hero_crop || {};
     const trims = [ct.trim_left, ct.trim_right, ct.trim_top, ct.trim_bottom].some(v => v) ? ` crop{L${ct.trim_left||0} R${ct.trim_right||0} T${ct.trim_top||0} B${ct.trim_bottom||0}}` : '';
-    console.log(`• ${l.name} (${l.city}) ${tag} — hero #${p.hero_index} ${heroImg?.category} (hw ${heroImg?.hero_worthy}, q ${heroImg?.visual_quality})${trims}, gallery [${gal.join(',')}] conf ${p.confidence}`);
+    console.log(`• ${l.name} (${l.city}) ${tag} [${imgs.length}📷] — hero #${p.hero_index} ${heroImg?.category} (hw ${heroImg?.hero_worthy}, q ${heroImg?.visual_quality})${trims}, gallery [${gal.join(',')}] conf ${p.confidence}`);
     if (APPLY) {
       // Back up the prior hero before overwriting — matters most for MIXED listings
       // whose hero is shared with the LIVE touchless page (fully reversible).
       heroBackup.push({ id: l.id, name: l.name, mixed, prev_hero_image: l.hero_image, prev_hero_image_source: l.hero_image_source });
-      const heroUrl = await upload(await cropHero(imgs[p.hero_index].buffer, p.hero_crop), 'image/jpeg', l.id, 'hero');
+      const heroUrl = await upload(await cropHero(used[p.hero_index].buffer, p.hero_crop), 'image/jpeg', l.id, 'hero');
       const galUrls = [];
-      for (const gi of gal) { const u = await upload(imgs[gi].buffer, imgs[gi].mediaType, l.id, `g${gi}`); if (u) galUrls.push(u); }
+      for (const gi of gal) { const u = await upload(used[gi].buffer, used[gi].mediaType, l.id, `g${gi}`); if (u) galUrls.push(u); }
       if (heroUrl) {
         await sb.from('listings').update({ hero_image: heroUrl, hero_image_source: 'ai_photo', photos: galUrls }).eq('id', l.id);
         applied++;
