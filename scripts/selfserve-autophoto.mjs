@@ -13,10 +13,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { readFileSync, writeFileSync } from 'node:fs';
 import sharp from 'sharp';
+import crypto from 'node:crypto';
 
 const env = Object.fromEntries(readFileSync('.env.local', 'utf8').split('\n').filter(l => l.includes('=') && !l.trim().startsWith('#')).map(l => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim().replace(/^["']|["']$/g, '')]; }));
 const sb = createClient(env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
-const AKEY = env.ANTHROPIC_API_KEY, GKEY = env.GOOGLE_PLACES_API_KEY, SKEY = env.SERPAPI_KEY;
+const AKEY = env.ANTHROPIC_API_KEY, GKEY = env.GOOGLE_PLACES_API_KEY, SKEY = env.SERPAPI_KEY, SIGN_SECRET = env.GOOGLE_URL_SIGNING_SECRET;
 const MODEL = 'claude-sonnet-5'; // tasteful enough for selection at a fraction of Opus cost
 const STATE = (process.argv[2] || 'CA').toUpperCase();
 const LIMIT = parseInt(process.argv[3] || '12', 10);
@@ -90,6 +91,25 @@ async function serpPhotoUrls(placeId) {
     for (const u of out) { const k = u.split('=')[0]; if (!seen.has(k)) { seen.add(k); uniq.push(u); } }
     return uniq.slice(0, MAX_PHOTOS);
   } catch { return []; }
+}
+// Street View fallback (Michael's rule): when a wash has NO usable Google photos,
+// grab a signed Street View Static image at its coordinates and use it as the hero.
+function signGoogleUrl(url) {
+  if (!SIGN_SECRET) return url;
+  const u = new URL(url);
+  const keyBuffer = Buffer.from(SIGN_SECRET.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
+  const sig = crypto.createHmac('sha1', keyBuffer).update(u.pathname + u.search).digest('base64').replace(/\+/g, '-').replace(/\//g, '_');
+  return `${url}&signature=${sig}`;
+}
+async function streetViewImage(lat, lng) {
+  try {
+    const meta = await (await fetch(signGoogleUrl(`https://maps.googleapis.com/maps/api/streetview/metadata?size=2048x1152&location=${lat},${lng}&key=${GKEY}`), { signal: AbortSignal.timeout(12000) })).json();
+    if (meta.status !== 'OK') return null; // no imagery here
+    const r = await fetch(signGoogleUrl(`https://maps.googleapis.com/maps/api/streetview?size=2048x1152&location=${lat},${lng}&fov=90&heading=0&pitch=0&key=${GKEY}`), { signal: AbortSignal.timeout(15000) });
+    if (!r.ok) return null;
+    const buf = Buffer.from(await r.arrayBuffer());
+    return buf.length < MIN_BYTES ? null : buf;
+  } catch { return null; }
 }
 // Download a googleusercontent photo at high resolution (append =w1600). Free
 // (public image URL) — full-res kept for storage; a downscaled copy is made for vision.
@@ -205,7 +225,7 @@ async function analyzeAll(name, mixed, imgs) {
 let rows = [];
 for (let attempt = 0; attempt < 3; attempt++) {
   let q = sb.from('listings')
-    .select('id, name, city, state, google_place_id, is_touchless, hero_image, hero_image_source, photos')
+    .select('id, name, city, state, google_place_id, is_touchless, hero_image, hero_image_source, photos, latitude, longitude')
     .eq('is_self_service', true).is('self_service_reviewed_at', null)
     // Skip closed washes (manually-closed via classification_source, or Google-closed
     // via business_status). The .is.null clauses keep listings with no such flag.
@@ -224,13 +244,30 @@ for (let attempt = 0; attempt < 3; attempt++) {
 const heroBackup = []; // {id, name, prev_hero_image, prev_hero_image_source} for reversibility
 console.log(`${STATE}: ${rows?.length || 0} listings to process (${APPLY ? 'APPLY' : 'DRY RUN'}), model ${MODEL}\n`);
 
-let applied = 0, flagged = 0, noPhotos = 0, errors = 0, demoted = 0, inTok = 0, outTok = 0, photoCalls = 0;
+let applied = 0, flagged = 0, noPhotos = 0, errors = 0, demoted = 0, streetview = 0, inTok = 0, outTok = 0, photoCalls = 0;
 for (const l of rows || []) {
   const mixed = l.is_touchless === true;
   const urls = await serpPhotoUrls(l.google_place_id);
   const imgs = [];
   for (const u of urls) { const d = await downloadUrl(u); if (d) imgs.push(d); if (imgs.length >= MAX_PHOTOS) break; }
-  if (imgs.length < 2) { noPhotos++; console.log(`• ${l.name} (${l.city}) — only ${imgs.length} usable photos, skipped`); continue; }
+  if (imgs.length < 2) {
+    // No usable Google photos → Street View hero (Michael's rule), but only when the
+    // listing has no existing real hero (never overwrite a curated/live touchless hero).
+    const hasHero = l.hero_image && l.hero_image_source !== 'fallback';
+    if (!hasHero && l.latitude != null && l.longitude != null) {
+      const sv = await streetViewImage(l.latitude, l.longitude);
+      if (sv) {
+        streetview++;
+        console.log(`• ${l.name} (${l.city}) — 🛣️ no photos → Street View hero`);
+        if (APPLY) {
+          const url = await upload(await cropHero(sv, {}), 'image/jpeg', l.id, 'hero');
+          if (url) { heroBackup.push({ id: l.id, name: l.name, mixed: l.is_touchless === true, prev_hero_image: l.hero_image, prev_hero_image_source: l.hero_image_source }); await sb.from('listings').update({ hero_image: url, hero_image_source: 'street_view_auto' }).eq('id', l.id); }
+        }
+        continue;
+      }
+    }
+    noPhotos++; console.log(`• ${l.name} (${l.city}) — no usable photos & no street view, skipped`); continue;
+  }
 
   const { r, used, triageTok } = await analyzeAll(l.name, mixed, imgs);
   if (triageTok) { inTok += triageTok.inTok; outTok += triageTok.outTok; }
@@ -278,7 +315,7 @@ for (const l of rows || []) {
 }
 const cost = (inTok / 1e6) * 3 + (outTok / 1e6) * 15; // Sonnet vision only; photos are free via SerpAPI quota
 console.log(`\n==================== AUTOPHOTO ${STATE} DONE ====================`);
-console.log(`${APPLY ? 'Applied' : 'Would apply'}: ${applied}  |  ❌ Not self-serve (demoted): ${demoted}  |  ⚠ Needs human: ${flagged}  |  too few photos: ${noPhotos}  |  errors: ${errors}`);
+console.log(`${APPLY ? 'Applied' : 'Would apply'}: ${applied}  |  ❌ Not self-serve (demoted): ${demoted}  |  ⚠ Needs human: ${flagged}  |  street-view heroes: ${streetview}  |  too few photos: ${noPhotos}  |  errors: ${errors}`);
 if (APPLY && heroBackup.length) {
   const f = `scripts/_backup_autophoto_hero_${STATE}_${Date.now()}.json`;
   writeFileSync(f, JSON.stringify(heroBackup, null, 2));
