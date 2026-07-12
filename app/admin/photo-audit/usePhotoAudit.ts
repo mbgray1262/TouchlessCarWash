@@ -532,6 +532,14 @@ export function usePhotoAudit() {
       // (state → city → name) so whole cities/states get finished together.
       // Touchless keeps its alphabetical-by-name order.
       const selfServe = washColRef.current === 'is_self_service';
+      if (selfServe) {
+        // Never surface closed washes in the self-serve review queue — no reason to
+        // review them (manually-closed via classification_source, or Google-closed
+        // via business_status). NOT_CLOSED + the business_status .or keep listings
+        // that have no closed flag (the .is.null clauses).
+        countQuery = countQuery.or(NOT_CLOSED).or('business_status.is.null,business_status.not.in.(CLOSED_PERMANENTLY,CLOSED_TEMPORARILY)');
+        dataQuery = dataQuery.or(NOT_CLOSED).or('business_status.is.null,business_status.not.in.(CLOSED_PERMANENTLY,CLOSED_TEMPORARILY)');
+      }
       if (selfServe && stateFilterRef.current) {
         countQuery = countQuery.eq('state', stateFilterRef.current);
         dataQuery = dataQuery.eq('state', stateFilterRef.current);

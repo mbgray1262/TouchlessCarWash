@@ -110,6 +110,10 @@ for (let attempt = 0; attempt < 3; attempt++) {
     .select('id, name, city, state, google_place_id, is_touchless, hero_image, photos')
     .eq('is_self_service', true).is('self_service_reviewed_at', null)
     .not('is_touchless', 'is', true)
+    // Skip closed washes (manually-closed via classification_source, or Google-closed
+    // via business_status). The .is.null clauses keep listings with no such flag.
+    .or('classification_source.is.null,classification_source.not.ilike.closed*')
+    .or('business_status.is.null,business_status.not.in.(CLOSED_PERMANENTLY,CLOSED_TEMPORARILY)')
     .eq('state', STATE).not('google_place_id', 'is', null)
     .order('city').limit(LIMIT);
   if (!res.error && res.data) { rows = res.data; break; } // empty array is valid; retry only on error/null
