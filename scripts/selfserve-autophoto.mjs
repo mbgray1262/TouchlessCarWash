@@ -63,7 +63,7 @@ STEP 2 — Pick the HERO: the single most ATTRACTIVE and INFORMATIVE image — o
   Always pick the best available; set hero_index null / needs_human true ONLY if nothing usably shows the self-serve wash.
   Also return hero_crop: fractions (0 to 0.4) to TRIM from each edge of the hero to isolate the main subject (the bays/facility) and remove distracting elements at the edges — e.g. a fence, an adjacent building, a pole, a parked car off to the side, or empty sky/pavement. Use 0 for edges that are already clean; keep the bays fully in frame and do NOT over-crop. The image is later center-cropped to 16:9 within whatever remains.
 
-STEP 3 — Pick GALLERY images (up to ${GALLERY_MAX}): genuine, attractive self-serve SCENES. PRIORITIZE great IN-BAY ACTION shots — a whole VEHICLE inside a recognizable BAY being washed, covered in soap/foam, or rinsed with the wand — these are the most engaging. The vehicle AND the bay must be clearly recognizable; NEVER an extreme close-up of only soap/foam/water/suds on a car's paint, glass, or windshield (an abstract texture shot with no bay or full vehicle is confusing and non-informative — DISQUALIFY it). EQUALLY STRONG (do NOT rank below a car-in-bay shot): a CLEAN, EMPTY self-serve BAY that clearly shows the equipment — the hanging spray WAND/lance, foam brush, coin/pay box, and the walled stall. A well-lit empty bay with clear self-serve equipment is just as valuable and informative as a bay with a car in it; score its visual_quality on its own merits and INCLUDE it — never skip or under-score it just because no vehicle is present. Also good: an appealing wand-in-use shot, a bright wide facility. Aim for variety. Include AS MANY genuinely good shots as exist (up to ${GALLERY_MAX}) — more good images = more engagement — but still NEVER pad with weak/useless filler (return fewer, even zero, rather than include a bad one).
+STEP 3 — Pick GALLERY images (up to ${GALLERY_MAX}): genuine, attractive self-serve SCENES. PRIORITIZE great IN-BAY ACTION shots — a whole VEHICLE inside a recognizable BAY being washed, covered in soap/foam, or rinsed with the wand — these are the most engaging. The vehicle AND the bay must be clearly recognizable; NEVER an extreme close-up of only soap/foam/water/suds on a car's paint, glass, or windshield (an abstract texture shot with no bay or full vehicle is confusing and non-informative — DISQUALIFY it). EQUALLY STRONG (do NOT rank below a car-in-bay shot): a CLEAN, EMPTY self-serve BAY that clearly shows the equipment — the hanging spray WAND/lance, foam brush, coin/pay box, and the walled stall. A well-lit empty bay with clear self-serve equipment is just as valuable and informative as a bay with a car in it; score its visual_quality on its own merits and INCLUDE it — never skip or under-score it just because no vehicle is present. Also good: an appealing wand-in-use shot, a bright wide facility. VARIETY IS REQUIRED — each gallery image must show something DIFFERENT. If several candidates are near-identical (e.g. two frontal shots of the same building, or two similar exterior-sign views), pick only the SINGLE best one and drop the rest, even if both are individually fine — a gallery of look-alike shots reads as duplicated and cheap. Favor a spread across subjects: a bay-in-use, an empty equipped bay, a wide facility, a signage/entrance view. Include AS MANY genuinely good, DISTINCT shots as exist (up to ${GALLERY_MAX}) — more good images = more engagement — but still NEVER pad with weak/useless filler OR a redundant look-alike (return fewer, even zero, rather than include a bad or duplicative one).
 
 NEVER pick as hero OR gallery:
   - ANY brush, cloth strip, mitter curtain, foam-pad, or abrasive contact equipment — STRICTLY forbidden (violates our paint-safety brand), even if otherwise nice.
@@ -179,6 +179,21 @@ async function cropHero(buffer, crop = {}) {
   } catch { return buffer; }
 }
 const xj = s => { const a = s.indexOf('{'), b = s.lastIndexOf('}'); if (a < 0 || b < 0) return null; try { return JSON.parse(s.slice(a, b + 1)); } catch { return null; } };
+
+// Perceptual (difference) hash — resolution/compression-independent, so the SAME
+// underlying Google photo stored as two different files (an old google-*/upload-* and a
+// fresh ai-* download) hashes to (near) the same value even though the URLs differ. Used
+// to keep visual duplicates out of the merged gallery. Returns a 64-bit BigInt.
+async function phash(buffer) {
+  const W = 9, H = 8;
+  const px = await sharp(buffer).grayscale().resize(W, H, { fit: 'fill' }).raw().toBuffer();
+  let hash = 0n, bit = 0n;
+  for (let r = 0; r < H; r++) for (let c = 0; c < W - 1; c++) { const i = r * W + c; if (px[i] < px[i + 1]) hash |= (1n << bit); bit++; }
+  return hash;
+}
+// Are two hashes within `thr` bits (Hamming distance)? Same-image-different-encoding is
+// typically 0-4; genuinely different photos are >10. Threshold 5 is a safe cutoff.
+const hamLE = (a, b, thr) => { let x = a ^ b, d = 0; while (x) { d += Number(x & 1n); x >>= 1n; if (d > thr) return false; } return true; };
 
 async function selectPhotos(name, mixed, imgs) {
   const content = [{ type: 'text', text: `${rubric(mixed)}\n\nLocation: ${name}\nCandidates:` }];
@@ -385,32 +400,40 @@ async function processListing(l) {
     }
     console.log(`• ${l.name} (${l.city}) ${tag} [${imgs.length}📷] — ${keepHero ? 'hero KEPT' : `hero #${p.hero_index} ${heroImg?.category} (hw ${heroImg?.hero_worthy}, q ${heroImg?.visual_quality})${trims}`}, gallery [${gal.join(',')}] conf ${p.confidence}${assessNote}`);
     if (APPLY) {
-      // Upload the enriched gallery (great self-serve shots) for both keep + replace.
-      const galUrls = [];
-      for (const gi of gal) { const u = await upload(used[gi].buffer, used[gi].mediaType, l.id, `g${gi}`); if (u) galUrls.push(u); }
-      // NEVER discard existing photos (Michael manually curated many, incl. touchless-
-      // equipment shots on mixed facilities). MERGE: keep everything already in the
-      // gallery and ADD the new self-serve picks. Dedupe by URL, cap at 8 (tool shows 8),
-      // existing photos prioritized so a cap never drops a curated one.
       const existing = Array.isArray(l.photos) ? l.photos.filter(Boolean) : [];
       const dedupe = arr => arr.filter((u, i, a) => u && a.indexOf(u) === i);
+      // NEVER discard existing photos (Michael curated many, incl. touchless-equipment
+      // shots on mixed facilities). MERGE existing + new picks. Dedupe by CONTENT (not
+      // just URL): perceptual-hash the active hero + every existing photo, then only ADD
+      // a new self-serve pick if its image isn't already present — otherwise the same
+      // Google photo shows twice (old file + fresh ai-* download). Existing photos are
+      // always kept as-is; we just never pile a duplicate on top. Cap 8, existing first.
+      const seen = [];
+      const seed = async (buf) => { if (buf) { try { seen.push(await phash(buf)); } catch {} } };
+      let heroUrl = null;
+      if (keepHero) { await seed(await fetchImage(l.hero_image)); }
+      else { const hb = await cropHero(used[p.hero_index].buffer, p.hero_crop); await seed(hb); heroUrl = await upload(hb, 'image/jpeg', l.id, 'hero'); }
+      // Base = the replaced hero (demoted into the gallery) + existing curated photos.
+      const baseUrls = dedupe([(!keepHero ? l.hero_image : null), ...existing].filter(Boolean));
+      for (const url of baseUrls) await seed(await fetchImage(url));
+      const newUrls = [];
+      for (const gi of gal) {
+        const buf = used[gi].buffer;
+        let h = null; try { h = await phash(buf); } catch {}
+        if (h != null && seen.some(s => hamLE(s, h, 5))) continue; // content duplicate → skip
+        if (h != null) seen.push(h);
+        const u = await upload(buf, used[gi].mediaType, l.id, `g${gi}`);
+        if (u) newUrls.push(u);
+      }
+      const merged = [...baseUrls, ...newUrls].slice(0, 8);
       if (keepHero) {
-        const merged = dedupe([...existing, ...galUrls]).slice(0, 8);
         if (merged.length !== existing.length) await sb.from('listings').update({ photos: merged }).eq('id', l.id);
         applied++;
       } else {
         // Back up the prior hero AND gallery before overwriting — matters most for MIXED
         // listings whose hero is shared with the LIVE touchless page (fully reversible).
         heroBackup.push({ id: l.id, name: l.name, mixed, prev_hero_image: l.hero_image, prev_hero_image_source: l.hero_image_source, prev_photos: existing });
-        const heroUrl = await upload(await cropHero(used[p.hero_index].buffer, p.hero_crop), 'image/jpeg', l.id, 'hero');
-        if (heroUrl) {
-          // The REPLACED hero is not thrown away — it becomes the FIRST gallery image
-          // (it's the touchless-equipment shot that matters for the mixed facility's
-          // touchless side), followed by the existing gallery, then the new self-serve picks.
-          const merged = dedupe([l.hero_image, ...existing, ...galUrls]).slice(0, 8);
-          await sb.from('listings').update({ hero_image: heroUrl, hero_image_source: 'ai_photo', photos: merged }).eq('id', l.id);
-          applied++;
-        }
+        if (heroUrl) { await sb.from('listings').update({ hero_image: heroUrl, hero_image_source: 'ai_photo', photos: merged }).eq('id', l.id); applied++; }
       }
     } else applied++;
   }
