@@ -11,7 +11,7 @@
  *        node scripts/selfserve-autophoto.mjs CA          (dry run, prints picks)
  */
 import { createClient } from '@supabase/supabase-js';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import sharp from 'sharp';
 
 const env = Object.fromEntries(readFileSync('.env.local', 'utf8').split('\n').filter(l => l.includes('=') && !l.trim().startsWith('#')).map(l => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim().replace(/^["']|["']$/g, '')]; }));
@@ -21,7 +21,9 @@ const MODEL = 'claude-sonnet-5'; // tasteful enough for selection at a fraction 
 const STATE = (process.argv[2] || 'CA').toUpperCase();
 const LIMIT = parseInt(process.argv[3] || '12', 10);
 const APPLY = process.argv.includes('--apply');
-const MAX_PHOTOS = 6, PHOTO_W = 1600, VISION_W = 1024, MIN_BYTES = 5000, PROMOTE_CONF = 0.5, MIN_HERO_SCORE = 3;
+const MAX_PHOTOS = 10, PHOTO_W = 1600, VISION_W = 1024, MIN_BYTES = 5000, PROMOTE_CONF = 0.5, MIN_HERO_SCORE = 3, GALLERY_MAX = 6;
+const INCLUDE_MIXED = !process.argv.includes('--self-only'); // process mixed listings too (facility-both hero), backed up
+const NAME_FILTER = process.argv.slice(4).find(a => !a.startsWith('--')); // optional name ILIKE for targeted runs
 
 function rubric(mixed) {
   return `You are a skilled photo editor curating images for a self-service car wash directory.
@@ -41,11 +43,12 @@ STEP 2 — Pick the HERO: the single most ATTRACTIVE and INFORMATIVE image — o
   - a beautifully-lit facility/exterior clearly showing the open self-serve bays (warm golden light or bright even light) — these are OFTEN the best heroes
   - a clean car in a bright, well-lit self-serve bay
   - a clear, well-composed wide shot of the bays
+  IF THIS IS A MIXED facility (also touchless/automatic): strongly prefer a WIDE FACILITY/exterior shot that shows BOTH the self-serve bays AND the touchless/automatic bay together, so a visitor looking for EITHER type sees themselves in it. NEVER use a close-up of only the touchless/automatic bay as the hero.
   REWARD: good natural light, clean composition, a clear read of the self-serve bays, sharpness, an inviting feel. PENALIZE: dark/harsh/blown-out light, awkward angles that hide the bays, clutter, or a frame dominated by a single car with little context. Between two decent options, choose the one a typical person would find more attractive.
   Always pick the best available; set hero_index null / needs_human true ONLY if nothing usably shows the self-serve wash.
   Also return hero_crop: fractions (0 to 0.4) to TRIM from each edge of the hero to isolate the main subject (the bays/facility) and remove distracting elements at the edges — e.g. a fence, an adjacent building, a pole, a parked car off to the side, or empty sky/pavement. Use 0 for edges that are already clean; keep the bays fully in frame and do NOT over-crop. The image is later center-cropped to 16:9 within whatever remains.
 
-STEP 3 — Pick up to 3 GALLERY images (here BE PICKY): genuine, attractive self-serve SCENES only — interior bays, a car being hand-washed, a bright wide facility, an appealing wand-in-use shot. Aim for variety. RETURN FEWER (even zero) RATHER THAN PAD with weak or useless shots.
+STEP 3 — Pick GALLERY images (up to ${GALLERY_MAX}): genuine, attractive self-serve SCENES. PRIORITIZE great IN-BAY ACTION shots — a car inside a bay being washed, covered in soap/foam, or being rinsed with the wand — these are the most engaging. Also good: clean interior bays, an appealing wand-in-use shot, a bright wide facility. Aim for variety. Include AS MANY genuinely good shots as exist (up to ${GALLERY_MAX}) — more good images = more engagement — but still NEVER pad with weak/useless filler (return fewer, even zero, rather than include a bad one).
 
 NEVER pick as hero OR gallery:
   - ANY brush, cloth strip, mitter curtain, foam-pad, or abrasive contact equipment — STRICTLY forbidden (violates our paint-safety brand), even if otherwise nice.
@@ -125,19 +128,24 @@ async function selectPhotos(name, mixed, imgs) {
 // get a separate, careful policy (facility hero that improves both / gallery-only).
 let rows = [];
 for (let attempt = 0; attempt < 3; attempt++) {
-  const res = await sb.from('listings')
-    .select('id, name, city, state, google_place_id, is_touchless, hero_image, photos')
+  let q = sb.from('listings')
+    .select('id, name, city, state, google_place_id, is_touchless, hero_image, hero_image_source, photos')
     .eq('is_self_service', true).is('self_service_reviewed_at', null)
-    .not('is_touchless', 'is', true)
     // Skip closed washes (manually-closed via classification_source, or Google-closed
     // via business_status). The .is.null clauses keep listings with no such flag.
     .or('classification_source.is.null,classification_source.not.ilike.closed*')
     .or('business_status.is.null,business_status.not.in.(CLOSED_PERMANENTLY,CLOSED_TEMPORARILY)')
-    .eq('state', STATE).not('google_place_id', 'is', null)
-    .order('city').limit(LIMIT);
+    .eq('state', STATE).not('google_place_id', 'is', null);
+  // MIXED listings are LIVE touchless pages, so overwriting their hero changes the
+  // live site — we back up the prior hero (reversible) and give them a facility hero
+  // that shows BOTH bay types. Pass --self-only to skip them.
+  if (!INCLUDE_MIXED) q = q.not('is_touchless', 'is', true);
+  if (NAME_FILTER) q = q.ilike('name', `%${NAME_FILTER}%`);
+  const res = await q.order('city').limit(LIMIT);
   if (!res.error && res.data) { rows = res.data; break; } // empty array is valid; retry only on error/null
   await new Promise(r => setTimeout(r, 1500));
 }
+const heroBackup = []; // {id, name, prev_hero_image, prev_hero_image_source} for reversibility
 console.log(`${STATE}: ${rows?.length || 0} listings to process (${APPLY ? 'APPLY' : 'DRY RUN'}), model ${MODEL}\n`);
 
 let applied = 0, flagged = 0, noPhotos = 0, errors = 0, demoted = 0, inTok = 0, outTok = 0, photoCalls = 0;
@@ -170,7 +178,7 @@ for (const l of rows || []) {
     if (i === p.hero_index || !imgs[i]) return false;
     const gi = p.images?.find(x => x.index === i);
     return gi && !gi.disqualified && (gi.visual_quality ?? 0) >= 3;
-  }).slice(0, 3);
+  }).slice(0, GALLERY_MAX);
   const tag = `${mixed ? '[mixed]' : '[self]'}`;
 
   if (!good) { flagged++; console.log(`• ${l.name} (${l.city}) ${tag} — ⚠ NEEDS HUMAN (conf ${p.confidence}, ${p.reason || ''})`); }
@@ -179,6 +187,9 @@ for (const l of rows || []) {
     const trims = [ct.trim_left, ct.trim_right, ct.trim_top, ct.trim_bottom].some(v => v) ? ` crop{L${ct.trim_left||0} R${ct.trim_right||0} T${ct.trim_top||0} B${ct.trim_bottom||0}}` : '';
     console.log(`• ${l.name} (${l.city}) ${tag} — hero #${p.hero_index} ${heroImg?.category} (hw ${heroImg?.hero_worthy}, q ${heroImg?.visual_quality})${trims}, gallery [${gal.join(',')}] conf ${p.confidence}`);
     if (APPLY) {
+      // Back up the prior hero before overwriting — matters most for MIXED listings
+      // whose hero is shared with the LIVE touchless page (fully reversible).
+      heroBackup.push({ id: l.id, name: l.name, mixed, prev_hero_image: l.hero_image, prev_hero_image_source: l.hero_image_source });
       const heroUrl = await upload(await cropHero(imgs[p.hero_index].buffer, p.hero_crop), 'image/jpeg', l.id, 'hero');
       const galUrls = [];
       for (const gi of gal) { const u = await upload(imgs[gi].buffer, imgs[gi].mediaType, l.id, `g${gi}`); if (u) galUrls.push(u); }
@@ -192,4 +203,9 @@ for (const l of rows || []) {
 const cost = (inTok / 1e6) * 3 + (outTok / 1e6) * 15 + photoCalls * 0.007; // Sonnet ~$3/$15 + Places ~$0.007/call
 console.log(`\n==================== AUTOPHOTO ${STATE} DONE ====================`);
 console.log(`${APPLY ? 'Applied' : 'Would apply'}: ${applied}  |  ❌ Not self-serve (demoted): ${demoted}  |  ⚠ Needs human: ${flagged}  |  too few photos: ${noPhotos}  |  errors: ${errors}`);
+if (APPLY && heroBackup.length) {
+  const f = `scripts/_backup_autophoto_hero_${STATE}_${Date.now()}.json`;
+  writeFileSync(f, JSON.stringify(heroBackup, null, 2));
+  console.log(`Prior heroes backed up (reversible): ${f}  (${heroBackup.filter(b => b.mixed).length} were mixed/live-touchless)`);
+}
 console.log(`Est. cost: ~$${cost.toFixed(2)} (${photoCalls} Google calls + Sonnet vision)`);
