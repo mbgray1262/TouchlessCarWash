@@ -149,6 +149,15 @@ async function generate(listing) {
 // the self-serve reclassification). Backs the old text up to a JSON first.
 const FIX_STALE = process.argv.includes('--fix-stale');
 const BANNED = /touchless|touch-free|brushless|paint-safe|paint safe/i;
+// --prep: pre-approval workflow. Generate descriptions for CONFIRMED self-serve-only
+// listings (is_self_service=true, is_touchless=false) missing one, REGARDLESS of
+// review/approval status, so a batch is fully review-ready before Michael approves.
+// Run AFTER autophoto so listings it demoted (is_self_service=false) are excluded.
+const PREP = process.argv.includes('--prep');
+// --state XX: restrict to one state (for per-batch runs).
+const stateArg = process.argv.find((a) => /^--state=/.test(a));
+const STATE = stateArg ? stateArg.split('=')[1].toUpperCase()
+  : (process.argv.includes('--state') ? (process.argv[process.argv.indexOf('--state') + 1] || '').toUpperCase() : null);
 
 async function main() {
   const cols = 'id, name, city, state, address, zip, phone, website, rating, review_count, is_touchless, is_self_service, amenities, wash_packages, hours, google_description, google_subtypes, typical_time_spent, price_range, crawl_snapshot, extracted_data, parent_chain';
@@ -157,7 +166,7 @@ async function main() {
   if (FIX_STALE) {
     const { data, error } = await sb.from('listings')
       .select(cols + ', description, description_generated_at')
-      .eq('is_self_service', true).eq('is_touchless', false).eq('is_approved', true)
+      .eq('is_self_service', true).not('is_touchless', 'is', true).eq('is_approved', true)
       .not('self_service_reviewed_at', 'is', null).not('description', 'is', null)
       .order('review_count', { ascending: false }).limit(500);
     if (error) throw error;
@@ -174,19 +183,23 @@ async function main() {
       return;
     }
   } else {
-    const { data, error } = await sb
+    let q = sb
       .from('listings')
       .select(cols)
       .eq('is_self_service', true)
-      .eq('is_touchless', false)
-      .eq('is_approved', true)
-      .not('self_service_reviewed_at', 'is', null)
-      .is('description', null)
-      .order('review_count', { ascending: false })
-      .limit(500);
+      // "not a touchless wash" = is_touchless false OR null. Using .eq(false) here
+      // silently skipped the ~23 never-classified (null) self-serve listings, so
+      // they launched with no description. Match isSelfServeOnly (!is_touchless).
+      .not('is_touchless', 'is', true)
+      .is('description', null);
+    // Default: only already-launched (approved+reviewed) listings. --prep: any
+    // confirmed self-serve-only listing, so descriptions land BEFORE approval.
+    if (!PREP) q = q.eq('is_approved', true).not('self_service_reviewed_at', 'is', null);
+    if (STATE) q = q.eq('state', STATE);
+    const { data, error } = await q.order('review_count', { ascending: false }).limit(1000);
     if (error) throw error;
     listings = data;
-    console.log(`Eligible self-serve-only listings missing a description: ${listings.length}`);
+    console.log(`Eligible self-serve-only listings missing a description${PREP ? ' [PREP]' : ''}${STATE ? ` [${STATE}]` : ''}: ${listings.length}`);
     if (!listings.length) return;
   }
 
