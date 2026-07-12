@@ -21,7 +21,7 @@ const MODEL = 'claude-sonnet-5'; // tasteful enough for selection at a fraction 
 const STATE = (process.argv[2] || 'CA').toUpperCase();
 const LIMIT = parseInt(process.argv[3] || '12', 10);
 const APPLY = process.argv.includes('--apply');
-const MAX_PHOTOS = 6, PHOTO_W = 1024, MIN_BYTES = 5000, PROMOTE_CONF = 0.5, MIN_HERO_SCORE = 3;
+const MAX_PHOTOS = 6, PHOTO_W = 1600, VISION_W = 1024, MIN_BYTES = 5000, PROMOTE_CONF = 0.5, MIN_HERO_SCORE = 3;
 
 function rubric(mixed) {
   return `You are a skilled photo editor curating images for a self-service car wash directory.
@@ -43,6 +43,7 @@ STEP 2 — Pick the HERO: the single most ATTRACTIVE and INFORMATIVE image — o
   - a clear, well-composed wide shot of the bays
   REWARD: good natural light, clean composition, a clear read of the self-serve bays, sharpness, an inviting feel. PENALIZE: dark/harsh/blown-out light, awkward angles that hide the bays, clutter, or a frame dominated by a single car with little context. Between two decent options, choose the one a typical person would find more attractive.
   Always pick the best available; set hero_index null / needs_human true ONLY if nothing usably shows the self-serve wash.
+  Also return hero_crop: fractions (0 to 0.4) to TRIM from each edge of the hero to isolate the main subject (the bays/facility) and remove distracting elements at the edges — e.g. a fence, an adjacent building, a pole, a parked car off to the side, or empty sky/pavement. Use 0 for edges that are already clean; keep the bays fully in frame and do NOT over-crop. The image is later center-cropped to 16:9 within whatever remains.
 
 STEP 3 — Pick up to 3 GALLERY images (here BE PICKY): genuine, attractive self-serve SCENES only — interior bays, a car being hand-washed, a bright wide facility, an appealing wand-in-use shot. Aim for variety. RETURN FEWER (even zero) RATHER THAN PAD with weak or useless shots.
 
@@ -55,7 +56,7 @@ NEVER pick as hero OR gallery:
 NEVER pick as GALLERY (these are fine to note but are useless filler — reject them from the gallery): a shot whose only value is the building name/sign on a wall; a close-up of a payment/coin/token machine; a bare vacuum canister or a lone hose/tube; empty pavement. (These may still be acceptable as a last-resort HERO only if truly nothing better exists — but never as gallery.)
 
 Return ONLY JSON:
-{"has_self_serve_bay":true,"images":[{"index":0,"category":"...","self_serve_relevance":4,"visual_quality":4,"hero_worthy":5,"disqualified":false,"reason":"..."}],"hero_index":2,"gallery_indices":[4,1],"confidence":0.86,"needs_human":false,"reason":"why these are the best of the set"}`;
+{"has_self_serve_bay":true,"images":[{"index":0,"category":"...","self_serve_relevance":4,"visual_quality":4,"hero_worthy":5,"disqualified":false,"reason":"..."}],"hero_index":2,"hero_crop":{"trim_left":0,"trim_right":0.2,"trim_top":0.1,"trim_bottom":0},"gallery_indices":[4,1],"confidence":0.86,"needs_human":false,"reason":"why these are the best of the set"}`;
 }
 
 async function photoRefs(placeId) {
@@ -73,8 +74,14 @@ async function download(ref) {
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(ct)) return null;
     const buf = Buffer.from(await r.arrayBuffer());
     if (buf.length < MIN_BYTES || buf.length > 8_000_000) return null;
-    return { buffer: buf, base64: buf.toString('base64'), mediaType: ct };
+    return { buffer: buf, mediaType: ct }; // full-res kept for storage; a downscaled copy is made for vision
   } catch { return null; }
+}
+// A smaller JPEG copy for the vision API (keeps token cost low; the stored image
+// stays full-resolution).
+async function visionCopy(buffer, mediaType) {
+  try { return { mediaType: 'image/jpeg', base64: (await sharp(buffer).resize(VISION_W, null, { withoutEnlargement: true }).jpeg({ quality: 80 }).toBuffer()).toString('base64') }; }
+  catch { return { mediaType, base64: buffer.toString('base64') }; }
 }
 async function upload(buffer, ct, listingId, slot) {
   const path = `${listingId}/ai-${slot}-${Date.now()}.${ct.split('/')[1].replace('jpeg', 'jpg')}`;
@@ -82,15 +89,20 @@ async function upload(buffer, ct, listingId, slot) {
   if (error) return null;
   return sb.storage.from('listing-photos').getPublicUrl(path).data.publicUrl;
 }
-// Center-crop the hero to 16:9 so it displays cleanly (gallery images keep their
-// natural orientation). Falls back to the original buffer if anything goes wrong.
-async function cropHero16x9(buffer) {
+// Hero crop from the FULL-RES buffer: first trim distracting edges (fractions the
+// AI suggests — e.g. a fence on the right), then center-crop the remainder to 16:9.
+// Gallery images keep their natural orientation. Falls back on any error.
+async function cropHero(buffer, crop = {}) {
   try {
+    const clamp = v => Math.min(Math.max(Number(v) || 0, 0), 0.4);
+    const tl = clamp(crop.trim_left), tr = clamp(crop.trim_right), tt = clamp(crop.trim_top), tb = clamp(crop.trim_bottom);
     const m = await sharp(buffer).metadata();
-    const AR = 16 / 9; let cw = m.width, ch = m.height, left = 0, top = 0;
-    if (m.width / m.height > AR) { cw = Math.round(m.height * AR); left = Math.round((m.width - cw) / 2); }
-    else { ch = Math.round(m.width / AR); top = Math.round((m.height - ch) / 2); }
-    return await sharp(buffer).extract({ left, top, width: cw, height: ch }).jpeg({ quality: 85 }).toBuffer();
+    let x = Math.round(m.width * tl), y = Math.round(m.height * tt);
+    let w = Math.round(m.width * (1 - tl - tr)), h = Math.round(m.height * (1 - tt - tb));
+    const AR = 16 / 9; // then 16:9 center-crop within the trimmed region
+    if (w / h > AR) { const nw = Math.round(h * AR); x += Math.round((w - nw) / 2); w = nw; }
+    else { const nh = Math.round(w / AR); y += Math.round((h - nh) / 2); h = nh; }
+    return await sharp(buffer).extract({ left: x, top: y, width: Math.max(16, w), height: Math.max(9, h) }).jpeg({ quality: 88 }).toBuffer();
   } catch { return buffer; }
 }
 const xj = s => { const a = s.indexOf('{'), b = s.lastIndexOf('}'); if (a < 0 || b < 0) return null; try { return JSON.parse(s.slice(a, b + 1)); } catch { return null; } };
@@ -136,7 +148,9 @@ for (const l of rows || []) {
   for (const ref of refs) { const d = await download(ref); photoCalls++; if (d) imgs.push({ ...d, ref }); if (imgs.length >= MAX_PHOTOS) break; }
   if (imgs.length < 2) { noPhotos++; console.log(`• ${l.name} (${l.city}) — only ${imgs.length} usable photos, skipped`); continue; }
 
-  const r = await selectPhotos(l.name, mixed, imgs);
+  const visionImgs = [];
+  for (const g of imgs) visionImgs.push(await visionCopy(g.buffer, g.mediaType));
+  const r = await selectPhotos(l.name, mixed, visionImgs);
   if (r.err) { errors++; console.log(`• ${l.name} — vision error ${r.err}`); continue; }
   inTok += r.usage?.input_tokens || 0; outTok += r.usage?.output_tokens || 0;
   const p = r.parsed || {};
@@ -161,9 +175,11 @@ for (const l of rows || []) {
 
   if (!good) { flagged++; console.log(`• ${l.name} (${l.city}) ${tag} — ⚠ NEEDS HUMAN (conf ${p.confidence}, ${p.reason || ''})`); }
   else {
-    console.log(`• ${l.name} (${l.city}) ${tag} — hero #${p.hero_index} ${heroImg?.category} (hero_worthy ${heroImg?.hero_worthy}, quality ${heroImg?.visual_quality}), gallery [${gal.join(',')}] conf ${p.confidence}`);
+    const ct = p.hero_crop || {};
+    const trims = [ct.trim_left, ct.trim_right, ct.trim_top, ct.trim_bottom].some(v => v) ? ` crop{L${ct.trim_left||0} R${ct.trim_right||0} T${ct.trim_top||0} B${ct.trim_bottom||0}}` : '';
+    console.log(`• ${l.name} (${l.city}) ${tag} — hero #${p.hero_index} ${heroImg?.category} (hw ${heroImg?.hero_worthy}, q ${heroImg?.visual_quality})${trims}, gallery [${gal.join(',')}] conf ${p.confidence}`);
     if (APPLY) {
-      const heroUrl = await upload(await cropHero16x9(imgs[p.hero_index].buffer), 'image/jpeg', l.id, 'hero');
+      const heroUrl = await upload(await cropHero(imgs[p.hero_index].buffer, p.hero_crop), 'image/jpeg', l.id, 'hero');
       const galUrls = [];
       for (const gi of gal) { const u = await upload(imgs[gi].buffer, imgs[gi].mediaType, l.id, `g${gi}`); if (u) galUrls.push(u); }
       if (heroUrl) {
