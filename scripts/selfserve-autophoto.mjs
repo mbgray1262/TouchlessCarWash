@@ -22,6 +22,11 @@ const MODEL = 'claude-sonnet-5'; // tasteful enough for selection at a fraction 
 const STATE = (process.argv[2] || 'CA').toUpperCase();
 const LIMIT = parseInt(process.argv[3] || '12', 10);
 const APPLY = process.argv.includes('--apply');
+// How many listings to process at once. The whole thing is I/O-bound (waiting on
+// SerpAPI + the vision API), so running a few in parallel is a ~CONCURRENCY× speedup.
+// Each listing makes at most one vision call at a time ⇒ ~CONCURRENCY concurrent API
+// calls. Override with CONCURRENCY=6 etc. Lower it if you ever hit rate limits.
+const CONCURRENCY = parseInt(process.env.CONCURRENCY || '4', 10);
 // MAX_PHOTOS is a high safety ceiling, not a real cap — virtually no wash has this
 // many photos, and pagination fetches every page up to MAX_PAGES first.
 const MAX_PHOTOS = 90, MAX_PAGES = 10, PHOTO_W = 1600, VISION_W = 640, MIN_BYTES = 5000, PROMOTE_CONF = 0.5, MIN_HERO_SCORE = 3, GALLERY_MAX = 6;
@@ -266,20 +271,21 @@ const heroBackup = []; // {id, name, prev_hero_image, prev_hero_image_source} fo
 console.log(`${STATE}: ${rows?.length || 0} listings to process (${APPLY ? 'APPLY' : 'DRY RUN'}), model ${MODEL}\n`);
 
 let applied = 0, flagged = 0, noPhotos = 0, errors = 0, demoted = 0, streetview = 0, inTok = 0, outTok = 0, photoCalls = 0;
-for (const l of rows || []) {
+async function processListing(l) {
   const mixed = l.is_touchless === true;
   const urls = await serpPhotoUrls(l.google_place_id);
-  const imgs = [];
-  for (const u of urls) { const d = await downloadUrl(u); if (d) imgs.push(d); if (imgs.length >= MAX_PHOTOS) break; }
+  // Download all candidate photos in parallel (network-bound, no API cost). Order is
+  // preserved by Promise.all, which matters because later code indexes into `imgs`.
+  const imgs = (await Promise.all(urls.slice(0, MAX_PHOTOS).map(u => downloadUrl(u).catch(() => null)))).filter(Boolean);
   if (imgs.length < 2) {
     // Mobile washes ("movil"/"mobile"/"a domicilio") have no fixed self-serve facility.
     if (MOBILE.test(l.name || '')) {
       demoted++; console.log(`• ${l.name} (${l.city}) — ❌ MOBILE wash (no self-serve facility) — demoted`);
       if (APPLY) await sb.from('listings').update({ is_self_service: false, self_service_source: 'autophoto_mobile' }).eq('id', l.id);
-      continue;
+      return;
     }
     // Never touch a MIXED (live touchless) listing's hero — leave it and just move on.
-    if (mixed) { noPhotos++; console.log(`• ${l.name} (${l.city}) — no self-serve photos (mixed/live — left as is)`); continue; }
+    if (mixed) { noPhotos++; console.log(`• ${l.name} (${l.city}) — no self-serve photos (mixed/live — left as is)`); return; }
     // Self-serve-only with no Google photos: VERIFY the actual pixels — the existing
     // hero AND a street view — and use whichever genuinely shows the car wash. Don't
     // trust hero_image_source labels (leftover 'manual' junk street-views exist).
@@ -294,18 +300,18 @@ for (const l of rows || []) {
       if (rv.parsed?.has_self_serve_bay && hi != null && cand[hi] && !rv.parsed?.needs_human) {
         streetview++; console.log(`• ${l.name} (${l.city}) — 🛣️ ${cand[hi].src} image shows the wash → hero`);
         if (APPLY) { const url = await upload(await cropHero(cand[hi].buffer, {}), 'image/jpeg', l.id, 'hero'); if (url) { heroBackup.push({ id: l.id, name: l.name, mixed: false, prev_hero_image: l.hero_image, prev_hero_image_source: l.hero_image_source }); await sb.from('listings').update({ hero_image: url, hero_image_source: 'street_view_auto' }).eq('id', l.id); } }
-        continue;
+        return;
       }
     }
     // No Google photos and neither the existing hero nor street view shows a car wash → demote.
     demoted++; console.log(`• ${l.name} (${l.city}) — ❌ no photos & no image shows a car wash — demoted`);
     if (APPLY) await sb.from('listings').update({ is_self_service: false, self_service_source: 'autophoto_no_evidence' }).eq('id', l.id);
-    continue;
+    return;
   }
 
   const { r, used, triageTok } = await analyzeAll(l.name, mixed, imgs);
   if (triageTok) { inTok += triageTok.inTok; outTok += triageTok.outTok; }
-  if (r.err) { errors++; console.log(`• ${l.name} — vision error ${r.err}`); continue; }
+  if (r.err) { errors++; console.log(`• ${l.name} — vision error ${r.err}`); return; }
   inTok += r.usage?.input_tokens || 0; outTok += r.usage?.output_tokens || 0;
   const p = r.parsed || {};
   if (process.env.DEBUG_JSON) console.log(`\n=== ${l.name} (${imgs.length} looked at, ${used.length} finalists) ===\n` + JSON.stringify(p, null, 2) + '\n');
@@ -315,7 +321,7 @@ for (const l of rows || []) {
     demoted++;
     console.log(`• ${l.name} (${l.city}) — ❌ NOT SELF-SERVE (no wash bay in any photo) — demoted`);
     if (APPLY) await sb.from('listings').update({ is_self_service: false, self_service_source: 'autophoto_not_selfserve' }).eq('id', l.id);
-    continue;
+    return;
   }
   const heroImg = p.images?.find(x => x.index === p.hero_index);
   const heroOk = p.hero_index != null && used[p.hero_index] && heroImg && !heroImg.disqualified && (heroImg.hero_worthy ?? 0) >= MIN_HERO_SCORE;
@@ -347,6 +353,20 @@ for (const l of rows || []) {
     } else applied++;
   }
 }
+
+// Run CONCURRENCY listings at once via a bounded worker pool. JS is single-threaded,
+// so the shared counters/heroBackup mutate safely (no real data races); each worker
+// pulls the next un-taken listing until the queue is empty.
+let _next = 0;
+async function worker() {
+  while (_next < rows.length) {
+    const l = rows[_next++];
+    try { await processListing(l); }
+    catch (e) { errors++; console.log(`• ${l.name} (${l.city}) — ERROR ${e.message}`); }
+  }
+}
+await Promise.all(Array.from({ length: Math.min(CONCURRENCY, rows.length || 1) }, worker));
+
 const cost = (inTok / 1e6) * 3 + (outTok / 1e6) * 15; // Sonnet vision only; photos are free via SerpAPI quota
 console.log(`\n==================== AUTOPHOTO ${STATE} DONE ====================`);
 console.log(`${APPLY ? 'Applied' : 'Would apply'}: ${applied}  |  ❌ Not self-serve (demoted): ${demoted}  |  ⚠ Needs human: ${flagged}  |  street-view heroes: ${streetview}  |  too few photos: ${noPhotos}  |  errors: ${errors}`);
