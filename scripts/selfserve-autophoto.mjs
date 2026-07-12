@@ -16,12 +16,13 @@ import sharp from 'sharp';
 
 const env = Object.fromEntries(readFileSync('.env.local', 'utf8').split('\n').filter(l => l.includes('=') && !l.trim().startsWith('#')).map(l => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim().replace(/^["']|["']$/g, '')]; }));
 const sb = createClient(env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
-const AKEY = env.ANTHROPIC_API_KEY, GKEY = env.GOOGLE_PLACES_API_KEY;
+const AKEY = env.ANTHROPIC_API_KEY, GKEY = env.GOOGLE_PLACES_API_KEY, SKEY = env.SERPAPI_KEY;
 const MODEL = 'claude-sonnet-5'; // tasteful enough for selection at a fraction of Opus cost
 const STATE = (process.argv[2] || 'CA').toUpperCase();
 const LIMIT = parseInt(process.argv[3] || '12', 10);
 const APPLY = process.argv.includes('--apply');
-const MAX_PHOTOS = 10, PHOTO_W = 1600, VISION_W = 1024, MIN_BYTES = 5000, PROMOTE_CONF = 0.5, MIN_HERO_SCORE = 3, GALLERY_MAX = 6;
+const MAX_PHOTOS = 20, PHOTO_W = 1600, VISION_W = 768, MIN_BYTES = 5000, PROMOTE_CONF = 0.5, MIN_HERO_SCORE = 3, GALLERY_MAX = 6;
+let serpCalls = 0;
 const INCLUDE_MIXED = !process.argv.includes('--self-only'); // process mixed listings too (facility-both hero), backed up
 const NAME_FILTER = process.argv.slice(4).find(a => !a.startsWith('--')); // optional name ILIKE for targeted runs
 
@@ -62,22 +63,31 @@ Return ONLY JSON:
 {"has_self_serve_bay":true,"images":[{"index":0,"category":"...","self_serve_relevance":4,"visual_quality":4,"hero_worthy":5,"disqualified":false,"reason":"..."}],"hero_index":2,"hero_crop":{"trim_left":0,"trim_right":0.2,"trim_top":0.1,"trim_bottom":0},"gallery_indices":[4,1],"confidence":0.86,"needs_human":false,"reason":"why these are the best of the set"}`;
 }
 
-async function photoRefs(placeId) {
+// Get ALL of a place's Google Maps photos via SerpAPI (not the Places API, which
+// hard-caps at 10). 2 quota-searches: place_id -> data_id, then data_id -> photos.
+async function serpPhotoUrls(placeId) {
   try {
-    const r = await fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId)}&fields=photos&key=${GKEY}`, { signal: AbortSignal.timeout(12000) });
-    const j = await r.json();
-    return (j.result?.photos || []).slice(0, MAX_PHOTOS).map(p => p.photo_reference);
+    const r1 = await fetch(`https://serpapi.com/search.json?engine=google_maps&place_id=${encodeURIComponent(placeId)}&api_key=${SKEY}`, { signal: AbortSignal.timeout(25000) });
+    const j1 = await r1.json(); serpCalls++;
+    const dataId = j1.place_results?.data_id;
+    if (!dataId) return [];
+    const r2 = await fetch(`https://serpapi.com/search.json?engine=google_maps_photos&data_id=${encodeURIComponent(dataId)}&api_key=${SKEY}`, { signal: AbortSignal.timeout(25000) });
+    const j2 = await r2.json(); serpCalls++;
+    return (j2.photos || []).map(p => p.image).filter(u => typeof u === 'string' && u.includes('googleusercontent')).slice(0, MAX_PHOTOS);
   } catch { return []; }
 }
-async function download(ref) {
+// Download a googleusercontent photo at high resolution (append =w1600). Free
+// (public image URL) — full-res kept for storage; a downscaled copy is made for vision.
+async function downloadUrl(url) {
   try {
-    const r = await fetch(`https://maps.googleapis.com/maps/api/place/photo?maxwidth=${PHOTO_W}&photo_reference=${encodeURIComponent(ref)}&key=${GKEY}`, { signal: AbortSignal.timeout(15000), redirect: 'follow' });
+    const hi = url.split('=')[0] + '=w1600';
+    const r = await fetch(hi, { signal: AbortSignal.timeout(15000), redirect: 'follow' });
     if (!r.ok) return null;
     const ct = (r.headers.get('content-type') || 'image/jpeg').split(';')[0].trim();
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(ct)) return null;
     const buf = Buffer.from(await r.arrayBuffer());
     if (buf.length < MIN_BYTES || buf.length > 8_000_000) return null;
-    return { buffer: buf, mediaType: ct }; // full-res kept for storage; a downscaled copy is made for vision
+    return { buffer: buf, mediaType: ct };
   } catch { return null; }
 }
 // A smaller JPEG copy for the vision API (keeps token cost low; the stored image
@@ -114,7 +124,7 @@ async function selectPhotos(name, mixed, imgs) {
   const content = [{ type: 'text', text: `${rubric(mixed)}\n\nLocation: ${name}\nCandidates:` }];
   imgs.forEach((g, i) => { content.push({ type: 'text', text: `Image ${i}:` }); content.push({ type: 'image', source: { type: 'base64', media_type: g.mediaType, data: g.base64 } }); });
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'x-api-key': AKEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }, body: JSON.stringify({ model: MODEL, max_tokens: 3500, messages: [{ role: 'user', content }] }), signal: AbortSignal.timeout(90000) });
+    const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'x-api-key': AKEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }, body: JSON.stringify({ model: MODEL, max_tokens: 6000, messages: [{ role: 'user', content }] }), signal: AbortSignal.timeout(90000) });
     if (!res.ok) return { err: `${res.status}: ${(await res.text()).slice(0, 160)}` };
     const j = await res.json();
     return { parsed: xj((j.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n')), usage: j.usage };
@@ -151,9 +161,9 @@ console.log(`${STATE}: ${rows?.length || 0} listings to process (${APPLY ? 'APPL
 let applied = 0, flagged = 0, noPhotos = 0, errors = 0, demoted = 0, inTok = 0, outTok = 0, photoCalls = 0;
 for (const l of rows || []) {
   const mixed = l.is_touchless === true;
-  const refs = await photoRefs(l.google_place_id); photoCalls++;
+  const urls = await serpPhotoUrls(l.google_place_id);
   const imgs = [];
-  for (const ref of refs) { const d = await download(ref); photoCalls++; if (d) imgs.push({ ...d, ref }); if (imgs.length >= MAX_PHOTOS) break; }
+  for (const u of urls) { const d = await downloadUrl(u); if (d) imgs.push(d); if (imgs.length >= MAX_PHOTOS) break; }
   if (imgs.length < 2) { noPhotos++; console.log(`• ${l.name} (${l.city}) — only ${imgs.length} usable photos, skipped`); continue; }
 
   const visionImgs = [];
@@ -162,6 +172,7 @@ for (const l of rows || []) {
   if (r.err) { errors++; console.log(`• ${l.name} — vision error ${r.err}`); continue; }
   inTok += r.usage?.input_tokens || 0; outTok += r.usage?.output_tokens || 0;
   const p = r.parsed || {};
+  if (process.env.DEBUG_JSON) console.log(`\n=== ${l.name} (${imgs.length} photos) ===\n` + JSON.stringify(p, null, 2) + '\n');
   // VERIFY (Michael's rule): if NO photo shows a genuine self-serve wash bay, this
   // isn't a self-serve wash — demote it so it never reaches the review queue.
   if (p.has_self_serve_bay === false) {
@@ -200,7 +211,7 @@ for (const l of rows || []) {
     } else applied++;
   }
 }
-const cost = (inTok / 1e6) * 3 + (outTok / 1e6) * 15 + photoCalls * 0.007; // Sonnet ~$3/$15 + Places ~$0.007/call
+const cost = (inTok / 1e6) * 3 + (outTok / 1e6) * 15; // Sonnet vision only; photos are free via SerpAPI quota
 console.log(`\n==================== AUTOPHOTO ${STATE} DONE ====================`);
 console.log(`${APPLY ? 'Applied' : 'Would apply'}: ${applied}  |  ❌ Not self-serve (demoted): ${demoted}  |  ⚠ Needs human: ${flagged}  |  too few photos: ${noPhotos}  |  errors: ${errors}`);
 if (APPLY && heroBackup.length) {
@@ -208,4 +219,4 @@ if (APPLY && heroBackup.length) {
   writeFileSync(f, JSON.stringify(heroBackup, null, 2));
   console.log(`Prior heroes backed up (reversible): ${f}  (${heroBackup.filter(b => b.mixed).length} were mixed/live-touchless)`);
 }
-console.log(`Est. cost: ~$${cost.toFixed(2)} (${photoCalls} Google calls + Sonnet vision)`);
+console.log(`Est. cost: ~$${cost.toFixed(2)} Sonnet vision (${serpCalls} SerpAPI searches used, photos free)`);
