@@ -97,7 +97,7 @@ export default async function SelfServeStatePage({ params }: Props) {
               <span className="text-sm font-normal text-gray-400">({group.length})</span>
             </h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {group.map(l => <ListingCard key={l.id} listing={l} />)}
+              {group.map(l => <ListingCard key={l.id} listing={l} context="self-serve" />)}
             </div>
           </section>
         ))}

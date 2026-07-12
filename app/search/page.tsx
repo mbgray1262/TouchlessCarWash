@@ -719,6 +719,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                     listing={listing}
                     distance={listing.distanceMiles}
                     rank={earnsTrophy(listing) ? metroRanks.get(listing.id) : undefined}
+                    context={selfServe ? 'self-serve' : 'default'}
                   />
                   {/* Inline funnel after the first row (page 1 only) */}
                   {hasBestOf && searchMetro && page === 1 && idx === 2 && listings.length > 3 && (

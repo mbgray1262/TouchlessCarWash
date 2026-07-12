@@ -46,9 +46,18 @@ interface ListingCardProps {
    * /best/[metro] page for the full ranked list.
    */
   rank?: number;
+  /**
+   * Which directory the card is being shown in. On the self-serve surfaces a
+   * MIXED facility (touchless + self-serve) must not flash its touchless-only
+   * chrome — the Touchless Satisfaction Score and Paint-safe badge both rate the
+   * touchless bay, not the self-serve bays the visitor is shopping for. Those
+   * signals still show on every touchless surface (default context).
+   */
+  context?: 'default' | 'self-serve';
 }
 
-export function ListingCard({ listing, href, showVerifiedBadge = false, distance, rank }: ListingCardProps) {
+export function ListingCard({ listing, href, showVerifiedBadge = false, distance, rank, context = 'default' }: ListingCardProps) {
+  const selfServeContext = context === 'self-serve';
   const defaultHref = `/state/${getStateSlug(listing.state)}/${slugify(listing.city)}/${listing.slug}`;
   const linkHref = href ?? defaultHref;
 
@@ -193,7 +202,7 @@ export function ListingCard({ listing, href, showVerifiedBadge = false, distance
             <span>{listing.address}</span>
           </div>
 
-          {listing.touchless_satisfaction_score != null && (() => {
+          {!selfServeContext && listing.touchless_satisfaction_score != null && (() => {
             const t = tssTier(listing.touchless_satisfaction_score);
             return (
               <div
@@ -215,7 +224,7 @@ export function ListingCard({ listing, href, showVerifiedBadge = false, distance
             );
           })()}
 
-          {listing.paint_safe_verified && (
+          {!selfServeContext && listing.paint_safe_verified && (
             <div
               className="inline-flex items-center gap-1 text-xs font-medium text-gray-600 border border-gray-300 rounded-full px-2 py-0.5 mb-1 w-fit cursor-help"
               title="Paint-safe: we verified this wash is genuinely friction-free — no brushes or cloth that could touch your paint."
