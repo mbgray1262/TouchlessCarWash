@@ -334,7 +334,13 @@ async function processListing(l) {
   }).slice(0, GALLERY_MAX);
   const tag = `${mixed ? '[mixed]' : '[self]'}`;
 
-  if (!good) { flagged++; console.log(`• ${l.name} (${l.city}) ${tag} — ⚠ NEEDS HUMAN (conf ${p.confidence}, ${p.reason || ''})`); }
+  if (!good) {
+    flagged++; console.log(`• ${l.name} (${l.city}) ${tag} — ⚠ NEEDS HUMAN (conf ${p.confidence}, ${p.reason || ''})`);
+    // Tag it so it surfaces in the photo-audit "Need Review" tab instead of being
+    // lost in the full queue. Provenance only — leaves is_self_service +
+    // self_service_reviewed_at untouched, so visibility/approval are unaffected.
+    if (APPLY) await sb.from('listings').update({ self_service_source: 'autophoto_needs_human' }).eq('id', l.id);
+  }
   else {
     const ct = p.hero_crop || {};
     const trims = [ct.trim_left, ct.trim_right, ct.trim_top, ct.trim_bottom].some(v => v) ? ` crop{L${ct.trim_left||0} R${ct.trim_right||0} T${ct.trim_top||0} B${ct.trim_bottom||0}}` : '';

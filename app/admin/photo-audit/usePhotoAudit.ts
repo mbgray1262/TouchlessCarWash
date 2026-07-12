@@ -230,7 +230,21 @@ export function usePhotoAudit() {
       return;
     }
     if (data) {
-      setStats(data as AuditStats);
+      const s = { ...(data as AuditStats) };
+      // The touchless RPC doesn't know about self-serve. In self-serve mode, "Need
+      // Review" = listings the autophoto pipeline flagged (self_service_source=
+      // 'autophoto_needs_human') that are still unreviewed, scoped to the active
+      // state filter. Overriding here keeps the tab count consistent on every reload.
+      if (washColRef.current === 'is_self_service') {
+        let q = supabase.from('listings').select('id', { count: 'exact', head: true })
+          .eq('is_self_service', true).is('self_service_reviewed_at', null)
+          .eq('self_service_source', 'autophoto_needs_human')
+          .or(NOT_CLOSED).or('business_status.is.null,business_status.not.in.(CLOSED_PERMANENTLY,CLOSED_TEMPORARILY)');
+        if (stateFilterRef.current) q = q.eq('state', stateFilterRef.current);
+        const { count } = await q;
+        s.needs_review = count ?? 0;
+      }
+      setStats(s);
     }
   }, []);
 
@@ -589,6 +603,67 @@ export function usePhotoAudit() {
 
       setResults(allResults);
       setFilteredTotal(totalAll ?? 0);
+      setLoading(false);
+      return;
+    }
+
+    // "review" filter, SELF-SERVE scope: listings the autophoto pipeline flagged for
+    // human judgment (self_service_source='autophoto_needs_human') and not yet
+    // reviewed — usually thin photo sets where it found one usable bay shot but
+    // couldn't build a confident hero/gallery. Touchless 'review' still falls through
+    // to the photo_audit_results RPC below.
+    if (filter === 'review' && washColRef.current === 'is_self_service') {
+      let countQuery = supabase
+        .from('listings').select('id', { count: 'exact', head: true })
+        .eq('is_self_service', true).is('self_service_reviewed_at', null)
+        .eq('self_service_source', 'autophoto_needs_human')
+        .or(NOT_CLOSED).or('business_status.is.null,business_status.not.in.(CLOSED_PERMANENTLY,CLOSED_TEMPORARILY)');
+      let dataQuery = supabase
+        .from('listings')
+        .select('id, name, slug, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
+        .eq('is_self_service', true).is('self_service_reviewed_at', null)
+        .eq('self_service_source', 'autophoto_needs_human')
+        .or(NOT_CLOSED).or('business_status.is.null,business_status.not.in.(CLOSED_PERMANENTLY,CLOSED_TEMPORARILY)');
+      if (stateFilterRef.current) {
+        countQuery = countQuery.eq('state', stateFilterRef.current);
+        dataQuery = dataQuery.eq('state', stateFilterRef.current);
+      }
+      const { count: totalReview } = await countQuery;
+      const { data: reviewListings } = await dataQuery
+        .order('state', { ascending: true }).order('city', { ascending: true }).order('name', { ascending: true })
+        .range(offset, offset + PAGE_SIZE - 1);
+
+      const allResults: AuditResult[] = (reviewListings ?? []).map((l): AuditResult => {
+        const hasHero = !!l.hero_image;
+        const hasGallery = (l.photos ?? []).length > 0;
+        return {
+          id: `ssreview-${l.id}`,
+          listing_id: l.id,
+          listing_name: l.name,
+          listing_slug: l.slug,
+          listing_city: l.city,
+          listing_state: l.state,
+          listing_hero: l.hero_image,
+          hero_quality: hasHero ? 'has_hero' : hasGallery ? 'has_candidates' : 'missing',
+          equipment_brand: l.equipment_brand,
+          equipment_model: l.equipment_model,
+          equipment_confidence: null,
+          equipment_source_photo: null,
+          suggested_hero_url: null,
+          suggested_hero_reason: 'AI flagged for review — thin photo set, needs a human hero pick',
+          photos_to_remove: [],
+          reviewed: false,
+          applied: hasHero,
+          created_at: '',
+          raw_response: null,
+          google_photos_added: 0,
+          google_photos_screened: 0,
+          listing_parent_chain: l.parent_chain ?? null,
+        };
+      });
+
+      setResults(allResults);
+      setFilteredTotal(totalReview ?? 0);
       setLoading(false);
       return;
     }
@@ -1264,7 +1339,7 @@ export function usePhotoAudit() {
     // Prime the trophy-winner counts so the Best-Of tab shows the remaining-to-
     // review number before it's clicked. Caches, so opening the tab is instant.
     refreshBestOfCounts().catch(() => {});
-  }, [loadStats, loadQueueStats, refreshBestOfCounts, washType]);
+  }, [loadStats, loadQueueStats, refreshBestOfCounts, washType, stateFilter]);
 
   // ─── Run batch (creates a server-side job) ────────────────────
 
