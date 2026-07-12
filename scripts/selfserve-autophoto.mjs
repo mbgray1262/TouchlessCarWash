@@ -24,11 +24,18 @@ const APPLY = process.argv.includes('--apply');
 const MAX_PHOTOS = 6, PHOTO_W = 1024, MIN_BYTES = 5000, PROMOTE_CONF = 0.5, MIN_HERO_SCORE = 3;
 
 function rubric(mixed) {
-  return `You are a skilled photo editor curating images for a self-service car wash directory. Two different standards apply: for the HERO you ALWAYS pick the best available self-serve shot (it need not be perfect); for the GALLERY you are picky and include only genuinely good scenes (never useless filler).
+  return `You are a skilled photo editor curating images for a self-service car wash directory.
 
 This location is: ${mixed ? 'MIXED — it is ALSO a touchless/automatic wash. Self-serve seekers view this page, so the imagery MUST clearly show the self-serve side, never only the automatic bay.' : 'SELF-SERVE ONLY.'}
 
-STEP 1 — Score EVERY image (skip none). For each: category, self_serve_relevance (0-5), visual_quality (0-5), hero_worthy (0-5), disqualified (bool) + reason.
+WHAT A SELF-SERVE WASH BAY IS (read carefully): an enclosed or partly-walled STALL a customer drives INTO and washes their own car with a HAND WAND / lance (a spray gun on a hose), usually with a per-bay coin/credit box and a foam brush; often "SELF SERVE"/"WASH" signage on the stall. A facility/exterior photo that clearly shows these wash-bay stalls counts too.
+DO NOT confuse a wash bay with:
+  - VACUUM / DETAIL areas: OPEN canopies over open parking spaces where cars park side-by-side to vacuum or hand-detail (vacuum hoses on posts, people around parked cars, NO enclosed wash stalls, NO spray wands). These are NOT self-serve wash bays.
+  - Automatic / touchless in-bay washes, or tunnel washes.
+
+STEP 0 — VERIFY FIRST: does AT LEAST ONE photo clearly show a genuine self-serve WASH BAY (or a facility view of the wash-bay stalls)? If YES, set has_self_serve_bay=true and continue. If NO photo shows a real self-serve wash bay — even if there are vacuum canopies, an automatic/tunnel wash, or only signage/exterior — set has_self_serve_bay=false, hero_index=null, gallery_indices=[] and STOP (do not pick a hero or gallery).
+
+STEP 1 — (only if has_self_serve_bay) Score EVERY image (skip none). For each: category, self_serve_relevance (0-5), visual_quality (0-5), hero_worthy (0-5), disqualified (bool) + reason.
 
 STEP 2 — Pick the HERO: the single most ATTRACTIVE and INFORMATIVE image — one that both looks genuinely nice to a typical visitor AND clearly shows what this self-serve wash looks like. Make a BALANCED, tasteful judgment; do NOT mechanically prefer one type. A great hero can be ANY of these — pick whichever is actually the nicest of THIS set:
   - a beautifully-lit facility/exterior clearly showing the open self-serve bays (warm golden light or bright even light) — these are OFTEN the best heroes
@@ -48,7 +55,7 @@ NEVER pick as hero OR gallery:
 NEVER pick as GALLERY (these are fine to note but are useless filler — reject them from the gallery): a shot whose only value is the building name/sign on a wall; a close-up of a payment/coin/token machine; a bare vacuum canister or a lone hose/tube; empty pavement. (These may still be acceptable as a last-resort HERO only if truly nothing better exists — but never as gallery.)
 
 Return ONLY JSON:
-{"images":[{"index":0,"category":"...","self_serve_relevance":4,"visual_quality":4,"hero_worthy":5,"disqualified":false,"reason":"..."}],"hero_index":2,"gallery_indices":[4,1],"confidence":0.86,"needs_human":false,"reason":"why these are the best of the set"}`;
+{"has_self_serve_bay":true,"images":[{"index":0,"category":"...","self_serve_relevance":4,"visual_quality":4,"hero_worthy":5,"disqualified":false,"reason":"..."}],"hero_index":2,"gallery_indices":[4,1],"confidence":0.86,"needs_human":false,"reason":"why these are the best of the set"}`;
 }
 
 async function photoRefs(placeId) {
@@ -121,7 +128,7 @@ for (let attempt = 0; attempt < 3; attempt++) {
 }
 console.log(`${STATE}: ${rows?.length || 0} listings to process (${APPLY ? 'APPLY' : 'DRY RUN'}), model ${MODEL}\n`);
 
-let applied = 0, flagged = 0, noPhotos = 0, errors = 0, inTok = 0, outTok = 0, photoCalls = 0;
+let applied = 0, flagged = 0, noPhotos = 0, errors = 0, demoted = 0, inTok = 0, outTok = 0, photoCalls = 0;
 for (const l of rows || []) {
   const mixed = l.is_touchless === true;
   const refs = await photoRefs(l.google_place_id); photoCalls++;
@@ -133,6 +140,14 @@ for (const l of rows || []) {
   if (r.err) { errors++; console.log(`• ${l.name} — vision error ${r.err}`); continue; }
   inTok += r.usage?.input_tokens || 0; outTok += r.usage?.output_tokens || 0;
   const p = r.parsed || {};
+  // VERIFY (Michael's rule): if NO photo shows a genuine self-serve wash bay, this
+  // isn't a self-serve wash — demote it so it never reaches the review queue.
+  if (p.has_self_serve_bay === false) {
+    demoted++;
+    console.log(`• ${l.name} (${l.city}) — ❌ NOT SELF-SERVE (no wash bay in any photo) — demoted`);
+    if (APPLY) await sb.from('listings').update({ is_self_service: false, self_service_source: 'autophoto_not_selfserve' }).eq('id', l.id);
+    continue;
+  }
   const heroImg = p.images?.find(x => x.index === p.hero_index);
   const heroOk = p.hero_index != null && imgs[p.hero_index] && heroImg && !heroImg.disqualified && (heroImg.hero_worthy ?? 0) >= MIN_HERO_SCORE;
   const good = !p.needs_human && (p.confidence ?? 0) >= PROMOTE_CONF && heroOk;
@@ -160,5 +175,5 @@ for (const l of rows || []) {
 }
 const cost = (inTok / 1e6) * 3 + (outTok / 1e6) * 15 + photoCalls * 0.007; // Sonnet ~$3/$15 + Places ~$0.007/call
 console.log(`\n==================== AUTOPHOTO ${STATE} DONE ====================`);
-console.log(`${APPLY ? 'Applied' : 'Would apply'}: ${applied}  |  ⚠ Needs human: ${flagged}  |  too few photos: ${noPhotos}  |  errors: ${errors}`);
+console.log(`${APPLY ? 'Applied' : 'Would apply'}: ${applied}  |  ❌ Not self-serve (demoted): ${demoted}  |  ⚠ Needs human: ${flagged}  |  too few photos: ${noPhotos}  |  errors: ${errors}`);
 console.log(`Est. cost: ~$${cost.toFixed(2)} (${photoCalls} Google calls + Sonnet vision)`);
