@@ -53,9 +53,10 @@ export function ListingMainColumn({
   const selfServe = isSelfServeOnly(listing);
   return (
     <div className="lg:col-span-2 space-y-6">
-      {/* Touchless Satisfaction Score — the headline 0–100 gauge. Shown
-          whenever the listing has enough touchless reviews to score. */}
-      {showTouchlessGauge && (
+      {/* Touchless Satisfaction Score — the headline 0–100 gauge (and its
+          "a score appears once there are 3 reviews" empty state). It rates the
+          touchless wash specifically, so it's hidden on self-serve-only listings. */}
+      {!selfServe && showTouchlessGauge && (
         <TouchlessSatisfactionGauge
           score={listing.touchless_satisfaction_score ?? null}
           pos={listing.touchless_pos ?? 0}
@@ -65,7 +66,7 @@ export function ListingMainColumn({
           snippets={touchlessReviewSnippets}
         />
       )}
-      {cityScoreRanking.length >= 2 && (
+      {!selfServe && cityScoreRanking.length >= 2 && (
         <TouchlessScoreComparison
           items={cityScoreRanking}
           currentId={listing.id}
@@ -78,7 +79,7 @@ export function ListingMainColumn({
           touchless-themed snippet in the Paint-Safe module) so it never claims
           reviews the visitor can't see, and suppressed when the gauge is present
           (the gauge already shows the sentiment split). */}
-      {listing.touchless_sentiment && !showTouchlessGauge && paintModuleSnippets.some((s) => s.theme === 'touchless') && (
+      {!selfServe && listing.touchless_sentiment && !showTouchlessGauge && paintModuleSnippets.some((s) => s.theme === 'touchless') && (
         <div className={`flex items-center gap-2 px-4 py-3 rounded-xl border ${
           listing.touchless_sentiment === 'positive'
             ? 'bg-green-50 border-green-200'
