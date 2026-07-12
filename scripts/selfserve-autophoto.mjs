@@ -34,12 +34,15 @@ function rubric(mixed) {
 
 This location is: ${mixed ? 'MIXED — it is ALSO a touchless/automatic wash. Self-serve seekers view this page, so the imagery MUST clearly show the self-serve side, never only the automatic bay.' : 'SELF-SERVE ONLY.'}
 
-WHAT A SELF-SERVE WASH BAY IS (read carefully): an enclosed or partly-walled STALL a customer drives INTO and washes their own car with a HAND WAND / lance (a spray gun on a hose), usually with a per-bay coin/credit box and a foam brush; often "SELF SERVE"/"WASH" signage on the stall. A facility/exterior photo that clearly shows these wash-bay stalls counts too.
-DO NOT confuse a wash bay with:
-  - VACUUM / DETAIL areas: OPEN canopies over open parking spaces where cars park side-by-side to vacuum or hand-detail (vacuum hoses on posts, people around parked cars, NO enclosed wash stalls, NO spray wands). These are NOT self-serve wash bays.
-  - Automatic / touchless in-bay washes, or tunnel washes.
+WHAT A SELF-SERVE WASH BAY IS (read VERY carefully): an ENCLOSED or 3-SIDED covered STALL that a VEHICLE — a car, truck, van, SUV, BOAT, RV, trailer, or motorcycle — is driven/pulled INTO to be washed by hand. It has WALLS on the sides separating each bay, a hanging spray WAND/lance (a trigger spray gun on a hose) mounted on the wall, and usually a coin box + foam brush. The vehicle sits INSIDE a walled/covered stall. ANY vehicle in such a stall (even a boat on a trailer) IS a valid self-serve wash bay shot. A facility/exterior photo that clearly shows a ROW OF THESE WALLED STALLS also counts.
 
-STEP 0 — VERIFY FIRST: does AT LEAST ONE photo clearly show a genuine self-serve WASH BAY (or a facility view of the wash-bay stalls)? If YES, set has_self_serve_bay=true and continue. If NO photo shows a real self-serve wash bay — even if there are vacuum canopies, an automatic/tunnel wash, or only signage/exterior — set has_self_serve_bay=false, hero_index=null, gallery_indices=[] and STOP (do not pick a hero or gallery).
+CRITICAL — a self-serve VACUUM area is NOT a wash bay; it is IRRELEVANT and must NEVER be hero or gallery (this is a common mistake — do not make it):
+  - It is an OPEN lot with NO side walls between cars — cars park out in the open beside upright VACUUM CANISTERS / cylinders (often colored blue or red) mounted on posts or arched metal frames, sometimes under a light canopy.
+  - Those are VACUUM/shampoo canisters with thick suction hoses — NOT wash stalls, NOT spray wands.
+  - A ROW of canister-on-post stations over open parking = a VACUUM area. Customers use it themselves, but it is NOT a self-serve WASH bay. DISQUALIFY every such photo (category = "vacuum").
+  Also NOT wash bays: automatic/touchless in-bay washes, tunnel washes, hand-wash/detail areas.
+
+STEP 0 — VERIFY FIRST: does AT LEAST ONE photo clearly show a genuine self-serve WASH BAY — an ENCLOSED/WALLED stall with a spray wand (a vehicle inside a walled covered stall), or a facility view of a ROW of such walled stalls? A row of vacuum canisters in an open lot DOES NOT count. If YES, set has_self_serve_bay=true. If the ONLY "self-serve" photos are vacuum-canister stations, open-lot parking, an automatic/tunnel wash, or signage — set has_self_serve_bay=false, hero_index=null, gallery_indices=[] and STOP.
 
 STEP 1 — (only if has_self_serve_bay) Score EVERY image (skip none). For each: category, self_serve_relevance (0-5), visual_quality (0-5), hero_worthy (0-5), disqualified (bool) + reason.
 
@@ -174,7 +177,7 @@ async function selectPhotos(name, mixed, imgs) {
 // TRIAGE: score every image cheaply (no hero/gallery decision) so we can look at
 // EVERY photo even when a gallery has 60-80 (too many for one final request).
 async function triageBatch(mixed, visionImgs) {
-  const prompt = `Score each candidate photo for a SELF-SERVICE car wash directory (site is ${mixed ? 'MIXED (also automatic/touchless)' : 'self-serve only'}). For EACH image return its index and score 0-5 = how good it would be as a hero/gallery image (5 = a beautiful, clear self-serve WASH BAY or facility shot; 0 = irrelevant/junk). Mark disqualified=true for: any brush/abrasive equipment; automatic/tunnel-only; messy or blocked bays; close-ups of coin/vacuum/sign/machine; a car with no bay context; car interiors; gas; food; maps; blurry/dark. Return ONLY JSON: {"scores":[{"index":0,"score":4,"disqualified":false}]}`;
+  const prompt = `Score each candidate photo for a SELF-SERVICE car wash directory (site is ${mixed ? 'MIXED (also automatic/touchless)' : 'self-serve only'}). A self-serve WASH BAY = an ENCLOSED/WALLED covered STALL a car is driven into, with a spray WAND on the wall. For EACH image return its index and score 0-5 (5 = a beautiful, clear self-serve WASH BAY or a row of walled stalls; 0 = irrelevant/junk). Mark disqualified=true for: any brush/abrasive equipment; automatic/tunnel-only; a self-serve VACUUM area (upright canisters/cylinders on posts or arched frames in an OPEN lot with no walled stalls — NOT a wash bay); messy/blocked bays; close-ups of coin/vacuum/sign/machine; a car with no bay context; car interiors; gas; food; maps; blurry/dark. Return ONLY JSON: {"scores":[{"index":0,"score":4,"disqualified":false}]}`;
   const content = [{ type: 'text', text: prompt }];
   visionImgs.forEach((g, i) => { content.push({ type: 'text', text: `Image ${i}:` }); content.push({ type: 'image', source: { type: 'base64', media_type: g.mediaType, data: g.base64 } }); });
   const body = JSON.stringify({ model: MODEL, max_tokens: 4000, messages: [{ role: 'user', content }] });
@@ -209,6 +212,7 @@ async function analyzeAll(name, mixed, imgs) {
     for (const sc of (t.parsed?.scores || [])) if (!sc.disqualified && sc.index != null && batch[sc.index]) scores.push({ gi: s + sc.index, score: sc.score ?? 0 });
   }
   scores.sort((a, b) => b.score - a.score);
+  if (process.env.DEBUG_JSON) console.log(`triage kept ${scores.length}/${imgs.length}; top scores:`, scores.slice(0, 16).map(s => `#${s.gi}:${s.score}`).join(' '));
   const shortlistGI = scores.slice(0, SHORTLIST).map(x => x.gi);
   const used = shortlistGI.map(gi => imgs[gi]);
   if (used.length < 2) return { r: { parsed: { has_self_serve_bay: false } }, used, triageTok: { inTok, outTok } };
