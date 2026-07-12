@@ -11,7 +11,7 @@
 import { permanentRedirect } from 'next/navigation';
 import { supabase, type Listing } from '@/lib/supabase';
 import { publicListingsCount } from '@/lib/public-listings';
-import { isSelfServePublic } from '@/lib/self-serve';
+import { isSelfServePublic, isSelfServeOnly } from '@/lib/self-serve';
 import type { TssSnippet } from '@/components/TouchlessSatisfactionGauge';
 import type { ScoreRankItem } from '@/components/TouchlessScoreComparison';
 import { earnsTrophy } from '@/lib/metro-scoring';
@@ -106,8 +106,16 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
 
   const stateCode = getStateCode(params.state);
   const stateName = stateCode ? getStateName(stateCode) : listing.state;
+  // Self-serve-only listings share this metadata builder but must not claim
+  // "touch-free / brushless" — swap the wash-type wording in title + description.
+  const selfServe = isSelfServeOnly(listing);
+  const washTypeLabel = selfServe ? 'Self-Serve Car Wash' : 'Touchless Car Wash';
   const topAmenities = (listing.amenities || []).slice(0, 3).join(', ');
-  const amenityPart = topAmenities ? ` Touch-free, brushless car wash offering ${topAmenities}.` : '';
+  const amenityPart = topAmenities
+    ? selfServe
+      ? ` Self-serve wash bays offering ${topAmenities}.`
+      : ` Touch-free, brushless car wash offering ${topAmenities}.`
+    : '';
   // Canonical URL is built from the listing's OWN state + city (via the same
   // buildListingUrl() the render path redirects to and that /sitemap.xml emits),
   // NOT from the request's params. A globally-unique slug resolves under any
@@ -142,10 +150,10 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
     : '';
   const title = trophyRanking
     ? `#${trophyRanking.rank} Best Touchless Car Wash in ${trophyRanking.metro_name} | ${listing.name}`
-    : `${titleRatingPrefix}${listing.name} | Touchless Car Wash in ${listing.city}, ${listing.state}`;
+    : `${titleRatingPrefix}${listing.name} | ${washTypeLabel} in ${listing.city}, ${listing.state}`;
   const ogTitle = trophyRanking
     ? `#${trophyRanking.rank} Best Touchless Car Wash in ${trophyRanking.metro_name} | ${listing.name}`
-    : `${titleRatingPrefix}${listing.name} | Touchless Car Wash in ${listing.city}, ${stateName}`;
+    : `${titleRatingPrefix}${listing.name} | ${washTypeLabel} in ${listing.city}, ${stateName}`;
 
   // Lead with star rating for CTR — Google often shows this in snippet
   const ratingPrefix = listing.rating > 0

@@ -7,6 +7,7 @@ import { streetAddress } from '@/lib/utils';
 import { getChainBrandImage } from '@/lib/chain-brand-images';
 import { earnsTrophy } from '@/lib/metro-scoring';
 import { getBrandLabel } from '@/lib/equipment-data';
+import { isSelfServeOnly } from '@/lib/self-serve';
 import { isRealCustomerSnippet, type BestOfRanking } from './listing-data';
 
 export const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -212,18 +213,30 @@ export function defaultWashPrice(listing: Listing): number {
 
 export function buildFAQs(listing: Listing, hours: Record<string, string> | null): { q: string; a: string }[] {
   const faqs: { q: string; a: string }[] = [];
+  // Self-serve-only listings share this template but must not wear any of its
+  // touchless/brushless/paint-safe branding — flip the wash-type-specific copy
+  // to self-serve wording. Mixed (also-touchless) listings keep touchless copy.
+  const selfServe = isSelfServeOnly(listing);
 
-  // 1. Is this a touchless car wash? (always shown) — enriched with wash types & equipment
-  let touchlessAnswer = `Yes, ${listing.name} in ${listing.city}, ${listing.state} is a verified touchless (brushless) car wash — also known as a touch-free or no-touch wash — that cleans your vehicle using high-pressure water and detergents without physical contact.`;
-  if (listing.touchless_wash_types && listing.touchless_wash_types.length > 0) {
-    const typeLabels = listing.touchless_wash_types.map((wt) => WASH_TYPE_LABELS[wt]?.label || wt);
-    touchlessAnswer += ` Wash types available: ${typeLabels.join(' and ')}.`;
+  // 1. Wash-type identity (always shown) — enriched with wash types & equipment
+  if (selfServe) {
+    let ssAnswer = `Yes, ${listing.name} in ${listing.city}, ${listing.state} is a self-serve (self-service) car wash — an open-bay facility where you wash your own vehicle using a high-pressure wand and foaming brush that you control. Pull into an open bay, pay by coin, card, or app, and wash on your own schedule at your own pace.`;
+    if (listing.amenities && listing.amenities.length > 0) {
+      ssAnswer += ` On-site you'll find ${listing.amenities.slice(0, 4).join(', ')}.`;
+    }
+    faqs.push({ q: `Is ${listing.name} a self-serve car wash?`, a: ssAnswer });
+  } else {
+    let touchlessAnswer = `Yes, ${listing.name} in ${listing.city}, ${listing.state} is a verified touchless (brushless) car wash — also known as a touch-free or no-touch wash — that cleans your vehicle using high-pressure water and detergents without physical contact.`;
+    if (listing.touchless_wash_types && listing.touchless_wash_types.length > 0) {
+      const typeLabels = listing.touchless_wash_types.map((wt) => WASH_TYPE_LABELS[wt]?.label || wt);
+      touchlessAnswer += ` Wash types available: ${typeLabels.join(' and ')}.`;
+    }
+    if (listing.equipment_brand) {
+      const brandLabel = listing.equipment_model || getBrandLabel(listing.equipment_brand) || listing.equipment_brand;
+      touchlessAnswer += ` They use ${brandLabel} touchless wash equipment.`;
+    }
+    faqs.push({ q: `Is ${listing.name} a touchless car wash?`, a: touchlessAnswer });
   }
-  if (listing.equipment_brand) {
-    const brandLabel = listing.equipment_model || getBrandLabel(listing.equipment_brand) || listing.equipment_brand;
-    touchlessAnswer += ` They use ${brandLabel} touchless wash equipment.`;
-  }
-  faqs.push({ q: `Is ${listing.name} a touchless car wash?`, a: touchlessAnswer });
 
   // 2. Hours (conditional)
   if (hours && Object.keys(hours).length > 0) {
@@ -287,14 +300,16 @@ export function buildFAQs(listing: Listing, hours: Record<string, string> | null
     if (model) {
       equipAnswer += model;
     } else if (brandLabel) {
-      equipAnswer += `${brandLabel} touchless wash equipment`;
+      equipAnswer += selfServe ? `${brandLabel} wash equipment` : `${brandLabel} touchless wash equipment`;
     } else {
-      equipAnswer += 'professional touchless wash equipment';
+      equipAnswer += selfServe ? 'professional self-serve wash-bay equipment' : 'professional touchless wash equipment';
     }
     if (tech.length > 0) {
       equipAnswer += `, featuring ${tech.join(', ')}`;
     }
-    equipAnswer += '. This touch-free technology ensures a scratch-free, brushless wash every time.';
+    equipAnswer += selfServe
+      ? '. You control the high-pressure wand yourself, so you decide exactly how your vehicle is cleaned.'
+      : '. This touch-free technology ensures a scratch-free, brushless wash every time.';
     faqs.push({ q: `What equipment does ${listing.name} use?`, a: equipAnswer });
   }
 
@@ -303,7 +318,9 @@ export function buildFAQs(listing: Listing, hours: Record<string, string> | null
   if (serviceTypes.length > 0) {
     faqs.push({
       q: `What types of car wash services does ${listing.name} offer?`,
-      a: `${listing.name} offers the following services: ${serviceTypes.join(', ')}. All washes are touchless and touch-free — no brushes or cloth touch your vehicle.`,
+      a: selfServe
+        ? `${listing.name} offers the following services: ${serviceTypes.join(', ')}. Choose your wash settings at the bay and clean your vehicle at your own pace.`
+        : `${listing.name} offers the following services: ${serviceTypes.join(', ')}. All washes are touchless and touch-free — no brushes or cloth touch your vehicle.`,
     });
   }
 
@@ -321,14 +338,16 @@ export function buildFAQs(listing: Listing, hours: Record<string, string> | null
   if (specialFeatures.length > 0) {
     faqs.push({
       q: `What special features does ${listing.name} have?`,
-      a: `${listing.name} offers these special features: ${specialFeatures.join(', ')}. These extras make it a standout among touchless car washes in ${listing.city}.`,
+      a: `${listing.name} offers these special features: ${specialFeatures.join(', ')}. These extras make it a standout among ${selfServe ? 'self-serve' : 'touchless'} car washes in ${listing.city}.`,
     });
   }
 
   // 10. Safe for luxury vehicles (always shown — high-value ad keyword content)
   faqs.push({
     q: `Is ${listing.name} safe for Tesla, BMW, and luxury vehicles?`,
-    a: `Yes. ${listing.name} is a touchless car wash, meaning no brushes or cloth ever contact your vehicle. This makes it the safest automated wash option for luxury and high-end vehicles including Tesla Model 3, Model Y, and Model S, BMW, Mercedes-Benz, Lexus, Audi, Porsche, Range Rover, and Genesis. Touchless washes are also recommended by auto detailing professionals for cars with ceramic coatings, paint protection film (PPF), vinyl wraps, or any premium paint finish.`,
+    a: selfServe
+      ? `Yes. At ${listing.name} you wash your own vehicle with a high-pressure wand you control — no automated spinning brushes or cloth strips ever touch your paint. That hands-on control makes a self-serve bay a popular choice for owners of Tesla Model 3, Model Y, and Model S, BMW, Mercedes-Benz, Lexus, Audi, Porsche, Range Rover, and Genesis, and for cars with ceramic coatings, paint protection film (PPF), or vinyl wraps — you decide exactly how each panel is cleaned and rinsed.`
+      : `Yes. ${listing.name} is a touchless car wash, meaning no brushes or cloth ever contact your vehicle. This makes it the safest automated wash option for luxury and high-end vehicles including Tesla Model 3, Model Y, and Model S, BMW, Mercedes-Benz, Lexus, Audi, Porsche, Range Rover, and Genesis. Touchless washes are also recommended by auto detailing professionals for cars with ceramic coatings, paint protection film (PPF), vinyl wraps, or any premium paint finish.`,
   });
 
   // 11. Location (always shown)

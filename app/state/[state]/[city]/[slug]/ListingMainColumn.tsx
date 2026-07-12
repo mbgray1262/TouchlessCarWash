@@ -17,6 +17,7 @@ import PaintSafeModule, { type PaintSnippet } from '@/components/PaintSafeModule
 import TouchlessSatisfactionGauge, { type TssSnippet } from '@/components/TouchlessSatisfactionGauge';
 import { TouchlessScoreComparison, type ScoreRankItem } from '@/components/TouchlessScoreComparison';
 import type { Listing, ReviewSnippet } from '@/lib/supabase';
+import { isSelfServeOnly } from '@/lib/self-serve';
 import { getStateSlug, slugify } from '@/lib/constants';
 import { getBrandLabel, getBrandBySlug, slugifyModel } from '@/lib/equipment-data';
 import { WASH_TYPE_LABELS, asArray, monthlyMemberships, defaultWashPrice } from './listing-content';
@@ -45,6 +46,11 @@ export function ListingMainColumn({
   equipmentVideos,
   faqs,
 }: ListingMainColumnProps) {
+  // Self-serve-only listings must not show the touchless "Paint-Safe" framing.
+  // The gauge/score/sentiment blocks self-suppress (no touchless data), but the
+  // Paint-Safe module renders even in its empty "not enough reviews" state, so
+  // gate it explicitly.
+  const selfServe = isSelfServeOnly(listing);
   return (
     <div className="lg:col-span-2 space-y-6">
       {/* Touchless Satisfaction Score — the headline 0–100 gauge. Shown
@@ -104,18 +110,21 @@ export function ListingMainColumn({
 
       {/* Paint-Safe module — verified badge + unified review-evidence drawer
           (absorbs the old touchless-snippets section). Public badge only; the
-          granular paint_score stays internal for ranking. */}
-      <PaintSafeModule
-        state={(listing.paint_state as 'verified' | 'has_data_unverified' | 'not_enough') ?? 'not_enough'}
-        reviewCount={listing.review_count ?? 0}
-        paintPos={listing.paint_pos ?? 0}
-        paintNeg={listing.paint_neg ?? 0}
-        snippets={paintModuleSnippets}
-      />
+          granular paint_score stays internal for ranking. Touchless-only framing,
+          so it's hidden on self-serve-only listings. */}
+      {!selfServe && (
+        <PaintSafeModule
+          state={(listing.paint_state as 'verified' | 'has_data_unverified' | 'not_enough') ?? 'not_enough'}
+          reviewCount={listing.review_count ?? 0}
+          paintPos={listing.paint_pos ?? 0}
+          paintNeg={listing.paint_neg ?? 0}
+          snippets={paintModuleSnippets}
+        />
+      )}
       {/* AI-Generated Description */}
       {listing.description && (
         <div className="bg-white rounded-2xl border border-gray-200 p-6">
-          <h2 className="text-lg font-bold text-[#0F2744] mb-3">{listing.name} — Touchless & Brushless Car Wash in {listing.city}, {listing.state}</h2>
+          <h2 className="text-lg font-bold text-[#0F2744] mb-3">{listing.name} — {isSelfServeOnly(listing) ? 'Self-Serve' : 'Touchless & Brushless'} Car Wash in {listing.city}, {listing.state}</h2>
           <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
             {listing.description}
           </div>
@@ -346,7 +355,9 @@ export function ListingMainColumn({
         </div>
       )}
 
-      {equipmentVideos.length > 0 && (
+      {/* "See a Touchless Wash in Action" — touchless equipment footage, off-topic
+          on a self-serve-only listing, so hidden there. */}
+      {!selfServe && equipmentVideos.length > 0 && (
         <TouchlessVideo listingId={listing.id} videos={equipmentVideos} preferBrand={listing.equipment_brand} />
       )}
 

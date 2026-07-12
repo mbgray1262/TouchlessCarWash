@@ -33,6 +33,7 @@ interface ListingData {
   rating: number | null;
   review_count: number | null;
   is_touchless: boolean;
+  is_self_service: boolean | null;
   amenities: string[] | null;
   wash_packages: Array<{ name: string; price?: string; description?: string; features?: string[] }> | null;
   hours: Record<string, string> | null;
@@ -106,6 +107,8 @@ function buildUserMessage(listing: ListingData): string {
 
   if (listing.is_touchless) {
     parts.push('Type: Touchless (brushless) automated car wash');
+  } else if (listing.is_self_service) {
+    parts.push('Type: Self-serve (self-service) car wash — open wand bays where the customer washes their own vehicle with a high-pressure wand and foaming brush they control, paying by coin, card, or app. Do NOT describe it as touchless, touch-free, brushless, or paint-safe.');
   }
 
   if (listing.rating && listing.rating > 0) {
@@ -431,12 +434,23 @@ Deno.serve(async (req: Request) => {
       // (handled separately by lib/listing-quality.ts) are noindexed; rich
       // listings get high-quality, fact-grounded rewrites.
       const richOnly: boolean = body.rich_only ?? false;
+      // wash_type: 'touchless' (default) or 'self_serve'. Self-serve-only
+      // listings share this generator but must be written with self-serve
+      // wording (see the Type label in buildUserMessage), so we target the
+      // is_self_service population (excluding mixed listings, which are already
+      // covered by their touchless description) when asked.
+      const washType: 'touchless' | 'self_serve' = body.wash_type === 'self_serve' ? 'self_serve' : 'touchless';
 
       let query = supabase
         .from('listings')
         .select('id')
-        .eq('is_touchless', true)
         .order('review_count', { ascending: false });
+
+      if (washType === 'self_serve') {
+        query = query.eq('is_self_service', true).eq('is_touchless', false);
+      } else {
+        query = query.eq('is_touchless', true);
+      }
 
       // If specific listing IDs provided, only process those
       if (listingIds && listingIds.length > 0) {
@@ -528,7 +542,7 @@ Deno.serve(async (req: Request) => {
       try {
         const { data: listing } = await supabase
           .from('listings')
-          .select('id, name, city, state, address, zip, phone, website, rating, review_count, is_touchless, amenities, wash_packages, hours, google_description, google_category, google_subtypes, typical_time_spent, price_range, crawl_snapshot, extracted_data, parent_chain')
+          .select('id, name, city, state, address, zip, phone, website, rating, review_count, is_touchless, is_self_service, amenities, wash_packages, hours, google_description, google_category, google_subtypes, typical_time_spent, price_range, crawl_snapshot, extracted_data, parent_chain')
           .eq('id', task.listing_id)
           .maybeSingle();
 
@@ -544,11 +558,16 @@ Deno.serve(async (req: Request) => {
           // visible reviews section. Otherwise a user could read a description
           // quoting "the store is well-stocked" and then scroll to the reviews
           // section and find no matching text — looks like the AI made it up.
-          const { data: snippets } = await supabase
+          // Self-serve-only listings have no is_touchless_evidence snippets — and
+          // must not paraphrase touchless claims anyway — so for them we pull the
+          // general top-rated review snippets instead of the touchless-evidence pool.
+          const selfServeOnly = listing.is_self_service === true && listing.is_touchless !== true;
+          let snippetQuery = supabase
             .from('review_snippets')
             .select('review_text, rating, sentiment')
-            .eq('listing_id', task.listing_id)
-            .eq('is_touchless_evidence', true)
+            .eq('listing_id', task.listing_id);
+          if (!selfServeOnly) snippetQuery = snippetQuery.eq('is_touchless_evidence', true);
+          const { data: snippets } = await snippetQuery
             .order('rating', { ascending: false, nullsFirst: false })
             .limit(5);
           const listingWithSnippets = { ...listing, review_snippets: snippets ?? [] };

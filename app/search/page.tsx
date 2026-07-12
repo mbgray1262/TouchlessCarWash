@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { publicListings } from '@/lib/public-listings';
+import { SELF_SERVE_LIVE, publicSelfServeListings } from '@/lib/self-serve';
 import { getStateSlug, slugify, US_STATES } from '@/lib/constants';
 import { ListingCard } from '@/components/ListingCard';
 import { Pagination, PAGE_SIZE } from '@/components/Pagination';
@@ -30,6 +31,7 @@ interface SearchPageProps {
     filters?: string;
     page?: string;
     sort?: string;
+    type?: string;
   };
 }
 
@@ -62,10 +64,16 @@ function buildSearchFilter(query: string): string {
   return extras.length > 0 ? `${base},${extras.join(',')}` : base;
 }
 
+// The visibility source for the active wash-type tab: publicListings (touchless)
+// or publicSelfServeListings. Both share the (columns, opts?) signature so they're
+// interchangeable here; the amenity-filter join logic is wash-type-agnostic.
+type ListingSource = typeof publicListings;
+
 async function searchListings(
   query: string,
   activeFilterSlugs: string[],
-  allFilters: Filter[]
+  allFilters: Filter[],
+  source: ListingSource
 ): Promise<Listing[]> {
   // Paint-Safe Verified is a synthetic chip filtering the paint_safe_verified
   // column, not an amenity join — it never resolves to a listing_filters id.
@@ -92,7 +100,7 @@ async function searchListings(
 
     if (qualifiedIds.length === 0) return [];
 
-    let q = publicListings(LISTING_CARD_COLUMNS)
+    let q = source(LISTING_CARD_COLUMNS)
       .in('id', qualifiedIds)
       .order('rating', { ascending: false });
 
@@ -104,7 +112,7 @@ async function searchListings(
     const { data } = await q;
     return (data as Listing[]) ?? [];
   } else {
-    let q = publicListings(LISTING_CARD_COLUMNS)
+    let q = source(LISTING_CARD_COLUMNS)
       .order('rating', { ascending: false });
 
     if (wantsPaintSafe) q = q.eq('paint_safe_verified', true);
@@ -151,7 +159,8 @@ async function searchByProximity(
   lat: number,
   lng: number,
   activeFilterSlugs: string[],
-  allFilters: Filter[]
+  allFilters: Filter[],
+  source: ListingSource
 ): Promise<(Listing & { distanceMiles: number })[]> {
   const radii = [25, 50, 100];
 
@@ -187,7 +196,7 @@ async function searchByProximity(
   for (const radius of radii) {
     const box = boundingBox(lat, lng, radius);
 
-    let query = publicListings(PROXIMITY_COLUMNS)
+    let query = source(PROXIMITY_COLUMNS)
       .not('latitude', 'is', null)
       .not('longitude', 'is', null)
       .gte('latitude', box.minLat)
@@ -442,7 +451,7 @@ async function getMetroListingCount(metro: MetroArea): Promise<number> {
   return count ?? 0;
 }
 
-function buildBaseHref(query: string, activeFilterSlugs: string[], lat?: number | null, lng?: number | null): string {
+function buildBaseHref(query: string, activeFilterSlugs: string[], lat?: number | null, lng?: number | null, washType?: 'touchless' | 'self_serve'): string {
   const params = new URLSearchParams();
   if (query) params.set('q', query);
   if (lat != null && lng != null) {
@@ -450,6 +459,7 @@ function buildBaseHref(query: string, activeFilterSlugs: string[], lat?: number 
     params.set('lng', String(lng));
   }
   if (activeFilterSlugs.length > 0) params.set('filters', activeFilterSlugs.join(','));
+  if (washType === 'self_serve') params.set('type', 'self-serve');
   const qs = params.toString();
   return `/search${qs ? `?${qs}` : ''}`;
 }
@@ -500,6 +510,16 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const lng = searchParams.lng ? parseFloat(searchParams.lng) : null;
   const isProximitySearch = lat != null && lng != null && !isNaN(lat) && !isNaN(lng);
 
+  // Wash-type tab: touchless (default/flagship) vs self-serve. The self-serve tab
+  // only exists once the category is live; until then this is always touchless,
+  // so the search page is unchanged. `source` swaps the visibility rule; the rest
+  // of the touchless-only funnel (Best-Of banner, TSS sort) is gated off below.
+  const washType: 'touchless' | 'self_serve' =
+    SELF_SERVE_LIVE && searchParams.type === 'self-serve' ? 'self_serve' : 'touchless';
+  const selfServe = washType === 'self_serve';
+  const washNoun = selfServe ? 'self-serve' : 'touchless';
+  const source: ListingSource = selfServe ? publicSelfServeListings : publicListings;
+
   const allFilters = await getFilters();
 
   const hasSearch = query.length > 0 || activeFilterSlugs.length > 0;
@@ -510,15 +530,15 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   let resolvedLng = lng;
 
   if (isProximitySearch) {
-    listings = await searchByProximity(lat, lng, activeFilterSlugs, allFilters);
+    listings = await searchByProximity(lat, lng, activeFilterSlugs, allFilters, source);
   } else if (hasSearch) {
-    listings = await searchListings(query, activeFilterSlugs, allFilters);
+    listings = await searchListings(query, activeFilterSlugs, allFilters, source);
 
     // Fallback: if text search found nothing and no lat/lng, try geocoding the query
     if (listings.length === 0 && query.length > 0) {
       const geo = await serverForwardGeocode(query);
       if (geo) {
-        listings = await searchByProximity(geo.lat, geo.lng, activeFilterSlugs, allFilters);
+        listings = await searchByProximity(geo.lat, geo.lng, activeFilterSlugs, allFilters, source);
         resolvedProximity = true;
         resolvedLat = geo.lat;
         resolvedLng = geo.lng;
@@ -546,19 +566,21 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const resultLabel = (hasSearch || resolvedProximity)
     ? listings.length > 0
       ? resolvedProximity
-        ? `${listings.length} touchless car wash${listings.length !== 1 ? 'es' : ''} near ${query || 'this location'}`
+        ? `${listings.length} ${washNoun} car wash${listings.length !== 1 ? 'es' : ''} near ${query || 'this location'}`
         : `Found ${listings.length} car wash${listings.length !== 1 ? 'es' : ''}`
       : 'No results found'
     : null;
 
-  const baseHref = buildBaseHref(query, activeFilterSlugs, resolvedLat, resolvedLng);
+  const baseHref = buildBaseHref(query, activeFilterSlugs, resolvedLat, resolvedLng, washType);
 
   // Steer users toward top-tier listings and the matching /best/[metro] page.
   // Banner/CTA show whenever the search maps to a metro with a real best-of page
   // (>=3 listings). Trophy badges are best-effort from the persisted rankings
   // (same source as the detail-page "#N Best in [Metro]" badge), so they stay
   // consistent and simply don't appear for metros not yet synced.
-  const searchMetro = listings.length > 0
+  // Best-Of is a touchless-only funnel (metros ranked by touchless evidence), so
+  // it's suppressed on the self-serve tab.
+  const searchMetro = !selfServe && listings.length > 0
     ? resolveSearchMetro(query, resolvedLat, resolvedLng)
     : undefined;
   const [metroRanks, metroListingCount] = searchMetro
@@ -570,7 +592,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     ? {
         '@context': 'https://schema.org',
         '@type': 'ItemList',
-        name: query ? `Touchless Car Washes in ${query}` : 'Touchless Car Wash Search Results',
+        name: query
+          ? `${selfServe ? 'Self-Serve' : 'Touchless'} Car Washes in ${query}`
+          : `${selfServe ? 'Self-Serve' : 'Touchless'} Car Wash Search Results`,
         numberOfItems: listings.length,
         itemListElement: paginatedListings.map((listing, index) => ({
           '@type': 'ListItem',
@@ -594,7 +618,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         <div className="container mx-auto px-4 max-w-6xl">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
             {resolvedProximity && query
-              ? <>Touchless Car Washes Near {query}</>
+              ? <>{selfServe ? 'Self-Serve' : 'Touchless'} Car Washes Near {query}</>
               : query
                 ? <>Results for &ldquo;{query}&rdquo;</>
                 : 'Find a Car Wash'}
@@ -606,6 +630,23 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       </div>
 
       <div className="container mx-auto px-4 max-w-6xl py-8">
+        {SELF_SERVE_LIVE && (hasSearch || resolvedProximity) && (
+          <div className="flex items-center gap-2 mb-5">
+            <span className="text-sm text-gray-500">Wash type:</span>
+            <Link
+              href={buildBaseHref(query, activeFilterSlugs, resolvedLat, resolvedLng, 'touchless')}
+              className={`text-sm font-medium px-3 py-1.5 rounded-full border transition-colors ${!selfServe ? 'bg-[#0F2744] text-white border-[#0F2744]' : 'bg-white text-gray-700 border-gray-200 hover:border-[#0F2744]'}`}
+            >
+              Touchless
+            </Link>
+            <Link
+              href={buildBaseHref(query, activeFilterSlugs, resolvedLat, resolvedLng, 'self_serve')}
+              className={`text-sm font-medium px-3 py-1.5 rounded-full border transition-colors ${selfServe ? 'bg-[#0F2744] text-white border-[#0F2744]' : 'bg-white text-gray-700 border-gray-200 hover:border-[#0F2744]'}`}
+            >
+              Self-Serve
+            </Link>
+          </div>
+        )}
         <SearchFilters
           filters={withPaintSafeChip(
             allFilters,
@@ -645,7 +686,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             </CardContent>
           </Card>
         ) : listings.length === 0 ? (
-          <NoResultsSection query={query} activeFilterSlugs={activeFilterSlugs} isProximitySearch={resolvedProximity} lat={resolvedLat} lng={resolvedLng} />
+          <NoResultsSection query={query} activeFilterSlugs={activeFilterSlugs} isProximitySearch={resolvedProximity} lat={resolvedLat} lng={resolvedLng} washNoun={washNoun} selfServe={selfServe} />
         ) : (
           <>
             {hasBestOf && searchMetro && (
@@ -711,12 +752,16 @@ function NoResultsSection({
   query,
   activeFilterSlugs,
   isProximitySearch,
+  washNoun = 'touchless',
+  selfServe = false,
 }: {
   query: string;
   activeFilterSlugs: string[];
   isProximitySearch?: boolean;
   lat?: number | null;
   lng?: number | null;
+  washNoun?: string;
+  selfServe?: boolean;
 }) {
   const isZip = /^\d{5}$/.test(query.trim());
   const stateFromZip = isZip ? getStateFromZip(query.trim()) : null;
@@ -735,14 +780,14 @@ function NoResultsSection({
           </div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">
             {isProximitySearch
-              ? `No touchless car washes found near ${query || 'this location'}`
-              : `No touchless car washes found${query ? ` for \u201c${query}\u201d` : ''}`}
+              ? `No ${washNoun} car washes found near ${query || 'this location'}`
+              : `No ${washNoun} car washes found${query ? ` for \u201c${query}\u201d` : ''}`}
           </h2>
           <p className="text-muted-foreground mb-6 max-w-md mx-auto">
             {isProximitySearch
-              ? `We searched within 100 miles but didn\u2019t find any verified touchless car washes${stateInfo ? `. Try browsing ${stateInfo.name} or a nearby metro area` : '. Try browsing by state or checking a nearby metro area'}.`
+              ? `We searched within 100 miles but didn\u2019t find any verified ${washNoun} car washes${stateInfo ? `. Try browsing ${stateInfo.name} or a nearby metro area` : '. Try browsing by state or checking a nearby metro area'}.`
               : isZip
-                ? `We don\u2019t have any verified touchless car washes at that ZIP code yet${stateInfo ? `, but we have listings throughout ${stateInfo.name}` : ''}.`
+                ? `We don\u2019t have any verified ${washNoun} car washes at that ZIP code yet${stateInfo ? `, but we have listings throughout ${stateInfo.name}` : ''}.`
                 : 'Try searching for a nearby city, a different ZIP code, or browse by state below.'}
           </p>
           <div className="flex flex-wrap gap-3 justify-center">
@@ -753,24 +798,24 @@ function NoResultsSection({
             )}
             {stateInfo && (
               <Button asChild>
-                <Link href={`/state/${getStateSlug(stateInfo.code)}`}>
+                <Link href={selfServe ? `/self-serve-car-wash/${getStateSlug(stateInfo.code)}` : `/state/${getStateSlug(stateInfo.code)}`}>
                   <MapPin className="w-4 h-4 mr-1.5" />
                   Browse {stateInfo.name}
                 </Link>
               </Button>
             )}
             <Button variant={stateInfo ? 'outline' : 'default'} asChild>
-              <Link href="/states">
+              <Link href={selfServe ? '/self-serve-car-wash' : '/states'}>
                 <MapIcon className="w-4 h-4 mr-1.5" />
-                Browse All States
+                {selfServe ? 'Browse Self-Serve' : 'Browse All States'}
               </Link>
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Suggested "Best Of" metros */}
-      {suggestedMetros.length > 0 && (
+      {/* Suggested "Best Of" metros — touchless-only funnel, hidden on self-serve */}
+      {!selfServe && suggestedMetros.length > 0 && (
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <Trophy className="w-5 h-5 text-amber-500" />

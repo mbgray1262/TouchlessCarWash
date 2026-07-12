@@ -21,7 +21,7 @@
 import { supabase } from '@/lib/supabase';
 
 /** Category master switch. Flip to true (+ deploy) to launch the self-serve directory. */
-export const SELF_SERVE_LIVE = false;
+export const SELF_SERVE_LIVE = true;
 
 /** Landing hero — a real self-serve wash-bay photo from our own curated listings.
  *  Swap for any of the admin-approved self-serve heroes. */
@@ -53,6 +53,25 @@ export function isSelfServePublic(listing: {
   self_service_reviewed_at?: string | null;
 }): boolean {
   return SELF_SERVE_LIVE && !!listing.is_self_service && !!listing.is_approved && !!listing.self_service_reviewed_at;
+}
+
+/**
+ * COPY SWITCH for the shared listing-detail template. A listing renders that
+ * template if it's touchless-public OR (when live) self-serve-public. When the
+ * listing is NOT a touchless wash, every touchless-branded string on the page
+ * ("Touchless & Brushless", "Paint-Safe", the touchless FAQs, the meta title)
+ * must flip to self-serve wording. Mixed listings (is_touchless=true AND
+ * is_self_service=true) keep the touchless copy — touchless is the flagship
+ * framing and they earned it. So the switch is simply "not a touchless wash":
+ * true for self-serve-only (and the handful of untyped is_touchless=null rows
+ * that only reach this template via the self-serve gate). This is copy-only —
+ * it never affects visibility (that's isSelfServePublic / publicListings).
+ */
+export function isSelfServeOnly(listing: {
+  is_self_service?: boolean | null;
+  is_touchless?: boolean | null;
+}): boolean {
+  return !!listing.is_self_service && !listing.is_touchless;
 }
 
 /** Count of publicly visible self-serve listings matching the chained filters. */

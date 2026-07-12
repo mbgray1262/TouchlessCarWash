@@ -12,6 +12,7 @@ import { TrackableLink } from '@/components/TrackableLink';
 import { ListingBreadcrumb } from '@/components/ListingBreadcrumb';
 import { Badge } from '@/components/ui/badge';
 import type { Listing } from '@/lib/supabase';
+import { isSelfServeOnly } from '@/lib/self-serve';
 import { tssTier } from '@/lib/touchless-satisfaction';
 import { streetAddress } from '@/lib/utils';
 import { isOptimizedImageHost } from './listing-content';
@@ -71,6 +72,9 @@ export function ListingHero({
   const heroShortAddress = `${streetAddress(listing.address, listing.city, listing.state, listing.zip)}, ${listing.city}, ${listing.state}`;
   const heroDirectionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${streetAddress(listing.address, listing.city, listing.state, listing.zip)}, ${listing.city}, ${listing.state} ${listing.zip}`)}`;
   const heroPill = 'text-[11px] font-semibold px-2 py-0.5';
+  // Self-serve-only listings must not wear touchless/paint-safe badges — they get
+  // a single "Self-Serve" badge instead. Mixed (also-touchless) keep touchless.
+  const selfServe = isSelfServeOnly(listing);
   const heroContent = (
     <>
       <ListingBreadcrumb
@@ -104,22 +108,31 @@ export function ListingHero({
                 <Gauge className="w-3 h-3 mr-1" />Satisfaction {listing.touchless_satisfaction_score}
               </Badge>
             )}
-            {listing.paint_safe_verified && (
-              <Badge className={`bg-emerald-600 text-white border-0 shadow-sm ${heroPill}`}>
-                <ShieldCheck className="w-3 h-3 mr-1" />Paint-Safe
-              </Badge>
-            )}
-            {/* "Touchless Verified" requires backing: a user-review verification
-                must have at least one touchless mention behind it (else the badge
-                is unbacked/misleading); other sources (chain, vendor) stand alone. */}
-            {(listing.touchless_verified && (listing.touchless_verified !== 'user_review' || (listing.touchless_mentions ?? 0) > 0)) ? (
+            {selfServe ? (
+              /* Self-serve: no touchless/paint-safe claims — just the wash-type badge. */
               <Badge className={`bg-[#22C55E] text-white border-0 shadow-sm ${heroPill}`}>
-                <CheckCircle className="w-3 h-3 mr-1" />Touchless Verified
+                <CheckCircle className="w-3 h-3 mr-1" />Self-Serve
               </Badge>
             ) : (
-              <Badge className={`bg-gray-100 text-gray-700 border-0 shadow-sm ${heroPill}`}>
-                <CheckCircle className="w-3 h-3 mr-1" />Touchless
-              </Badge>
+              <>
+                {listing.paint_safe_verified && (
+                  <Badge className={`bg-emerald-600 text-white border-0 shadow-sm ${heroPill}`}>
+                    <ShieldCheck className="w-3 h-3 mr-1" />Paint-Safe
+                  </Badge>
+                )}
+                {/* "Touchless Verified" requires backing: a user-review verification
+                    must have at least one touchless mention behind it (else the badge
+                    is unbacked/misleading); other sources (chain, vendor) stand alone. */}
+                {(listing.touchless_verified && (listing.touchless_verified !== 'user_review' || (listing.touchless_mentions ?? 0) > 0)) ? (
+                  <Badge className={`bg-[#22C55E] text-white border-0 shadow-sm ${heroPill}`}>
+                    <CheckCircle className="w-3 h-3 mr-1" />Touchless Verified
+                  </Badge>
+                ) : (
+                  <Badge className={`bg-gray-100 text-gray-700 border-0 shadow-sm ${heroPill}`}>
+                    <CheckCircle className="w-3 h-3 mr-1" />Touchless
+                  </Badge>
+                )}
+              </>
             )}
             {listing.is_claimed && (
               <Badge className={`bg-blue-500 text-white border-0 shadow-sm ${heroPill}`}>

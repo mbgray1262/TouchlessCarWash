@@ -15,6 +15,7 @@ import { TrackableLink } from '@/components/TrackableLink';
 import { HoursStatusBadge } from '@/components/HoursStatusBadge';
 import { Button } from '@/components/ui/button';
 import type { Listing } from '@/lib/supabase';
+import { isSelfServeOnly } from '@/lib/self-serve';
 import { streetAddress, hasStreetAddress } from '@/lib/utils';
 import { DAY_ORDER, DAY_LABELS } from './listing-content';
 import type { BestOfRanking } from './listing-data';
@@ -177,11 +178,15 @@ export function ListingSidebar({
         </div>
       </div>
 
-      <VerificationPrompt
-        listingId={listing.id}
-        listingName={listing.name}
-        stats={verificationStats}
-      />
+      {/* Community "Is this touchless?" vote — meaningless on a self-serve-only
+          listing, so it's hidden there. */}
+      {!isSelfServeOnly(listing) && (
+        <VerificationPrompt
+          listingId={listing.id}
+          listingName={listing.name}
+          stats={verificationStats}
+        />
+      )}
 
       {listing.latitude && listing.longitude && (
         <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
