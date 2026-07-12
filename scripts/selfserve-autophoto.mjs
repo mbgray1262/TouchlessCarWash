@@ -27,7 +27,9 @@ const APPLY = process.argv.includes('--apply');
 const MAX_PHOTOS = 90, MAX_PAGES = 10, PHOTO_W = 1600, VISION_W = 640, MIN_BYTES = 5000, PROMOTE_CONF = 0.5, MIN_HERO_SCORE = 3, GALLERY_MAX = 6;
 let serpCalls = 0;
 const INCLUDE_MIXED = !process.argv.includes('--self-only'); // process mixed listings too (facility-both hero), backed up
+const SKIP_DONE = process.argv.includes('--skip-done'); // skip listings already given a good ai_photo hero (fix only the un-done ones)
 const NAME_FILTER = process.argv.slice(4).find(a => !a.startsWith('--')); // optional name ILIKE for targeted runs
+const MOBILE = /\b(m[oó]vil|mobile|a\s?domicilio|domicilio|at\s?home|to\s?your)\b/i; // mobile washes = no fixed self-serve facility
 
 function rubric(mixed) {
   return `You are a skilled photo editor curating images for a self-service car wash directory.
@@ -110,6 +112,17 @@ async function streetViewImage(lat, lng) {
     if (meta.status !== 'OK') return null; // no imagery here
     const r = await fetch(signGoogleUrl(`https://maps.googleapis.com/maps/api/streetview?size=2048x1152&location=${lat},${lng}&fov=90&heading=0&pitch=0&key=${GKEY}`), { signal: AbortSignal.timeout(15000) });
     if (!r.ok) return null;
+    const buf = Buffer.from(await r.arrayBuffer());
+    return buf.length < MIN_BYTES ? null : buf;
+  } catch { return null; }
+}
+// Fetch any image URL as-is (used to vision-verify an existing hero).
+async function fetchImage(url) {
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(15000), redirect: 'follow' });
+    if (!r.ok) return null;
+    const ct = (r.headers.get('content-type') || 'image/jpeg').split(';')[0].trim();
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(ct)) return null;
     const buf = Buffer.from(await r.arrayBuffer());
     return buf.length < MIN_BYTES ? null : buf;
   } catch { return null; }
@@ -240,6 +253,7 @@ for (let attempt = 0; attempt < 3; attempt++) {
   // live site — we back up the prior hero (reversible) and give them a facility hero
   // that shows BOTH bay types. Pass --self-only to skip them.
   if (!INCLUDE_MIXED) q = q.not('is_touchless', 'is', true);
+  if (SKIP_DONE) q = q.or('hero_image_source.is.null,hero_image_source.neq.ai_photo'); // only un-done listings
   if (NAME_FILTER) q = q.ilike('name', `%${NAME_FILTER}%`);
   const res = await q.order('city').limit(LIMIT);
   if (!res.error && res.data) { rows = res.data; break; } // empty array is valid; retry only on error/null
@@ -255,22 +269,35 @@ for (const l of rows || []) {
   const imgs = [];
   for (const u of urls) { const d = await downloadUrl(u); if (d) imgs.push(d); if (imgs.length >= MAX_PHOTOS) break; }
   if (imgs.length < 2) {
-    // No usable Google photos → Street View hero (Michael's rule), but only when the
-    // listing has no existing real hero (never overwrite a curated/live touchless hero).
-    const hasHero = l.hero_image && l.hero_image_source !== 'fallback';
-    if (!hasHero && l.latitude != null && l.longitude != null) {
-      const sv = await streetViewImage(l.latitude, l.longitude);
-      if (sv) {
-        streetview++;
-        console.log(`• ${l.name} (${l.city}) — 🛣️ no photos → Street View hero`);
-        if (APPLY) {
-          const url = await upload(await cropHero(sv, {}), 'image/jpeg', l.id, 'hero');
-          if (url) { heroBackup.push({ id: l.id, name: l.name, mixed: l.is_touchless === true, prev_hero_image: l.hero_image, prev_hero_image_source: l.hero_image_source }); await sb.from('listings').update({ hero_image: url, hero_image_source: 'street_view_auto' }).eq('id', l.id); }
-        }
+    // Mobile washes ("movil"/"mobile"/"a domicilio") have no fixed self-serve facility.
+    if (MOBILE.test(l.name || '')) {
+      demoted++; console.log(`• ${l.name} (${l.city}) — ❌ MOBILE wash (no self-serve facility) — demoted`);
+      if (APPLY) await sb.from('listings').update({ is_self_service: false, self_service_source: 'autophoto_mobile' }).eq('id', l.id);
+      continue;
+    }
+    // Never touch a MIXED (live touchless) listing's hero — leave it and just move on.
+    if (mixed) { noPhotos++; console.log(`• ${l.name} (${l.city}) — no self-serve photos (mixed/live — left as is)`); continue; }
+    // Self-serve-only with no Google photos: VERIFY the actual pixels — the existing
+    // hero AND a street view — and use whichever genuinely shows the car wash. Don't
+    // trust hero_image_source labels (leftover 'manual' junk street-views exist).
+    const cand = [];
+    if (l.hero_image) { const b = await fetchImage(l.hero_image); if (b) cand.push({ buffer: b, src: 'existing' }); }
+    if (l.latitude != null && l.longitude != null) { const sv = await streetViewImage(l.latitude, l.longitude); if (sv) cand.push({ buffer: sv, src: 'streetview' }); }
+    if (cand.length) {
+      const vis = []; for (const c of cand) vis.push(await visionCopy(c.buffer, 'image/jpeg'));
+      const rv = await selectPhotos(l.name, mixed, vis);
+      inTok += rv.usage?.input_tokens || 0; outTok += rv.usage?.output_tokens || 0;
+      const hi = rv.parsed?.hero_index;
+      if (rv.parsed?.has_self_serve_bay && hi != null && cand[hi] && !rv.parsed?.needs_human) {
+        streetview++; console.log(`• ${l.name} (${l.city}) — 🛣️ ${cand[hi].src} image shows the wash → hero`);
+        if (APPLY) { const url = await upload(await cropHero(cand[hi].buffer, {}), 'image/jpeg', l.id, 'hero'); if (url) { heroBackup.push({ id: l.id, name: l.name, mixed: false, prev_hero_image: l.hero_image, prev_hero_image_source: l.hero_image_source }); await sb.from('listings').update({ hero_image: url, hero_image_source: 'street_view_auto' }).eq('id', l.id); } }
         continue;
       }
     }
-    noPhotos++; console.log(`• ${l.name} (${l.city}) — no usable photos & no street view, skipped`); continue;
+    // No Google photos and neither the existing hero nor street view shows a car wash → demote.
+    demoted++; console.log(`• ${l.name} (${l.city}) — ❌ no photos & no image shows a car wash — demoted`);
+    if (APPLY) await sb.from('listings').update({ is_self_service: false, self_service_source: 'autophoto_no_evidence' }).eq('id', l.id);
+    continue;
   }
 
   const { r, used, triageTok } = await analyzeAll(l.name, mixed, imgs);
