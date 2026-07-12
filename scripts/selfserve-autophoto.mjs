@@ -388,17 +388,27 @@ async function processListing(l) {
       // Upload the enriched gallery (great self-serve shots) for both keep + replace.
       const galUrls = [];
       for (const gi of gal) { const u = await upload(used[gi].buffer, used[gi].mediaType, l.id, `g${gi}`); if (u) galUrls.push(u); }
+      // NEVER discard existing photos (Michael manually curated many, incl. touchless-
+      // equipment shots on mixed facilities). MERGE: keep everything already in the
+      // gallery and ADD the new self-serve picks. Dedupe by URL, cap at 8 (tool shows 8),
+      // existing photos prioritized so a cap never drops a curated one.
+      const existing = Array.isArray(l.photos) ? l.photos.filter(Boolean) : [];
+      const dedupe = arr => arr.filter((u, i, a) => u && a.indexOf(u) === i);
       if (keepHero) {
-        // Keep the existing hero; only enrich the gallery (never wipe it to empty).
-        if (galUrls.length) await sb.from('listings').update({ photos: galUrls }).eq('id', l.id);
+        const merged = dedupe([...existing, ...galUrls]).slice(0, 8);
+        if (merged.length !== existing.length) await sb.from('listings').update({ photos: merged }).eq('id', l.id);
         applied++;
       } else {
-        // Back up the prior hero before overwriting — matters most for MIXED listings
-        // whose hero is shared with the LIVE touchless page (fully reversible).
-        heroBackup.push({ id: l.id, name: l.name, mixed, prev_hero_image: l.hero_image, prev_hero_image_source: l.hero_image_source });
+        // Back up the prior hero AND gallery before overwriting — matters most for MIXED
+        // listings whose hero is shared with the LIVE touchless page (fully reversible).
+        heroBackup.push({ id: l.id, name: l.name, mixed, prev_hero_image: l.hero_image, prev_hero_image_source: l.hero_image_source, prev_photos: existing });
         const heroUrl = await upload(await cropHero(used[p.hero_index].buffer, p.hero_crop), 'image/jpeg', l.id, 'hero');
         if (heroUrl) {
-          await sb.from('listings').update({ hero_image: heroUrl, hero_image_source: 'ai_photo', photos: galUrls }).eq('id', l.id);
+          // The REPLACED hero is not thrown away — it becomes the FIRST gallery image
+          // (it's the touchless-equipment shot that matters for the mixed facility's
+          // touchless side), followed by the existing gallery, then the new self-serve picks.
+          const merged = dedupe([l.hero_image, ...existing, ...galUrls]).slice(0, 8);
+          await sb.from('listings').update({ hero_image: heroUrl, hero_image_source: 'ai_photo', photos: merged }).eq('id', l.id);
           applied++;
         }
       }
