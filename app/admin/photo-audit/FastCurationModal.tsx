@@ -1029,6 +1029,20 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                 <Plus className="w-4 h-4" /> Also Touchless
               </button>
             )}
+            {isSelfServe && listing.is_touchless === true && (
+              <button
+                onClick={async () => {
+                  if (!confirm(`Mark "${listing.name}" as NOT touchless?\n\nRemoves the touchless tag (is_touchless=false)${listing.is_approved === true ? ' and takes it OFF the public touchless directory (the touchless page will 308-redirect).' : '.'}\n\nUse this when a listing is tagged touchless but clearly isn't. Its self-serve tag is NOT affected — approve it for self-serve as usual afterward.`)) return;
+                  await markNotTouchless();
+                  onUpdate?.();
+                }}
+                disabled={saving}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 text-sm font-medium disabled:opacity-50 border border-amber-200"
+                title="This wash is tagged touchless but isn't. Removes the touchless tag (keeps self-serve) and pulls it from the public touchless directory."
+              >
+                <Ban className="w-4 h-4" /> Not Touchless
+              </button>
+            )}
             {!isSelfServe && listing.is_self_service !== true && (
               <button
                 onClick={async () => {
