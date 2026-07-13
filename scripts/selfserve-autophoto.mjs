@@ -470,24 +470,23 @@ async function processListing(l) {
       if (keepHero) { await seed(await fetchImage(l.hero_image)); }
       else { const hb = await cropHero(used[p.hero_index].buffer, p.hero_crop); await seed(hb); heroUrl = await upload(hb, 'image/jpeg', l.id, 'hero'); }
       // Base = the replaced hero (demoted into the gallery) + existing curated photos.
-      // Existing photos are preserved — EXCEPT any that are really just the KEPT
-      // hero again (the "hero shows twice, once as hero + once in gallery" bug
-      // Michael caught on Buffs Wash). Two independent signals, because the hero is
-      // usually a CROP of the gallery original — and a crop shifts the dhash a lot:
-      //   (a) filename is a prior hero/rehost/crop variant (ai-hero / hero-cropped /
-      //       hero_rehost), or
-      //   (b) phash is within 20 bits of the hero. Measured on Buffs: the same-shot
-      //       crop was 18 bits away while every genuinely different bay shot was 30+,
-      //       so 20 splits them cleanly (the old cutoff of 5 only caught re-encodes).
-      // Every other curated photo is kept.
-      const HERO_FILE = /(?:ai-)?hero[-_]|hero_rehost|hero-cropped/i;
+      // Existing photos are ALL preserved — EXCEPT one that is literally the KEPT hero
+      // AGAIN (the "hero shows twice, once as hero + once in gallery" bug Michael caught
+      // on Buffs Wash). We identify that dup by EXACT URL match to the current hero, or a
+      // tight phash match to it (a crop-variant of the same shot: Buffs' was 18 bits away;
+      // genuinely different shots are 30+, so 20 splits them). DO NOT use a filename
+      // heuristic — a blanket /hero-cropped/ regex matched a mixed listing's DISTINCT old
+      // touchless hero (also stored as hero-cropped-*) and DELETED it from the gallery
+      // (Green Car Wash lost its Belanger Saber touchless shots). Only the actual current
+      // hero is a dup; every other curated photo — including demoted old touchless heroes
+      // — must be kept.
       const heroSeed = seen.length ? seen[0] : null;
       const rawBase = dedupe([(!keepHero ? l.hero_image : null), ...existing].filter(Boolean));
       const baseUrls = [];
       for (const url of rawBase) {
         const buf = await fetchImage(url);
         let h = null; if (buf) { try { h = await phash(buf); } catch {} }
-        const isHeroDup = keepHero && (HERO_FILE.test(url) || (h != null && heroSeed != null && hamLE(heroSeed, h, 20)));
+        const isHeroDup = keepHero && (url === l.hero_image || (h != null && heroSeed != null && hamLE(heroSeed, h, 20)));
         if (isHeroDup) continue; // it's the hero again → don't repeat it in the gallery
         if (h != null) seen.push(h);
         baseUrls.push(url);
