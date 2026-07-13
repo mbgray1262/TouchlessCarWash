@@ -34,6 +34,7 @@ let serpCalls = 0;
 const INCLUDE_MIXED = !process.argv.includes('--self-only'); // process mixed listings too (facility-both hero), backed up
 const MIXED_ONLY = process.argv.includes('--mixed-only'); // ONLY mixed (also-touchless) listings — the careful facility pass
 const SKIP_DONE = process.argv.includes('--skip-done'); // skip listings already given a good ai_photo hero (fix only the un-done ones)
+const NEEDS_HUMAN_ONLY = process.argv.includes('--needs-human'); // ONLY re-process currently-flagged (autophoto_needs_human) listings
 const NAME_FILTER = process.argv.slice(4).find(a => !a.startsWith('--')); // optional name ILIKE for targeted runs
 const MOBILE = /\b(m[oó]vil|mobile|a\s?domicilio|domicilio|at\s?home|to\s?your)\b/i; // mobile washes = no fixed self-serve facility
 
@@ -298,7 +299,7 @@ async function analyzeAll(name, mixed, imgs) {
 let rows = [];
 for (let attempt = 0; attempt < 3; attempt++) {
   let q = sb.from('listings')
-    .select('id, name, city, state, google_place_id, is_touchless, hero_image, hero_image_source, photos, latitude, longitude')
+    .select('id, name, city, state, google_place_id, is_touchless, hero_image, hero_image_source, photos, latitude, longitude, self_service_source')
     .eq('is_self_service', true).is('self_service_reviewed_at', null)
     // Skip closed washes (manually-closed via classification_source, or Google-closed
     // via business_status). The .is.null clauses keep listings with no such flag.
@@ -311,6 +312,7 @@ for (let attempt = 0; attempt < 3; attempt++) {
   if (!INCLUDE_MIXED) q = q.not('is_touchless', 'is', true);
   if (MIXED_ONLY) q = q.eq('is_touchless', true); // the careful mixed-facility pass
   if (SKIP_DONE) q = q.or('hero_image_source.is.null,hero_image_source.neq.ai_photo'); // only un-done listings
+  if (NEEDS_HUMAN_ONLY) q = q.eq('self_service_source', 'autophoto_needs_human'); // re-process only the flagged
   if (NAME_FILTER) q = q.ilike('name', `%${NAME_FILTER}%`);
   const res = await q.order('city').limit(LIMIT);
   if (!res.error && res.data) { rows = res.data; break; } // empty array is valid; retry only on error/null
@@ -349,7 +351,7 @@ async function processListing(l) {
       if (rv.parsed?.has_self_serve_bay && hi != null && cand[hi] && !rv.parsed?.needs_human) {
         // Confident: an image (existing hero OR street view) clearly shows the wash → use it, no flag.
         streetview++; console.log(`• ${l.name} (${l.city}) — 🛣️ ${cand[hi].src} image shows the wash → hero`);
-        if (APPLY) { const url = await upload(await cropHero(cand[hi].buffer, {}), 'image/jpeg', l.id, 'hero'); if (url) { heroBackup.push({ id: l.id, name: l.name, mixed: false, prev_hero_image: l.hero_image, prev_hero_image_source: l.hero_image_source }); await sb.from('listings').update({ hero_image: url, hero_image_source: 'street_view_auto' }).eq('id', l.id); } }
+        if (APPLY) { const url = await upload(await cropHero(cand[hi].buffer, {}), 'image/jpeg', l.id, 'hero'); if (url) { heroBackup.push({ id: l.id, name: l.name, mixed: false, prev_hero_image: l.hero_image, prev_hero_image_source: l.hero_image_source }); const srcFix = l.self_service_source === 'autophoto_needs_human' ? { self_service_source: 'autophoto_applied' } : {}; await sb.from('listings').update({ hero_image: url, hero_image_source: 'street_view_auto', ...srcFix }).eq('id', l.id); } }
         return;
       }
       // Michael's rule: when Google photos are missing/thin, don't leave the listing
@@ -404,8 +406,14 @@ async function processListing(l) {
     return;
   }
   const heroImg = p.images?.find(x => x.index === p.hero_index);
-  const heroOk = p.hero_index != null && used[p.hero_index] && heroImg && !heroImg.disqualified && (heroImg.hero_worthy ?? 0) >= MIN_HERO_SCORE;
-  const good = !p.needs_human && (p.confidence ?? 0) >= PROMOTE_CONF && heroOk;
+  // has_self_serve_bay is TRUE here (the false case returned above), so the listing IS
+  // self-serve. AUTO-APPLY it into the normal approve queue — do NOT bury a confirmed
+  // self-serve wash in "Need Review" just because the hero pick is moderate. The old gate
+  // (needs_human / confidence>=0.5 / hero_worthy>=3) flagged obviously-self-serve washes
+  // like Speedy & Hilltop (clear bays, but a distant-building hero). Now we only need SOME
+  // hero to show — a usable AI pick, or an existing hero to keep.
+  const heroUsable = p.hero_index != null && used[p.hero_index] && heroImg && !heroImg.disqualified;
+  const good = heroUsable || !!l.hero_image;
   // Gallery: only distinct, non-disqualified, decent-quality shots (no padding).
   const gal = (p.gallery_indices || []).filter(i => {
     if (i === p.hero_index || !used[i]) return false;
@@ -415,7 +423,9 @@ async function processListing(l) {
   const tag = `${mixed ? '[mixed]' : '[self]'}`;
 
   if (!good) {
-    flagged++; console.log(`• ${l.name} (${l.city}) ${tag} — ⚠ NEEDS HUMAN (conf ${p.confidence}, ${p.reason || ''})`);
+    // Reaches here only when it's self-serve but we found NO usable hero AND there's no
+    // existing hero to keep — genuinely needs a human to add one.
+    flagged++; console.log(`• ${l.name} (${l.city}) ${tag} — ⚠ NEEDS HUMAN (self-serve, but no usable hero found)`);
     // Tag it so it surfaces in the photo-audit "Need Review" tab instead of being
     // lost in the full queue. Provenance only — leaves is_self_service +
     // self_service_reviewed_at untouched, so visibility/approval are unaffected.
@@ -440,6 +450,9 @@ async function processListing(l) {
         else if (a) { assessNote = ' — current hero touchless-only → replacing with self-serve hero'; }
       }
     }
+    // No usable AI hero pick → we must keep the existing hero (can't crop a null pick).
+    // good=true guarantees l.hero_image exists in this case.
+    if (!heroUsable) { keepHero = true; assessNote = ' — kept existing hero (no stronger AI pick); gallery enriched'; }
     console.log(`• ${l.name} (${l.city}) ${tag} [${imgs.length}📷] — ${keepHero ? 'hero KEPT' : `hero #${p.hero_index} ${heroImg?.category} (hw ${heroImg?.hero_worthy}, q ${heroImg?.visual_quality})${trims}`}, gallery [${gal.join(',')}] conf ${p.confidence}${assessNote}`);
     if (APPLY) {
       const existing = Array.isArray(l.photos) ? l.photos.filter(Boolean) : [];
@@ -488,14 +501,20 @@ async function processListing(l) {
         if (u) newUrls.push(u);
       }
       const merged = [...baseUrls, ...newUrls].slice(0, 8);
+      // A successful apply means it's confirmed self-serve with a hero — so if it was
+      // previously FLAGGED (autophoto_needs_human), clear that so it leaves the "Need
+      // Review" tab. Don't touch any other classification source (google_category etc.).
+      const srcFix = l.self_service_source === 'autophoto_needs_human' ? { self_service_source: 'autophoto_applied' } : {};
       if (keepHero) {
-        if (merged.length !== existing.length) await sb.from('listings').update({ photos: merged }).eq('id', l.id);
+        const upd = { ...srcFix };
+        if (merged.length !== existing.length) upd.photos = merged;
+        if (Object.keys(upd).length) await sb.from('listings').update(upd).eq('id', l.id);
         applied++;
       } else {
         // Back up the prior hero AND gallery before overwriting — matters most for MIXED
         // listings whose hero is shared with the LIVE touchless page (fully reversible).
         heroBackup.push({ id: l.id, name: l.name, mixed, prev_hero_image: l.hero_image, prev_hero_image_source: l.hero_image_source, prev_photos: existing });
-        if (heroUrl) { await sb.from('listings').update({ hero_image: heroUrl, hero_image_source: 'ai_photo', photos: merged }).eq('id', l.id); applied++; }
+        if (heroUrl) { await sb.from('listings').update({ hero_image: heroUrl, hero_image_source: 'ai_photo', photos: merged, ...srcFix }).eq('id', l.id); applied++; }
       }
     } else applied++;
   }
