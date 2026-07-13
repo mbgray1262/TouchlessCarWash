@@ -14,7 +14,7 @@ import { getTouchlessVideoPool } from '@/lib/videos';
 import { RedirectBanner } from '@/components/RedirectBanner';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { publicListings } from '@/lib/public-listings';
-import { SELF_SERVE_LIVE } from '@/lib/self-serve';
+import { SELF_SERVE_LIVE, selfServeStateTally } from '@/lib/self-serve';
 import { getApprovedTouchlessCount } from '@/lib/listing-queries';
 import { US_STATES, getStateSlug } from '@/lib/constants';
 import { getMetroBySlug } from '@/lib/metro-areas';
@@ -180,7 +180,7 @@ async function getTotalReviewCount(): Promise<number> {
 }
 
 export default async function Home({ searchParams }: { searchParams?: { geo?: string } }) {
-  const [featuredListings, stateListingCounts, totalCount, totalReviews, homeVideos, topSatisfaction] =
+  const [featuredListings, stateListingCounts, totalCount, totalReviews, homeVideos, topSatisfaction, ssTally] =
     await Promise.all([
       getFeaturedListings(),
       getStateListingCounts(),
@@ -188,7 +188,12 @@ export default async function Home({ searchParams }: { searchParams?: { geo?: st
       getTotalReviewCount(),
       getTouchlessVideoPool(),
       getTopSatisfactionListings(),
+      // Live self-serve figures for the discovery card + stat tile. One tally gives
+      // both the count (sum) and the states covered (length). Skipped when gated off.
+      SELF_SERVE_LIVE ? selfServeStateTally() : Promise.resolve([] as { code: string; count: number }[]),
     ]);
+  const selfServeCount = ssTally.reduce((n, s) => n + s.count, 0);
+  const selfServeStates = ssTally.length;
 
   // Passive geo via Netlify's x-nf-geo header → nearest metro suggestion.
   // ?geo=lat,lng overrides for local/preview testing (no Netlify header in dev).
@@ -268,14 +273,20 @@ export default async function Home({ searchParams }: { searchParams?: { geo?: st
 
       <HeroSection totalCount={totalCount} />
 
-      {SELF_SERVE_LIVE && (
+      {SELF_SERVE_LIVE && selfServeCount > 0 && (
         <section className="bg-[#22C55E]/10 border-y border-[#22C55E]/20">
-          <div className="container mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 text-center">
-            <span className="text-sm text-[#0F2744]">
-              Prefer to wash it yourself in a self-serve bay you control?
-            </span>
-            <Link href="/self-serve-car-wash" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#22C55E] hover:underline">
-              Browse self-service car washes <ArrowRight className="w-4 h-4" />
+          <div className="container mx-auto px-4 py-5 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-5 text-center sm:text-left">
+            <div className="min-w-0">
+              <div className="text-sm font-bold text-[#0F2744]">Prefer to wash it yourself?</div>
+              <div className="text-sm text-gray-600">
+                {selfServeCount.toLocaleString()} self-serve car washes{selfServeStates > 0 ? ` across ${selfServeStates} states` : ''} — open wand bays you control, pay by coin, card, or app.
+              </div>
+            </div>
+            <Link
+              href="/self-serve-car-wash"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-[#22C55E] hover:bg-[#1ea952] rounded-lg px-4 py-2 transition-colors shrink-0"
+            >
+              Browse self-serve <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </section>
@@ -283,10 +294,10 @@ export default async function Home({ searchParams }: { searchParams?: { geo?: st
 
       <section className="bg-[#0F2744] py-12">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto text-center">
+          <div className={`grid grid-cols-2 ${SELF_SERVE_LIVE && selfServeCount > 0 ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-8 max-w-5xl mx-auto text-center`}>
             <div>
               <div className="text-4xl md:text-5xl font-bold text-white mb-2">{totalCount.toLocaleString()}+</div>
-              <div className="text-sm text-white/80">Verified Listings</div>
+              <div className="text-sm text-white/80">Touchless Listings</div>
             </div>
             <div>
               <div className="text-4xl md:text-5xl font-bold text-white mb-2">50</div>
@@ -296,6 +307,12 @@ export default async function Home({ searchParams }: { searchParams?: { geo?: st
               <div className="text-4xl md:text-5xl font-bold text-white mb-2">{(Math.floor(totalReviews / 100) * 100).toLocaleString()}+</div>
               <div className="text-sm text-white/80">Customer Reviews</div>
             </div>
+            {SELF_SERVE_LIVE && selfServeCount > 0 && (
+              <div>
+                <div className="text-4xl md:text-5xl font-bold text-white mb-2">{(Math.floor(selfServeCount / 50) * 50).toLocaleString()}+</div>
+                <div className="text-sm text-white/80">Self-Serve Locations</div>
+              </div>
+            )}
           </div>
         </div>
       </section>
