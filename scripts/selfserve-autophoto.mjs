@@ -42,7 +42,7 @@ function rubric(mixed) {
 
 This location is: ${mixed ? 'MIXED — it is ALSO a touchless/automatic wash. Self-serve seekers view this page, so the imagery MUST clearly show the self-serve side, never only the automatic bay.' : 'SELF-SERVE ONLY.'}
 
-WHAT A SELF-SERVE WASH BAY IS (read VERY carefully): an ENCLOSED or 3-SIDED covered STALL that a VEHICLE — a car, truck, van, SUV, BOAT, RV, trailer, or motorcycle — is driven/pulled INTO to be washed by hand. It has WALLS on the sides separating each bay, a hanging spray WAND/lance (a trigger spray gun on a hose) mounted on the wall, and usually a coin box + foam brush. The vehicle sits INSIDE a walled/covered stall. ANY vehicle in such a stall (even a boat on a trailer) IS a valid self-serve wash bay shot. A facility/exterior photo that clearly shows a ROW OF THESE WALLED STALLS also counts.
+WHAT A SELF-SERVE WASH BAY IS (read VERY carefully): a COVERED STALL that a VEHICLE — a car, truck, van, SUV, BOAT, RV, trailer, or motorcycle — is driven/pulled INTO to be washed by hand. It may be ENCLOSED, 3-SIDED, or an OPEN-canopy drive-through bay; it may be a LARGE/TALL drive-in bay (for trucks/RVs, sometimes marked "CLEARANCE 12'"). It has side WALLS/pillars separating each bay and a hanging spray WAND/lance mounted on the wall, usually with a coin/pay box + foam brush. KEY DISCRIMINATOR vs a vacuum area: a WASH bay is a DEEP covered stall a vehicle is driven fully INTO (a bay opening you can see through, with side walls); a VACUUM area is a SHALLOW shade canopy over OPEN parking that you park BESIDE. Judge by the STRUCTURE (deep drive-in stall) — do NOT require the wand to be clearly visible in the photo; the wand is often out of frame, in shadow, or coiled on the wall. ANY vehicle inside such a covered drive-in stall IS a valid self-serve wash bay shot. A facility/exterior photo OR a Street View that shows a ROW OF THESE COVERED BAY OPENINGS (the arched/rectangular drive-through openings in the building) ALSO counts as has_self_serve_bay=true — that row-of-bays exterior is often the clearest evidence. IMPORTANT: a vacuum area in the SAME photo or facility does NOT disqualify it — if wash bays (covered drive-in stalls) are present ANYWHERE in the set, set has_self_serve_bay=true (the vacuum shots are just skipped for hero/gallery).
 
 CRITICAL — a self-serve VACUUM area is NOT a wash bay; it is IRRELEVANT and must NEVER be hero or gallery (this is a common mistake — do not make it):
   - It is an OPEN lot with NO side walls between cars — cars park out in the open beside upright VACUUM CANISTERS / cylinders (often colored blue or red) mounted on posts or arched metal frames, sometimes under a light canopy.
@@ -50,7 +50,7 @@ CRITICAL — a self-serve VACUUM area is NOT a wash bay; it is IRRELEVANT and mu
   - A ROW of canister-on-post stations over open parking = a VACUUM area. Customers use it themselves, but it is NOT a self-serve WASH bay. DISQUALIFY every such photo (category = "vacuum").
   Also NOT wash bays: automatic/touchless in-bay washes, tunnel washes, hand-wash/detail areas.
 
-STEP 0 — VERIFY FIRST: does AT LEAST ONE photo clearly show a genuine self-serve WASH BAY — an ENCLOSED/WALLED stall with a spray wand (a vehicle inside a walled covered stall), or a facility view of a ROW of such walled stalls? A row of vacuum canisters in an open lot DOES NOT count. If YES, set has_self_serve_bay=true. If the ONLY "self-serve" photos are vacuum-canister stations, open-lot parking, an automatic/tunnel wash, or signage — set has_self_serve_bay=false, hero_index=null, gallery_indices=[] and STOP.
+STEP 0 — VERIFY FIRST: does AT LEAST ONE photo (INCLUDING the Street View, if provided) show a genuine self-serve WASH BAY — a covered drive-in stall (enclosed, 3-sided, open-canopy, or a large "clearance" bay), a vehicle inside such a stall, OR a facility/Street-View exterior showing a ROW of covered bay OPENINGS in the building? Judge by structure, not by a visible wand. A vacuum area in the SAME set does NOT count against it — if ANY covered wash bay is present, set has_self_serve_bay=true. Only set has_self_serve_bay=false if the ENTIRE set (photos + Street View) shows NO covered wash bay at all — i.e. it's purely a vacuum lot with no bays, purely open-lot parking, an automatic/tunnel-only wash, or just signage. When false, set hero_index=null, gallery_indices=[] and STOP.
 
 STEP 1 — (only if has_self_serve_bay) Score EVERY image (skip none). For each: category, self_serve_relevance (0-5), visual_quality (0-5), hero_worthy (0-5), disqualified (bool) + reason.
 
@@ -63,7 +63,7 @@ STEP 2 — Pick the HERO: the single most ATTRACTIVE and INFORMATIVE image — o
   Always pick the best available; set hero_index null / needs_human true ONLY if nothing usably shows the self-serve wash.
   Also return hero_crop: fractions (0 to 0.4) to TRIM from each edge of the hero to isolate the main subject (the bays/facility) and remove distracting elements at the edges — e.g. a fence, an adjacent building, a pole, a parked car off to the side, or empty sky/pavement. Use 0 for edges that are already clean; keep the bays fully in frame and do NOT over-crop. The image is later center-cropped to 16:9 within whatever remains.
 
-STEP 3 — Pick GALLERY images (up to ${GALLERY_MAX}): genuine, attractive self-serve SCENES. PRIORITIZE great IN-BAY ACTION shots — a whole VEHICLE inside a recognizable BAY being washed, covered in soap/foam, or rinsed with the wand — these are the most engaging. The vehicle AND the bay must be clearly recognizable; NEVER an extreme close-up of only soap/foam/water/suds on a car's paint, glass, or windshield (an abstract texture shot with no bay or full vehicle is confusing and non-informative — DISQUALIFY it). EQUALLY STRONG (do NOT rank below a car-in-bay shot): a CLEAN, EMPTY self-serve BAY that clearly shows the equipment — the hanging spray WAND/lance, foam brush, coin/pay box, and the walled stall. A well-lit empty bay with clear self-serve equipment is just as valuable and informative as a bay with a car in it; score its visual_quality on its own merits and INCLUDE it — never skip or under-score it just because no vehicle is present. Also good: an appealing wand-in-use shot, a bright wide facility. VARIETY IS REQUIRED — each gallery image must show something DIFFERENT. If several candidates are near-identical (e.g. two frontal shots of the same building, or two similar exterior-sign views), pick only the SINGLE best one and drop the rest, even if both are individually fine — a gallery of look-alike shots reads as duplicated and cheap. Favor a spread across subjects: a bay-in-use, an empty equipped bay, a wide facility, a signage/entrance view. Include AS MANY genuinely good, DISTINCT shots as exist (up to ${GALLERY_MAX}) — more good images = more engagement — but still NEVER pad with weak/useless filler OR a redundant look-alike (return fewer, even zero, rather than include a bad or duplicative one).
+STEP 3 — Pick GALLERY images (up to ${GALLERY_MAX}): genuine, attractive self-serve SCENES. PRIORITIZE great IN-BAY ACTION shots — a whole VEHICLE inside a recognizable BAY being washed, covered in soap/foam, or rinsed with the wand — these are the most engaging. The vehicle AND the bay must be clearly recognizable; NEVER an extreme close-up of only soap/foam/water/suds on a car's paint, glass, or windshield (an abstract texture shot with no bay or full vehicle is confusing and non-informative — DISQUALIFY it). EQUALLY STRONG (do NOT rank below a car-in-bay shot): a CLEAN, EMPTY self-serve BAY that clearly shows the equipment — the hanging spray WAND/lance, foam brush, coin/pay box, and the walled stall. A well-lit empty bay with clear self-serve equipment is just as valuable and informative as a bay with a car in it; score its visual_quality on its own merits and INCLUDE it — never skip or under-score it just because no vehicle is present. Also good: an appealing wand-in-use shot, a bright wide facility. LEAN TOWARD INCLUDING more good shots, not fewer — a rich gallery of several DIFFERENT vehicles being washed in bays is exactly what we want and is highly engaging. Two shots of DIFFERENT vehicles, or the SAME bay type from a different angle/lighting, or different bays, are DISTINCT — KEEP them all. "Near-identical" (the only thing to collapse) means the SAME vehicle from essentially the same angle, or two nearly-interchangeable exterior/building/sign shots — in that narrow case keep the single best. Do NOT treat "another car in another bay" as a duplicate; those are the best content on the page. Favor a spread across subjects too (bay-in-use, empty equipped bay, wide facility, entrance), but never DROP a genuinely good distinct in-bay shot just to force variety. Include AS MANY genuinely good, DISTINCT shots as exist (up to ${GALLERY_MAX}) — more good images = more engagement — only avoid true look-alikes and weak/useless filler.
 
 NEVER pick as hero OR gallery:
   - ANY brush, cloth strip, mitter curtain, foam-pad, or abrasive contact equipment — STRICTLY forbidden (violates our paint-safety brand), even if otherwise nice.
@@ -84,27 +84,38 @@ Return ONLY JSON:
 // hard-caps at 10). place_id -> data_id, then paginate google_maps_photos through
 // ALL pages (follow next_page_token) until the gallery is exhausted — no artificial cap.
 async function serpPhotoUrls(placeId) {
-  try {
-    const r1 = await fetch(`https://serpapi.com/search.json?engine=google_maps&place_id=${encodeURIComponent(placeId)}&api_key=${SKEY}`, { signal: AbortSignal.timeout(25000) });
-    const j1 = await r1.json(); serpCalls++;
-    const dataId = j1.place_results?.data_id;
-    if (!dataId) return [];
-    const out = []; let token = null;
-    for (let page = 0; page < MAX_PAGES; page++) {
-      let url = `https://serpapi.com/search.json?engine=google_maps_photos&data_id=${encodeURIComponent(dataId)}&api_key=${SKEY}`;
-      if (token) url += `&next_page_token=${encodeURIComponent(token)}`;
-      const r = await fetch(url, { signal: AbortSignal.timeout(25000) });
-      const j = await r.json(); serpCalls++;
-      const pagePhotos = (j.photos || []).map(p => p.image).filter(u => typeof u === 'string' && u.includes('googleusercontent'));
-      out.push(...pagePhotos);
-      token = j.serpapi_pagination?.next_page_token;
-      if (!token || !pagePhotos.length) break; // no more pages
-    }
-    // Dedupe (base URL, ignoring size params) while preserving order.
-    const seen = new Set(), uniq = [];
-    for (const u of out) { const k = u.split('=')[0]; if (!seen.has(k)) { seen.add(k); uniq.push(u); } }
-    return uniq.slice(0, MAX_PHOTOS);
-  } catch { return []; }
+  // SerpAPI is transiently flaky under concurrency (timeouts, partial/empty results).
+  // A single miss used to return [] → the <2-photo branch skipped the ENTIRE gallery
+  // (and could even falsely demote a real self-serve wash). Buffs Wash came back
+  // empty during the batch run yet returns 37 photos on a retry, losing its whole
+  // gallery. So RETRY on error/empty before giving up — only the genuinely photoless
+  // pay the extra (rare) calls.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const r1 = await fetch(`https://serpapi.com/search.json?engine=google_maps&place_id=${encodeURIComponent(placeId)}&api_key=${SKEY}`, { signal: AbortSignal.timeout(25000) });
+      const j1 = await r1.json(); serpCalls++;
+      const dataId = j1.place_results?.data_id;
+      if (dataId) {
+        const out = []; let token = null;
+        for (let page = 0; page < MAX_PAGES; page++) {
+          let url = `https://serpapi.com/search.json?engine=google_maps_photos&data_id=${encodeURIComponent(dataId)}&api_key=${SKEY}`;
+          if (token) url += `&next_page_token=${encodeURIComponent(token)}`;
+          const r = await fetch(url, { signal: AbortSignal.timeout(25000) });
+          const j = await r.json(); serpCalls++;
+          const pagePhotos = (j.photos || []).map(p => p.image).filter(u => typeof u === 'string' && u.includes('googleusercontent'));
+          out.push(...pagePhotos);
+          token = j.serpapi_pagination?.next_page_token;
+          if (!token || !pagePhotos.length) break; // no more pages
+        }
+        // Dedupe (base URL, ignoring size params) while preserving order.
+        const seen = new Set(), uniq = [];
+        for (const u of out) { const k = u.split('=')[0]; if (!seen.has(k)) { seen.add(k); uniq.push(u); } }
+        if (uniq.length) return uniq.slice(0, MAX_PHOTOS);
+      }
+    } catch { /* fall through to retry */ }
+    if (attempt < 2) await new Promise(r => setTimeout(r, 1500 * (attempt + 1))); // backoff, then retry
+  }
+  return [];
 }
 // Street View fallback (Michael's rule): when a wash has NO usable Google photos,
 // grab a signed Street View Static image at its coordinates and use it as the hero.
@@ -214,7 +225,7 @@ async function selectPhotos(name, mixed, imgs) {
 // TRIAGE: score every image cheaply (no hero/gallery decision) so we can look at
 // EVERY photo even when a gallery has 60-80 (too many for one final request).
 async function triageBatch(mixed, visionImgs) {
-  const prompt = `Score each candidate photo for a SELF-SERVICE car wash directory (site is ${mixed ? 'MIXED (also automatic/touchless)' : 'self-serve only'}). A self-serve WASH BAY = an ENCLOSED/WALLED covered STALL a car is driven into, with a spray WAND on the wall. For EACH image return its index and score 0-5 (5 = a beautiful, clear self-serve WASH BAY or a row of walled stalls; 0 = irrelevant/junk). An EMPTY bay that clearly shows the equipment (spray wand/lance, foam brush, coin box, walled stall) scores JUST AS HIGH as a bay with a vehicle — do not penalize it for having no car. Mark disqualified=true for: any brush/abrasive equipment; automatic/tunnel-only; a self-serve VACUUM area (upright canisters/cylinders on posts or arched frames in an OPEN lot with no walled stalls — NOT a wash bay); ANY shot whose subject is vacuum/vending equipment — vacuum canisters, vacuum hoses (thick corrugated tubes, often blue), vacuum nozzles, air/fragrance/shampoo/"Fragramatics" or other coin-op vending machines and their pay stations — even if a person is using them or it is only part of the frame (ALWAYS disqualified); messy/blocked bays; close-ups of coin/sign/machine; a car with no bay context; car interiors; gas; food; maps; any graphic/flyer/poster/event-or-promo announcement/logo/coupon (especially advertising something other than this wash); extreme close-ups of soap/foam/water on paint/glass with no bay or full vehicle (abstract texture shots); blurry/dark. Return ONLY JSON: {"scores":[{"index":0,"score":4,"disqualified":false}]}`;
+  const prompt = `Score each candidate photo for a SELF-SERVICE car wash directory (site is ${mixed ? 'MIXED (also automatic/touchless)' : 'self-serve only'}). A self-serve WASH BAY = a COVERED drive-in STALL a vehicle is pulled into (enclosed, 3-sided, open-canopy, or a large "clearance" bay), typically with a spray WAND on the wall — but judge by the deep drive-in STRUCTURE, not by a visible wand. A facility/Street-View exterior showing a ROW of covered bay OPENINGS also depicts wash bays. For EACH image return its index and score 0-5 (5 = a beautiful, clear self-serve WASH BAY, a row of covered stalls, or a clean facility exterior showing the bay openings; 0 = irrelevant/junk). An EMPTY bay that clearly shows the equipment (spray wand/lance, foam brush, coin box, walled stall) scores JUST AS HIGH as a bay with a vehicle — do not penalize it for having no car. Mark disqualified=true for: any brush/abrasive equipment; automatic/tunnel-only; a self-serve VACUUM area (upright canisters/cylinders on posts or arched frames in an OPEN lot with no walled stalls — NOT a wash bay); ANY shot whose subject is vacuum/vending equipment — vacuum canisters, vacuum hoses (thick corrugated tubes, often blue), vacuum nozzles, air/fragrance/shampoo/"Fragramatics" or other coin-op vending machines and their pay stations — even if a person is using them or it is only part of the frame (ALWAYS disqualified); messy/blocked bays; close-ups of coin/sign/machine; a car with no bay context; car interiors; gas; food; maps; any graphic/flyer/poster/event-or-promo announcement/logo/coupon (especially advertising something other than this wash); extreme close-ups of soap/foam/water on paint/glass with no bay or full vehicle (abstract texture shots); blurry/dark. Return ONLY JSON: {"scores":[{"index":0,"score":4,"disqualified":false}]}`;
   const content = [{ type: 'text', text: prompt }];
   visionImgs.forEach((g, i) => { content.push({ type: 'text', text: `Image ${i}:` }); content.push({ type: 'image', source: { type: 'base64', media_type: g.mediaType, data: g.base64 } }); });
   const body = JSON.stringify({ model: MODEL, max_tokens: 4000, messages: [{ role: 'user', content }] });
@@ -336,15 +347,32 @@ async function processListing(l) {
       inTok += rv.usage?.input_tokens || 0; outTok += rv.usage?.output_tokens || 0;
       const hi = rv.parsed?.hero_index;
       if (rv.parsed?.has_self_serve_bay && hi != null && cand[hi] && !rv.parsed?.needs_human) {
+        // Confident: an image (existing hero OR street view) clearly shows the wash → use it, no flag.
         streetview++; console.log(`• ${l.name} (${l.city}) — 🛣️ ${cand[hi].src} image shows the wash → hero`);
         if (APPLY) { const url = await upload(await cropHero(cand[hi].buffer, {}), 'image/jpeg', l.id, 'hero'); if (url) { heroBackup.push({ id: l.id, name: l.name, mixed: false, prev_hero_image: l.hero_image, prev_hero_image_source: l.hero_image_source }); await sb.from('listings').update({ hero_image: url, hero_image_source: 'street_view_auto' }).eq('id', l.id); } }
         return;
       }
+      // Michael's rule: when Google photos are missing/thin, don't leave the listing
+      // blank for him to hunt — still give it a hero from STREET VIEW (preferred) or
+      // the existing image, then FLAG for review. Never demote on absent photos.
+      const svc = cand.find(c => c.src === 'streetview') || cand[0];
+      flagged++; console.log(`• ${l.name} (${l.city}) — ⚠ NEEDS HUMAN — thin Google photos; set ${svc.src} as hero for review`);
+      if (APPLY) { const url = await upload(await cropHero(svc.buffer, {}), 'image/jpeg', l.id, 'hero'); if (url) { heroBackup.push({ id: l.id, name: l.name, mixed: false, prev_hero_image: l.hero_image, prev_hero_image_source: l.hero_image_source }); await sb.from('listings').update({ hero_image: url, hero_image_source: 'street_view_auto', self_service_source: 'autophoto_needs_human' }).eq('id', l.id); } }
+      return;
     }
-    // No Google photos and neither the existing hero nor street view shows a car wash → demote.
-    demoted++; console.log(`• ${l.name} (${l.city}) — ❌ no photos & no image shows a car wash — demoted`);
-    if (APPLY) await sb.from('listings').update({ is_self_service: false, self_service_source: 'autophoto_no_evidence' }).eq('id', l.id);
+    // No candidates at all (no coords AND no existing hero) — flag for review, no hero to set.
+    flagged++; console.log(`• ${l.name} (${l.city}) — ⚠ NEEDS HUMAN (no photos or street view to judge)`);
+    if (APPLY) await sb.from('listings').update({ self_service_source: 'autophoto_needs_human' }).eq('id', l.id);
     return;
+  }
+
+  // ALWAYS add a Street View shot as an extra candidate (Michael's rule): it often
+  // shows the row of covered bays clearly even when the Google photos are close-ups
+  // that miss them, and it's a strong hero fallback. Appended last so analyzeAll
+  // examines it alongside the Google photos (triage/selection handle it by index).
+  if (l.latitude != null && l.longitude != null) {
+    const sv = await streetViewImage(l.latitude, l.longitude);
+    if (sv) imgs.push({ buffer: sv, mediaType: 'image/jpeg' });
   }
 
   const { r, used, triageTok } = await analyzeAll(l.name, mixed, imgs);
@@ -353,12 +381,26 @@ async function processListing(l) {
   inTok += r.usage?.input_tokens || 0; outTok += r.usage?.output_tokens || 0;
   const p = r.parsed || {};
   if (process.env.DEBUG_JSON) console.log(`\n=== ${l.name} (${imgs.length} looked at, ${used.length} finalists) ===\n` + JSON.stringify(p, null, 2) + '\n');
-  // VERIFY (Michael's rule): if NO photo shows a genuine self-serve wash bay, this
-  // isn't a self-serve wash — demote it so it never reaches the review queue.
+  // Policy (Michael, 2026-07-13): NEVER auto-demote on a "no self-serve bay" verdict —
+  // it's too often WRONG on real washes (Mach 1's open-canopy wand bays read as "not a
+  // walled stall"; Group A). FLAG for human review instead (keep is_self_service=true),
+  // and set the best available photo as a PROVISIONAL hero so the listing isn't blank
+  // in the queue. Genuine tunnels/gas/detail get one-click rejected in review. (MOBILE
+  // washes above stay a hard demote — that's a reliable name signal, not a vision guess.)
   if (p.has_self_serve_bay === false) {
-    demoted++;
-    console.log(`• ${l.name} (${l.city}) — ❌ NOT SELF-SERVE (no wash bay in any photo) — demoted`);
-    if (APPLY) await sb.from('listings').update({ is_self_service: false, self_service_source: 'autophoto_not_selfserve' }).eq('id', l.id);
+    flagged++;
+    // Provisional hero = highest-visual-quality non-disqualified shot. Skip for MIXED
+    // (live touchless) listings — never overwrite their live hero on a low-confidence pass.
+    const best = !mixed ? (p.images || []).filter(x => used[x.index] && !x.disqualified).sort((a, b) => (b.visual_quality ?? 0) - (a.visual_quality ?? 0))[0] : null;
+    console.log(`• ${l.name} (${l.city}) — ⚠ NEEDS HUMAN (vision unsure it's self-serve${best ? '; best photo set as provisional hero' : ''})`);
+    if (APPLY) {
+      const upd = { self_service_source: 'autophoto_needs_human' };
+      if (best && used[best.index]) {
+        const url = await upload(await cropHero(used[best.index].buffer, {}), 'image/jpeg', l.id, 'hero');
+        if (url) { heroBackup.push({ id: l.id, name: l.name, mixed, prev_hero_image: l.hero_image, prev_hero_image_source: l.hero_image_source }); upd.hero_image = url; upd.hero_image_source = 'ai_photo'; }
+      }
+      await sb.from('listings').update(upd).eq('id', l.id);
+    }
     return;
   }
   const heroImg = p.images?.find(x => x.index === p.hero_index);
@@ -414,8 +456,28 @@ async function processListing(l) {
       if (keepHero) { await seed(await fetchImage(l.hero_image)); }
       else { const hb = await cropHero(used[p.hero_index].buffer, p.hero_crop); await seed(hb); heroUrl = await upload(hb, 'image/jpeg', l.id, 'hero'); }
       // Base = the replaced hero (demoted into the gallery) + existing curated photos.
-      const baseUrls = dedupe([(!keepHero ? l.hero_image : null), ...existing].filter(Boolean));
-      for (const url of baseUrls) await seed(await fetchImage(url));
+      // Existing photos are preserved — EXCEPT any that are really just the KEPT
+      // hero again (the "hero shows twice, once as hero + once in gallery" bug
+      // Michael caught on Buffs Wash). Two independent signals, because the hero is
+      // usually a CROP of the gallery original — and a crop shifts the dhash a lot:
+      //   (a) filename is a prior hero/rehost/crop variant (ai-hero / hero-cropped /
+      //       hero_rehost), or
+      //   (b) phash is within 20 bits of the hero. Measured on Buffs: the same-shot
+      //       crop was 18 bits away while every genuinely different bay shot was 30+,
+      //       so 20 splits them cleanly (the old cutoff of 5 only caught re-encodes).
+      // Every other curated photo is kept.
+      const HERO_FILE = /(?:ai-)?hero[-_]|hero_rehost|hero-cropped/i;
+      const heroSeed = seen.length ? seen[0] : null;
+      const rawBase = dedupe([(!keepHero ? l.hero_image : null), ...existing].filter(Boolean));
+      const baseUrls = [];
+      for (const url of rawBase) {
+        const buf = await fetchImage(url);
+        let h = null; if (buf) { try { h = await phash(buf); } catch {} }
+        const isHeroDup = keepHero && (HERO_FILE.test(url) || (h != null && heroSeed != null && hamLE(heroSeed, h, 20)));
+        if (isHeroDup) continue; // it's the hero again → don't repeat it in the gallery
+        if (h != null) seen.push(h);
+        baseUrls.push(url);
+      }
       const newUrls = [];
       for (const gi of gal) {
         const buf = used[gi].buffer;
