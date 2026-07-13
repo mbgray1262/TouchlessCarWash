@@ -328,6 +328,16 @@ async function processListing(l) {
   // Download all candidate photos in parallel (network-bound, no API cost). Order is
   // preserved by Promise.all, which matters because later code indexes into `imgs`.
   const imgs = (await Promise.all(urls.slice(0, MAX_PHOTOS).map(u => downloadUrl(u).catch(() => null)))).filter(Boolean);
+  // Add a Street View candidate UP FRONT — BEFORE the <2 gate — so a lone good Google
+  // photo is NEVER discarded. Laporte returned exactly 1 photo (a perfect "LAPORTE CAR
+  // WASH" + bays shot); the old code saw imgs.length<2 and threw it away for a backyard
+  // street view. With street view added here, that 1 photo + street view = 2 candidates
+  // → the normal path runs and the model picks the good photo as hero. Street view is
+  // then only the SOLE candidate when there are genuinely 0 Google photos.
+  if (l.latitude != null && l.longitude != null) {
+    const sv = await streetViewImage(l.latitude, l.longitude);
+    if (sv) imgs.push({ buffer: sv, mediaType: 'image/jpeg' });
+  }
   if (imgs.length < 2) {
     // Mobile washes ("movil"/"mobile"/"a domicilio") have no fixed self-serve facility.
     if (MOBILE.test(l.name || '')) {
@@ -366,15 +376,6 @@ async function processListing(l) {
     flagged++; console.log(`• ${l.name} (${l.city}) — ⚠ NEEDS HUMAN (no photos or street view to judge)`);
     if (APPLY) await sb.from('listings').update({ self_service_source: 'autophoto_needs_human' }).eq('id', l.id);
     return;
-  }
-
-  // ALWAYS add a Street View shot as an extra candidate (Michael's rule): it often
-  // shows the row of covered bays clearly even when the Google photos are close-ups
-  // that miss them, and it's a strong hero fallback. Appended last so analyzeAll
-  // examines it alongside the Google photos (triage/selection handle it by index).
-  if (l.latitude != null && l.longitude != null) {
-    const sv = await streetViewImage(l.latitude, l.longitude);
-    if (sv) imgs.push({ buffer: sv, mediaType: 'image/jpeg' });
   }
 
   const { r, used, triageTok } = await analyzeAll(l.name, mixed, imgs);
