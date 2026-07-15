@@ -113,11 +113,30 @@ function signGoogleUrl(url) {
   const sig = crypto.createHmac('sha1', keyBuffer).update(u.pathname + u.search).digest('base64').replace(/\+/g, '-').replace(/\//g, '_');
   return `${url}&signature=${sig}`;
 }
+// Bearing FROM the pano TO the business, so the camera is aimed at the building.
+function svBearing(from, to) {
+  const R = (d) => (d * Math.PI) / 180, D = (r) => (r * 180) / Math.PI;
+  const y = Math.sin(R(to.lng - from.lng)) * Math.cos(R(to.lat));
+  const x = Math.cos(R(from.lat)) * Math.sin(R(to.lat)) - Math.sin(R(from.lat)) * Math.cos(R(to.lat)) * Math.cos(R(to.lng - from.lng));
+  return (D(Math.atan2(y, x)) + 360) % 360;
+}
+// Street View fallback hero. TWO fixes (Michael's idea — "can't we use the street view
+// photo and its date to determine the current business?"):
+//  1. source=outdoor — the default returns the NEAREST pano, which is often a stale
+//     user photosphere sitting on the business (10380 N 59th Ave: a 2017 "© Keith Pond"
+//     sphere shadowed Google's real 2025-01 car imagery). Outdoor = official, current.
+//  2. Aim the camera. The old fixed heading=0 pointed NORTH regardless of where the wash
+//     was — that's what made Laporte's hero a backyard. Now the heading is the bearing
+//     from the pano to the listing's coords, so the building is in frame.
+// The metadata call is FREE and also returns `date`, which we log as the hero's vintage.
 async function streetViewImage(lat, lng) {
   try {
-    const meta = await (await fetch(signGoogleUrl(`https://maps.googleapis.com/maps/api/streetview/metadata?size=2048x1152&location=${lat},${lng}&key=${GKEY}`), { signal: AbortSignal.timeout(12000) })).json();
-    if (meta.status !== 'OK') return null; // no imagery here
-    const r = await fetch(signGoogleUrl(`https://maps.googleapis.com/maps/api/streetview?size=2048x1152&location=${lat},${lng}&fov=90&heading=0&pitch=0&key=${GKEY}`), { signal: AbortSignal.timeout(15000) });
+    const meta = await (await fetch(signGoogleUrl(`https://maps.googleapis.com/maps/api/streetview/metadata?location=${lat},${lng}&source=outdoor&radius=120&key=${GKEY}`), { signal: AbortSignal.timeout(12000) })).json();
+    if (meta.status !== 'OK' || !meta.pano_id) return null; // no official imagery here
+    // If the pano sits essentially on top of the business, a bearing is meaningless — keep 0.
+    const dLat = Math.abs((meta.location?.lat ?? lat) - lat), dLng = Math.abs((meta.location?.lng ?? lng) - lng);
+    const heading = (dLat < 1e-5 && dLng < 1e-5) ? 0 : svBearing(meta.location, { lat, lng });
+    const r = await fetch(signGoogleUrl(`https://maps.googleapis.com/maps/api/streetview?size=2048x1152&pano=${meta.pano_id}&fov=90&heading=${heading.toFixed(0)}&pitch=0&key=${GKEY}`), { signal: AbortSignal.timeout(15000) });
     if (!r.ok) return null;
     const buf = Buffer.from(await r.arrayBuffer());
     return buf.length < MIN_BYTES ? null : buf;
