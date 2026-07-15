@@ -38,13 +38,35 @@ SOURCE = 'gmaps-selfserve'
 
 # Google pre-filters reviews to these; keep it to terms customers actually type.
 SEARCH_QUERY = 'self serve OR self-service OR wand OR coin OR quarters OR token OR "foam brush" OR bay'
-# What we KEEP. Deliberately tighter than the search query: "bay"/"vacuum" alone are noise.
-SELFSERVE_RE = re.compile(
-    r'self[\s-]?serv\w*|\bwands?\b|\bcoins?\b|\bquarters?\b|\btokens?\b|foam(?:ing)?\s+brush|'
-    r'pressure\s+wash(?:er|ing)?\b|\bspray\s+(?:it|your\s+car)\s+yourself\b|wash\s+it\s+yourself',
+# ── What we KEEP ─────────────────────────────────────────────────────────────────────
+# Tiered, because a bare keyword is not evidence. Every rule below was written against
+# real false positives from the first run — see the comments.
+#
+# STRONG: equipment you can only be describing if you're standing in a wand bay.
+STRONG_RE = re.compile(
+    r'\bwands?\b|foam(?:ing)?\s+brush|'
+    r'self[\s-]?serv\w*\s+(?:bay|stall|area|side)|(?:manual|self)\s+wash\s+bay|'
+    r'\bwash\s+bays?\b|hand\s+wash\s+station|do[\s-]?it[\s-]?yourself|'
+    r'\bspray\s+(?:it|your\s+car)\s+yourself\b|wash\s+it\s+yourself|self\s+wash\b',
     re.I)
-# Negations — "no self serve here" is evidence AGAINST, and must never be stored as evidence FOR.
-NEG_RE = re.compile(r'\b(no|not a|isn\'?t a|used to be a|no longer a)\s+(self[\s-]?serv\w*|wand)', re.I)
+# WEAK: coins/quarters/tokens. At a car wash these are usually for the AIR PUMP or the
+# VACUUM, not a wash bay ("I had $1.50 in quarters... to put air in one of my tires").
+# Only count them when a wash-bay word sits within ~40 chars.
+WEAK_RE = re.compile(
+    r'(?:\bcoins?\b|\bquarters?\b|\btokens?\b|coin[\s-]?op\w*)(?=.{0,40}?'
+    r'(?:wash|bay|wand|brush|soap|timer|sprayer))|'
+    r'(?:wash|bay|wand|brush|soap|timer|sprayer).{0,40}?(?:\bcoins?\b|\bquarters?\b|\btokens?\b)',
+    re.I)
+# NEGATIVE — reject outright. Each one burned us in the first run:
+NEG_RE = re.compile(
+    r'\b(?:no|not a|isn\'?t a|used to be a|no longer a)\s+(?:self[\s-]?serv\w*|wand)|'
+    r'coin\s+purse|'                                    # a THEFT report, not a coin-op wash
+    r'(?:quarters?|coins?).{0,30}(?:air|tire|vacuum)|'  # change for the air pump / vacuum
+    r'(?:air|tire|vacuum)\s+machine|'
+    r'self[\s-]?serv\w*\s+drive[\s-]?(?:thru|through)|' # that's an AUTOMATIC, not a wand bay
+    r'(?:go|going|goes|drive|drove)\s+to\s+a\s+self[\s-]?serv|'   # comparing to ANOTHER business
+    r'(?:than|like|versus|vs\.?)\s+a\s+self[\s-]?serv',
+    re.I)
 
 HAS_TAB_JS = r"""() => { const b=[...document.querySelectorAll('button[role=tab],div[role=tab],button')].find(x=>/^Reviews/.test((x.innerText||'').trim())||/^Reviews for/.test(x.getAttribute('aria-label')||'')); return !!b; }"""
 CLICK_TAB_JS = r"""() => { const b=[...document.querySelectorAll('button[role=tab],div[role=tab],button')].find(x=>/^Reviews/.test((x.innerText||'').trim())||/^Reviews for/.test(x.getAttribute('aria-label')||'')); if(b){b.click(); return true;} return false; }"""
@@ -167,7 +189,9 @@ async def harvest_one(page, listing, stats):
         text = r['text']
         if NEG_RE.search(text):            # "no self serve here" — never store as evidence FOR
             continue
-        hits = [m.group(0) for m in SELFSERVE_RE.finditer(text)]
+        hits = [m.group(0) for m in STRONG_RE.finditer(text)]
+        if not hits:                       # weak terms only count in a wash-bay context
+            hits = [m.group(0) for m in WEAK_RE.finditer(text)]
         if not hits: continue
         ss_n += 1
         is_lg, rc, pc = parse_creds(r.get('info'))
