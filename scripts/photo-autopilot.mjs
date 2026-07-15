@@ -200,6 +200,12 @@ let q=sb.from('listings').select('id,name,city,state,address,latitude,longitude,
   .eq('is_self_service',true).not('google_place_id','is',null);
 if(NEEDS_REVIEW) q=q.eq('self_service_source','autophoto_needs_human');
 else q=q.is('self_service_reviewed_at',null);
+// --unapproved-only: work exclusively on listings that CANNOT publish, whatever we write.
+// The public gate is is_self_service && is_approved && self_service_reviewed_at — so on an
+// already-approved listing, stamping reviewed_at puts it live immediately, at this script's
+// 0.55 confidence bar. That is far below "highly confident". Use this for unattended runs:
+// the photo + wash-type work still happens, and a human still decides what goes public.
+if(process.argv.includes('--unapproved-only')) q=q.eq('is_approved',false);
 if(STATE) q=q.eq('state',STATE);
 // Page explicitly: Supabase silently caps an unpaginated SELECT at 1000 rows, and a
 // swallowed `error` here previously read as "0 listings — nothing to do", which is how a
