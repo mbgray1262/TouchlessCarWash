@@ -200,15 +200,33 @@ async def main():
     DRY = '--dry' in args; SCROLLS = int(opt('--scrolls', '8')); RELOADS = int(opt('--reloads', '5'))
     headless = '--headless' in args   # Google serves headless clients a degraded page — default OFF
 
-    # Targets: unclassified listings that have a real Google place_id.
-    log('fetching targets (unclassified + place_id)...')
+    # Targets: unclassified listings with a real place_id that are plausibly CAR WASHES.
+    #
+    # The naive "unclassified + place_id" filter is 30,626 rows and includes 3,996 gas
+    # stations, 3,185 detailers, 504 dollar stores and a license plate agency. At ~33s each
+    # that's ~5 wasted days of scraping. Google's category narrows it to the real pool;
+    # rows with NO category are kept (unknown ≠ not a wash — that's the mistake that would
+    # silently drop real washes).
+    log('fetching targets (unclassified + place_id + plausibly a car wash)...')
     targets = []
-    for off in range(0, 40000, 1000):
-        rows = sb('GET', f'/rest/v1/listings?select=id,name,google_place_id&is_self_service=is.null'
-                          f'&google_place_id=not.is.null&order=id&limit=1000&offset={off}')
-        if not rows: break
-        targets.extend([r for r in rows if (r.get('google_place_id') or '').startswith('ChIJ')])
-        if len(rows) < 1000: break
+    for filt in ('&or=(google_category.ilike.*car%20wash*,google_subtypes.ilike.*car%20wash*)',
+                 '&google_category=is.null&google_subtypes=is.null'):
+        for off in range(0, 40000, 1000):
+            rows = sb('GET', f'/rest/v1/listings?select=id,name,google_place_id&is_self_service=is.null'
+                              f'&google_place_id=not.is.null{filt}&order=id&limit=1000&offset={off}')
+            if not rows: break
+            targets.extend([r for r in rows if (r.get('google_place_id') or '').startswith('ChIJ')])
+            if len(rows) < 1000: break
+    # Don't spend 30s of scraping to confirm what the name already tells us: conveyor chains
+    # and express/auto-spa brands are not self-serve (a name that says "self serv" outright wins).
+    CHAIN = re.compile(r"\b(tidal wave|whistle express|mister car ?wash|quick quack|tommy'?s express|take 5|zips? car ?wash|club car ?wash|super ?star car ?wash|autobell|el car ?wash|splash ?in|go car ?wash|crew car ?wash|delta sonic|flagstop|rocket car ?wash|caliber car ?wash|jax kar ?wash|sparkling image)\b", re.I)
+    EXCL = re.compile(r'\b(express|auto spa|tunnel)\b', re.I)
+    SELF = re.compile(r'self[\s-]?serv', re.I)
+    before = len(targets)
+    targets = [t for t in targets
+               if not CHAIN.search(t.get('name') or '')
+               and not (EXCL.search(t.get('name') or '') and not SELF.search(t.get('name') or ''))]
+    log(f'  {before} plausible car washes → {len(targets)} after dropping chains / express / auto spa')
 
     # Resume: skip listings already harvested by THIS source.
     done = set()
