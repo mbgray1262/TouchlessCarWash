@@ -46,7 +46,11 @@ SEARCH_QUERY = 'self serve OR self-service OR wand OR coin OR quarters OR token 
 STRONG_RE = re.compile(
     r'\bwands?\b|foam(?:ing)?\s+brush|'
     r'self[\s-]?serv\w*\s+(?:bay|stall|area|side)|(?:manual|self)\s+wash\s+bay|'
-    r'\bwash\s+bays?\b|hand\s+wash\s+station|do[\s-]?it[\s-]?yourself|'
+    r'\bwash\s+bays?\b|hand\s+wash\s+station|'
+    # "do it yourself" only counts when it is NOT about the vacuums. EVERY car wash has
+    # self-service vacuums — tunnels included — so "free do it yourself vacuums" is not
+    # evidence of a wand bay. Same for the free-vacuum phrasing at express tunnels.
+    r'do[\s-]?it[\s-]?yourself(?!\s+\w{0,10}\s?vacuum)(?!\s+vacuum)|'
     r'\bspray\s+(?:it|your\s+car)\s+yourself\b|wash\s+it\s+yourself|self\s+wash\b',
     re.I)
 # WEAK: coins/quarters/tokens. At a car wash these are usually for the AIR PUMP or the
@@ -65,7 +69,7 @@ NEG_RE = re.compile(
     r'(?:air|tire|vacuum)\s+machine|'
     r'self[\s-]?serv\w*\s+drive[\s-]?(?:thru|through)|' # that's an AUTOMATIC, not a wand bay
     r'(?:go|going|goes|drive|drove)\s+to\s+a\s+self[\s-]?serv|'   # comparing to ANOTHER business
-    r'(?:than|like|versus|vs\.?)\s+a\s+self[\s-]?serv',
+    r'(?:than|like|versus|vs\.?)\s+(?:a|in a|at a)\s+self[\s-]?(?:serv|wash)',  # "a wand like in a self wash" — Waterway is full-service
     re.I)
 
 HAS_TAB_JS = r"""() => { const b=[...document.querySelectorAll('button[role=tab],div[role=tab],button')].find(x=>/^Reviews/.test((x.innerText||'').trim())||/^Reviews for/.test(x.getAttribute('aria-label')||'')); return !!b; }"""
