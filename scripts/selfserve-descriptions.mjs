@@ -196,7 +196,16 @@ async function main() {
     // confirmed self-serve-only listing, so descriptions land BEFORE approval.
     if (!PREP) q = q.eq('is_approved', true).not('self_service_reviewed_at', 'is', null);
     if (STATE) q = q.eq('state', STATE);
-    const { data, error } = await q.order('review_count', { ascending: false }).limit(1000);
+    // Retry: this select is wide (snapshot + extracted_data), and while the review
+    // harvester is running the DB is busy enough to return a statement timeout. Transient —
+    // don't let it kill an unattended run.
+    let data = null, error = null;
+    for (let a = 0; a < 5; a++) {
+      ({ data, error } = await q.order('review_count', { ascending: false }).limit(500));
+      if (!error) break;
+      console.log(`  …query attempt ${a + 1} failed (${error.message.slice(0, 50)}) — retrying`);
+      await new Promise(r => setTimeout(r, 4000 * (a + 1)));
+    }
     if (error) throw error;
     listings = data;
     console.log(`Eligible self-serve-only listings missing a description${PREP ? ' [PREP]' : ''}${STATE ? ` [${STATE}]` : ''}: ${listings.length}`);
