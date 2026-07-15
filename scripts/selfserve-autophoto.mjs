@@ -18,7 +18,11 @@ import crypto from 'node:crypto';
 const env = Object.fromEntries(readFileSync('.env.local', 'utf8').split('\n').filter(l => l.includes('=') && !l.trim().startsWith('#')).map(l => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim().replace(/^["']|["']$/g, '')]; }));
 const sb = createClient(env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 const AKEY = env.ANTHROPIC_API_KEY, GKEY = env.GOOGLE_PLACES_API_KEY, SKEY = env.SERPAPI_KEY, SIGN_SECRET = env.GOOGLE_URL_SIGNING_SECRET;
-const MODEL = 'claude-sonnet-5'; // tasteful enough for selection at a fraction of Opus cost
+const MODEL = 'claude-sonnet-5'; // tasteful enough for the FINAL hero/gallery selection
+// TRIAGE_MODEL scores each photo 0-5 (the high-volume call). Defaults to Sonnet; set
+// TRIAGE_MODEL=claude-haiku-4-5 to run the cheap-triage experiment (Haiku scores,
+// Sonnet still makes the final pick). Cost is tracked per-model below.
+const TRIAGE_MODEL = process.env.TRIAGE_MODEL || MODEL;
 const STATE = (process.argv[2] || 'CA').toUpperCase();
 const LIMIT = parseInt(process.argv[3] || '12', 10);
 const APPLY = process.argv.includes('--apply');
@@ -83,42 +87,22 @@ Return ONLY JSON:
 {"has_self_serve_bay":true,"images":[{"index":0,"category":"...","self_serve_relevance":4,"visual_quality":4,"hero_worthy":5,"disqualified":false,"reason":"..."}],"hero_index":2,"hero_crop":{"trim_left":0,"trim_right":0.2,"trim_top":0.1,"trim_bottom":0},"gallery_indices":[4,1],"confidence":0.86,"needs_human":false,"reason":"why these are the best of the set"}`;
 }
 
-// Get EVERY one of a place's Google Maps photos via SerpAPI (the Places API
-// hard-caps at 10). place_id -> data_id, then paginate google_maps_photos through
-// ALL pages (follow next_page_token) until the gallery is exhausted — no artificial cap.
+// Photos come from the FREE headless-browser scrape (scripts/maps-photos-scrape.py),
+// cached to _maps_photos_cache.json keyed by place_id. SerpAPI was retired once its
+// monthly quota was exhausted — the scrape needs no quota/subscription. The cache holds
+// BASE lh3 URLs (size-suffix stripped); append =w1600 so downloadUrl fetches a usable
+// resolution. Run the scraper for a state BEFORE autophoto so its cache is populated.
+let _mapsCache = null;
+function loadMapsCache() {
+  if (_mapsCache) return _mapsCache;
+  try { _mapsCache = JSON.parse(readFileSync('scripts/_maps_photos_cache.json', 'utf8')); }
+  catch { _mapsCache = {}; }
+  return _mapsCache;
+}
 async function serpPhotoUrls(placeId) {
-  // SerpAPI is transiently flaky under concurrency (timeouts, partial/empty results).
-  // A single miss used to return [] → the <2-photo branch skipped the ENTIRE gallery
-  // (and could even falsely demote a real self-serve wash). Buffs Wash came back
-  // empty during the batch run yet returns 37 photos on a retry, losing its whole
-  // gallery. So RETRY on error/empty before giving up — only the genuinely photoless
-  // pay the extra (rare) calls.
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      const r1 = await fetch(`https://serpapi.com/search.json?engine=google_maps&place_id=${encodeURIComponent(placeId)}&api_key=${SKEY}`, { signal: AbortSignal.timeout(25000) });
-      const j1 = await r1.json(); serpCalls++;
-      const dataId = j1.place_results?.data_id;
-      if (dataId) {
-        const out = []; let token = null;
-        for (let page = 0; page < MAX_PAGES; page++) {
-          let url = `https://serpapi.com/search.json?engine=google_maps_photos&data_id=${encodeURIComponent(dataId)}&api_key=${SKEY}`;
-          if (token) url += `&next_page_token=${encodeURIComponent(token)}`;
-          const r = await fetch(url, { signal: AbortSignal.timeout(25000) });
-          const j = await r.json(); serpCalls++;
-          const pagePhotos = (j.photos || []).map(p => p.image).filter(u => typeof u === 'string' && u.includes('googleusercontent'));
-          out.push(...pagePhotos);
-          token = j.serpapi_pagination?.next_page_token;
-          if (!token || !pagePhotos.length) break; // no more pages
-        }
-        // Dedupe (base URL, ignoring size params) while preserving order.
-        const seen = new Set(), uniq = [];
-        for (const u of out) { const k = u.split('=')[0]; if (!seen.has(k)) { seen.add(k); uniq.push(u); } }
-        if (uniq.length) return uniq.slice(0, MAX_PHOTOS);
-      }
-    } catch { /* fall through to retry */ }
-    if (attempt < 2) await new Promise(r => setTimeout(r, 1500 * (attempt + 1))); // backoff, then retry
-  }
-  return [];
+  const urls = loadMapsCache()[placeId] || [];
+  serpCalls++; // now "cache lookups" — kept for the summary line
+  return urls.map((u) => (u.includes('=') ? u : `${u}=w1600`)).slice(0, MAX_PHOTOS);
 }
 // Street View fallback (Michael's rule): when a wash has NO usable Google photos,
 // grab a signed Street View Static image at its coordinates and use it as the hero.
@@ -150,19 +134,44 @@ async function fetchImage(url) {
     return buf.length < MIN_BYTES ? null : buf;
   } catch { return null; }
 }
-// Download a googleusercontent photo at high resolution (append =w1600). Free
-// (public image URL) — full-res kept for storage; a downscaled copy is made for vision.
+// Download a googleusercontent photo at w1600 for SELECTION (vision + triage). Cheap and
+// fast; only the winning hero + gallery picks are later re-fetched at full res for
+// storage (see hiResBuffer). srcUrl (the size-stripped base) is kept for that re-fetch.
+// Only the free-scraper's googleusercontent gps-cs/geougc URLs support dynamic sizing
+// (=w1600 / =s0). The authoritative Places-API photo source (retired scraper — see memory
+// project_scraper_photo_contamination) yields place-photos URLs that are PRE-SIZED by the
+// edge fn (size=1600) and 404 on a size suffix, so those must be fetched as-is.
+const RESIZABLE = (u) => /googleusercontent\.com\/(?:gps-cs|geougc)/.test(u || '');
 async function downloadUrl(url) {
   try {
-    const hi = url.split('=')[0] + '=w1600';
-    const r = await fetch(hi, { signal: AbortSignal.timeout(15000), redirect: 'follow' });
+    const base = url.split('=')[0];
+    const fetchUrl = RESIZABLE(url) ? base + '=w1600' : url;
+    const r = await fetch(fetchUrl, { signal: AbortSignal.timeout(15000), redirect: 'follow' });
     if (!r.ok) return null;
     const ct = (r.headers.get('content-type') || 'image/jpeg').split(';')[0].trim();
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(ct)) return null;
     const buf = Buffer.from(await r.arrayBuffer());
     if (buf.length < MIN_BYTES || buf.length > 8_000_000) return null;
-    return { buffer: buf, mediaType: ct };
+    return { buffer: buf, mediaType: ct, srcUrl: RESIZABLE(url) ? base : url };
   } catch { return null; }
+}
+// Re-fetch a CHOSEN candidate at full resolution for final crop/storage. Google serves
+// the same photo far larger than the w1600 selection copy (=s0 returns the original,
+// often 3000-4000px), so a cropped hero stays crisp instead of being a shrunk slice of a
+// 1600px image. Cap the longest edge at 2560 to keep files reasonable. Falls back to the
+// already-downloaded selection buffer on any failure or when there's no source URL
+// (street-view / existing-hero buffers, which are already full-res).
+async function hiResBuffer(img) {
+  // Places / hosted URLs are already at their fetched (1600px) size — the selection buffer
+  // IS the final image; only resizable scraper URLs can be re-fetched larger via =s0.
+  if (!img || !img.srcUrl || !RESIZABLE(img.srcUrl)) return img?.buffer;
+  try {
+    const r = await fetch(img.srcUrl + '=s0', { signal: AbortSignal.timeout(20000), redirect: 'follow' });
+    if (!r.ok) return img.buffer;
+    const buf = Buffer.from(await r.arrayBuffer());
+    if (buf.length < MIN_BYTES || buf.length > 25_000_000) return img.buffer;
+    return await sharp(buf).resize(2560, 2560, { fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 90 }).toBuffer();
+  } catch { return img.buffer; }
 }
 // A smaller JPEG copy for the vision API (keeps token cost low; the stored image
 // stays full-resolution).
@@ -231,7 +240,7 @@ async function triageBatch(mixed, visionImgs) {
   const prompt = `Score each candidate photo for a SELF-SERVICE car wash directory (site is ${mixed ? 'MIXED (also automatic/touchless)' : 'self-serve only'}). A self-serve WASH BAY = a COVERED drive-in STALL a vehicle is pulled into (enclosed, 3-sided, open-canopy, or a large "clearance" bay), typically with a spray WAND on the wall — but judge by the deep drive-in STRUCTURE, not by a visible wand. A facility/Street-View exterior showing a ROW of covered bay OPENINGS also depicts wash bays. For EACH image return its index and score 0-5 (5 = a beautiful, clear self-serve WASH BAY, a row of covered stalls, or a clean facility exterior showing the bay openings; 0 = irrelevant/junk). An EMPTY bay that clearly shows the equipment (spray wand/lance, foam brush, coin box, walled stall) scores JUST AS HIGH as a bay with a vehicle — do not penalize it for having no car. Mark disqualified=true for: any brush/abrasive equipment; automatic/tunnel-only; a self-serve VACUUM area (upright canisters/cylinders on posts or arched frames in an OPEN lot with no walled stalls — NOT a wash bay); ANY shot whose subject is vacuum/vending equipment — vacuum canisters, vacuum hoses (thick corrugated tubes, often blue), vacuum nozzles, air/fragrance/shampoo/"Fragramatics" or other coin-op vending machines and their pay stations — even if a person is using them or it is only part of the frame (ALWAYS disqualified); messy/blocked bays; close-ups of coin/sign/machine; a car with no bay context; car interiors; gas; food; maps; any graphic/flyer/poster/event-or-promo announcement/logo/coupon (especially advertising something other than this wash); extreme close-ups of soap/foam/water on paint/glass with no bay or full vehicle (abstract texture shots); a TILTED/crooked/dutch-angle shot (horizon not level) or an EXTREME CLOSE-UP of one car's body panel, fender, wheel/rim, hood, headlight, or windshield/decal where the bay is not clearly visible (amateur-angle fragments — score 0-1); blurry/dark. Return ONLY JSON: {"scores":[{"index":0,"score":4,"disqualified":false}]}`;
   const content = [{ type: 'text', text: prompt }];
   visionImgs.forEach((g, i) => { content.push({ type: 'text', text: `Image ${i}:` }); content.push({ type: 'image', source: { type: 'base64', media_type: g.mediaType, data: g.base64 } }); });
-  const body = JSON.stringify({ model: MODEL, max_tokens: 4000, messages: [{ role: 'user', content }] });
+  const body = JSON.stringify({ model: TRIAGE_MODEL, max_tokens: 4000, messages: [{ role: 'user', content }] });
   for (let a = 0; a < 3; a++) {
     try {
       const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'x-api-key': AKEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }, body, signal: AbortSignal.timeout(180000) });
@@ -324,6 +333,7 @@ const heroBackup = []; // {id, name, prev_hero_image, prev_hero_image_source} fo
 console.log(`${STATE}: ${rows?.length || 0} listings to process (${APPLY ? 'APPLY' : 'DRY RUN'}), model ${MODEL}\n`);
 
 let applied = 0, flagged = 0, noPhotos = 0, errors = 0, demoted = 0, streetview = 0, inTok = 0, outTok = 0, photoCalls = 0;
+let triageInTok = 0, triageOutTok = 0; // TRIAGE tokens tracked separately (may be a cheaper model)
 async function processListing(l) {
   const mixed = l.is_touchless === true;
   const urls = await serpPhotoUrls(l.google_place_id);
@@ -381,7 +391,7 @@ async function processListing(l) {
   }
 
   const { r, used, triageTok } = await analyzeAll(l.name, mixed, imgs);
-  if (triageTok) { inTok += triageTok.inTok; outTok += triageTok.outTok; }
+  if (triageTok) { triageInTok += triageTok.inTok; triageOutTok += triageTok.outTok; }
   if (r.err) { errors++; console.log(`• ${l.name} — vision error ${r.err}`); return; }
   inTok += r.usage?.input_tokens || 0; outTok += r.usage?.output_tokens || 0;
   const p = r.parsed || {};
@@ -401,7 +411,7 @@ async function processListing(l) {
     if (APPLY) {
       const upd = { self_service_source: 'autophoto_needs_human' };
       if (best && used[best.index]) {
-        const url = await upload(await cropHero(used[best.index].buffer, {}), 'image/jpeg', l.id, 'hero');
+        const url = await upload(await cropHero(await hiResBuffer(used[best.index]), {}), 'image/jpeg', l.id, 'hero');
         if (url) { heroBackup.push({ id: l.id, name: l.name, mixed, prev_hero_image: l.hero_image, prev_hero_image_source: l.hero_image_source }); upd.hero_image = url; upd.hero_image_source = 'ai_photo'; }
       }
       await sb.from('listings').update(upd).eq('id', l.id);
@@ -470,7 +480,7 @@ async function processListing(l) {
       const seed = async (buf) => { if (buf) { try { seen.push(await phash(buf)); } catch {} } };
       let heroUrl = null;
       if (keepHero) { await seed(await fetchImage(l.hero_image)); }
-      else { const hb = await cropHero(used[p.hero_index].buffer, p.hero_crop); await seed(hb); heroUrl = await upload(hb, 'image/jpeg', l.id, 'hero'); }
+      else { const hb = await cropHero(await hiResBuffer(used[p.hero_index]), p.hero_crop); await seed(hb); heroUrl = await upload(hb, 'image/jpeg', l.id, 'hero'); }
       // Base = the replaced hero (demoted into the gallery) + existing curated photos.
       // Existing photos are ALL preserved — EXCEPT one that is literally the KEPT hero
       // AGAIN (the "hero shows twice, once as hero + once in gallery" bug Michael caught
@@ -496,10 +506,10 @@ async function processListing(l) {
       const newUrls = [];
       for (const gi of gal) {
         const buf = used[gi].buffer;
-        let h = null; try { h = await phash(buf); } catch {}
+        let h = null; try { h = await phash(buf); } catch {} // phash on the (res-independent) selection copy
         if (h != null && seen.some(s => hamLE(s, h, 5))) continue; // content duplicate → skip
         if (h != null) seen.push(h);
-        const u = await upload(buf, used[gi].mediaType, l.id, `g${gi}`);
+        const u = await upload(await hiResBuffer(used[gi]), 'image/jpeg', l.id, `g${gi}`); // store full-res
         if (u) newUrls.push(u);
       }
       const merged = [...baseUrls, ...newUrls].slice(0, 8);
@@ -535,7 +545,12 @@ async function worker() {
 }
 await Promise.all(Array.from({ length: Math.min(CONCURRENCY, rows.length || 1) }, worker));
 
-const cost = (inTok / 1e6) * 3 + (outTok / 1e6) * 15; // Sonnet vision only; photos are free via SerpAPI quota
+// Sonnet = final selection/assess/crop; triage priced at its own model's rate.
+const haikuTriage = /haiku/i.test(TRIAGE_MODEL);
+const tIn = haikuTriage ? 1 : 3, tOut = haikuTriage ? 5 : 15; // Haiku 4.5 ~$1/$5 per M; Sonnet ~$3/$15
+const selCost = (inTok / 1e6) * 3 + (outTok / 1e6) * 15;
+const triageCost = (triageInTok / 1e6) * tIn + (triageOutTok / 1e6) * tOut;
+const cost = selCost + triageCost; // photos are free via SerpAPI quota
 console.log(`\n==================== AUTOPHOTO ${STATE} DONE ====================`);
 console.log(`${APPLY ? 'Applied' : 'Would apply'}: ${applied}  |  ❌ Not self-serve (demoted): ${demoted}  |  ⚠ Needs human: ${flagged}  |  street-view heroes: ${streetview}  |  too few photos: ${noPhotos}  |  errors: ${errors}`);
 if (APPLY && heroBackup.length) {
@@ -543,4 +558,4 @@ if (APPLY && heroBackup.length) {
   writeFileSync(f, JSON.stringify(heroBackup, null, 2));
   console.log(`Prior heroes backed up (reversible): ${f}  (${heroBackup.filter(b => b.mixed).length} were mixed/live-touchless)`);
 }
-console.log(`Est. cost: ~$${cost.toFixed(2)} Sonnet vision (${serpCalls} SerpAPI searches used, photos free)`);
+console.log(`Est. cost: ~$${cost.toFixed(2)} (Sonnet select $${selCost.toFixed(2)} + ${haikuTriage ? 'Haiku' : 'Sonnet'} triage $${triageCost.toFixed(2)}; TRIAGE_MODEL=${TRIAGE_MODEL}; ${serpCalls} cache lookups, photos free via headless-browser scrape)`);

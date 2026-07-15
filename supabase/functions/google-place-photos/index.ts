@@ -87,6 +87,9 @@ Deno.serve(async (req) => {
 
     const offset = parseInt(url.searchParams.get('offset') ?? '0', 10);
     const limit = parseInt(url.searchParams.get('limit') ?? '5', 10);
+    // Optional resolution (defaults to 800 for the review-tool thumbnails; the autophoto
+    // photo-source pipeline passes size=1600 for hero-quality candidates). Capped at 1600.
+    const size = Math.min(Math.max(parseInt(url.searchParams.get('size') ?? '800', 10) || 800, 200), 1600);
 
     const { photos: photoRefs, debug } = await fetchPhotoReferences(placeId, googleApiKey);
     if (photoRefs.length === 0) return json({ photos: [], total: 0, hasMore: false, debug });
@@ -96,7 +99,7 @@ Deno.serve(async (req) => {
 
     // Resolve only this page of thumbnail URLs in parallel
     const photoPromises = page.map(async (photo) => {
-      const thumbUrl = await resolveMediaUrl(photo.name, googleApiKey, 800);
+      const thumbUrl = await resolveMediaUrl(photo.name, googleApiKey, size);
       if (!thumbUrl) return null;
       return {
         name: photo.name,
