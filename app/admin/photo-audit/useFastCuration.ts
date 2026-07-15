@@ -55,6 +55,7 @@ interface ListingData {
   is_touchless: boolean | null;
   is_self_service: boolean | null;
   self_service_reviewed_at: string | null;
+  self_service_source: string | null;
   crawl_notes: string | null;
   // Set by markClosed() to one of 'closed_permanently_admin' /
   // 'closed_temporarily_admin' / other classification labels. Read by
@@ -110,7 +111,7 @@ export function useFastCuration(listingId: string) {
     const [{ data }, { count: evidenceCount }] = await Promise.all([
       supabase
         .from('listings')
-        .select('id, name, city, state, address, zip, slug, latitude, longitude, google_place_id, website, hero_image, hero_image_source, photos, street_view_url, google_photo_url, blocked_photos, equipment_brand, equipment_model, touchless_verified, touchless_evidence, parent_chain, is_approved, is_touchless, is_self_service, self_service_reviewed_at, crawl_notes, classification_source')
+        .select('id, name, city, state, address, zip, slug, latitude, longitude, google_place_id, website, hero_image, hero_image_source, photos, street_view_url, google_photo_url, blocked_photos, equipment_brand, equipment_model, touchless_verified, touchless_evidence, parent_chain, is_approved, is_touchless, is_self_service, self_service_reviewed_at, self_service_source, crawl_notes, classification_source')
         .eq('id', listingId)
         .maybeSingle(),
       // Real review evidence behind a 'user_review' verification: count of
@@ -917,8 +918,12 @@ export function useFastCuration(listingId: string) {
       const update: Record<string, unknown> = {
         reviewed_at: now, self_service_reviewed_at: now, is_approved: true, is_self_service: true,
       };
+      // Clear the "needs review" flag so an already-approved-but-flagged listing (e.g. a
+      // contamination-remediated one) drops out of the Need Review tab once re-approved.
+      if (listing.self_service_source === 'autophoto_needs_human') update.self_service_source = 'autophoto_reviewed';
       await supabase.from('listings').update(update).eq('id', listing.id);
-      setListing(prev => prev ? { ...prev, is_approved: true, is_self_service: true, self_service_reviewed_at: now } : prev);
+      setListing(prev => prev ? { ...prev, is_approved: true, is_self_service: true, self_service_reviewed_at: now,
+        self_service_source: prev.self_service_source === 'autophoto_needs_human' ? 'autophoto_reviewed' : prev.self_service_source } : prev);
     }
 
     onUpdate?.();

@@ -237,7 +237,10 @@ export function usePhotoAudit() {
       // state filter. Overriding here keeps the tab count consistent on every reload.
       if (washColRef.current === 'is_self_service') {
         let q = supabase.from('listings').select('id', { count: 'exact', head: true })
-          .eq('is_self_service', true).is('self_service_reviewed_at', null)
+          .eq('is_self_service', true)
+          // NOT filtered on self_service_reviewed_at: a remediated-but-already-approved
+          // listing must resurface for re-review WITHOUT being unpublished (keeping
+          // reviewed_at set keeps it live). Approving clears self_service_source so it drops.
           .eq('self_service_source', 'autophoto_needs_human')
           .or(NOT_CLOSED).or('business_status.is.null,business_status.not.in.(CLOSED_PERMANENTLY,CLOSED_TEMPORARILY)');
         if (stateFilterRef.current) q = q.eq('state', stateFilterRef.current);
@@ -615,13 +618,13 @@ export function usePhotoAudit() {
     if (filter === 'review' && washColRef.current === 'is_self_service') {
       let countQuery = supabase
         .from('listings').select('id', { count: 'exact', head: true })
-        .eq('is_self_service', true).is('self_service_reviewed_at', null)
+        .eq('is_self_service', true)
         .eq('self_service_source', 'autophoto_needs_human')
         .or(NOT_CLOSED).or('business_status.is.null,business_status.not.in.(CLOSED_PERMANENTLY,CLOSED_TEMPORARILY)');
       let dataQuery = supabase
         .from('listings')
         .select('id, name, slug, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
-        .eq('is_self_service', true).is('self_service_reviewed_at', null)
+        .eq('is_self_service', true)
         .eq('self_service_source', 'autophoto_needs_human')
         .or(NOT_CLOSED).or('business_status.is.null,business_status.not.in.(CLOSED_PERMANENTLY,CLOSED_TEMPORARILY)');
       if (stateFilterRef.current) {
