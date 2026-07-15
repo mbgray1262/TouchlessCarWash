@@ -213,11 +213,20 @@ if(STATE) q=q.eq('state',STATE);
 // failure as an empty result: if the fetch fails, stop loudly.
 let rows=[];
 for(let page=0;;page++){
-  const {data,error}=await q.order('id').range(page*1000,page*1000+999);
-  if(error){ console.error(`\n⛔ listings query FAILED (page ${page}): ${error.message}\nAborting rather than reporting an empty queue.`); process.exit(1); }
+  // Retry: this select pulls the photos blob per row, and when the review harvester is
+  // running the DB is busy enough to hit a statement timeout. A timeout is transient —
+  // but it must never be mistaken for "no work to do" (that silently wasted a whole run).
+  let data=null,error=null;
+  for(let a=0;a<5;a++){
+    ({data,error}=await q.order('id').range(page*500,page*500+499));
+    if(!error) break;
+    console.log(`   …query attempt ${a+1} failed (${error.message.slice(0,50)}) — retrying`);
+    await sleep(4000*(a+1));
+  }
+  if(error){ console.error(`\n⛔ listings query FAILED after 5 attempts (page ${page}): ${error.message}\nAborting rather than reporting an empty queue.`); process.exit(1); }
   if(!data?.length) break;
   rows.push(...data);
-  if(data.length<1000) break;
+  if(data.length<500) break;
 }
 if(LIMIT) rows=rows.slice(0,LIMIT);
 console.log(`Photo Autopilot — ${rows?.length||0} listings | spend so far $${spend.toFixed(2)} / $${CAP} | ${APPLY?'APPLY':'DRY RUN'}\n`);
