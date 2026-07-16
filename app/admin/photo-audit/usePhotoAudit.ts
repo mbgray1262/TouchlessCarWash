@@ -221,14 +221,14 @@ export function usePhotoAudit() {
     setNoHeroUnprocessed(noHeroUnprocessedRes.count ?? 0);
     setHeldCount(heldRes.count ?? 0);
     setSecondLookCount(secondLookRes.count ?? 0);
-    // AI-Picked (self-serve only): approved listings where the AI chose the hero and
-    // no human has confirmed yet (source not 'admin_review'). Confirming in the editor
-    // sets source='admin_review', so the listing drops out of this count on next load.
+    // AI-Verified (self-serve only): listings the conservative Gemini verifier confirmed
+    // (a clearly-visible wand bay in a real photo AND a second signal — reviews or name).
+    // Approved OR not — the new ones aren't live yet and this is where you publish them.
+    // Confirming in the editor sets source='admin_review', so the listing drops out here.
     if (washColRef.current === 'is_self_service') {
       const aiPickedRes = await supabase.from('listings').select('id', { count: 'exact', head: true })
-        .eq('is_self_service', true).eq('is_approved', true)
-        .in('hero_image_source', AI_HERO_SOURCES)
-        .neq('self_service_source', 'admin_review')
+        .eq('is_self_service', true)
+        .eq('self_service_source', 'gemini_bay_confirmed')
         .or(NOT_CLOSED);
       setAiPickedCount(aiPickedRes.count ?? 0);
     } else {
@@ -697,16 +697,14 @@ export function usePhotoAudit() {
     if (filter === 'ai_picked') {
       let countQuery = supabase
         .from('listings').select('id', { count: 'exact', head: true })
-        .eq('is_self_service', true).eq('is_approved', true)
-        .in('hero_image_source', AI_HERO_SOURCES)
-        .neq('self_service_source', 'admin_review')
+        .eq('is_self_service', true)
+        .eq('self_service_source', 'gemini_bay_confirmed')
         .or(NOT_CLOSED);
       let dataQuery = supabase
         .from('listings')
         .select('id, name, slug, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain, self_serve_bay_photo')
-        .eq('is_self_service', true).eq('is_approved', true)
-        .in('hero_image_source', AI_HERO_SOURCES)
-        .neq('self_service_source', 'admin_review')
+        .eq('is_self_service', true)
+        .eq('self_service_source', 'gemini_bay_confirmed')
         .or(NOT_CLOSED);
       if (stateFilterRef.current) {
         countQuery = countQuery.eq('state', stateFilterRef.current);
@@ -736,9 +734,7 @@ export function usePhotoAudit() {
           equipment_confidence: null,
           equipment_source_photo: null,
           suggested_hero_url: null,
-          suggested_hero_reason: noBay
-            ? '⚠ AI-picked hero, and NO photo shows a self-serve bay — confirm it really is self-serve'
-            : 'AI picked this hero — confirm it looks right, or swap it',
+          suggested_hero_reason: 'Gemini confirmed a self-serve wand bay in this photo + it has review/name evidence. Confirm to publish, or swap the hero / mark Not Self-Serve.',
           photos_to_remove: [],
           reviewed: false,
           applied: hasHero,

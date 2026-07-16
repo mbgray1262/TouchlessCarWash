@@ -647,9 +647,10 @@ export default function PhotoAuditPage() {
             {([
               { key: 'all' as ViewFilter, label: `All (${viewFilter === 'all' ? filteredTotal : queueStats.totalUntagged})` },
               { key: 'review' as ViewFilter, label: `Need Review (${stats.needs_review})` },
-              // Self-serve only: the AI-handled listings to spot-check (AI-picked hero, not yet
-              // human-confirmed). Replaces the standalone contact sheet with a live in-tool queue.
-              ...(washType === 'self_serve' ? [{ key: 'ai_picked' as ViewFilter, label: `🤖 AI-Picked (${viewFilter === 'ai_picked' ? filteredTotal : aiPickedCount})` }] : []),
+              // Self-serve only: listings the conservative Gemini verifier confirmed
+              // (visible wand bay + review/name signal), awaiting your publish. Confirming
+              // in the editor sets source='admin_review' and the listing drops off here.
+              ...(washType === 'self_serve' ? [{ key: 'ai_picked' as ViewFilter, label: `🤖 AI-Verified (${viewFilter === 'ai_picked' ? filteredTotal : aiPickedCount})` }] : []),
               { key: 'equipment' as ViewFilter, label: `Equipment (${stats.equipment_total})` },
               { key: 'heroes' as ViewFilter, label: `Poor Heroes (${stats.heroes_total})` },
               { key: 'cleanup' as ViewFilter, label: `Cleanup (${stats.cleanup_total})` },
