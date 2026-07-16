@@ -918,12 +918,15 @@ export function useFastCuration(listingId: string) {
       const update: Record<string, unknown> = {
         reviewed_at: now, self_service_reviewed_at: now, is_approved: true, is_self_service: true,
       };
-      // Clear the "needs review" flag so an already-approved-but-flagged listing (e.g. a
-      // contamination-remediated one) drops out of the Need Review tab once re-approved.
-      if (listing.self_service_source === 'autophoto_needs_human') update.self_service_source = 'autophoto_reviewed';
+      // Confirming stamps self_service_source='admin_review' = "a human personally signed off".
+      // This drops the listing out of BOTH the Need Review tab (was 'autophoto_needs_human')
+      // and the AI-Picked tab (which excludes 'admin_review'), so a confirmed listing leaves
+      // the queue immediately. 'admin_review' is the established human-confirmed value (see the
+      // markSelfServe path). Original AI provenance is preserved in git backups if ever needed.
+      update.self_service_source = 'admin_review';
       await supabase.from('listings').update(update).eq('id', listing.id);
       setListing(prev => prev ? { ...prev, is_approved: true, is_self_service: true, self_service_reviewed_at: now,
-        self_service_source: prev.self_service_source === 'autophoto_needs_human' ? 'autophoto_reviewed' : prev.self_service_source } : prev);
+        self_service_source: 'admin_review' } : prev);
     }
 
     onUpdate?.();

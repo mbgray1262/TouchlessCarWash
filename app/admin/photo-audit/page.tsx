@@ -430,7 +430,7 @@ export default function PhotoAuditPage() {
     changeFilter, changePage,
     runBatch, applyEquipment, rejectResult, applyAllHighConfidence, undoApply, reload,
     noHeroCount, noHeroUnprocessed, heldCount, secondLookCount, bestOfCount, removeFromResults,
-    bestOfReviewedCount, bestOfTotal, bestOfSubFilter, setBestOfSubFilter, markBestOfReviewed, unmarkBestOfReviewed,
+    bestOfReviewedCount, bestOfTotal, bestOfSubFilter, setBestOfSubFilter, markBestOfReviewed, unmarkBestOfReviewed, aiPickedCount,
     noHeroSubFilter, setNoHeroSubFilter, markAllChainListingsAudited,
     lowResListings, lowResTotal, lowResPage, lowResTotalPages, changeLowResPage,
     dismissLowRes, scanForLowRes, scanProgress,
@@ -647,6 +647,9 @@ export default function PhotoAuditPage() {
             {([
               { key: 'all' as ViewFilter, label: `All (${viewFilter === 'all' ? filteredTotal : queueStats.totalUntagged})` },
               { key: 'review' as ViewFilter, label: `Need Review (${stats.needs_review})` },
+              // Self-serve only: the AI-handled listings to spot-check (AI-picked hero, not yet
+              // human-confirmed). Replaces the standalone contact sheet with a live in-tool queue.
+              ...(washType === 'self_serve' ? [{ key: 'ai_picked' as ViewFilter, label: `🤖 AI-Picked (${viewFilter === 'ai_picked' ? filteredTotal : aiPickedCount})` }] : []),
               { key: 'equipment' as ViewFilter, label: `Equipment (${stats.equipment_total})` },
               { key: 'heroes' as ViewFilter, label: `Poor Heroes (${stats.heroes_total})` },
               { key: 'cleanup' as ViewFilter, label: `Cleanup (${stats.cleanup_total})` },
@@ -1060,7 +1063,9 @@ export default function PhotoAuditPage() {
             // listing stamps self_service_reviewed_at, so drop it from the current
             // list immediately for progress feedback (it also stays gone on reload
             // when "Unreviewed only" is checked).
-            if (washType === 'self_serve' && viewFilter === 'all' && editorListingId) {
+            if (washType === 'self_serve' && (viewFilter === 'all' || viewFilter === 'ai_picked') && editorListingId) {
+              // AI-Picked: confirming stamps self_service_source='admin_review', which the
+              // tab's query excludes — so drop it now for instant feedback, gone on reload too.
               removeFromResults(editorListingId);
             }
             // On the Best-Of tab, approving/saving a winner counts as having

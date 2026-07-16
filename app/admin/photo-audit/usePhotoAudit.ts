@@ -88,7 +88,12 @@ export interface LowResListing {
   hero_image_source: string | null;
 }
 
-export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup' | 'no_hero' | 'low_res' | 'held' | 'unscanned' | 'second_look' | 'best_of' | 'no_evidence' | 'by_equipment' | 'tier2_recheck';
+export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup' | 'no_hero' | 'low_res' | 'held' | 'unscanned' | 'second_look' | 'best_of' | 'no_evidence' | 'by_equipment' | 'tier2_recheck' | 'ai_picked';
+
+// Hero sources the AI chose without a human looking. A listing with one of these,
+// still approved and not yet human-confirmed (self_service_source !== 'admin_review'),
+// is what the "AI-Picked" self-serve tab surfaces for spot-checking.
+export const AI_HERO_SOURCES = ['autopilot', 'ai_photo', 'street_view_fix', 'streetview-ai'];
 
 const POLL_INTERVAL = 3000; // 3 seconds — fast enough to show per-listing progress
 const PAGE_SIZE = 25;
@@ -141,6 +146,7 @@ export function usePhotoAudit() {
   const [filteredTotal, setFilteredTotal] = useState(0);
   const [heldCount, setHeldCount] = useState(0);
   const [secondLookCount, setSecondLookCount] = useState(0);
+  const [aiPickedCount, setAiPickedCount] = useState(0);
   const [bestOfCount, setBestOfCount] = useState(0);
   const [bestOfReviewedCount, setBestOfReviewedCount] = useState(0);
   const [bestOfTotal, setBestOfTotal] = useState(0);
@@ -215,6 +221,19 @@ export function usePhotoAudit() {
     setNoHeroUnprocessed(noHeroUnprocessedRes.count ?? 0);
     setHeldCount(heldRes.count ?? 0);
     setSecondLookCount(secondLookRes.count ?? 0);
+    // AI-Picked (self-serve only): approved listings where the AI chose the hero and
+    // no human has confirmed yet (source not 'admin_review'). Confirming in the editor
+    // sets source='admin_review', so the listing drops out of this count on next load.
+    if (washColRef.current === 'is_self_service') {
+      const aiPickedRes = await supabase.from('listings').select('id', { count: 'exact', head: true })
+        .eq('is_self_service', true).eq('is_approved', true)
+        .in('hero_image_source', AI_HERO_SOURCES)
+        .neq('self_service_source', 'admin_review')
+        .or(NOT_CLOSED);
+      setAiPickedCount(aiPickedRes.count ?? 0);
+    } else {
+      setAiPickedCount(0);
+    }
     setQueueStats({
       totalUntagged: total,
       alreadyAudited: audited,
@@ -667,6 +686,72 @@ export function usePhotoAudit() {
 
       setResults(allResults);
       setFilteredTotal(totalReview ?? 0);
+      setLoading(false);
+      return;
+    }
+
+    // "ai_picked" filter (self-serve): the listings the AI classified AND chose a hero for,
+    // that are live but no human has personally confirmed. This is the in-tool replacement
+    // for the standalone spot-check contact sheet — live, and drops a listing the moment you
+    // Confirm Self-Serve & Approve (that sets self_service_source='admin_review').
+    if (filter === 'ai_picked') {
+      let countQuery = supabase
+        .from('listings').select('id', { count: 'exact', head: true })
+        .eq('is_self_service', true).eq('is_approved', true)
+        .in('hero_image_source', AI_HERO_SOURCES)
+        .neq('self_service_source', 'admin_review')
+        .or(NOT_CLOSED);
+      let dataQuery = supabase
+        .from('listings')
+        .select('id, name, slug, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain, self_serve_bay_photo')
+        .eq('is_self_service', true).eq('is_approved', true)
+        .in('hero_image_source', AI_HERO_SOURCES)
+        .neq('self_service_source', 'admin_review')
+        .or(NOT_CLOSED);
+      if (stateFilterRef.current) {
+        countQuery = countQuery.eq('state', stateFilterRef.current);
+        dataQuery = dataQuery.eq('state', stateFilterRef.current);
+      }
+      const { count: totalAiPicked } = await countQuery;
+      const { data: aiListings } = await dataQuery
+        // No-bay-proof first (the real defect: claims self-serve, shows no proof), then by place.
+        .order('self_serve_bay_photo', { ascending: true, nullsFirst: false })
+        .order('state', { ascending: true }).order('city', { ascending: true }).order('name', { ascending: true })
+        .range(offset, offset + PAGE_SIZE - 1);
+
+      const allResults: AuditResult[] = (aiListings ?? []).map((l): AuditResult => {
+        const hasHero = !!l.hero_image;
+        const noBay = (l as { self_serve_bay_photo?: boolean | null }).self_serve_bay_photo === false;
+        return {
+          id: `aipicked-${l.id}`,
+          listing_id: l.id,
+          listing_name: l.name,
+          listing_slug: l.slug,
+          listing_city: l.city,
+          listing_state: l.state,
+          listing_hero: l.hero_image,
+          hero_quality: hasHero ? 'has_hero' : 'missing',
+          equipment_brand: l.equipment_brand,
+          equipment_model: l.equipment_model,
+          equipment_confidence: null,
+          equipment_source_photo: null,
+          suggested_hero_url: null,
+          suggested_hero_reason: noBay
+            ? '⚠ AI-picked hero, and NO photo shows a self-serve bay — confirm it really is self-serve'
+            : 'AI picked this hero — confirm it looks right, or swap it',
+          photos_to_remove: [],
+          reviewed: false,
+          applied: hasHero,
+          created_at: '',
+          raw_response: null,
+          google_photos_added: 0,
+          google_photos_screened: 0,
+          listing_parent_chain: l.parent_chain ?? null,
+        };
+      });
+
+      setResults(allResults);
+      setFilteredTotal(totalAiPicked ?? 0);
       setLoading(false);
       return;
     }
@@ -1524,6 +1609,7 @@ export function usePhotoAudit() {
     noHeroUnprocessed,
     heldCount,
     secondLookCount,
+    aiPickedCount,
     bestOfCount,
     bestOfReviewedCount,
     bestOfTotal,
