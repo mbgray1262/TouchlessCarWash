@@ -228,7 +228,7 @@ export function usePhotoAudit() {
     if (washColRef.current === 'is_self_service') {
       const aiPickedRes = await supabase.from('listings').select('id', { count: 'exact', head: true })
         .eq('is_self_service', true)
-        .eq('self_service_source', 'gemini_bay_confirmed')
+        .eq('self_service_source', 'ai_hero_selected')
         .or(NOT_CLOSED);
       setAiPickedCount(aiPickedRes.count ?? 0);
     } else {
@@ -698,13 +698,13 @@ export function usePhotoAudit() {
       let countQuery = supabase
         .from('listings').select('id', { count: 'exact', head: true })
         .eq('is_self_service', true)
-        .eq('self_service_source', 'gemini_bay_confirmed')
+        .eq('self_service_source', 'ai_hero_selected')
         .or(NOT_CLOSED);
       let dataQuery = supabase
         .from('listings')
         .select('id, name, slug, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain, self_serve_bay_photo')
         .eq('is_self_service', true)
-        .eq('self_service_source', 'gemini_bay_confirmed')
+        .eq('self_service_source', 'ai_hero_selected')
         .or(NOT_CLOSED);
       if (stateFilterRef.current) {
         countQuery = countQuery.eq('state', stateFilterRef.current);
