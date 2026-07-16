@@ -170,11 +170,18 @@ TASKS
    • A Street View image (SV*) is a legitimate hero — pick it if it beats the photos.
    • The hero MUST be better than the best SV image. If nothing beats SV, choose the SV id.
 5. GALLERY — up to 5, genuinely different from each other and from the hero, all quality>=3.
+6. SELF-SERVE BAY EVIDENCE — self_serve_bay_ids: EVERY candidate id in which self-service
+   wand-bay equipment is actually VISIBLE: a spray wand on its holster/boom, a foam brush,
+   a coin/card/timer box, or an open bay clearly built to be operated by the driver.
+   • This is the PROOF a visitor needs. A handsome exterior with no visible bay proves nothing.
+   • An automatic in-bay arch/gantry is NOT self-serve evidence. Vacuums are NOT. A closed
+     shutter is NOT. A sign that merely says "SELF SERVE" is NOT — we need the equipment.
+   • Empty list is a valid, honest answer. Do not stretch.
 
 BAN outright (hero and gallery): cartoons, line art, logos/graphics, promo flyers/coupons/price boards, screenshots, maps, interiors of shops, vacuum-only or vending-only shots, brushes/friction equipment, blurry or dark shots, anything not clearly this wash.
 
 Output the JSON object and NOTHING else — no analysis, no commentary, no per-image notes.
-{"wash_type":"self_serve|touchless|both|unclear","wash_type_evidence":"<8 words>","signage_name":"<text or unreadable>","name_matches":true|false|"unreadable","hero":"<id>","hero_montage":["<id>","<id>"]|null,"gallery":["<id>",...],"confidence":0.0-1.0}`;
+{"wash_type":"self_serve|touchless|both|unclear","wash_type_evidence":"<8 words>","signage_name":"<text or unreadable>","name_matches":true|false|"unreadable","hero":"<id>","hero_montage":["<id>","<id>"]|null,"gallery":["<id>",...],"self_serve_bay_ids":["<id>",...],"confidence":0.0-1.0}`;
 
 async function ask(content){
   for(let a=0;a<5;a++){
@@ -231,7 +238,7 @@ for(let page=0;;page++){
 if(LIMIT) rows=rows.slice(0,LIMIT);
 console.log(`Photo Autopilot — ${rows?.length||0} listings | spend so far $${spend.toFixed(2)} / $${CAP} | ${APPLY?'APPLY':'DRY RUN'}\n`);
 
-const backup=[]; let done=0, svHero=0, montage=0, promoted=0, exceptions=0, skipped=0;
+const backup=[]; let done=0, svHero=0, montage=0, promoted=0, exceptions=0, skipped=0, bayForced=0, noBayEvidence=0;
 const CONCURRENCY=parseInt(process.env.AP_CONCURRENCY||'5',10);
 const queue=[...(rows||[])]; let capped=false;
 async function processOne(l){
@@ -316,6 +323,23 @@ async function processOne(l){
       const u=await hostBuffer(g.buf,l.id,gid); if(u) galleryUrls.push(u);
     }
     if(galleryUrls.length) upd.photos=galleryUrls.slice(0,6);
+    // The bay photo is the EVIDENCE, not decoration: a self-serve listing showing only a
+    // handsome exterior proves nothing to a visitor. Record whether the published hero or
+    // gallery actually contains a frame with visible wand-bay equipment — honestly, including
+    // when it doesn't, so "claims self-serve with no proof" is a queryable defect.
+    if(v.wash_type==='self_serve'||v.wash_type==='both'){
+      const bayIds=(v.self_serve_bay_ids||[]).filter(id=>byId[id]);
+      const published=new Set([v.hero,...(v.hero_montage||[]),...(v.gallery||[]).slice(0,5)]);
+      upd.self_serve_bay_photo = bayIds.some(id=>published.has(id));
+      if(!upd.self_serve_bay_photo && bayIds.length){
+        // We HAVE bay evidence but didn't publish it — the art-director optimised for looks.
+        // Force one bay frame into the gallery: proof beats prettiness on a self-serve page.
+        const id=bayIds[0], g=byId[id];
+        const u = g.kind==='existing'&&g.url ? g.url : await hostBuffer(g.buf,l.id,id);
+        if(u){ upd.photos=[u,...(upd.photos||[]).filter(x=>x!==u)].slice(0,6); upd.self_serve_bay_photo=true; bayForced++; }
+      }
+      if(!upd.self_serve_bay_photo) noBayEvidence++;
+    }
     // Name/signage mismatch = the accuracy problem → exception for ME, don't publish silently.
     if(v.name_matches===false){ upd.self_service_source='autopilot_name_mismatch'; exceptions++; }
     else if((v.confidence??0)<0.55){ upd.self_service_source='autopilot_exception'; exceptions++; }
@@ -334,4 +358,5 @@ saveSpend();
 if(APPLY&&backup.length){ const f=`scripts/_backup_autopilot_${STATE||'review'}_${Date.now()}.json`; writeFileSync(f,JSON.stringify(backup,null,2)); console.log(`\nBacked up ${backup.length} (reversible): ${f}`); }
 console.log(`\n==================== AUTOPILOT ${STATE||(NEEDS_REVIEW?'NEEDS-REVIEW':'')} ${APPLY?'APPLIED':'DRY RUN'} ====================`);
 console.log(`processed ${done} | Street-View heroes ${svHero} | montages ${montage} | promoted to touchless ${promoted} | exceptions (mine) ${exceptions} | no imagery ${skipped}`);
+console.log(`self-serve BAY EVIDENCE: forced a bay shot into gallery ${bayForced} | still NO bay proof ${noBayEvidence}  ← claims self-serve, shows the user nothing`);
 console.log(`SPEND: $${spend.toFixed(2)} / $${CAP}  (this run: ${visionCalls} vision calls, ${(tokIn/1000).toFixed(0)}k in + ${(tokOut/1000).toFixed(0)}k out = $${(tokIn*TOK.in+tokOut*TOK.out).toFixed(2)} of Anthropic)`);
