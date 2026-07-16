@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePhotoAudit, AuditResult, ViewFilter, LowResListing } from './usePhotoAudit';
 import { supabase } from '@/lib/supabase';
 import { Camera, Wrench, Trash2, Play, Loader2, Check, X, Undo2, ChevronDown, ChevronUp, ExternalLink, Filter, ChevronLeft, ChevronRight, ScanLine, Search, Trophy } from 'lucide-react';
@@ -453,6 +453,23 @@ export default function PhotoAuditPage() {
     setNavIndex(idx >= 0 ? idx : 0);
     setEditorListingId(listingId);
   };
+
+  // Deep-link: /admin/photo-audit?edit=<listingId> opens that listing's editor
+  // directly, without it needing to be in the current queue. The modal fetches
+  // its own data by id (ListingEditorModal loads .eq('id', listingId)), so this
+  // just needs to set the id. Used by the AI spot-check contact sheet so each
+  // card opens the SAME editor — pick a different Google photo / Street View,
+  // mark not-self-serve / also-touchless — instead of only the read-only listing.
+  // Read once on mount from window.location (no useSearchParams → no Suspense).
+  // ?wash=self_serve also flips the wash-type toggle, so the editor shows the
+  // self-serve action buttons ("Not Self-Serve" / "Also Touchless" / "Confirm
+  // Self-Serve & Approve") rather than the default touchless set.
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    if (p.get('wash') === 'self_serve') setWashType('self_serve');
+    const id = p.get('edit');
+    if (id) { setNavList([id]); setNavIndex(0); setEditorListingId(id); }
+  }, [setWashType]);
 
   const navigateNext = () => {
     if (navIndex < navList.length - 1) {

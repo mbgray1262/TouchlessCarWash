@@ -55,10 +55,14 @@ const badge=r=>{ const b=[];
   if(r.self_serve_bay_photo===false) b.push(`<span class="b no">NO bay proof</span>`);
   return b.join(' '); };
 
-const cards=touched.map(r=>`<a class="c" href="${listingUrl(r)}" target="_blank" rel="noopener">
-  <div class="img">${r.hero_image?`<img loading="lazy" src="${r.hero_image}">`:'<div class="nh">no hero</div>'}</div>
-  <div class="meta"><div class="nm">${(r.name||'').replace(/</g,'&lt;')}</div><div class="loc">${r.city||''}, ${r.state||''}</div><div class="badges">${badge(r)}</div></div>
-</a>`).join('\n');
+// Primary click opens the SAME editor modal Michael uses in the photo-audit tool
+// (?edit=<id> deep-link), so he can pick another Google photo / Street View, mark
+// not-self-serve / also-touchless, etc. A small corner link opens the read-only live page.
+const editUrl=r=>`${SITE}/admin/photo-audit?wash=self_serve&edit=${r.id}`;
+const cards=touched.map(r=>`<div class="c">
+  <a class="img" href="${editUrl(r)}" target="_blank" rel="noopener" title="Open editor">${r.hero_image?`<img loading="lazy" src="${r.hero_image}">`:'<div class="nh">no hero</div>'}<span class="edit">✎ edit</span></a>
+  <div class="meta"><div class="nm">${(r.name||'').replace(/</g,'&lt;')} <a class="live" href="${listingUrl(r)}" target="_blank" rel="noopener" title="View live listing">↗</a></div><div class="loc">${r.city||''}, ${r.state||''}</div><div class="badges">${badge(r)}</div></div>
+</div>`).join('\n');
 
 const noBay=touched.filter(r=>r.self_serve_bay_photo===false).length;
 const aiHero=touched.filter(r=>AI_HERO.has(r.hero_image_source)).length;
@@ -70,9 +74,12 @@ h1{margin:0 0 4px;font-size:18px} .sub{color:#8ba;font-size:13px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;padding:20px}
 .c{display:block;background:#18202e;border-radius:10px;overflow:hidden;text-decoration:none;color:inherit;border:1px solid #223}
 .c:hover{border-color:#4a7}
-.img{aspect-ratio:16/10;background:#0b1018;display:flex;align-items:center;justify-content:center}
+.img{position:relative;aspect-ratio:16/10;background:#0b1018;display:flex;align-items:center;justify-content:center;text-decoration:none}
 .img img{width:100%;height:100%;object-fit:cover} .nh{color:#556;font-size:12px}
+.edit{position:absolute;top:7px;right:7px;background:rgba(30,58,95,.92);color:#9cf;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;opacity:0;transition:.12s}
+.c:hover .edit{opacity:1}
 .meta{padding:9px 11px} .nm{font-weight:600;font-size:13px;line-height:1.25} .loc{color:#8ba;font-size:12px;margin:2px 0 6px}
+.live{color:#7ad;text-decoration:none;font-size:12px;font-weight:400} .live:hover{color:#9cf}
 .b{display:inline-block;font-size:10.5px;padding:2px 6px;border-radius:20px;margin:0 3px 3px 0;font-weight:600}
 .b.ai{background:#1e3a5f;color:#9cf} .b.g{background:#5f3a1e;color:#fc9} .b.o{background:#1e5f3a;color:#9fc} .b.no{background:#5f1e2a;color:#f9a}
 .f{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
@@ -80,7 +87,7 @@ button{background:#223;color:#cde;border:1px solid #345;border-radius:20px;paddi
 button.on{background:#2a5;color:#031;border-color:#3c6}
 </style></head><body>
 <header><h1>AI-handled self-serve listings — spot check</h1>
-<div class="sub">${touched.length} listings the AI classified or photographed (your ${all.length-touched.length} hand-curated ones are excluded). ${aiHero} AI-picked heroes · ${noBay} with no bay photo (shown first). Click any card to open the live listing.</div>
+<div class="sub">${touched.length} listings the AI classified or photographed (your ${all.length-touched.length} hand-curated ones are excluded). ${aiHero} AI-picked heroes · ${noBay} with no bay photo (shown first). <b>Click a card to open it in the photo editor</b> (pick another photo / Street View, mark not-self-serve, etc.); click the ↗ to view the live page. You must be logged into admin.</div>
 <div class="f">
 <button class="on" onclick="filt(this,'all')">All (${touched.length})</button>
 <button onclick="filt(this,'no')">⚠ No bay proof (${noBay})</button>
