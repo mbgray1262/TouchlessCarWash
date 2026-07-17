@@ -431,7 +431,7 @@ export default function PhotoAuditPage() {
     runBatch, applyEquipment, rejectResult, applyAllHighConfidence, undoApply, reload,
     noHeroCount, noHeroUnprocessed, heldCount, secondLookCount, bestOfCount, removeFromResults,
     bestOfReviewedCount, bestOfTotal, bestOfSubFilter, setBestOfSubFilter, markBestOfReviewed, unmarkBestOfReviewed, aiPickedCount,
-    triageYesCount, triageNoCount, triageMaybeCount,
+    triageYesCount, triageNoCount, triageMaybeCount, ssUnreviewedCount,
     noHeroSubFilter, setNoHeroSubFilter, markAllChainListingsAudited,
     lowResListings, lowResTotal, lowResPage, lowResTotalPages, changeLowResPage,
     dismissLowRes, scanForLowRes, scanProgress,
@@ -643,46 +643,66 @@ export default function PhotoAuditPage() {
       {/* Single filter bar */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="px-4 py-3 bg-gray-50 border-b flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-x-1.5 gap-y-2 flex-wrap">
             <Filter className="w-3.5 h-3.5 text-gray-400" />
-            {([
-              { key: 'all' as ViewFilter, label: `All (${viewFilter === 'all' ? filteredTotal : queueStats.totalUntagged})` },
-              { key: 'review' as ViewFilter, label: `Need Review (${stats.needs_review})` },
-              // Self-serve only: listings the conservative Gemini verifier confirmed
-              // (visible wand bay + review/name signal), awaiting your publish. Confirming
-              // in the editor sets source='admin_review' and the listing drops off here.
-              ...(washType === 'self_serve' ? [{ key: 'ai_picked' as ViewFilter, label: `🤖 AI-Verified (${viewFilter === 'ai_picked' ? filteredTotal : aiPickedCount})` }] : []),
-              ...(washType === 'self_serve' ? [{ key: 'triage_yes' as ViewFilter, label: `🆕 AI Self-Serve (${viewFilter === 'triage_yes' ? filteredTotal : triageYesCount})` }] : []),
-              ...(washType === 'self_serve' ? [{ key: 'triage_maybe' as ViewFilter, label: `🤔 AI Maybe (${viewFilter === 'triage_maybe' ? filteredTotal : triageMaybeCount})` }] : []),
-              ...(washType === 'self_serve' ? [{ key: 'triage_no' as ViewFilter, label: `🚫 AI Not-SS (${viewFilter === 'triage_no' ? filteredTotal : triageNoCount})` }] : []),
-              { key: 'equipment' as ViewFilter, label: `Equipment (${stats.equipment_total})` },
-              { key: 'heroes' as ViewFilter, label: `Poor Heroes (${stats.heroes_total})` },
-              { key: 'cleanup' as ViewFilter, label: `Cleanup (${stats.cleanup_total})` },
-              { key: 'best_of' as ViewFilter, label: `🏆 Best-Of Winners (${bestOfCount})` },
-              { key: 'no_hero' as ViewFilter, label: `No hero picked (${viewFilter === 'no_hero' ? filteredTotal : noHeroCount})` },
-              { key: 'low_res' as ViewFilter, label: `Low Res${stats.low_res_total > 0 ? ` (${stats.low_res_total})` : ''}` },
-              { key: 'held' as ViewFilter, label: `Held (${viewFilter === 'held' ? filteredTotal : heldCount})` },
-              { key: 'second_look' as ViewFilter, label: `Second Look (${viewFilter === 'second_look' ? filteredTotal : secondLookCount})` },
-              { key: 'unscanned' as ViewFilter, label: `Unscanned (${viewFilter === 'unscanned' ? filteredTotal : queueStats.remaining})` },
-              { key: 'no_evidence' as ViewFilter, label: `No Review Evidence${viewFilter === 'no_evidence' ? ` (${filteredTotal})` : ''}` },
-              { key: 'tier2_recheck' as ViewFilter, label: `♻️ Tier-2 Recheck${viewFilter === 'tier2_recheck' ? ` (${filteredTotal})` : ''}` },
-            ]).map(f => (
-              <button
-                key={f.key}
-                onClick={() => changeFilter(f.key)}
-                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-                  viewFilter === f.key
-                    ? f.key === 'review' && stats.needs_review > 0
-                      ? 'bg-amber-500 text-white shadow-sm'
-                      : 'bg-white text-gray-900 shadow-sm'
-                    : f.key === 'review' && stats.needs_review > 0
-                      ? 'text-amber-600 font-semibold'
-                      : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
+            {(() => {
+              const isSS = washType === 'self_serve';
+              const tc = (key: ViewFilter, base: number) => (viewFilter === key ? filteredTotal : base);
+              type Tab = { key: ViewFilter; label: string; count: number; primary?: boolean; always?: boolean };
+              // Grouped, wash-type aware. A tab shows only if it's `primary`/`always`, has items,
+              // or is the active view — so empty & irrelevant filters stop cluttering the bar.
+              const groups: { label: string | null; tabs: Tab[] }[] = [
+                { label: null, tabs: [
+                  { key: 'all', label: 'All', count: tc('all', queueStats.totalUntagged), primary: true },
+                  { key: 'review', label: 'Need Review', count: stats.needs_review, primary: true },
+                  { key: 'unscanned', label: 'Unscanned', count: tc('unscanned', queueStats.remaining), primary: true },
+                ] },
+                ...(isSS ? [{ label: 'REVIEW', tabs: [
+                  { key: 'ss_unreviewed' as ViewFilter, label: '📋 To Confirm', count: tc('ss_unreviewed', ssUnreviewedCount), always: true },
+                  { key: 'triage_yes' as ViewFilter, label: '🆕 AI Self-Serve', count: tc('triage_yes', triageYesCount), always: true },
+                  { key: 'triage_maybe' as ViewFilter, label: '🤔 AI Maybe', count: tc('triage_maybe', triageMaybeCount), always: true },
+                  { key: 'ai_picked' as ViewFilter, label: '🤖 Verified', count: tc('ai_picked', aiPickedCount), always: true },
+                  { key: 'triage_no' as ViewFilter, label: '🚫 AI Not-SS', count: tc('triage_no', triageNoCount), always: true },
+                ] }] : []),
+                { label: 'Photos', tabs: [
+                  { key: 'no_hero', label: 'No hero', count: tc('no_hero', noHeroCount) },
+                  { key: 'heroes', label: 'Poor heroes', count: stats.heroes_total },
+                  { key: 'low_res', label: 'Low res', count: stats.low_res_total },
+                  { key: 'cleanup', label: 'Cleanup', count: stats.cleanup_total },
+                ] },
+                { label: 'Review', tabs: [
+                  { key: 'held', label: 'Held', count: tc('held', heldCount) },
+                  ...(!isSS ? [
+                    { key: 'second_look' as ViewFilter, label: 'Second look', count: tc('second_look', secondLookCount) },
+                    { key: 'best_of' as ViewFilter, label: '🏆 Best-Of', count: bestOfCount, always: true },
+                    { key: 'tier2_recheck' as ViewFilter, label: '♻️ Tier-2', count: viewFilter === 'tier2_recheck' ? filteredTotal : 0, always: true },
+                    { key: 'no_evidence' as ViewFilter, label: 'No evidence', count: viewFilter === 'no_evidence' ? filteredTotal : 0, always: true },
+                    { key: 'equipment' as ViewFilter, label: 'Equipment', count: stats.equipment_total },
+                  ] : []),
+                ] },
+              ];
+              const btnCls = (key: ViewFilter) =>
+                `px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                  viewFilter === key
+                    ? key === 'review' && stats.needs_review > 0 ? 'bg-amber-500 text-white shadow-sm' : 'bg-white text-gray-900 shadow-sm'
+                    : key === 'review' && stats.needs_review > 0 ? 'text-amber-600 font-semibold' : 'text-gray-500 hover:text-gray-700'
+                }`;
+              return groups.map((g, gi) => {
+                const vis = g.tabs.filter(t => t.primary || t.always || t.count > 0 || viewFilter === t.key);
+                if (!vis.length) return null;
+                return (
+                  <div key={gi} className="flex items-center gap-1.5">
+                    {gi > 0 && <span className="w-px h-5 bg-gray-300 mx-1" aria-hidden />}
+                    {g.label && <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{g.label}</span>}
+                    {vis.map(t => (
+                      <button key={t.key} onClick={() => changeFilter(t.key)} className={btnCls(t.key)}>
+                        {t.label}{t.count > 0 ? ` (${t.count})` : ''}
+                      </button>
+                    ))}
+                  </div>
+                );
+              });
+            })()}
             {/* Equipment-brand review: pick a maker to review ALL its listings */}
             <select
               value={equipmentBrand}

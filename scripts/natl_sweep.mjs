@@ -74,7 +74,7 @@ while (processed < MAX) {
   writeFileSync('scripts/_gallery_urls.json', JSON.stringify(main));
   // 3) triage --apply this chunk
   const ids = chunk.map(l=>l.id).join(',');
-  const tr = await run('node',['scripts/triage-selfserve.mjs','--ids',ids,'--apply']);
+  const tr = await run('node',['scripts/classify-selfserve.mjs','--ids',ids,'--apply']);
   // parse the triage summary line from its stderr/stdout tail (it prints to stdout; capture via log file instead)
   // advance cursor + counters
   cursor = chunk[chunk.length-1].id; writeFileSync(CURSOR_FILE, cursor);

@@ -88,7 +88,7 @@ export interface LowResListing {
   hero_image_source: string | null;
 }
 
-export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup' | 'no_hero' | 'low_res' | 'held' | 'unscanned' | 'second_look' | 'best_of' | 'no_evidence' | 'by_equipment' | 'tier2_recheck' | 'ai_picked' | 'triage_yes' | 'triage_no' | 'triage_maybe';
+export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup' | 'no_hero' | 'low_res' | 'held' | 'unscanned' | 'second_look' | 'best_of' | 'no_evidence' | 'by_equipment' | 'tier2_recheck' | 'ai_picked' | 'triage_yes' | 'triage_no' | 'triage_maybe' | 'ss_unreviewed';
 
 // The nationwide AI triage (scripts/triage-selfserve.mjs) stamps self_service_source with
 // one of these as it classifies the unclassified pool. These three views let you browse and
@@ -159,6 +159,7 @@ export function usePhotoAudit() {
   const [triageYesCount, setTriageYesCount] = useState(0);
   const [triageNoCount, setTriageNoCount] = useState(0);
   const [triageMaybeCount, setTriageMaybeCount] = useState(0);
+  const [ssUnreviewedCount, setSsUnreviewedCount] = useState(0);
   const [bestOfCount, setBestOfCount] = useState(0);
   const [bestOfReviewedCount, setBestOfReviewedCount] = useState(0);
   const [bestOfTotal, setBestOfTotal] = useState(0);
@@ -243,16 +244,23 @@ export function usePhotoAudit() {
         .eq('self_service_source', 'ai_hero_selected')
         .or(NOT_CLOSED);
       setAiPickedCount(aiPickedRes.count ?? 0);
-      // Nationwide AI-triage buckets (filtered by source only — 'no' and 'maybe' are not
-      // is_self_service=true, so we can't scope them to the self-serve flag).
-      const triageCount = async (src: string) => {
+      // Nationwide AI-triage buckets. For the 🆕 AI Self-Serve bucket require is_self_service=true
+      // so that marking one "Not Self-Serve" (which sets is_self_service=false) drops it off.
+      const triageCount = async (src: string, ss?: boolean) => {
         let q = supabase.from('listings').select('id', { count: 'exact', head: true }).eq('self_service_source', src);
+        if (ss !== undefined) q = q.eq('is_self_service', ss);
         if (stateFilterRef.current) q = q.eq('state', stateFilterRef.current);
         return (await q).count ?? 0;
       };
-      setTriageYesCount(await triageCount('triage_selfserve'));
+      setTriageYesCount(await triageCount('triage_selfserve', true));
       setTriageNoCount(await triageCount('triage_not_selfserve'));
       setTriageMaybeCount(await triageCount('triage_maybe'));
+      // Tagged self-serve + approved (live), but you have NOT reviewed for the self-serve directory
+      // yet (self_service_reviewed_at IS NULL) — the ~633 that don't show publicly until confirmed.
+      let su = supabase.from('listings').select('id', { count: 'exact', head: true })
+        .eq('is_self_service', true).eq('is_approved', true).is('self_service_reviewed_at', null);
+      if (stateFilterRef.current) su = su.eq('state', stateFilterRef.current);
+      setSsUnreviewedCount((await su).count ?? 0);
     } else {
       setAiPickedCount(0);
       setTriageYesCount(0);
@@ -725,6 +733,8 @@ export function usePhotoAudit() {
       let dataQuery = supabase.from('listings')
         .select('id, name, slug, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
         .eq('self_service_source', src);
+      // 🆕 AI Self-Serve: only still-self-serve ones — marking "Not Self-Serve" (is_self_service=false) drops it off.
+      if (filter === 'triage_yes') { countQuery = countQuery.eq('is_self_service', true); dataQuery = dataQuery.eq('is_self_service', true); }
       if (stateFilterRef.current) {
         countQuery = countQuery.eq('state', stateFilterRef.current);
         dataQuery = dataQuery.eq('state', stateFilterRef.current);
@@ -764,6 +774,35 @@ export function usePhotoAudit() {
       }));
       setResults(triageResults);
       setFilteredTotal(triageTotal ?? 0);
+      setLoading(false);
+      return;
+    }
+
+    // "ss_unreviewed" filter: tagged self-serve + approved (live) but not yet reviewed for the
+    // self-serve directory (self_service_reviewed_at IS NULL). These already have real photos —
+    // your ~633. Confirming stamps reviewed_at and adds them to the public self-serve count.
+    if (filter === 'ss_unreviewed') {
+      let countQuery = supabase.from('listings').select('id', { count: 'exact', head: true })
+        .eq('is_self_service', true).eq('is_approved', true).is('self_service_reviewed_at', null);
+      let dataQuery = supabase.from('listings')
+        .select('id, name, slug, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
+        .eq('is_self_service', true).eq('is_approved', true).is('self_service_reviewed_at', null);
+      if (stateFilterRef.current) { countQuery = countQuery.eq('state', stateFilterRef.current); dataQuery = dataQuery.eq('state', stateFilterRef.current); }
+      const { count: suTotal } = await countQuery;
+      const { data: suListings } = await dataQuery
+        .order('state', { ascending: true }).order('city', { ascending: true }).order('name', { ascending: true })
+        .range(offset, offset + PAGE_SIZE - 1);
+      const suResults: AuditResult[] = (suListings ?? []).map((l): AuditResult => ({
+        id: `ssunrev-${l.id}`, listing_id: l.id, listing_name: l.name, listing_slug: l.slug,
+        listing_city: l.city, listing_state: l.state, listing_hero: l.hero_image,
+        hero_quality: l.hero_image ? 'has_hero' : 'missing', equipment_brand: l.equipment_brand,
+        equipment_model: l.equipment_model, equipment_confidence: null, equipment_source_photo: null,
+        suggested_hero_url: null, suggested_hero_reason: 'Tagged self-serve & live, but not yet confirmed for the self-serve directory. Review + confirm to publish it there.',
+        photos_to_remove: [], reviewed: false, applied: false, created_at: '', raw_response: null,
+        google_photos_added: 0, google_photos_screened: 0, listing_parent_chain: l.parent_chain ?? null,
+      }));
+      setResults(suResults);
+      setFilteredTotal(suTotal ?? 0);
       setLoading(false);
       return;
     }
@@ -1687,6 +1726,7 @@ export function usePhotoAudit() {
     triageYesCount,
     triageNoCount,
     triageMaybeCount,
+    ssUnreviewedCount,
     bestOfCount,
     bestOfReviewedCount,
     bestOfTotal,

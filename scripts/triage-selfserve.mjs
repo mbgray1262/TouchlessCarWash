@@ -57,7 +57,11 @@ CRITICAL — these are NOT self-serve (→ "no"), even though they have wands, b
  - automatic FRICTION tunnels (brushes/cloth on the car); touchless in-bay automatics with no customer wand.
  - car-wash EQUIPMENT vendors; gas stations/stores with no wash bay; vacuum-only lots.
 
-The disqualifier for self-serve is EVIDENCE OF STAFF doing the washing — NOT the absence of a visible coin box (coin boxes are often too small to see in a thumbnail). An OPEN covered wash STALL/BAY with spray hoses or a wand mounted on the WALLS and a wet floor IS a self-serve bay even if it is empty (no car, no person) — that is what a self-serve bay looks like between customers.
+=== CRITICAL: VACUUM stalls vs self-serve WASH BAYS (the #1 false positive) ===
+Many express/tunnel washes have rows of cars parked under long fabric CANOPIES (often blue) at open, flat parking stalls, with hoses hanging from OVERHEAD ARCHES/BOOMS — those are VACUUM stalls (free vacuums), NOT wash bays. A tile is a VACUUM stall, NOT a self-serve bay, when: the car sits in an open flat PARKING space (painted lines, no side walls), the hoses come from a tall overhead arch/canopy, and there is no spray-wand gun / no side walls / no coin wash box. Rows of cars under a canopy being vacuumed ≠ self-serve. Do NOT count vacuum stalls as bays. If ALL a listing's "bay-looking" tiles are actually cars at vacuum canopies (no real 3-walled wash stall with a wand), the verdict is "no".
+A real SELF-SERVE WASH BAY has SIDE WALLS (a 3-sided concrete/painted stall), a swing-arm BOOM with a metal spray WAND/lance, and a wet floor — the car is INSIDE a stall, not in open parking.
+
+The disqualifier for self-serve is EVIDENCE OF STAFF doing the washing OR that the "bays" are really vacuum stalls — NOT the absence of a visible coin box (coin boxes are often too small to see in a thumbnail). An OPEN 3-walled wash STALL/BAY with spray hoses or a wand mounted on the WALLS and a wet floor IS a self-serve bay even if it is empty (no car, no person) — that is what a self-serve bay looks like between customers.
 
 IMPORTANT bias: missing a real self-serve wash is worse than being unsure. Only say "no" when you are CONFIDENT it is not self-serve. If any tile shows an open wash bay/stall you cannot rule out, say "maybe", never "no".
 
@@ -78,8 +82,9 @@ async function gemini(b64, name, n) {
   return null;
 }
 
+const CURATED = new Set(['manual','upload','pasted','chain-brand','chain-brand-auto','text-verified-pick']);
 const ids = (arg('--ids','')).split(',').map(s=>s.trim()).filter(Boolean);
-const { data } = await sb.from('listings').select('id,name,city,state').in('id',ids);
+const { data } = await sb.from('listings').select('id,name,city,state,hero_image,hero_image_source').in('id',ids);
 console.log(`Triage — ${data.length} listings | ${APPLY?'APPLY':'DRY RUN'}\n`);
 let inTok=0,outTok=0,calls=0; const tally={yes:0,no:0,maybe:0,no_photos:0};
 for (const l of (data||[])) {
@@ -104,7 +109,18 @@ for (const l of (data||[])) {
   console.log(`${icon} ${l.name} (${l.city}, ${l.state}) — ${verdict.toUpperCase()} "${reason}" [${urls.length} photos, ${sheetsUsed} sheet(s)${verdict==='yes'?`, bays ${JSON.stringify(bayTiles)} hero #${heroTile}`:''}]`);
   v={verdict};
   if (APPLY) {
-    if (v.verdict==='yes')      await sb.from('listings').update({is_self_service:true, self_service_source:'triage_selfserve'}).eq('id',l.id);
+    if (v.verdict==='yes') {
+      const upd = { is_self_service:true, self_service_source:'triage_selfserve' };
+      // Save the AI-picked bay photo as the hero + a small gallery so it's reviewable in the tool.
+      // NEVER overwrite a human-curated hero.
+      if (!CURATED.has(l.hero_image_source)) {
+        const heroUrl = (heroTile>=0 && urls[heroTile]) ? urls[heroTile] : (bayTiles?.[0]!=null && urls[bayTiles[0]]) ? urls[bayTiles[0]] : urls[0];
+        const gi = [...new Set([...(bayTiles||[]), 0,1,2,3,4,5])].filter(i=>urls[i]!=null).slice(0,6);
+        if (heroUrl) { upd.hero_image = heroUrl+'=w1200-h900'; upd.hero_image_source = 'ai_triage'; }
+        upd.photos = gi.map(i=>urls[i]+'=w1200-h900');
+      }
+      await sb.from('listings').update(upd).eq('id',l.id);
+    }
     else if (v.verdict==='no')  await sb.from('listings').update({is_self_service:false,self_service_source:'triage_not_selfserve'}).eq('id',l.id);
     else                         await sb.from('listings').update({self_service_source:'triage_maybe'}).eq('id',l.id);
   }
