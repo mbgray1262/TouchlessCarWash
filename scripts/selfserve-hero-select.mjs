@@ -20,8 +20,14 @@
  *                  frame, sign-only, interior-only, vacuum-only score low.
  *   quality      — ok | poor (blurry, dark, low-res, heavily obstructed)
  *
- * Hero = highest hero_score among {is_facility && quality==ok && hero_score>=HERO_MIN}.
- *        None clear HERO_MIN → HELD (hero left, source flagged).
+ * CLASSIFICATION GATE (added after Michael caught it): before picking a hero, check whether ANY
+ * photo actually shows a self-serve wand bay OR a brushless touchless arch. If NONE does and we
+ * looked at >=3 real photos, the listing is NOT self-serve/touchless (it's a tunnel/express/vacuum
+ * lot like New Day) → is_self_service=false. A pretty building exterior is NOT proof of self-serve.
+ * SAFETY: de-classify touches ONLY is_self_service — never is_approved or is_touchless.
+ *
+ * Hero (only for listings that PASS the gate) = highest hero_score among
+ *        {is_facility && quality==ok && hero_score>=HERO_MIN}. None clear it → HELD, kept classified.
  * Gallery = next best distinct photos (different `shows`), quality ok, is_facility.
  *
  *   node scripts/selfserve-hero-select.mjs --self-test          # the exact cases he caught
@@ -53,14 +59,24 @@ const bearing = (f, t) => { const R = d => d * Math.PI / 180, D = r => r * 180 /
   const x = Math.cos(R(f.lat)) * Math.sin(R(t.lat)) - Math.sin(R(f.lat)) * Math.cos(R(t.lat)) * Math.cos(R(t.lng - f.lng));
   return (D(Math.atan2(y, x)) + 360) % 360; };
 
-// Every candidate photo: existing hero + gallery + up to 10 Places photos + Street View angles.
+// Full Maps gallery harvested by the browser (scripts/maps_gallery.py) — EVERY photo, not the
+// Places API's 10. Keyed by listing id: { title, match, urls:[baseUrl,...] }.
+let GALLERY = {};
+try { GALLERY = JSON.parse(readFileSync('scripts/_gallery_urls.json', 'utf8')); } catch {}
+
+// Every candidate photo: existing hero + FULL browser gallery (all photos) + Street View angles.
+// Falls back to the Places API's 10 only when the browser harvest is missing for a listing.
 async function gatherPhotos(l) {
   const cands = [];
   const seen = new Set();
   const add = (url, kind) => { if (url && !seen.has(url)) { seen.add(url); cands.push({ url, kind }); } };
   add(l.hero_image, 'existing');
   for (const u of (l.photos || [])) add(u, 'existing');
-  if (l.google_place_id) {
+  const g = GALLERY[l.id];
+  if (g && g.match && g.urls?.length) {
+    // Browser-harvested full gallery. Base URLs need a size suffix; ask for hero-quality.
+    for (const base of g.urls) add(`${base}=w1600-h1200`, 'gallery');
+  } else if (l.google_place_id) {
     try { const r = await fetch(`${SB_URL}/functions/v1/google-place-photos?place_id=${l.google_place_id}&offset=0&limit=10&size=1600`, { headers: { Authorization: `Bearer ${ANON}` }, signal: AbortSignal.timeout(25000) });
       if (r.ok) { const j = await r.json(); for (const p of (j.photos || [])) add(p.url, 'google'); } } catch {}
   }
@@ -73,19 +89,33 @@ async function gatherPhotos(l) {
         for (const dh of [0, -25, 25]) add(`https://maps.googleapis.com/maps/api/streetview?size=1600x900&pano=${j.pano_id}&heading=${((h + dh + 360) % 360).toFixed(0)}&fov=78&pitch=2&key=${PKEY}`, 'streetview'); }
     } catch {}
   }
-  return cands.slice(0, 16);
+  // Score up to 30 photos/listing (full galleries can be 40+; 30 is comprehensive but bounds
+  // Gemini calls). Existing hero + street view are already near the front of the list.
+  return cands.slice(0, 30);
 }
 
-const SCORE_PROMPT = (name) => `You are picking the HERO photo for the car wash listing "${name}" on a directory site. Judge ONLY this one image.
-Return strict JSON: {"is_facility":true|false,"shows":"facility_exterior|self_serve_bay|touchless_equip|car_wash_action|vacuum|interior|sign|people|other","hero_score":0-10,"quality":"ok|poor","note":"<=8 words"}
+const SCORE_PROMPT = (name) => `You are picking the HERO photo for "${name}" on a TOUCHLESS and SELF-SERVE car wash directory. This directory is for washes with NO brushes (touchless automatic) and DIY wand bays (self-serve). Judge ONLY this one image.
+Return strict JSON: {"is_facility":true|false,"shows":"facility_exterior|self_serve_bay|touchless_equip|friction_tunnel|car_wash_action|vacuum|interior|sign|people|other","hero_score":0-10,"quality":"ok|poor","note":"<=8 words"}
 
-is_facility = false if the image is a DIFFERENT business (e.g. a restaurant like Burger King, a store), just trees/road/an empty lot, an unrelated scene, or clearly not this car wash. Only true if it plausibly shows THIS car wash or its grounds/equipment.
-hero_score (attractiveness as the main image a visitor sees first):
-  8-10 = clean, well-framed facility exterior, or an appealing wide shot of the wash; a clean nice car mid-wash is good.
-  4-7  = shows the facility but average — some clutter, plain, or partial.
-  0-3  = dirty-car close-up, a mirror/trash/pole in the frame, a coin box or control panel close-up, a bare sign, an interior-only shot, a vacuum-only shot, blurry/dark.
+is_facility = false if the image is a DIFFERENT business (a restaurant like Burger King, a store), just trees/road/an empty lot, an unrelated scene, or clearly not this car wash.
+
+=== CRITICAL: VACUUM STATION vs SELF-SERVE WASH BAY (the most common mistake — read carefully) ===
+These look similar but are OPPOSITE. Study the equipment, not the car:
+ - A VACUUM STATION is an open PARKING stall (flat lot, painted lines) with tall posts or arches overhead, often under a fabric SHADE CANOPY, holding thick CORRUGATED SUCTION HOSES (usually black, or hanging from green/painted arms). There is NO high-pressure spray wand. Cars park here to vacuum AFTER washing. This is shows="vacuum", hero_score <= 2. If you see green arms/arches with hanging hoses over open parking under a canopy → it is VACUUMS, not a bay.
+ - A SELF-SERVE WASH BAY is an enclosed or 3-walled STALL (concrete/painted walls on the sides, a roof), with a swing-arm boom holding a metal high-pressure SPRAY WAND/LANCE and usually a coin/token box or a function selector dial (RINSE/SOAP/WAX) on the wall. Walls + wand + selector = a real bay. shows="self_serve_bay".
+If you are not clearly seeing side WALLS and a spray WAND/LANCE, it is NOT a self_serve_bay. When unsure between vacuum and bay, call it "vacuum".
+
+=== CRITICAL: the HERO must show the FACILITY, not one customer's car ===
+A glamour shot whose SUBJECT is a single shiny customer car (the car fills the frame, taken to show off the car) is a POOR hero even if it was taken at this wash. shows="car_wash_action" or "other", hero_score <= 4. We want the BAYS / building / equipment as the subject, not somebody's car.
+
+CRITICAL wash-type rule: if the image shows spinning CLOTH or FOAM BRUSHES, curtains, or wraps TOUCHING a car — that is a FRICTION / automatic TUNNEL wash, the OPPOSITE of what this directory lists. Set shows="friction_tunnel" and hero_score <= 2, no matter how pretty or well-lit it is. We must never headline a self-serve/touchless listing with a brushes-on-car photo.
+
+hero_score (for an APPROPRIATE image whose SUBJECT is the facility — a clean building/bays exterior, a self-serve wand bay with walls+wand, or brushless touchless arch/equipment):
+  8-10 = clean, well-framed facility exterior showing the wash bays/building; OR a clear self-serve wand bay (walls + spray wand visible); OR a brushless touchless arch. The FACILITY is the subject.
+  4-7  = shows the facility but average — plain, partial, cluttered, or a car is partly the subject.
+  0-3  = vacuum station (rule above), single-car glamour shot, friction/brush tunnel, dirty-car close-up, mirror/trash/pole in frame, coin-box or control-panel close-up, bare sign, interior-only, blurry/dark.
 quality = poor if blurry, dark, low-res, or heavily obstructed.
-Be honest and strict — a mediocre shot is not an 8.`;
+Be honest and strict. A weak, honest score is far better than calling a vacuum or a car photo a "bay".`;
 
 let calls = 0;
 async function score(imgB64, name) {
@@ -115,6 +145,21 @@ async function selectFor(l) {
     const s = await b64(buf); if (!s) continue;
     const v = await score(s, l.name); await sleep(120);
     if (v) scored.push({ ...c, buf, ...v });
+  }
+  // The classification GATE: does ANY photo actually show a self-serve wand bay OR a brushless
+  // touchless arch? That — not "did we find a pretty photo" — is what qualifies a listing for
+  // this directory. A gorgeous building exterior is NOT proof of self-serve (New Day has a lovely
+  // exterior and is a friction TUNNEL). This is the exact judgment Michael makes by hand.
+  const facilityCount = scored.filter(x => x.is_facility).length;
+  const evidence = scored.filter(x => x.is_facility && x.quality === 'ok' && (x.shows === 'self_serve_bay' || x.shows === 'touchless_equip'));
+  if (!evidence.length) {
+    // No bay, no brushless arch anywhere. If we actually looked at a real set of photos, this is
+    // NOT a self-serve/touchless wash (it's a tunnel/express/vacuum lot). De-classify — set
+    // is_self_service=false. SAFETY: the apply step touches ONLY is_self_service, never
+    // is_approved or is_touchless, so genuine touchless/mixed listings are never pulled offline.
+    if (facilityCount >= 3) return { verdict: 'not_selfserve', scored };
+    // Too few photos to be sure → don't de-classify on thin evidence; hold for a human.
+    return { verdict: 'no_evidence_few_photos', scored };
   }
   const usable = scored.filter(x => x.is_facility && x.quality === 'ok');
   if (!usable.length) return { verdict: 'no_facility_photo', scored };
@@ -148,13 +193,24 @@ async function loadTargets() {
   if (process.argv.includes('--self-test')) {
     const names = [['New Day Car Wash', 'AL'], ['Northstar Laserwash%', 'AK'], ['Liberty Wash%', 'AR'], ['Sparkle Carwash', 'AR']];
     const out = [];
-    for (const [n, s] of names) { const { data } = await sb.from('listings').select('id,name,city,state,hero_image,photos,google_place_id,latitude,longitude').ilike('name', n).eq('state', s).limit(1); if (data?.[0]) out.push(data[0]); }
+    for (const [n, s] of names) { const { data } = await sb.from('listings').select('id,name,city,state,hero_image,hero_image_source,photos,google_place_id,latitude,longitude').ilike('name', n).eq('state', s).limit(1); if (data?.[0]) out.push(data[0]); }
     return out;
   }
+  // Targeted mode: --ids id1,id2,... (for focused end-to-end tests).
+  const idsArg = arg('--ids', '');
+  if (idsArg) {
+    const ids = idsArg.split(',').map(s => s.trim()).filter(Boolean);
+    const { data } = await sb.from('listings').select('id,name,city,state,hero_image,hero_image_source,photos,google_place_id,latitude,longitude').in('id', ids);
+    return data || [];
+  }
+  // Re-run over the ones already hero-selected (to apply the friction-brush rule), plus any
+  // still on the original source. NOTE: photos now hold the SELECTED gallery — but we also want
+  // the full candidate pool, so gatherPhotos re-fetches Places + Street View fresh each time.
+  const SRC = arg('--source', 'ai_hero_selected');
   let rows = [];
   for (let p = 0; ; p++) {
-    const { data } = await sb.from('listings').select('id,name,city,state,hero_image,photos,google_place_id,latitude,longitude')
-      .eq('self_service_source', 'gemini_bay_confirmed').order('id').range(p * 200, p * 200 + 199);
+    const { data } = await sb.from('listings').select('id,name,city,state,hero_image,hero_image_source,photos,google_place_id,latitude,longitude')
+      .eq('self_service_source', SRC).order('id').range(p * 200, p * 200 + 199);
     if (!data?.length) break; rows.push(...data); if (data.length < 200) break;
   }
   return rows.slice(0, LIMIT);
@@ -162,10 +218,20 @@ async function loadTargets() {
 
 const targets = await loadTargets();
 console.log(`Hero selector — ${targets.length} listings | HERO_MIN=${HERO_MIN} | ${APPLY ? 'APPLY' : 'DRY RUN'}\n`);
-const out = { HERO_SELECTED: [], no_good_hero: [], no_facility_photo: [], no_photos: [] };
+// NEVER touch a hero a human chose. Curated listings are skipped ENTIRELY — no re-scoring,
+// no hero overwrite, no de-classify — because the human's pick/classification stands. This is
+// the guard protecting Michael's ~1,396 manual heroes (feedback_no_night_jobs_no_vision_rescreen).
+const CURATED = new Set(['manual', 'upload', 'pasted', 'chain-brand', 'chain-brand-auto', 'text-verified-pick']);
+const out = { HERO_SELECTED: [], not_selfserve: [], no_good_hero: [], no_facility_photo: [], no_evidence_few_photos: [], no_photos: [], curated_skipped: [] };
 for (const l of targets) {
+  if (CURATED.has(l.hero_image_source)) {
+    out.curated_skipped.push(l.name);
+    console.log(`•  ${l.name} (${l.city}, ${l.state}) — curated hero (${l.hero_image_source}), left untouched`);
+    continue;
+  }
   const r = await selectFor(l);
   out[r.verdict] = out[r.verdict] || []; out[r.verdict].push(l.name);
+  const nPhotos = (r.scored || []).length;
   if (r.verdict === 'HERO_SELECTED') {
     console.log(`✅ ${l.name} (${l.city}, ${l.state}) — hero: ${r.hero.shows} score ${r.hero.hero_score} [${r.hero.kind}] "${r.hero.note}" | +${r.gallery.length} gallery`);
     if (APPLY) {
@@ -173,16 +239,22 @@ for (const l of targets) {
       const gUrls = []; let gi = 0; for (const g of r.gallery) { const u = await hostGallery(g.buf, l.id, gi++); if (u) gUrls.push(u); }
       if (hUrl) await sb.from('listings').update({ hero_image: hUrl, hero_image_source: 'ai_best', photos: gUrls, self_service_source: 'ai_hero_selected' }).eq('id', l.id);
     }
+  } else if (r.verdict === 'not_selfserve') {
+    console.log(`✗  ${l.name} (${l.city}, ${l.state}) — NO self-serve bay / touchless arch in any of ${nPhotos} photos → NOT SELF-SERVICE (de-classified)`);
+    // De-classify exactly as a human would. SAFETY: touch ONLY is_self_service — never
+    // is_approved or is_touchless. A live touchless/mixed listing stays live and touchless;
+    // this just says "it is not ALSO a self-serve wash". These are pre-launch (is_approved=false).
+    if (APPLY) await sb.from('listings').update({ is_self_service: false, self_service_source: 'vision_no_selfserve_evidence' }).eq('id', l.id);
   } else {
-    console.log(`·  ${l.name} (${l.city}, ${l.state}) — ${r.verdict}${r.best ? ` (best only ${r.best.hero_score}: ${r.best.note})` : ''} → HELD (no good self-serve hero)`);
-    // HELD = don't surface as a self-serve candidate. Do NOT touch is_approved — many of these
-    // are ALSO live touchless listings, and setting is_approved=false would pull them from the
-    // touchless directory (the exact collateral damage from earlier today). Just flag the source.
+    console.log(`·  ${l.name} (${l.city}, ${l.state}) — ${r.verdict}${r.best ? ` (best only ${r.best.hero_score}: ${r.best.note})` : ''} → HELD (kept classified, needs a human hero)`);
+    // HELD but KEPT self-serve: it has bay/touchless evidence (or too few photos to judge) but no
+    // attractive hero. Don't de-classify, don't touch is_approved. Human picks a hero.
     if (APPLY) await sb.from('listings').update({ self_service_source: 'ai_no_good_photo' }).eq('id', l.id);
   }
 }
-writeFileSync(`scripts/_hero_select_${Date.now()}.json`, JSON.stringify(out, null, 2));
 console.log(`\n==================== HERO SELECT ${APPLY ? 'APPLIED' : 'DRY RUN'} ====================`);
-console.log(`✅ good hero chosen ...... ${out.HERO_SELECTED.length}`);
-console.log(`·  no photo good enough → HELD: ${(out.no_good_hero || []).length + (out.no_facility_photo || []).length + (out.no_photos || []).length}`);
+console.log(`✅ good hero chosen ................... ${out.HERO_SELECTED.length}`);
+console.log(`✗  NO bay/arch in any photo → NOT self-serve (de-classified): ${(out.not_selfserve || []).length}`);
+console.log(`·  has evidence but no good hero → HELD (kept): ${(out.no_good_hero || []).length + (out.no_facility_photo || []).length + (out.no_evidence_few_photos || []).length + (out.no_photos || []).length}`);
+console.log(`•  curated hero, left untouched ....... ${(out.curated_skipped || []).length}`);
 console.log(`Gemini photo-scoring calls: ${calls}`);

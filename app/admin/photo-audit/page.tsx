@@ -431,6 +431,7 @@ export default function PhotoAuditPage() {
     runBatch, applyEquipment, rejectResult, applyAllHighConfidence, undoApply, reload,
     noHeroCount, noHeroUnprocessed, heldCount, secondLookCount, bestOfCount, removeFromResults,
     bestOfReviewedCount, bestOfTotal, bestOfSubFilter, setBestOfSubFilter, markBestOfReviewed, unmarkBestOfReviewed, aiPickedCount,
+    triageYesCount, triageNoCount, triageMaybeCount,
     noHeroSubFilter, setNoHeroSubFilter, markAllChainListingsAudited,
     lowResListings, lowResTotal, lowResPage, lowResTotalPages, changeLowResPage,
     dismissLowRes, scanForLowRes, scanProgress,
@@ -651,6 +652,9 @@ export default function PhotoAuditPage() {
               // (visible wand bay + review/name signal), awaiting your publish. Confirming
               // in the editor sets source='admin_review' and the listing drops off here.
               ...(washType === 'self_serve' ? [{ key: 'ai_picked' as ViewFilter, label: `🤖 AI-Verified (${viewFilter === 'ai_picked' ? filteredTotal : aiPickedCount})` }] : []),
+              ...(washType === 'self_serve' ? [{ key: 'triage_yes' as ViewFilter, label: `🆕 AI Self-Serve (${viewFilter === 'triage_yes' ? filteredTotal : triageYesCount})` }] : []),
+              ...(washType === 'self_serve' ? [{ key: 'triage_maybe' as ViewFilter, label: `🤔 AI Maybe (${viewFilter === 'triage_maybe' ? filteredTotal : triageMaybeCount})` }] : []),
+              ...(washType === 'self_serve' ? [{ key: 'triage_no' as ViewFilter, label: `🚫 AI Not-SS (${viewFilter === 'triage_no' ? filteredTotal : triageNoCount})` }] : []),
               { key: 'equipment' as ViewFilter, label: `Equipment (${stats.equipment_total})` },
               { key: 'heroes' as ViewFilter, label: `Poor Heroes (${stats.heroes_total})` },
               { key: 'cleanup' as ViewFilter, label: `Cleanup (${stats.cleanup_total})` },

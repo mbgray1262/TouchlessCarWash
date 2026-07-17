@@ -88,7 +88,16 @@ export interface LowResListing {
   hero_image_source: string | null;
 }
 
-export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup' | 'no_hero' | 'low_res' | 'held' | 'unscanned' | 'second_look' | 'best_of' | 'no_evidence' | 'by_equipment' | 'tier2_recheck' | 'ai_picked';
+export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup' | 'no_hero' | 'low_res' | 'held' | 'unscanned' | 'second_look' | 'best_of' | 'no_evidence' | 'by_equipment' | 'tier2_recheck' | 'ai_picked' | 'triage_yes' | 'triage_no' | 'triage_maybe';
+
+// The nationwide AI triage (scripts/triage-selfserve.mjs) stamps self_service_source with
+// one of these as it classifies the unclassified pool. These three views let you browse and
+// spot-check its yes / no / maybe calls in the tool.
+export const TRIAGE_SOURCE: Record<'triage_yes' | 'triage_no' | 'triage_maybe', string> = {
+  triage_yes: 'triage_selfserve',
+  triage_no: 'triage_not_selfserve',
+  triage_maybe: 'triage_maybe',
+};
 
 // Hero sources the AI chose without a human looking. A listing with one of these,
 // still approved and not yet human-confirmed (self_service_source !== 'admin_review'),
@@ -147,6 +156,9 @@ export function usePhotoAudit() {
   const [heldCount, setHeldCount] = useState(0);
   const [secondLookCount, setSecondLookCount] = useState(0);
   const [aiPickedCount, setAiPickedCount] = useState(0);
+  const [triageYesCount, setTriageYesCount] = useState(0);
+  const [triageNoCount, setTriageNoCount] = useState(0);
+  const [triageMaybeCount, setTriageMaybeCount] = useState(0);
   const [bestOfCount, setBestOfCount] = useState(0);
   const [bestOfReviewedCount, setBestOfReviewedCount] = useState(0);
   const [bestOfTotal, setBestOfTotal] = useState(0);
@@ -231,8 +243,21 @@ export function usePhotoAudit() {
         .eq('self_service_source', 'ai_hero_selected')
         .or(NOT_CLOSED);
       setAiPickedCount(aiPickedRes.count ?? 0);
+      // Nationwide AI-triage buckets (filtered by source only — 'no' and 'maybe' are not
+      // is_self_service=true, so we can't scope them to the self-serve flag).
+      const triageCount = async (src: string) => {
+        let q = supabase.from('listings').select('id', { count: 'exact', head: true }).eq('self_service_source', src);
+        if (stateFilterRef.current) q = q.eq('state', stateFilterRef.current);
+        return (await q).count ?? 0;
+      };
+      setTriageYesCount(await triageCount('triage_selfserve'));
+      setTriageNoCount(await triageCount('triage_not_selfserve'));
+      setTriageMaybeCount(await triageCount('triage_maybe'));
     } else {
       setAiPickedCount(0);
+      setTriageYesCount(0);
+      setTriageNoCount(0);
+      setTriageMaybeCount(0);
     }
     setQueueStats({
       totalUntagged: total,
@@ -686,6 +711,59 @@ export function usePhotoAudit() {
 
       setResults(allResults);
       setFilteredTotal(totalReview ?? 0);
+      setLoading(false);
+      return;
+    }
+
+    // Nationwide AI-triage buckets (self-serve mode). Browse/spot-check the classifier's
+    // yes / no / maybe calls. Filtered by self_service_source only (no/maybe aren't
+    // is_self_service=true). Click a listing to open the curator and review its photos.
+    if (filter === 'triage_yes' || filter === 'triage_no' || filter === 'triage_maybe') {
+      const src = TRIAGE_SOURCE[filter];
+      let countQuery = supabase.from('listings').select('id', { count: 'exact', head: true })
+        .eq('self_service_source', src);
+      let dataQuery = supabase.from('listings')
+        .select('id, name, slug, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
+        .eq('self_service_source', src);
+      if (stateFilterRef.current) {
+        countQuery = countQuery.eq('state', stateFilterRef.current);
+        dataQuery = dataQuery.eq('state', stateFilterRef.current);
+      }
+      const { count: triageTotal } = await countQuery;
+      const { data: triageListings } = await dataQuery
+        .order('state', { ascending: true }).order('city', { ascending: true }).order('name', { ascending: true })
+        .range(offset, offset + PAGE_SIZE - 1);
+      const reasonByFilter = {
+        triage_yes: 'AI found a customer self-serve wand bay in the photos. Confirm to keep, or mark Not Self-Serve.',
+        triage_no: 'AI saw no self-serve bay (tunnel / touchless / hand-wash / detailer / store). Spot-check for misses.',
+        triage_maybe: 'AI was unsure (a bay might be present but could be automatic/attendant). You decide.',
+      } as const;
+      const triageResults: AuditResult[] = (triageListings ?? []).map((l): AuditResult => ({
+        id: `triage-${l.id}`,
+        listing_id: l.id,
+        listing_name: l.name,
+        listing_slug: l.slug,
+        listing_city: l.city,
+        listing_state: l.state,
+        listing_hero: l.hero_image,
+        hero_quality: l.hero_image ? 'has_hero' : 'missing',
+        equipment_brand: l.equipment_brand,
+        equipment_model: l.equipment_model,
+        equipment_confidence: null,
+        equipment_source_photo: null,
+        suggested_hero_url: null,
+        suggested_hero_reason: reasonByFilter[filter],
+        photos_to_remove: [],
+        reviewed: false,
+        applied: false,
+        created_at: '',
+        raw_response: null,
+        google_photos_added: 0,
+        google_photos_screened: 0,
+        listing_parent_chain: l.parent_chain ?? null,
+      }));
+      setResults(triageResults);
+      setFilteredTotal(triageTotal ?? 0);
       setLoading(false);
       return;
     }
@@ -1606,6 +1684,9 @@ export function usePhotoAudit() {
     heldCount,
     secondLookCount,
     aiPickedCount,
+    triageYesCount,
+    triageNoCount,
+    triageMaybeCount,
     bestOfCount,
     bestOfReviewedCount,
     bestOfTotal,
