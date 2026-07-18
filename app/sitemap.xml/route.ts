@@ -1,6 +1,6 @@
 import { supabase, type Listing } from '@/lib/supabase';
 import { publicListings } from '@/lib/public-listings';
-import { SELF_SERVE_LIVE, publicSelfServeListings, selfServeStateTally } from '@/lib/self-serve';
+import { SELF_SERVE_LIVE, publicSelfServeListings, selfServeStateTally, qualifyingSelfServeCities } from '@/lib/self-serve';
 import { US_STATES, getStateSlug, slugify } from '@/lib/constants';
 import { getQualifyingMetros } from '@/lib/metro-queries';
 import { FEATURES } from '@/lib/features';
@@ -338,8 +338,9 @@ export async function GET() {
   // exact render/robots gate in lib/self-serve.ts, keeping sitemap ⟺ indexable.
   let selfServeUrls: string[] = [];
   if (SELF_SERVE_LIVE) {
-    const [ssTally, ssListingsRes] = await Promise.all([
+    const [ssTally, ssCities, ssListingsRes] = await Promise.all([
       selfServeStateTally(),
+      qualifyingSelfServeCities(),
       publicSelfServeListings('slug, state, city, is_touchless, updated_at, created_at').limit(10000),
     ]);
     const ssListings = (ssListingsRes.data ?? []) as {
@@ -355,6 +356,16 @@ export async function GET() {
     for (const { code } of ssTally) {
       selfServeUrls.push(`  <url>
     <loc>${baseUrl}/self-serve-car-wash/${getStateSlug(code)}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`);
+    }
+    // City hubs — only cities with >= MIN_SELF_SERVE_CITY listings (shared
+    // qualifyingSelfServeCities() drives BOTH this and the page's 200-vs-404).
+    for (const c of ssCities) {
+      selfServeUrls.push(`  <url>
+    <loc>${baseUrl}/self-serve-car-wash/${getStateSlug(c.stateCode)}/${c.citySlug}</loc>
     <lastmod>${now}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>

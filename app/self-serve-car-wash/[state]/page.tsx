@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 import { ChevronRight, MapPin } from 'lucide-react';
 import { ListingCard } from '@/components/ListingCard';
 import { LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
-import { SELF_SERVE_LIVE, publicSelfServeListings } from '@/lib/self-serve';
+import { SELF_SERVE_LIVE, publicSelfServeListings, MIN_SELF_SERVE_CITY } from '@/lib/self-serve';
 import { US_STATES, getStateName, slugify } from '@/lib/constants';
 
 const SITE_URL = 'https://touchlesscarwashfinder.com';
@@ -93,7 +93,10 @@ export default async function SelfServeStatePage({ params }: Props) {
         {cities.map(([city, group]) => (
           <section key={city} className="mt-10">
             <h2 className="text-xl font-bold text-[#0F2744] mb-4 flex items-center gap-2">
-              <MapPin className="w-4.5 h-4.5 text-[#22C55E]" /> {city}
+              <MapPin className="w-4.5 h-4.5 text-[#22C55E]" />
+              {group.length >= MIN_SELF_SERVE_CITY
+                ? <Link href={`${PATH}/${params.state}/${slugify(city)}`} className="hover:text-[#22C55E] hover:underline">{city}</Link>
+                : city}
               <span className="text-sm font-normal text-gray-400">({group.length})</span>
             </h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">

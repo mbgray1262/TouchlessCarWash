@@ -19,6 +19,7 @@
  * context (confirmed real bays + appropriate photos). See project_self_serve_broadening.
  */
 import { supabase } from '@/lib/supabase';
+import { slugify, getStateName } from '@/lib/constants';
 
 /** Category master switch. Flip to true (+ deploy) to launch the self-serve directory. */
 export const SELF_SERVE_LIVE = true;
@@ -77,6 +78,58 @@ export function isSelfServeOnly(listing: {
 /** Count of publicly visible self-serve listings matching the chained filters. */
 export function publicSelfServeCount() {
   return publicSelfServeListings('*', { count: 'exact', head: true });
+}
+
+/**
+ * Minimum public self-serve listings a city needs before it earns its own
+ * /self-serve-car-wash/<state>/<city> hub page. Below this, a city hub would be a
+ * thin/near-duplicate of the single listing's own page (which already targets
+ * "self serve car wash <city>"), so we don't create one. THE shared threshold —
+ * both the city-hub page (200-vs-404) and the sitemap import it, so the
+ * "in sitemap ⟺ indexable" invariant can never drift.
+ */
+export const MIN_SELF_SERVE_CITY = 5;
+
+/**
+ * The cities that qualify for a self-serve city hub (>= MIN_SELF_SERVE_CITY public
+ * self-serve listings). One scan, grouped by state code + city SLUG (so name variants
+ * that slugify the same are counted together, matching how the page resolves its slug).
+ * Used by BOTH /sitemap.xml and the state hub's city links.
+ */
+export async function qualifyingSelfServeCities(): Promise<
+  { stateCode: string; stateSlug: string; citySlug: string; cityName: string; count: number }[]
+> {
+  const groups = new Map<string, { stateCode: string; cityName: string; count: number }>();
+  let from = 0;
+  while (true) {
+    const { data } = await publicSelfServeListings('state, city').order('id').range(from, from + 999);
+    if (!data || !data.length) break;
+    for (const r of data as { state: string | null; city: string | null }[]) {
+      const code = (r.state || '').toUpperCase();
+      const city = r.city || '';
+      const cslug = slugify(city);
+      if (!code || !cslug) continue;
+      const key = `${code}/${cslug}`;
+      const g = groups.get(key);
+      if (g) g.count++;
+      else groups.set(key, { stateCode: code, cityName: city, count: 1 });
+    }
+    from += data.length;
+    if (data.length < 1000) break;
+  }
+  const out: { stateCode: string; stateSlug: string; citySlug: string; cityName: string; count: number }[] = [];
+  for (const [key, g] of Array.from(groups.entries())) {
+    if (g.count < MIN_SELF_SERVE_CITY) continue;
+    const citySlug = key.split('/')[1];
+    out.push({
+      stateCode: g.stateCode,
+      stateSlug: slugify(getStateName(g.stateCode)),
+      citySlug,
+      cityName: g.cityName,
+      count: g.count,
+    });
+  }
+  return out.sort((a, b) => b.count - a.count || a.stateCode.localeCompare(b.stateCode));
 }
 
 /** Per-state counts of public self-serve listings, sorted desc. Used by the
