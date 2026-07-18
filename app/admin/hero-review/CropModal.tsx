@@ -97,7 +97,13 @@ export function CropModal({ imageUrl, listingId, uploadType = 'hero', onSave, on
   const [saving, setSaving] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const proxiedImageUrl = getProxiedUrl(imageUrl);
+  // Cache-bust per open. The crop <img> loads with crossOrigin="anonymous", which the browser
+  // caches in a SEPARATE partition from the no-cors <img> used for the hero/gallery thumbnails.
+  // That partition can serve a stale decode (the previously-cropped image) even though the URL is
+  // correct — the "I see the last image I cropped" bug. A fresh token per mount forces a clean load.
+  const cacheBust = useRef(Date.now()).current;
+  const base = getProxiedUrl(imageUrl);
+  const proxiedImageUrl = base + (base.includes('?') ? '&' : '?') + '_cb=' + cacheBust;
 
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const { width, height } = e.currentTarget;
@@ -234,6 +240,7 @@ export function CropModal({ imageUrl, listingId, uploadType = 'hero', onSave, on
             minHeight={50}
           >
             <img
+              key={proxiedImageUrl}
               ref={imgRef}
               src={proxiedImageUrl}
               alt="Crop preview"

@@ -1292,6 +1292,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
       {/* Crop modal */}
       {cropPhoto && (
         <CropModal
+          key={cropPhoto.id + '|' + cropPhoto.url}
           imageUrl={cropPhoto.url}
           listingId={listing.id}
           uploadType="gallery"
