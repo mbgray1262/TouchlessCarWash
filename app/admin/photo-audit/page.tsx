@@ -668,8 +668,11 @@ export default function PhotoAuditPage() {
                     title: "Tagged self-serve AND approved (live-eligible), but you haven't personally signed off yet. Confirming keeps them in the self-serve directory." },
                   { key: 'triage_yes' as ViewFilter, label: '🆕 AI Self-Serve', count: tc('triage_yes', triageYesCount), always: true,
                     title: 'New finds the nationwide AI classifier flagged as self-serve (it saw a wand bay). Confirm or reject each.' },
-                  { key: 'ai_picked' as ViewFilter, label: '🤖 AI-Picked', count: tc('ai_picked', aiPickedCount), always: true,
-                    title: 'Self-serve listings where the AI also auto-picked a hero photo — pending your confirm. (Confirming marks them human-reviewed.)' },
+                  // Legacy bucket from the retired ai_hero_selected pipeline — it only drains, never
+                  // refills (discovery writes triage_selfserve, not ai_hero_selected). So it hides
+                  // once empty (no `always`) instead of sitting there as a dead 0-count tab.
+                  { key: 'ai_picked' as ViewFilter, label: '🤖 AI-Picked', count: tc('ai_picked', aiPickedCount),
+                    title: 'Legacy: self-serve listings the old pipeline auto-picked a hero for. Drains as you review; new finds go to AI Self-Serve instead.' },
                   { key: 'triage_no' as ViewFilter, label: '🚫 AI Not-SS', count: tc('triage_no', triageNoCount), always: true,
                     title: 'Listings the AI classified as NOT self-serve. Browse to spot-check the rejections.' },
                 ] }] : []),
