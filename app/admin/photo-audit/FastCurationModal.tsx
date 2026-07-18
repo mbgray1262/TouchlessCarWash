@@ -856,7 +856,19 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                 enhancingId={enhancing}
                 enhancedIds={enhancedIds}
                 discovering={discovering}
-                streetViewUrl={listing.latitude && listing.longitude ? `https://www.google.com/maps/@${listing.latitude},${listing.longitude},3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192` : undefined}
+                // Street View must resolve by PLACE, not stored lat/lng. Many listings have a
+                // bad geocode (the coordinate lands on a nearby residential street), so a
+                // coordinate-based Street View shows the wrong location or "no imagery". The
+                // place_id always resolves the real business (same as the Google Photos button),
+                // and its Street View is one click from there. Fall back to a name+address search,
+                // then to coordinates only if we have nothing better.
+                streetViewUrl={
+                  listing.google_place_id
+                    ? `https://www.google.com/maps/place/?q=place_id:${listing.google_place_id}`
+                    : ([listing.name, listing.address, listing.city, listing.state, listing.zip].filter(Boolean).length
+                        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([listing.name, listing.address, listing.city, listing.state, listing.zip].filter(Boolean).join(', '))}`
+                        : (listing.latitude && listing.longitude ? `https://www.google.com/maps/@${listing.latitude},${listing.longitude},3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192` : undefined))
+                }
                 googlePhotosUrl={listing.google_place_id ? `https://www.google.com/maps/place/?q=place_id:${listing.google_place_id}` : undefined}
                 listingId={listing.id}
                 onHeroDropped={addHeroDirect}

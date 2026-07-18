@@ -72,7 +72,7 @@ export const GAS_STATION = /\b(mobil|shell|chevron|exxon|texaco|conoco|phillips\
 
 // Big-rig / commercial TRUCK washes — a different business than a consumer self-serve car wash.
 // Tagged distinctly ('truck_wash') so a future truck-wash category can pull them back.
-export const TRUCK_WASH = /\btruck\s*wash\b|\bbig\s*rig\b|\bfleet\s*wash\b|\bsemi\s*(truck\s*)?wash\b|\b18[\s-]?wheeler\b|blue\s*beacon|\bwash\s*my\s*truck\b/i;
+export const TRUCK_WASH = /\btruck\s*wash\b|\bbig\s*rig\b|\bfleet\s*wash\b|\bsemi\s*(truck\s*)?wash\b|\b18[\s-]?wheeler\b|blue\s*beacon|\bwash\s*my\s*truck\b|\bwashout\b|\breefer\b|\btrailer\s*wash|\btruck\b[\s\S]{0,20}\bwash(out)?\b/i;
 
 // Perceptual difference-hash (dHash): 9x8 grayscale, compare adjacent pixels → 64-bit fingerprint.
 // Two photos within HAMMING<=DEDUP_THRESH are the same shot (same building/angle, different file) —
