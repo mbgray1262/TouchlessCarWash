@@ -224,6 +224,7 @@ async def main():
             if a.startswith(flag + '='): return a.split('=', 1)[1]
         return d
     limit = int(opt('--limit', '0')); start = int(opt('--start', '0'))
+    ids_file = opt('--ids-file')   # enrich a SPECIFIC set (e.g. approved self-serve missing reviews)
     global DRY, SCROLLS, RELOADS
     DRY = '--dry' in args; SCROLLS = int(opt('--scrolls', '8')); RELOADS = int(opt('--reloads', '5'))
     headless = '--headless' in args   # Google serves headless clients a degraded page — default OFF
@@ -235,26 +236,44 @@ async def main():
     # that's ~5 wasted days of scraping. Google's category narrows it to the real pool;
     # rows with NO category are kept (unknown ≠ not a wash — that's the mistake that would
     # silently drop real washes).
-    log('fetching targets (unclassified + place_id + plausibly a car wash)...')
     targets = []
-    for filt in ('&or=(google_category.ilike.*car%20wash*,google_subtypes.ilike.*car%20wash*)',
-                 '&google_category=is.null&google_subtypes=is.null'):
-        for off in range(0, 40000, 1000):
-            rows = sb('GET', f'/rest/v1/listings?select=id,name,google_place_id&is_self_service=is.null'
-                              f'&google_place_id=not.is.null{filt}&order=id&limit=1000&offset={off}')
-            if not rows: break
-            targets.extend([r for r in rows if (r.get('google_place_id') or '').startswith('ChIJ')])
-            if len(rows) < 1000: break
-    # Don't spend 30s of scraping to confirm what the name already tells us: conveyor chains
-    # and express/auto-spa brands are not self-serve (a name that says "self serv" outright wins).
-    CHAIN = re.compile(r"\b(tidal wave|whistle express|mister car ?wash|quick quack|tommy'?s express|take 5|zips? car ?wash|club car ?wash|super ?star car ?wash|autobell|el car ?wash|splash ?in|go car ?wash|crew car ?wash|delta sonic|flagstop|rocket car ?wash|caliber car ?wash|jax kar ?wash|sparkling image)\b", re.I)
-    EXCL = re.compile(r'\b(express|auto spa|tunnel)\b', re.I)
-    SELF = re.compile(r'self[\s-]?serv', re.I)
-    before = len(targets)
-    targets = [t for t in targets
-               if not CHAIN.search(t.get('name') or '')
-               and not (EXCL.search(t.get('name') or '') and not SELF.search(t.get('name') or ''))]
-    log(f'  {before} plausible car washes → {len(targets)} after dropping chains / express / auto spa')
+    if ids_file:
+        # ENRICH MODE: harvest reviews for a specific set of listing ids (already-classified,
+        # approved self-serve that are missing review snippets). No chain/category filtering —
+        # these are confirmed washes; we just want their reviews.
+        with open(ids_file) as f:
+            want = [x.strip() for x in f.read().replace(',', '\n').split() if x.strip()]
+        log(f'ENRICH MODE — {len(want)} listing ids from {ids_file}')
+        for i in range(0, len(want), 100):
+            rows = sb('GET', f"/rest/v1/listings?select=id,name,google_place_id&id=in.({','.join(want[i:i+100])})")
+            targets.extend([r for r in (rows or []) if (r.get('google_place_id') or '').startswith('ChIJ')])
+    else:
+        # Targets: unclassified listings with a real place_id that are plausibly CAR WASHES.
+        #
+        # The naive "unclassified + place_id" filter is 30,626 rows and includes 3,996 gas
+        # stations, 3,185 detailers, 504 dollar stores and a license plate agency. At ~33s each
+        # that's ~5 wasted days of scraping. Google's category narrows it to the real pool;
+        # rows with NO category are kept (unknown ≠ not a wash — that's the mistake that would
+        # silently drop real washes).
+        log('fetching targets (unclassified + place_id + plausibly a car wash)...')
+        for filt in ('&or=(google_category.ilike.*car%20wash*,google_subtypes.ilike.*car%20wash*)',
+                     '&google_category=is.null&google_subtypes=is.null'):
+            for off in range(0, 40000, 1000):
+                rows = sb('GET', f'/rest/v1/listings?select=id,name,google_place_id&is_self_service=is.null'
+                                  f'&google_place_id=not.is.null{filt}&order=id&limit=1000&offset={off}')
+                if not rows: break
+                targets.extend([r for r in rows if (r.get('google_place_id') or '').startswith('ChIJ')])
+                if len(rows) < 1000: break
+        # Don't spend 30s of scraping to confirm what the name already tells us: conveyor chains
+        # and express/auto-spa brands are not self-serve (a name that says "self serv" outright wins).
+        CHAIN = re.compile(r"\b(tidal wave|whistle express|mister car ?wash|quick quack|tommy'?s express|take 5|zips? car ?wash|club car ?wash|super ?star car ?wash|autobell|el car ?wash|splash ?in|go car ?wash|crew car ?wash|delta sonic|flagstop|rocket car ?wash|caliber car ?wash|jax kar ?wash|sparkling image)\b", re.I)
+        EXCL = re.compile(r'\b(express|auto spa|tunnel)\b', re.I)
+        SELF = re.compile(r'self[\s-]?serv', re.I)
+        before = len(targets)
+        targets = [t for t in targets
+                   if not CHAIN.search(t.get('name') or '')
+                   and not (EXCL.search(t.get('name') or '') and not SELF.search(t.get('name') or ''))]
+        log(f'  {before} plausible car washes → {len(targets)} after dropping chains / express / auto spa')
 
     # Resume: skip listings already harvested by THIS source.
     done = set()
