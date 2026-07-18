@@ -115,6 +115,19 @@ async function classify(l){
   // Drop near-duplicate shots so the gallery never shows the same photo twice (keep the first of
   // each visually-distinct group; hero leads, so a dup of the hero further down is also removed).
   { const kept=[],keptH=[]; for(const i of usable){ const h=hashes[i]; if(h!=null&&keptH.some(kh=>ham(h,kh)<=DEDUP_THRESH))continue; kept.push(i); if(h!=null)keptH.push(h); } usable=kept; }
+  // Cap the gallery to the most visually-distinct shots so a listing with several near-identical
+  // exterior/street-view frames of the SAME building doesn't fill the gallery with clones. Keep the
+  // hero (usable[0]) fixed, then farthest-point-pick up to 4 more, most-different from the hero and
+  // from each other. (Same idea as scripts/dedup-gallery.mjs.)
+  if(usable.length>5){
+    const hero=usable[0], anchors=[hashes[hero]].filter(h=>h!=null), pool=usable.slice(1), picked=[];
+    while(picked.length<4 && pool.length){
+      let best=0,bestD=-1;
+      for(let k=0;k<pool.length;k++){ const h=hashes[pool[k]]; const refs=[...anchors,...picked.map(i=>hashes[i]).filter(x=>x!=null)]; const d=h==null?999:(refs.length?Math.min(...refs.map(r=>ham(h,r))):999); if(d>bestD){bestD=d;best=k;} }
+      picked.push(pool[best]); pool.splice(best,1);
+    }
+    usable=[hero,...picked];
+  }
   const heroIdx=usable.length?usable[0]:-1;
   const heroUrl=heroIdx>=0?urls[heroIdx]:null;
   let verdict = bay>0 ? 'self_serve' : (touch>0 ? 'touchless' : 'no');
