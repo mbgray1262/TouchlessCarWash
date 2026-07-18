@@ -24,6 +24,9 @@ const env = Object.fromEntries(readFileSync('.env.local','utf8').split('\n').fil
 const sb = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 const GKEY = env.GEMINI_API_KEY;
 const APPLY = process.argv.includes('--apply');
+// --reject-only: for cleaning an existing review queue. ONLY demote confident non-self-serve
+// (is_self_service=false). Never confirm, never set/overwrite a hero, never touch reviewed_at.
+const REJECT_ONLY = process.argv.includes('--reject-only');
 const arg = (k,d)=>{const i=process.argv.indexOf(k);return i>0?process.argv[i+1]:d;};
 const sleep = ms=>new Promise(r=>setTimeout(r,ms));
 const GALLERY = JSON.parse(readFileSync('scripts/_gallery_urls.json','utf8'));
@@ -63,22 +66,40 @@ const EXPRESS_CHAINS = /\b(zips?|tidal\s*wave|quick\s*quack|tommy'?s|tommy\s*ter
 // tint/wrap/ppf, and "detail SHOP/CENTER" — but NOT a bare "...and Auto Detailing" suffix
 // (a real self-serve wash that also offers detailing, e.g. Sof-Spra).
 const HANDWASH_DETAIL = /\bhand[\s-]?(car\s*)?wash\b|\bmobile[\s-]?(detail|wash|car)|\bfull[\s-]?service\b|\btint\b|\bwrap\b|\bppf\b|ceramic[\s-]?coat|\bdetail(ing)?\s+(shop|cent(er|re)|studio|garage|pros?)\b/i;
+// GAS / convenience brands — their washes are almost always automatic (in-bay/tunnel), not
+// customer self-serve. Michael's rule: filter these out by name.
+export const GAS_STATION = /\b(mobil|shell|chevron|exxon|texaco|conoco|phillips\s*66|valero|sunoco|citgo|sinclair|marathon|arco|\bbp\b|circle\s*k|sheetz|kwik[\s-]?trip|kwik[\s-]?star|wawa|quik[\s-]?trip|qt\b|racetrac|speedway|casey'?s|cenex|kum\s*&?\s*go|maverik|love'?s\s*travel|pilot\s*(travel|flying)|flying\s*j|7[\s-]?eleven|costco|sam'?s\s*club|buc[\s-]?ee'?s|murphy\s*(usa|express)|hy[\s-]?vee|holiday\s*station|meijer|thornton'?s|royal\s*farms|stripes|allsup'?s|get\s*go|getgo|gpm|circle|kroger\s*fuel)\b/i;
+
+// Big-rig / commercial TRUCK washes — a different business than a consumer self-serve car wash.
+// Tagged distinctly ('truck_wash') so a future truck-wash category can pull them back.
+export const TRUCK_WASH = /\btruck\s*wash\b|\bbig\s*rig\b|\bfleet\s*wash\b|\bsemi\s*(truck\s*)?wash\b|\b18[\s-]?wheeler\b|blue\s*beacon|\bwash\s*my\s*truck\b/i;
+
+// Perceptual difference-hash (dHash): 9x8 grayscale, compare adjacent pixels → 64-bit fingerprint.
+// Two photos within HAMMING<=DEDUP_THRESH are the same shot (same building/angle, different file) —
+// so the gallery never shows the reviewer the same photo twice. Computed from the =w1024 buffer we
+// already downloaded for vision (no extra fetch).
+const DEDUP_THRESH = 10;
+async function dhash(buf){ try{ const px=await sharp(buf).resize(9,8,{fit:'fill'}).grayscale().raw().toBuffer(); let h=0n,b=0n; for(let r=0;r<8;r++)for(let c=0;c<8;c++){const i=r*9+c; if(px[i]<px[i+1])h|=(1n<<b); b++;} return h; }catch{ return null; } }
+const ham=(a,b)=>{ if(a==null||b==null)return 99; let x=a^b,n=0; while(x){n+=Number(x&1n);x>>=1n;} return n; };
 
 async function classify(l){
+  if (TRUCK_WASH.test(l.name || '')) return { verdict:'truck', reason:'commercial truck wash (name)', bay:0,touch:0,fac:0,vac:0,fric:0,closeup:0,other:0, chain:true };
   if (EXPRESS_CHAINS.test(l.name || '')) return { verdict:'no', reason:'express tunnel chain (name)', bay:0,touch:0,fac:0,vac:0,fric:0,closeup:0,other:0, chain:true };
   if (HANDWASH_DETAIL.test(l.name || '')) return { verdict:'no', reason:'hand-wash / detail / tint shop (name)', bay:0,touch:0,fac:0,vac:0,fric:0,closeup:0,other:0, chain:true };
+  if (GAS_STATION.test(l.name || '')) return { verdict:'no', reason:'gas / convenience station (name)', bay:0,touch:0,fac:0,vac:0,fric:0,closeup:0,other:0, chain:true };
   const g=GALLERY[l.id];
   const urls=(g&&g.match)?(g.urls||[]).slice(0,MAX_PHOTOS):[];
   if(!urls.length) return {verdict:'no_photos'};
   let bay=0,touch=0,fac=0,vac=0,fric=0,closeup=0,other=0;
   const bayIdxs=[],touchIdxs=[],facIdxs=[];   // ONLY these are usable for hero/gallery
+  const hashes=[];   // perceptual fingerprint per photo index → near-dup removal in the gallery
   // Score photos in PARALLEL batches (was one-at-a-time = ~80s/listing). Check early-stop
   // after each batch so a clear self-serve wash finishes fast.
   const BATCH=6;
   for(let start=0; start<urls.length; start+=BATCH){
     const slice=urls.slice(start,start+BATCH);
-    const vs=await Promise.all(slice.map(async u=>{ const buf=await dl(u+'=w1024'); if(!buf)return null; const s=await b64(buf); if(!s)return null; return score(s); }));
-    for(let k=0;k<vs.length;k++){ const v=vs[k]; if(!v)continue; const i=start+k;
+    const vs=await Promise.all(slice.map(async u=>{ const buf=await dl(u+'=w1024'); if(!buf)return null; const s=await b64(buf); if(!s)return null; const v=await score(s); if(v)v._h=await dhash(buf); return v; }));
+    for(let k=0;k<vs.length;k++){ const v=vs[k]; if(!v)continue; const i=start+k; hashes[i]=v._h;
       if(v.shows==='self_serve_bay'&&v.side_walls){ bay++; bayIdxs.push(i); }
       else if(v.shows==='touchless_arch'){ touch++; touchIdxs.push(i); }
       else if(v.shows==='facility_exterior'){ fac++; facIdxs.push(i); }
@@ -90,7 +111,10 @@ async function classify(l){
   bayIdxs.sort((a,b)=>a-b); facIdxs.sort((a,b)=>a-b); touchIdxs.sort((a,b)=>a-b);
   // Hero/gallery come ONLY from usable photos (bay > touchless > facility) — NEVER a car
   // close-up, interior, vacuum or tunnel shot. Order so a real bay leads, facility backs it up.
-  const usable=[...bayIdxs,...touchIdxs,...facIdxs];
+  let usable=[...bayIdxs,...touchIdxs,...facIdxs];
+  // Drop near-duplicate shots so the gallery never shows the same photo twice (keep the first of
+  // each visually-distinct group; hero leads, so a dup of the hero further down is also removed).
+  { const kept=[],keptH=[]; for(const i of usable){ const h=hashes[i]; if(h!=null&&keptH.some(kh=>ham(h,kh)<=DEDUP_THRESH))continue; kept.push(i); if(h!=null)keptH.push(h); } usable=kept; }
   const heroIdx=usable.length?usable[0]:-1;
   const heroUrl=heroIdx>=0?urls[heroIdx]:null;
   let verdict = bay>0 ? 'self_serve' : (touch>0 ? 'touchless' : 'no');
@@ -110,13 +134,19 @@ async function classify(l){
 const ids=(arg('--ids','')).split(',').map(s=>s.trim()).filter(Boolean);
 let rows=null; for(let a=0;a<5&&!rows;a++){const r=await sb.from('listings').select('id,name,city,state,hero_image_source').in('id',ids);if(!r.error)rows=r.data;else await sleep(1200);}
 console.log(`Classifier v2 — ${rows.length} listings | ${APPLY?'APPLY':'DRY RUN'}\n`);
-const tally={self_serve:0,touchless:0,no:0,no_photos:0};
+const tally={self_serve:0,touchless:0,no:0,truck:0,no_photos:0};
 const results={};
 for(const l of rows){
   const r=await classify(l); tally[r.verdict]=(tally[r.verdict]||0)+1; results[l.id]=r.verdict;
-  const icon={self_serve:'✅',touchless:'◆',no:'✗',no_photos:'·'}[r.verdict];
+  const icon={self_serve:'✅',touchless:'◆',no:'✗',truck:'🚛',no_photos:'·'}[r.verdict];
   console.log(`${icon} ${l.name} (${l.city}, ${l.state}) — ${r.verdict.toUpperCase()}${r.verdict!=='no_photos'?` [bay=${r.bay} touch=${r.touch} fac=${r.fac} vac=${r.vac} fric=${r.fric} closeup=${r.closeup}]`:''}`);
   if(APPLY&&r.verdict!=='no_photos'){
+    // Truck washes → out of self-serve, tagged 'truck_wash' for a possible future truck category.
+    if(r.verdict==='truck'){ await sb.from('listings').update({is_self_service:false,self_service_source:'truck_wash'}).eq('id',l.id); }
+    else if(REJECT_ONLY){
+      // Queue-cleanup: demote only confident non-self-serve; leave real ones + heroes + reviewed_at alone.
+      if(r.verdict==='no'||r.verdict==='touchless') await sb.from('listings').update({is_self_service:false,self_service_source:'vision_cleanup_not_ss'}).eq('id',l.id);
+    } else
     // Tags match the Photo Audit tool's tabs: triage_selfserve = 🆕 AI Self-Serve, etc.
     if(r.verdict==='self_serve'){
       const upd={is_self_service:true,self_service_source:'triage_selfserve'};

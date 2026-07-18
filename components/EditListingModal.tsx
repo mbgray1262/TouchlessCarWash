@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Trash2, Save, Loader2, Plus, Clock, Wifi, Link2, Building2 } from 'lucide-react';
+import { X, Trash2, Save, Loader2, Plus, Clock, Wifi, Link2, Building2, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,6 +21,14 @@ const DAY_LABELS: Record<string, string> = {
 };
 
 const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+type StatusKey = 'not_touchless' | 'not_self_service' | 'no_car_wash';
+const STATUS_ACTIONS: Record<StatusKey, { label: string; done: string }> = {
+  not_touchless: { label: 'Not touchless', done: 'removed from the touchless directory' },
+  not_self_service: { label: 'Not self-service', done: 'marked reviewed & not self-service' },
+  no_car_wash: { label: 'No car wash here', done: 'hidden — no car wash at this location' },
+};
+const STATUS_ORDER: StatusKey[] = ['not_touchless', 'not_self_service', 'no_car_wash'];
 
 export interface EditableListing {
   id: string;
@@ -69,6 +77,55 @@ export default function EditListingModal({ listing, onClose, onSaved, onDeleted 
   );
   const [parentChain, setParentChain] = useState(listing.parent_chain || '');
   const [locationPageUrl, setLocationPageUrl] = useState(listing.location_page_url || '');
+  const [confirmStatus, setConfirmStatus] = useState<StatusKey | null>(null);
+  const [statusBusy, setStatusBusy] = useState<StatusKey | null>(null);
+
+  // Bust the CDN/ISR cache for this listing's public page so a change shows up
+  // immediately instead of being masked by the cached page for up to an hour.
+  const revalidatePublicPage = () => {
+    if (listing.slug && listing.city && listing.state) {
+      const path = `/state/${getStateSlug(listing.state)}/${slugify(listing.city)}/${listing.slug}`;
+      fetch('/api/revalidate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path }),
+      }).catch(() => {});
+    }
+  };
+
+  // "Remove from site" actions. Each only HIDES the listing (reversible in the DB) — never a hard
+  // delete. Setting is_touchless / is_approved / is_self_service false drops it from the public
+  // directories AND the sitemap together (both read the same flags), so no orphaned links.
+  const markStatus = async (key: StatusKey) => {
+    if (confirmStatus !== key) {
+      setConfirmStatus(key);
+      return;
+    }
+    setStatusBusy(key);
+    try {
+      const updates: Record<string, unknown> =
+        key === 'not_touchless'
+          ? { is_touchless: false }
+          : key === 'not_self_service'
+          ? { is_self_service: false, self_service_reviewed_at: new Date().toISOString() }
+          : { is_approved: false, is_touchless: false }; // no_car_wash → hide everywhere, keep record
+      const { error } = await supabase.from('listings').update(updates).eq('id', listing.id);
+      if (error) throw error;
+      revalidatePublicPage();
+      toast({ title: 'Updated', description: `${listing.name} — ${STATUS_ACTIONS[key].done}.` });
+      onDeleted(listing.id); // drop it from the admin list; it's no longer public
+      onClose();
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Failed to update status',
+        variant: 'destructive',
+      });
+    } finally {
+      setStatusBusy(null);
+      setConfirmStatus(null);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -382,6 +439,55 @@ export default function EditListingModal({ listing, onClose, onSaved, onDeleted 
               <Button size="sm" variant="outline" onClick={addPackage} className="w-full h-8 border-dashed">
                 <Plus className="w-3.5 h-3.5 mr-1" />Add Package
               </Button>
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+              <Ban className="w-4 h-4" /> Status / Remove from Site
+            </h3>
+            <p className="text-xs text-gray-400 mb-3">
+              Hide this listing from the public site without deleting it. Reversible — the record and
+              its Google place ID are kept. Use these instead of deleting when the location shouldn't
+              be listed.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {STATUS_ORDER.map((key) =>
+                confirmStatus === key ? (
+                  <div
+                    key={key}
+                    className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5"
+                  >
+                    <span className="text-sm font-medium text-amber-800">
+                      {STATUS_ACTIONS[key].label}?
+                    </span>
+                    <Button
+                      size="sm"
+                      onClick={() => markStatus(key)}
+                      disabled={statusBusy === key}
+                      className="h-7 text-xs bg-amber-600 hover:bg-amber-700 text-white"
+                    >
+                      {statusBusy === key ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Confirm'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setConfirmStatus(null)}
+                      className="h-7 text-xs"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <button
+                    key={key}
+                    onClick={() => setConfirmStatus(key)}
+                    className="rounded-lg border border-amber-200 text-amber-700 px-3 py-1.5 text-sm font-medium hover:bg-amber-50 transition-colors"
+                  >
+                    {STATUS_ACTIONS[key].label}
+                  </button>
+                )
+              )}
             </div>
           </section>
         </div>

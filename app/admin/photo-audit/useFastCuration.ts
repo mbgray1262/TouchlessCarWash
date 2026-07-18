@@ -942,8 +942,15 @@ export function useFastCuration(listingId: string) {
   const markNotSelfServe = useCallback(async () => {
     if (!listing) return;
     setSaving(true);
-    await supabase.from('listings').update({ is_self_service: false }).eq('id', listing.id);
-    setListing(prev => prev ? { ...prev, is_self_service: false } : prev);
+    // Stamp reviewed_at + source so this is a durable human "no" — it records the
+    // decision (so AI never re-screens it), keeps it out of the pending queue, and
+    // lets the status badge show "Not Self-Serve" instead of a stale "Reviewed"
+    // pill. Mirrors approveSelfServeAndNext, which stamps the same fields on "yes".
+    const now = new Date().toISOString();
+    await supabase.from('listings')
+      .update({ is_self_service: false, self_service_reviewed_at: now, self_service_source: 'admin_review' })
+      .eq('id', listing.id);
+    setListing(prev => prev ? { ...prev, is_self_service: false, self_service_reviewed_at: now, self_service_source: 'admin_review' } : prev);
     setSaving(false);
   }, [listing]);
 

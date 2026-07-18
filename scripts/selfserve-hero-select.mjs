@@ -209,8 +209,14 @@ async function loadTargets() {
   const SRC = arg('--source', 'ai_hero_selected');
   let rows = [];
   for (let p = 0; ; p++) {
-    const { data } = await sb.from('listings').select('id,name,city,state,hero_image,hero_image_source,photos,google_place_id,latitude,longitude')
-      .eq('self_service_source', SRC).order('id').range(p * 200, p * 200 + 199);
+    let data = null, error = null;
+    for (let a = 0; a < 5 && data === null; a++) {   // retry: Supabase intermittently returns null
+      const r = await sb.from('listings').select('id,name,city,state,hero_image,hero_image_source,photos,google_place_id,latitude,longitude')
+        .eq('self_service_source', SRC).order('id').range(p * 200, p * 200 + 199);
+      data = r.data; error = r.error;
+      if (data === null) await new Promise(x => setTimeout(x, 1200));
+    }
+    if (error) { console.error('⛔ loadTargets:', error.message); process.exit(1); }
     if (!data?.length) break; rows.push(...data); if (data.length < 200) break;
   }
   return rows.slice(0, LIMIT);

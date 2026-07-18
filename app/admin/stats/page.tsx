@@ -86,6 +86,9 @@ async function getStats() {
     // number being tracked, and the unclassified count is what's left to work.
     selfServeRes,
     selfServeUnclassifiedRes,
+    // LIVE self-serve — the public-facing count (matches lib/self-serve.ts /
+    // the homepage): is_self_service AND is_approved AND self_service_reviewed_at.
+    selfServeLiveRes,
   ] = await Promise.all([
     supabase.from('listings').select('id', { count: 'exact', head: true }),
     // Match the homepage / about-page count — only approved touchless listings.
@@ -119,6 +122,8 @@ async function getStats() {
     supabase.from('badge_embeds').select('listing_slug, referer_domain, referer_url, first_seen').order('first_seen', { ascending: false }).limit(200),
     supabase.from('listings').select('id', { count: 'exact', head: true }).eq('is_self_service', true),
     supabase.from('listings').select('id', { count: 'exact', head: true }).is('is_self_service', null),
+    supabase.from('listings').select('id', { count: 'exact', head: true })
+      .eq('is_self_service', true).eq('is_approved', true).not('self_service_reviewed_at', 'is', null),
   ]);
 
   // Tally engagement counts from the RPC result.
@@ -212,6 +217,7 @@ async function getStats() {
     touchlessListings: touchlessListingsRes.count ?? 0,
     selfServeListings: selfServeRes.count ?? 0,
     selfServeUnclassified: selfServeUnclassifiedRes.count ?? 0,
+    selfServeLive: selfServeLiveRes.count ?? 0,
     claimedListings: claimedListingsRes.count ?? 0,
     featuredListings: featuredListingsRes.count ?? 0,
     reviewSnippets: reviewSnippetsRes.count ?? 0,
@@ -269,7 +275,7 @@ export default async function AdminStatsPage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
           <StatCard icon={MapPin} label="Total Listings" value={stats.totalListings} color="blue" />
           <StatCard icon={Star} label="Touchless Verified" value={stats.touchlessListings} color="green" />
-          <StatCard icon={Droplets} label="Self-Serve" value={stats.selfServeListings} sub={`${stats.selfServeUnclassified.toLocaleString()} still unclassified`} color="amber" />
+          <StatCard icon={Droplets} label="Self-Serve" value={stats.selfServeListings} sub={`${stats.selfServeLive.toLocaleString()} live · ${stats.selfServeUnclassified.toLocaleString()} unclassified`} color="amber" />
           <StatCard icon={ShieldCheck} label="Claimed by Owner" value={stats.claimedListings} sub={`${stats.touchlessListings > 0 ? ((stats.claimedListings / stats.touchlessListings) * 100).toFixed(1) : 0}% claim rate`} color="blue" />
           <StatCard icon={TrendingUp} label="Featured" value={stats.featuredListings} color="amber" />
           <StatCard icon={Globe} label="States Covered" value={`${stats.stateCoverage}/51`} color="purple" />

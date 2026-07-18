@@ -556,6 +556,20 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                   // instead — approved (curated, will show when the self-serve
                   // directory launches) vs. pending review.
                   if (isSelfServe) {
+                    // Reviewed AND rejected → red "Not Self-Serve" (never a stale
+                    // green pill after clicking Not Self-Serve). Reviewed AND kept →
+                    // green. Not reviewed → amber pending.
+                    if (listing.self_service_reviewed_at && listing.is_self_service === false) {
+                      return (
+                        <span
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 cursor-help"
+                          title="You reviewed this and marked it NOT self-serve. It won't appear in the self-serve directory. Click 'Confirm Self-Serve & Approve' to change it back."
+                        >
+                          <span className="w-2 h-2 rounded-full bg-red-500" />
+                          Not Self-Serve
+                        </span>
+                      );
+                    }
                     return listing.self_service_reviewed_at ? (
                       <span
                         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 cursor-help"
@@ -983,20 +997,20 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                 touchless-specific "Tag Chain" bulk-demote is hidden. */}
             {isSelfServe ? (
               <button
-                onClick={async () => { await markNotSelfServe(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
+                onClick={async () => { await saveAll(); await markNotSelfServe(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
                 disabled={saving}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-100 hover:bg-orange-200 text-orange-700 text-sm font-medium disabled:opacity-50"
-                title="This isn't a self-serve wash. Removes the self-serve tag (leaves touchless status untouched) and drops it from the self-serve queue."
+                title="This isn't a self-serve wash. Saves any photo edits first, then removes the self-serve tag (leaves touchless status untouched) and drops it from the self-serve queue."
               >
                 <Ban className="w-4 h-4" /> Not Self-Serve
               </button>
             ) : (
               <>
                 <button
-                  onClick={async () => { await markNotTouchless(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
+                  onClick={async () => { await saveAll(); await markNotTouchless(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
                   disabled={saving}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-100 hover:bg-orange-200 text-orange-700 text-sm font-medium disabled:opacity-50"
-                  title="Confirm this listing is not touchless. Removes it from the Second Look queue."
+                  title="Confirm this listing is not touchless. Saves any photo edits first, then removes it from the Second Look queue."
                 >
                   <Ban className="w-4 h-4" /> Not Touchless
                 </button>
@@ -1020,6 +1034,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                   if (!confirm(`Also tag "${listing.name}" as TOUCHLESS?\n\nKeeps its self-serve tag. ${goLive
                     ? 'It is already approved, so it will appear on the public touchless directory (and in the touchless review queue).'
                     : 'It will need touchless approval before appearing on the public touchless directory.'}`)) return;
+                  await saveAll();
                   await markTouchless();
                 }}
                 disabled={saving}
@@ -1033,6 +1048,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
               <button
                 onClick={async () => {
                   if (!confirm(`Mark "${listing.name}" as NOT touchless?\n\nRemoves the touchless tag (is_touchless=false)${listing.is_approved === true ? ' and takes it OFF the public touchless directory (the touchless page will 308-redirect).' : '.'}\n\nUse this when a listing is tagged touchless but clearly isn't. Its self-serve tag is NOT affected — approve it for self-serve as usual afterward.`)) return;
+                  await saveAll();
                   await markNotTouchless();
                   onUpdate?.();
                 }}
@@ -1047,6 +1063,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
               <button
                 onClick={async () => {
                   if (!confirm(`Also tag "${listing.name}" as SELF-SERVE?\n\nKeeps its touchless tag. Self-serve is not public yet, so this only stages it for the self-serve directory (and its review queue).`)) return;
+                  await saveAll();
                   await markSelfServe();
                 }}
                 disabled={saving}
@@ -1057,7 +1074,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
               </button>
             )}
             <button
-              onClick={async () => { await markCantVerify(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
+              onClick={async () => { await saveAll(); await markCantVerify(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
               disabled={saving}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium disabled:opacity-50"
               title="Can't locate the business on Google Maps / Street View. Sets it aside for later — won't reappear in the Second Look queue."

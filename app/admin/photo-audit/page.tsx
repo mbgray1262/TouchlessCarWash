@@ -648,30 +648,41 @@ export default function PhotoAuditPage() {
             {(() => {
               const isSS = washType === 'self_serve';
               const tc = (key: ViewFilter, base: number) => (viewFilter === key ? filteredTotal : base);
-              type Tab = { key: ViewFilter; label: string; count: number; primary?: boolean; always?: boolean };
+              type Tab = { key: ViewFilter; label: string; count: number; primary?: boolean; always?: boolean; title?: string };
               // Grouped, wash-type aware. A tab shows only if it's `primary`/`always`, has items,
               // or is the active view — so empty & irrelevant filters stop cluttering the bar.
+              // Every tab carries a `title` so hovering explains exactly what it filters.
               const groups: { label: string | null; tabs: Tab[] }[] = [
                 { label: null, tabs: [
-                  { key: 'all', label: 'All', count: tc('all', queueStats.totalUntagged), primary: true },
-                  { key: 'review', label: 'Need Review', count: stats.needs_review, primary: true },
-                  { key: 'unscanned', label: 'Unscanned', count: tc('unscanned', queueStats.remaining), primary: true },
+                  { key: 'all', label: 'All', count: tc('all', queueStats.totalUntagged), primary: true,
+                    title: isSS ? 'Every self-serve-relevant listing in scope, grouped by state → city.' : 'Every touchless listing.' },
+                  // "Need Review" is a touchless-only concept (AI photo-audit results awaiting review).
+                  // Self-serve review happens through the REVIEW group below, so hide it there.
+                  ...(!isSS ? [{ key: 'review' as ViewFilter, label: 'Need Review', count: stats.needs_review, primary: true,
+                    title: 'Listings the AI photo-audit flagged as needing a human decision.' }] : []),
+                  { key: 'unscanned', label: 'Unscanned', count: tc('unscanned', queueStats.remaining), primary: true,
+                    title: "Listings the AI classifier hasn't scanned yet — the work queue for running a batch." },
                 ] },
                 ...(isSS ? [{ label: 'REVIEW', tabs: [
-                  { key: 'ss_unreviewed' as ViewFilter, label: '📋 To Confirm', count: tc('ss_unreviewed', ssUnreviewedCount), always: true },
-                  { key: 'triage_yes' as ViewFilter, label: '🆕 AI Self-Serve', count: tc('triage_yes', triageYesCount), always: true },
-                  { key: 'triage_maybe' as ViewFilter, label: '🤔 AI Maybe', count: tc('triage_maybe', triageMaybeCount), always: true },
-                  { key: 'ai_picked' as ViewFilter, label: '🤖 Verified', count: tc('ai_picked', aiPickedCount), always: true },
-                  { key: 'triage_no' as ViewFilter, label: '🚫 AI Not-SS', count: tc('triage_no', triageNoCount), always: true },
+                  { key: 'ss_unreviewed' as ViewFilter, label: '📋 To Confirm', count: tc('ss_unreviewed', ssUnreviewedCount), always: true,
+                    title: "Tagged self-serve AND approved (live-eligible), but you haven't personally signed off yet. Confirming keeps them in the self-serve directory." },
+                  { key: 'triage_yes' as ViewFilter, label: '🆕 AI Self-Serve', count: tc('triage_yes', triageYesCount), always: true,
+                    title: 'New finds the nationwide AI classifier flagged as self-serve (it saw a wand bay). Confirm or reject each.' },
+                  { key: 'ai_picked' as ViewFilter, label: '🤖 AI-Picked', count: tc('ai_picked', aiPickedCount), always: true,
+                    title: 'Self-serve listings where the AI also auto-picked a hero photo — pending your confirm. (Confirming marks them human-reviewed.)' },
+                  { key: 'triage_no' as ViewFilter, label: '🚫 AI Not-SS', count: tc('triage_no', triageNoCount), always: true,
+                    title: 'Listings the AI classified as NOT self-serve. Browse to spot-check the rejections.' },
                 ] }] : []),
                 { label: 'Photos', tabs: [
-                  { key: 'no_hero', label: 'No hero', count: tc('no_hero', noHeroCount) },
-                  { key: 'heroes', label: 'Poor heroes', count: stats.heroes_total },
-                  { key: 'low_res', label: 'Low res', count: stats.low_res_total },
-                  { key: 'cleanup', label: 'Cleanup', count: stats.cleanup_total },
+                  { key: 'no_hero', label: 'No hero', count: tc('no_hero', noHeroCount),
+                    title: isSS ? 'Self-serve listings with no hero image yet — pick one so they can go live.' : 'Touchless listings with no hero image.' },
+                  { key: 'heroes', label: 'Poor heroes', count: stats.heroes_total, title: 'Listings whose current hero the AI flagged as low quality.' },
+                  { key: 'low_res', label: 'Low res', count: stats.low_res_total, title: 'Listings whose hero image is low resolution.' },
+                  { key: 'cleanup', label: 'Cleanup', count: stats.cleanup_total, title: 'Listings with junk gallery photos the AI flagged for removal.' },
                 ] },
                 { label: 'Review', tabs: [
-                  { key: 'held', label: 'Held', count: tc('held', heldCount) },
+                  { key: 'held', label: 'Held', count: tc('held', heldCount),
+                    title: isSS ? 'Tagged self-serve but NOT approved yet, so not live. Approve (or reject) to clear.' : 'Touchless but not approved — the admin review queue.' },
                   ...(!isSS ? [
                     { key: 'second_look' as ViewFilter, label: 'Second look', count: tc('second_look', secondLookCount) },
                     { key: 'best_of' as ViewFilter, label: '🏆 Best-Of', count: bestOfCount, always: true },
@@ -695,7 +706,7 @@ export default function PhotoAuditPage() {
                     {gi > 0 && <span className="w-px h-5 bg-gray-300 mx-1" aria-hidden />}
                     {g.label && <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{g.label}</span>}
                     {vis.map(t => (
-                      <button key={t.key} onClick={() => changeFilter(t.key)} className={btnCls(t.key)}>
+                      <button key={t.key} onClick={() => changeFilter(t.key)} className={btnCls(t.key)} title={t.title}>
                         {t.label}{t.count > 0 ? ` (${t.count})` : ''}
                       </button>
                     ))}
