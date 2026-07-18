@@ -108,13 +108,26 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   const stateName = stateCode ? getStateName(stateCode) : listing.state;
   // Self-serve-only listings share this metadata builder but must not claim
   // "touch-free / brushless" — swap the wash-type wording in title + description.
+  // Wash-type wording, three ways: self-serve ONLY, MIXED (touchless + self-serve — the
+  // majority of self-serve listings), or touchless only. Naming the mixed page for BOTH lets
+  // that single URL rank for "self service car wash <city>" as well as the touchless term,
+  // instead of leaving all self-serve demand to the hub pages. `alsoSelfServe` is gated on
+  // isSelfServePublic (reviewed + approved + category live) so we only claim self-serve once a
+  // human has confirmed it — never on an unreviewed is_self_service flag.
   const selfServe = isSelfServeOnly(listing);
-  const washTypeLabel = selfServe ? 'Self-Serve Car Wash' : 'Touchless Car Wash';
+  const alsoSelfServe = !selfServe && isSelfServePublic(listing) && !!listing.is_touchless;
+  const washTypeLabel = selfServe
+    ? 'Self-Serve Car Wash'
+    : alsoSelfServe
+      ? 'Touchless & Self-Serve Car Wash'
+      : 'Touchless Car Wash';
   const topAmenities = (listing.amenities || []).slice(0, 3).join(', ');
   const amenityPart = topAmenities
     ? selfServe
       ? ` Self-serve wash bays offering ${topAmenities}.`
-      : ` Touch-free, brushless car wash offering ${topAmenities}.`
+      : alsoSelfServe
+        ? ` Touch-free automatic and self-serve wash bays offering ${topAmenities}.`
+        : ` Touch-free, brushless car wash offering ${topAmenities}.`
     : '';
   // Canonical URL is built from the listing's OWN state + city (via the same
   // buildListingUrl() the render path redirects to and that /sitemap.xml emits),

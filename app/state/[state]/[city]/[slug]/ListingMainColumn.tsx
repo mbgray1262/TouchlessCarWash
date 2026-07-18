@@ -17,7 +17,7 @@ import PaintSafeModule, { type PaintSnippet } from '@/components/PaintSafeModule
 import TouchlessSatisfactionGauge, { type TssSnippet } from '@/components/TouchlessSatisfactionGauge';
 import { TouchlessScoreComparison, type ScoreRankItem } from '@/components/TouchlessScoreComparison';
 import type { Listing, ReviewSnippet } from '@/lib/supabase';
-import { isSelfServeOnly } from '@/lib/self-serve';
+import { isSelfServeOnly, isSelfServePublic } from '@/lib/self-serve';
 import { getStateSlug, slugify } from '@/lib/constants';
 import { getBrandLabel, getBrandBySlug, slugifyModel } from '@/lib/equipment-data';
 import { WASH_TYPE_LABELS, asArray, monthlyMemberships, defaultWashPrice } from './listing-content';
@@ -125,7 +125,7 @@ export function ListingMainColumn({
       {/* AI-Generated Description */}
       {listing.description && (
         <div className="bg-white rounded-2xl border border-gray-200 p-6">
-          <h2 className="text-lg font-bold text-[#0F2744] mb-3">{listing.name} — {isSelfServeOnly(listing) ? 'Self-Serve' : 'Touchless & Brushless'} Car Wash in {listing.city}, {listing.state}</h2>
+          <h2 className="text-lg font-bold text-[#0F2744] mb-3">{listing.name} — {isSelfServeOnly(listing) ? 'Self-Serve' : (isSelfServePublic(listing) && listing.is_touchless ? 'Touchless & Self-Serve' : 'Touchless & Brushless')} Car Wash in {listing.city}, {listing.state}</h2>
           <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
             {listing.description}
           </div>
