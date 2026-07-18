@@ -217,7 +217,7 @@ export function PhotoGrid({
                 rel="noopener noreferrer"
                 onClick={() => onStreetViewOpened?.()}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium transition-colors"
-                title="Opens the real business on Google Maps (resolved by place, not by our stored coordinates — which are sometimes wrong and land on a nearby house). Click the Street View thumbnail there, screenshot it (⌘+Ctrl+Shift+4), then switch back — applied to your selected Paste-to target."
+                title="Opens a close-up Street View at the listing's coordinates. Screenshot it (⌘+Ctrl+Shift+4), then switch back — applied to your selected Paste-to target. (If it shows the wrong spot, this listing's stored coordinate is off — use the Google Photos button instead, which resolves by place.)"
               >
                 <MapPin className="w-3.5 h-3.5" />
                 Street View
