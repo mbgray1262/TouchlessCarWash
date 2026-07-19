@@ -21,6 +21,9 @@ interface ListingCrossLinksProps {
   trophyRanking: BestOfRanking | null;
   metroSiblings: Array<{ listing: Listing; rank: number }>;
   nearbyListings: Listing[];
+  selfServeNearby: Listing[];
+  selfServeOnly: boolean;
+  selfServePublic: boolean;
   lastVerified: string | null;
 }
 
@@ -34,6 +37,9 @@ export function ListingCrossLinks({
   trophyRanking,
   metroSiblings,
   nearbyListings,
+  selfServeNearby,
+  selfServeOnly,
+  selfServePublic,
   lastVerified,
 }: ListingCrossLinksProps) {
   return (
@@ -101,7 +107,9 @@ export function ListingCrossLinks({
         </div>
       )}
 
-      {nearbyListings.length > 0 && (
+      {/* Touchless nearby — shown for touchless & mixed listings. Hidden for self-serve-ONLY
+          listings (they aren't touchless, so touchless cross-links are off-topic for them). */}
+      {!selfServeOnly && nearbyListings.length > 0 && (
         <div className="mt-10">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-xl font-bold text-[#0F2744]">
@@ -128,6 +136,43 @@ export function ListingCrossLinks({
               className="inline-flex items-center gap-2 text-sm font-semibold text-[#0F2744] hover:text-[#22C55E] transition-colors"
             >
               Browse more in {stateName}
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Self-serve nearby — shown for self-serve listings (only OR mixed), so a visitor from
+          the self-serve directory sees more self-serve options. Links go to the self-serve state
+          hub (always exists for this state); the city hub may not exist below the density
+          threshold, so we avoid linking it directly to keep every internal link a live 200. */}
+      {selfServePublic && selfServeNearby.length > 0 && (
+        <div className="mt-10">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-xl font-bold text-[#0F2744]">
+              Other Self-Serve Car Washes Near {cityName}
+            </h2>
+            <Link
+              href={`/self-serve-car-wash/${stateSlug}`}
+              className="text-sm text-[#22C55E] hover:underline font-medium"
+            >
+              View self-serve in {stateName}
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {selfServeNearby.map((nearby) => (
+              <NearbyListingCard key={nearby.id} nearby={nearby} />
+            ))}
+          </div>
+          <div className="mt-6 pt-5 border-t border-gray-200 flex items-center justify-between flex-wrap gap-3">
+            <p className="text-sm text-gray-500">
+              Explore all self-service car washes in {stateName}
+            </p>
+            <Link
+              href={`/self-serve-car-wash/${stateSlug}`}
+              className="inline-flex items-center gap-2 text-sm font-semibold text-[#0F2744] hover:text-[#22C55E] transition-colors"
+            >
+              Browse self-serve in {stateName}
               <ChevronRight className="w-4 h-4" />
             </Link>
           </div>

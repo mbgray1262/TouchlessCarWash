@@ -5,6 +5,7 @@
 import { cache } from 'react';
 import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
 import { publicListings } from '@/lib/public-listings';
+import { publicSelfServeListings } from '@/lib/self-serve';
 import { US_STATES, slugify } from '@/lib/constants';
 import type { VerificationStats } from '@/components/VerificationPrompt';
 import type { PaintSnippet, PaintTheme } from '@/components/PaintSafeModule';
@@ -159,6 +160,25 @@ async function getNearbyListingsLegacy(listing: Listing, limit = 6): Promise<Lis
   const otherCity = data.filter((l) => l.city !== listing.city);
   const combined = [...cityMatches, ...otherCity].slice(0, limit);
   return combined as Listing[];
+}
+
+/**
+ * Other PUBLIC SELF-SERVE washes near this listing, same-city first. Powers the
+ * self-serve cross-link block on self-serve (and mixed) listing pages, so a visitor
+ * who arrived from the self-serve directory sees more self-serve options — not touchless.
+ * Uses the same public-self-serve rule as the directory (publicSelfServeListings).
+ */
+export async function getNearbySelfServeListings(listing: Listing, limit = 6): Promise<Listing[]> {
+  const { data } = await publicSelfServeListings('id, name, slug, city, state, rating, review_count, address, hero_image, google_photo_url, street_view_url, parent_chain, hero_image_source')
+    .eq('state', listing.state)
+    .neq('id', listing.id)
+    .order('review_count', { ascending: false })
+    .limit(limit * 4);
+  if (!data || data.length === 0) return [];
+  const citySlug = slugify(listing.city || '');
+  const cityMatches = (data as Listing[]).filter((l) => slugify(l.city || '') === citySlug);
+  const otherCity = (data as Listing[]).filter((l) => slugify(l.city || '') !== citySlug);
+  return [...cityMatches, ...otherCity].slice(0, limit);
 }
 
 export async function getChainListings(listing: Listing, limit = 6): Promise<{ chainName: string | null; listings: Listing[] }> {

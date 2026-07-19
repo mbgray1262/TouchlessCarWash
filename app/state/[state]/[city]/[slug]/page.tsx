@@ -29,6 +29,7 @@ import {
   buildListingUrl,
   findListingByPartialSlug,
   getNearbyListings,
+  getNearbySelfServeListings,
   getChainListings,
   getVerificationStats,
   getReviewSnippets,
@@ -292,7 +293,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     permanentRedirect(canonicalPath);
   }
 
-  const [nearbyListings, reviewSnippets, genericReviews, rankings, chainResult, verificationStats, equipmentVideos, paintSnippets, cityScoreRanking, badgeEmbedRes] = await Promise.all([
+  const [nearbyListings, reviewSnippets, genericReviews, rankings, chainResult, verificationStats, equipmentVideos, paintSnippets, cityScoreRanking, badgeEmbedRes, selfServeNearby] = await Promise.all([
     getNearbyListings(listing),
     getReviewSnippets(listing.id),
     getGenericReviews(listing.id),
@@ -308,6 +309,9 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     // badge on their site — the latter is how Tom's/Black Dog show up). When in
     // use, the "Claim your badge" CTAs become a "Badge active" acknowledgment.
     supabase.from('badge_embeds').select('id').eq('listing_slug', listing.slug).limit(1),
+    // Self-serve cross-links: only fetch for listings that are actually public self-serve
+    // (self-serve-only OR mixed) — a wasted query on the touchless-only majority otherwise.
+    isSelfServePublic(listing) ? getNearbySelfServeListings(listing) : Promise.resolve([] as Listing[]),
   ]);
   const badgeInUse = listing.is_claimed === true || ((badgeEmbedRes?.data?.length ?? 0) > 0);
 
@@ -511,6 +515,9 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
             trophyRanking={trophyRanking}
             metroSiblings={metroSiblings}
             nearbyListings={nearbyListings}
+            selfServeNearby={selfServeNearby}
+            selfServeOnly={isSelfServeOnly(listing)}
+            selfServePublic={isSelfServePublic(listing)}
             lastVerified={lastVerified}
           />
         </div>

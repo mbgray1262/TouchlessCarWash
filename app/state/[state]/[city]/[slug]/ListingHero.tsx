@@ -12,7 +12,7 @@ import { TrackableLink } from '@/components/TrackableLink';
 import { ListingBreadcrumb } from '@/components/ListingBreadcrumb';
 import { Badge } from '@/components/ui/badge';
 import type { Listing } from '@/lib/supabase';
-import { isSelfServeOnly } from '@/lib/self-serve';
+import { isSelfServeOnly, isSelfServePublic } from '@/lib/self-serve';
 import { tssTier } from '@/lib/touchless-satisfaction';
 import { streetAddress } from '@/lib/utils';
 import { isOptimizedImageHost } from './listing-content';
@@ -130,6 +130,14 @@ export function ListingHero({
                 ) : (
                   <Badge className={`bg-gray-100 text-gray-700 border-0 shadow-sm ${heroPill}`}>
                     <CheckCircle className="w-3 h-3 mr-1" />Touchless
+                  </Badge>
+                )}
+                {/* Mixed facility: it's ALSO a confirmed self-serve wash — show that badge
+                    alongside the touchless one so the wash type is clear (esp. for visitors
+                    arriving from the self-serve directory). */}
+                {isSelfServePublic(listing) && (
+                  <Badge className={`bg-[#22C55E] text-white border-0 shadow-sm ${heroPill}`}>
+                    <CheckCircle className="w-3 h-3 mr-1" />Self-Serve
                   </Badge>
                 )}
               </>
