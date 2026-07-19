@@ -47,7 +47,7 @@ export default function PhotoLightbox({ photos, index, listingName, onClose, onN
       {hasPrev && (
         <button
           onClick={(e) => { e.stopPropagation(); onNavigate(index - 1); }}
-          className="absolute left-4 z-10 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+          className="absolute left-1 sm:left-4 z-10 p-2 sm:p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
           aria-label="Previous photo"
         >
           <ChevronLeft className="w-6 h-6" />
@@ -57,7 +57,7 @@ export default function PhotoLightbox({ photos, index, listingName, onClose, onN
       {hasNext && (
         <button
           onClick={(e) => { e.stopPropagation(); onNavigate(index + 1); }}
-          className="absolute right-4 z-10 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+          className="absolute right-1 sm:right-4 z-10 p-2 sm:p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
           aria-label="Next photo"
         >
           <ChevronRight className="w-6 h-6" />
@@ -65,7 +65,7 @@ export default function PhotoLightbox({ photos, index, listingName, onClose, onN
       )}
 
       <div
-        className="relative max-w-5xl max-h-[90vh] w-full mx-16 flex items-center justify-center"
+        className="relative max-w-5xl max-h-[90vh] w-full mx-2 sm:mx-16 flex items-center justify-center"
         onClick={(e) => e.stopPropagation()}
       >
         <img
