@@ -102,6 +102,10 @@ export const TRIAGE_SOURCE: Record<'triage_yes' | 'triage_no' | 'triage_maybe', 
   triage_no: 'triage_not_selfserve',
   triage_maybe: 'triage_maybe',
 };
+// The "AI Self-Serve" (triage_yes) tab shows both AI-vision finds AND chain-tagged candidates —
+// locations of a known self-serve chain (bulk-tagged by vendor_id, source='chain_selfserve') that
+// still need a human to confirm + pick photos. Both live in the same review bucket.
+const SS_YES_SOURCES = ['triage_selfserve', 'chain_selfserve'];
 
 // Hero sources the AI chose without a human looking. A listing with one of these,
 // still approved and not yet human-confirmed (self_service_source !== 'admin_review'),
@@ -250,14 +254,15 @@ export function usePhotoAudit() {
       setAiPickedCount(aiPickedRes.count ?? 0);
       // Nationwide AI-triage buckets. For the 🆕 AI Self-Serve bucket require is_self_service=true
       // so that marking one "Not Self-Serve" (which sets is_self_service=false) drops it off.
-      const triageCount = async (src: string, ss?: boolean) => {
-        let q = supabase.from('listings').select('id', { count: 'exact', head: true }).eq('self_service_source', src);
+      const triageCount = async (src: string | string[], ss?: boolean) => {
+        let q = supabase.from('listings').select('id', { count: 'exact', head: true });
+        q = Array.isArray(src) ? q.in('self_service_source', src) : q.eq('self_service_source', src);
         if (ss !== undefined) q = q.eq('is_self_service', ss);
         if (stateFilterRef.current) q = q.eq('state', stateFilterRef.current);
         q = q.or(NOT_CLOSED).or(OPEN_BIZ);
         return (await q).count ?? 0;
       };
-      setTriageYesCount(await triageCount('triage_selfserve', true));
+      setTriageYesCount(await triageCount(SS_YES_SOURCES, true));
       setTriageNoCount(await triageCount('triage_not_selfserve'));
       setTriageMaybeCount(await triageCount('triage_maybe'));
       // Tagged self-serve + approved (live), but you have NOT reviewed for the self-serve directory
@@ -734,11 +739,12 @@ export function usePhotoAudit() {
     // is_self_service=true). Click a listing to open the curator and review its photos.
     if (filter === 'triage_yes' || filter === 'triage_no' || filter === 'triage_maybe') {
       const src = TRIAGE_SOURCE[filter];
-      let countQuery = supabase.from('listings').select('id', { count: 'exact', head: true })
-        .eq('self_service_source', src);
+      const yesBucket = filter === 'triage_yes'; // AI finds + chain-tagged candidates
+      let countQuery = supabase.from('listings').select('id', { count: 'exact', head: true });
+      countQuery = yesBucket ? countQuery.in('self_service_source', SS_YES_SOURCES) : countQuery.eq('self_service_source', src);
       let dataQuery = supabase.from('listings')
-        .select('id, name, slug, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
-        .eq('self_service_source', src);
+        .select('id, name, slug, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain');
+      dataQuery = yesBucket ? dataQuery.in('self_service_source', SS_YES_SOURCES) : dataQuery.eq('self_service_source', src);
       // 🆕 AI Self-Serve: only still-self-serve ones — marking "Not Self-Serve" (is_self_service=false) drops it off.
       if (filter === 'triage_yes') { countQuery = countQuery.eq('is_self_service', true); dataQuery = dataQuery.eq('is_self_service', true); }
       if (stateFilterRef.current) {
@@ -752,7 +758,7 @@ export function usePhotoAudit() {
         .order('state', { ascending: true }).order('city', { ascending: true }).order('name', { ascending: true })
         .range(offset, offset + PAGE_SIZE - 1);
       const reasonByFilter = {
-        triage_yes: 'AI found a customer self-serve wand bay in the photos. Confirm to keep, or mark Not Self-Serve.',
+        triage_yes: 'Flagged self-serve — AI saw a wand bay in the photos, OR it belongs to a known self-serve chain. Confirm + pick photos, or mark Not Self-Serve.',
         triage_no: 'AI saw no self-serve bay (tunnel / touchless / hand-wash / detailer / store). Spot-check for misses.',
         triage_maybe: 'AI was unsure (a bay might be present but could be automatic/attendant). You decide.',
       } as const;
