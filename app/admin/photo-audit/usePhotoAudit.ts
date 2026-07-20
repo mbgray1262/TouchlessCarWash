@@ -9,6 +9,10 @@ import { supabase } from '@/lib/supabase';
 // and only clutter the review queues. The `is.null` clause is required so listings
 // with a NULL classification_source aren't dropped (NULL NOT ILIKE … is NULL → excluded).
 const NOT_CLOSED = 'classification_source.is.null,classification_source.not.ilike.closed*';
+// Second closed signal — Google business_status. The self-serve queues must exclude BOTH
+// (a listing can be flagged closed via business_status without classification_source), so a
+// permanently/temporarily closed wash never appears in the review queue.
+const OPEN_BIZ = 'business_status.is.null,business_status.not.in.(CLOSED_PERMANENTLY,CLOSED_TEMPORARILY)';
 
 export interface AuditResult {
   id: string;
@@ -242,7 +246,7 @@ export function usePhotoAudit() {
       const aiPickedRes = await supabase.from('listings').select('id', { count: 'exact', head: true })
         .eq('is_self_service', true)
         .eq('self_service_source', 'ai_hero_selected')
-        .or(NOT_CLOSED);
+        .or(NOT_CLOSED).or(OPEN_BIZ);
       setAiPickedCount(aiPickedRes.count ?? 0);
       // Nationwide AI-triage buckets. For the 🆕 AI Self-Serve bucket require is_self_service=true
       // so that marking one "Not Self-Serve" (which sets is_self_service=false) drops it off.
@@ -250,6 +254,7 @@ export function usePhotoAudit() {
         let q = supabase.from('listings').select('id', { count: 'exact', head: true }).eq('self_service_source', src);
         if (ss !== undefined) q = q.eq('is_self_service', ss);
         if (stateFilterRef.current) q = q.eq('state', stateFilterRef.current);
+        q = q.or(NOT_CLOSED).or(OPEN_BIZ);
         return (await q).count ?? 0;
       };
       setTriageYesCount(await triageCount('triage_selfserve', true));
@@ -260,6 +265,7 @@ export function usePhotoAudit() {
       let su = supabase.from('listings').select('id', { count: 'exact', head: true })
         .eq('is_self_service', true).eq('is_approved', true).is('self_service_reviewed_at', null);
       if (stateFilterRef.current) su = su.eq('state', stateFilterRef.current);
+      su = su.or(NOT_CLOSED).or(OPEN_BIZ);
       setSsUnreviewedCount((await su).count ?? 0);
     } else {
       setAiPickedCount(0);
@@ -739,6 +745,8 @@ export function usePhotoAudit() {
         countQuery = countQuery.eq('state', stateFilterRef.current);
         dataQuery = dataQuery.eq('state', stateFilterRef.current);
       }
+      countQuery = countQuery.or(NOT_CLOSED).or(OPEN_BIZ);
+      dataQuery = dataQuery.or(NOT_CLOSED).or(OPEN_BIZ);
       const { count: triageTotal } = await countQuery;
       const { data: triageListings } = await dataQuery
         .order('state', { ascending: true }).order('city', { ascending: true }).order('name', { ascending: true })
@@ -788,6 +796,8 @@ export function usePhotoAudit() {
         .select('id, name, slug, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
         .eq('is_self_service', true).eq('is_approved', true).is('self_service_reviewed_at', null);
       if (stateFilterRef.current) { countQuery = countQuery.eq('state', stateFilterRef.current); dataQuery = dataQuery.eq('state', stateFilterRef.current); }
+      countQuery = countQuery.or(NOT_CLOSED).or(OPEN_BIZ);
+      dataQuery = dataQuery.or(NOT_CLOSED).or(OPEN_BIZ);
       const { count: suTotal } = await countQuery;
       const { data: suListings } = await dataQuery
         .order('state', { ascending: true }).order('city', { ascending: true }).order('name', { ascending: true })
@@ -816,13 +826,13 @@ export function usePhotoAudit() {
         .from('listings').select('id', { count: 'exact', head: true })
         .eq('is_self_service', true)
         .eq('self_service_source', 'ai_hero_selected')
-        .or(NOT_CLOSED);
+        .or(NOT_CLOSED).or(OPEN_BIZ);
       let dataQuery = supabase
         .from('listings')
         .select('id, name, slug, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain, self_serve_bay_photo')
         .eq('is_self_service', true)
         .eq('self_service_source', 'ai_hero_selected')
-        .or(NOT_CLOSED);
+        .or(NOT_CLOSED).or(OPEN_BIZ);
       if (stateFilterRef.current) {
         countQuery = countQuery.eq('state', stateFilterRef.current);
         dataQuery = dataQuery.eq('state', stateFilterRef.current);
