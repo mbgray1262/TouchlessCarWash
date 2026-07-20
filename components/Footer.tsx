@@ -40,6 +40,26 @@ const TOP_CITIES: { name: string; stateSlug: string; citySlug: string; stateCode
   { name: 'El Paso', stateSlug: 'texas', citySlug: 'el-paso', stateCode: 'TX' },
 ];
 
+// Densest self-serve cities (>=6 live self-serve washes, so comfortably above the 5-listing hub
+// threshold and stable). Links to the self-serve city hubs. Refresh occasionally as the directory
+// grows (same idea as TOP_CITIES). Every URL here must be a qualifying hub — verify:seo guards it.
+const SELF_SERVE_CITIES: { name: string; stateSlug: string; citySlug: string; stateCode: string }[] = [
+  { name: 'San Diego', stateSlug: 'california', citySlug: 'san-diego', stateCode: 'CA' },
+  { name: 'Denver', stateSlug: 'colorado', citySlug: 'denver', stateCode: 'CO' },
+  { name: 'Tucson', stateSlug: 'arizona', citySlug: 'tucson', stateCode: 'AZ' },
+  { name: 'Phoenix', stateSlug: 'arizona', citySlug: 'phoenix', stateCode: 'AZ' },
+  { name: 'San Antonio', stateSlug: 'texas', citySlug: 'san-antonio', stateCode: 'TX' },
+  { name: 'Mesa', stateSlug: 'arizona', citySlug: 'mesa', stateCode: 'AZ' },
+  { name: 'Colorado Springs', stateSlug: 'colorado', citySlug: 'colorado-springs', stateCode: 'CO' },
+  { name: 'Tampa', stateSlug: 'florida', citySlug: 'tampa', stateCode: 'FL' },
+  { name: 'Oakland', stateSlug: 'california', citySlug: 'oakland', stateCode: 'CA' },
+  { name: 'Los Angeles', stateSlug: 'california', citySlug: 'los-angeles', stateCode: 'CA' },
+  { name: 'Louisville', stateSlug: 'kentucky', citySlug: 'louisville', stateCode: 'KY' },
+  { name: 'Grand Junction', stateSlug: 'colorado', citySlug: 'grand-junction', stateCode: 'CO' },
+  { name: 'Oklahoma City', stateSlug: 'oklahoma', citySlug: 'oklahoma-city', stateCode: 'OK' },
+  { name: 'Lakewood', stateSlug: 'colorado', citySlug: 'lakewood', stateCode: 'CO' },
+];
+
 // All 50 states + DC
 const ALL_STATES: { name: string; slug: string }[] = [
   { name: 'Alabama', slug: 'alabama' },
@@ -128,6 +148,11 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/self-serve-car-wash" className="text-white/70 hover:text-[#22C55E] transition-colors py-1.5 inline-block">
+                  Self-Service Car Washes
+                </Link>
+              </li>
+              <li>
                 <Link href="/24-hour-touchless-car-wash" className="text-white/70 hover:text-[#22C55E] transition-colors py-1.5 inline-block">
                   24-Hour Car Washes
                 </Link>
@@ -201,7 +226,7 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Top Cities */}
+          {/* Top Cities — touchless, then a self-serve city block */}
           <div>
             <h3 className="font-semibold text-white mb-4">Top Cities</h3>
             <div className="grid grid-cols-1 gap-y-0 text-xs max-h-[400px] overflow-y-auto">
@@ -209,6 +234,18 @@ export function Footer() {
                 <Link
                   key={`${c.stateSlug}-${c.citySlug}`}
                   href={`/state/${c.stateSlug}/${c.citySlug}`}
+                  className="text-white/60 hover:text-[#22C55E] transition-colors truncate py-1.5 inline-block"
+                >
+                  {c.name}, {c.stateCode}
+                </Link>
+              ))}
+              <p className="text-white/40 text-[11px] font-semibold uppercase tracking-wide mt-4 mb-1 pt-3 border-t border-white/10">
+                Self-Serve Cities
+              </p>
+              {SELF_SERVE_CITIES.map((c) => (
+                <Link
+                  key={`ss-${c.stateSlug}-${c.citySlug}`}
+                  href={`/self-serve-car-wash/${c.stateSlug}/${c.citySlug}`}
                   className="text-white/60 hover:text-[#22C55E] transition-colors truncate py-1.5 inline-block"
                 >
                   {c.name}, {c.stateCode}
