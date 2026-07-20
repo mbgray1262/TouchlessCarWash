@@ -835,12 +835,18 @@ export function useFastCuration(listingId: string) {
     await supabase.from('listings').update({
       is_approved: false,
       is_touchless: false,
+      // Also drop it from the SELF-SERVE queues — "not a car wash" means not self-serve either.
+      // Without this the listing stays is_self_service=true and reappears in the AI Self-Serve
+      // queue on every reload no matter how many times it's marked.
+      is_self_service: false,
+      self_service_source: 'not_a_carwash_admin',
+      self_service_reviewed_at: now,
       classification_source: 'not_a_carwash_admin',
       crawl_notes: newNotes,
       photo_audited_at: now,
     }).eq('id', listing.id);
     await supabase.from('photo_audit_results').update({ reviewed: true, applied: true }).eq('listing_id', listing.id);
-    setListing(prev => prev ? { ...prev, is_approved: false, is_touchless: false, classification_source: 'not_a_carwash_admin', crawl_notes: newNotes } : prev);
+    setListing(prev => prev ? { ...prev, is_approved: false, is_touchless: false, is_self_service: false, self_service_source: 'not_a_carwash_admin', self_service_reviewed_at: now, classification_source: 'not_a_carwash_admin', crawl_notes: newNotes } : prev);
     setSaving(false);
   }, [listing]);
 
