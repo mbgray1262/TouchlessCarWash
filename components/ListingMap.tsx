@@ -27,7 +27,9 @@ export default function ListingMap({ lat, lng, name, address }: ListingMapProps)
     L.Marker.prototype.options.icon = markerIcon;
   }, []);
 
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+  // Directions (a genuine "leave to navigate" intent) rather than a plain Maps
+  // search — the latter was a casual bounce off our page for no user benefit.
+  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
 
   return (
     <MapContainer
@@ -46,12 +48,12 @@ export default function ListingMap({ lat, lng, name, address }: ListingMapProps)
             <p style={{ fontWeight: 700, marginBottom: '4px', color: '#0F2744' }}>{name}</p>
             <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '8px' }}>{address}</p>
             <a
-              href={mapsUrl}
+              href={directionsUrl}
               target="_blank"
               rel="noopener noreferrer"
               style={{ fontSize: '13px', color: '#2563eb', textDecoration: 'underline' }}
             >
-              Open in Google Maps
+              Get Directions
             </a>
           </div>
         </Popup>
