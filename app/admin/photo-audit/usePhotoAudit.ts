@@ -743,7 +743,7 @@ export function usePhotoAudit() {
       let countQuery = supabase.from('listings').select('id', { count: 'exact', head: true });
       countQuery = yesBucket ? countQuery.in('self_service_source', SS_YES_SOURCES) : countQuery.eq('self_service_source', src);
       let dataQuery = supabase.from('listings')
-        .select('id, name, slug, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain');
+        .select('id, name, slug, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain, self_service_confidence');
       dataQuery = yesBucket ? dataQuery.in('self_service_source', SS_YES_SOURCES) : dataQuery.eq('self_service_source', src);
       // 🆕 AI Self-Serve: only still-self-serve ones — marking "Not Self-Serve" (is_self_service=false) drops it off.
       if (filter === 'triage_yes') { countQuery = countQuery.eq('is_self_service', true); dataQuery = dataQuery.eq('is_self_service', true); }
@@ -754,11 +754,17 @@ export function usePhotoAudit() {
       countQuery = countQuery.or(NOT_CLOSED).or(OPEN_BIZ);
       dataQuery = dataQuery.or(NOT_CLOSED).or(OPEN_BIZ);
       const { count: triageTotal } = await countQuery;
+      // 🆕 AI Self-Serve is ordered by the Street-View facility screen (self_service_confidence:
+      // 2 = a row of wand bays is visible in street view, 1 = plausible, 0 = doubtful) so the
+      // near-certain ones come first and the ambiguous ones sink. It only ORDERS the queue —
+      // nothing is filtered out by it, because street view misreads mixed tunnel+self-serve
+      // sites (see scripts/streetview-screen.mjs for the validation that established this).
+      if (yesBucket) dataQuery = dataQuery.order('self_service_confidence', { ascending: false, nullsFirst: false });
       const { data: triageListings } = await dataQuery
         .order('state', { ascending: true }).order('city', { ascending: true }).order('name', { ascending: true })
         .range(offset, offset + PAGE_SIZE - 1);
       const reasonByFilter = {
-        triage_yes: 'Flagged self-serve — AI saw a wand bay in the photos, OR it belongs to a known self-serve chain. Confirm + pick photos, or mark Not Self-Serve.',
+        triage_yes: 'Flagged self-serve — ordered by a Street-View check of the whole facility: the ones where a row of wand bays is visible come first. Confirm + pick photos, or mark Not Self-Serve.',
         triage_no: 'AI saw no self-serve bay (tunnel / touchless / hand-wash / detailer / store). Spot-check for misses.',
         triage_maybe: 'AI was unsure (a bay might be present but could be automatic/attendant). You decide.',
       } as const;
@@ -776,7 +782,11 @@ export function usePhotoAudit() {
         equipment_confidence: null,
         equipment_source_photo: null,
         suggested_hero_url: null,
-        suggested_hero_reason: reasonByFilter[filter],
+        suggested_hero_reason: yesBucket && l.self_service_confidence === 2
+          ? '\u2605 Street View shows a row of wand bays \u2014 near-certain self-serve. ' + reasonByFilter[filter]
+          : yesBucket && l.self_service_confidence === 0
+          ? 'Street View did NOT show wand bays (may still be a mixed tunnel + self-serve site \u2014 check before rejecting). ' + reasonByFilter[filter]
+          : reasonByFilter[filter],
         photos_to_remove: [],
         reviewed: false,
         applied: false,

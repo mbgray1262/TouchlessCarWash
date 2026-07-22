@@ -11,11 +11,13 @@
  */
 
 // Known EXPRESS TUNNEL chains — conveyor/tunnel washes, never customer self-serve wand bays.
-export const EXPRESS_CHAINS = /\b(zips?|tidal\s*wave|quick\s*quack|tommy'?s|tommy\s*terrific|whitewater|white\s*water|raceway\s*express|bluewave|blue\s*wave|mister\s+car\s*wash|take\s*5|whistle\s*express|club\s*car\s*wash|go\s*car\s*wash|super\s*star|el\s*car\s*wash|mammoth|caliber|spinx|wildwater|splash\s*car\s*wash\s*express|flagship|autobell|delta\s*sonic\s*express)\b/i;
+// NB "express" in a bare name is only a HINT, never a hard reject — Michael confirmed
+// "Tsunami Express" and "Jerry's Express" as real self-serve. Only NAMED chains belong here.
+export const EXPRESS_CHAINS = /\b(zips?|tidal\s*wave|quick\s*quack|tommy'?s|tommy\s*terrific|whitewater|white\s*water|raceway\s*express|bluewave|blue\s*wave|mister\s+car\s*wash|take\s*5|whistle\s*express|club\s*car\s*wash|go\s*car\s*wash|super\s*star|el\s*car\s*wash|mammoth|caliber|spinx|wildwater|splash\s*car\s*wash\s*express|flagship|autobell|delta\s*sonic\s*express|drive\s*&?\s*n?\s*shine)\b/i;
 
 // Attendant HAND-WASH / DETAIL / mobile / tint-wrap shops — staff wash the car, or it's a
 // detail/tint business, NOT a customer self-serve wand bay.
-export const HANDWASH_DETAIL = /\bhand[\s-]?(car\s*)?wash\b|\bmobile[\s-]?(detail|wash|car)|\bfull[\s-]?service\b|\btint\b|\bwrap\b|\bppf\b|ceramic[\s-]?coat|\bdetail(ing)?\s+(shop|cent(er|re)|studio|garage|pros?)\b/i;
+export const HANDWASH_DETAIL = /\bhand[\s-]?(car\s*)?wash\b|\bmobile[\s-]?(detail|wash|car)|\bfull[\s-]?service\b|\btint\b|\bwrap\b|\bppf\b|ceramic[\s-]?coat|\bauto\s*salon\b|\bdetail(ing)?\s+(shop|cent(er|re)|studio|garage|pros?)\b/i;
 
 // A name with a real WASH signal is a car wash even if it also details — never auto-rejected
 // by the detail filter. Carve-out for e.g. "Sof-Spra Car Wash and Auto Detailing".
@@ -28,7 +30,7 @@ export const DETAIL_SHOP = /\bdetail(ing|s)?\b|ceramic\s*coat|paint\s*correction
 export const GAS_STATION = /\b(mobil|shell|chevron|exxon|texaco|conoco|phillips\s*66|valero|sunoco|citgo|sinclair|marathon|arco|\bbp\b|circle\s*k|sheetz|kwik[\s-]?trip|kwik[\s-]?star|wawa|quik[\s-]?trip|qt\b|racetrac|speedway|casey'?s|cenex|kum\s*&?\s*go|maverik|love'?s\s*travel|pilot\s*(travel|flying)|flying\s*j|7[\s-]?eleven|costco|sam'?s\s*club|buc[\s-]?ee'?s|murphy\s*(usa|express)|hy[\s-]?vee|holiday\s*station|meijer|thornton'?s|royal\s*farms|stripes|allsup'?s|get\s*go|getgo|gpm|circle|kroger\s*fuel)\b/i;
 
 // Big-rig / commercial TRUCK washes — a different business than a consumer self-serve car wash.
-export const TRUCK_WASH = /\btruck\s*wash(es|ing)?\b|\bbig\s*rig\b|\bfleet\s*wash(es|ing)?\b|\bsemi\s*(truck\s*)?wash\b|\b18[\s-]?wheeler\b|blue\s*beacon|\bwash\s*my\s*truck\b|\bwashout\b|\breefer\b|\btrailer\s*wash|\btruck\b[\s\S]{0,20}\bwash(out|ing|es)?\b/i;
+export const TRUCK_WASH = /\btruck\s*(o|0)?mat\b|\btruck\s*tub\b|\btruck\s*wash(es|ing)?\b|\bbig\s*rig\b|\bfleet\s*wash(es|ing)?\b|\bsemi\s*(truck\s*)?wash\b|\b18[\s-]?wheeler\b|blue\s*beacon|\bwash\s*my\s*truck\b|\bwashout\b|\breefer\b|\btrailer\s*wash|\btruck\b[\s\S]{0,20}\bwash(out|ing|es)?\b/i;
 
 /**
  * Name-only verdict. Returns null when the name says nothing decisive (→ needs photos/vision).
