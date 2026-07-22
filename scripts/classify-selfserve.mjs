@@ -19,6 +19,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { readFileSync, writeFileSync } from 'fs';
 import sharp from 'sharp';
+// Name filters live in ONE module shared with the queue-cleanup pass so they can't drift.
+import { nameVerdict } from './selfserve-name-filters.mjs';
 
 const env = Object.fromEntries(readFileSync('.env.local','utf8').split('\n').filter(l=>l.includes('=')&&!l.trim().startsWith('#')).map(l=>{const i=l.indexOf('=');return [l.slice(0,i).trim(),l.slice(i+1).trim().replace(/^["']|["']$/g,'')];}));
 const sb = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
@@ -29,7 +31,9 @@ const APPLY = process.argv.includes('--apply');
 const REJECT_ONLY = process.argv.includes('--reject-only');
 const arg = (k,d)=>{const i=process.argv.indexOf(k);return i>0?process.argv[i+1]:d;};
 const sleep = ms=>new Promise(r=>setTimeout(r,ms));
-const GALLERY = JSON.parse(readFileSync('scripts/_gallery_urls.json','utf8'));
+// --gallery lets a side job (e.g. a queue-cleanup pass) read its OWN harvested gallery file
+// instead of the shared one the nationwide sweep is concurrently read-modify-writing.
+const GALLERY = JSON.parse(readFileSync(arg('--gallery','scripts/_gallery_urls.json'),'utf8'));
 const MAX_PHOTOS = 16;
 const CURATED = new Set(['manual','upload','pasted','chain-brand','chain-brand-auto','text-verified-pick']);
 
@@ -56,32 +60,6 @@ async function score(s){for(let a=0;a<4;a++){try{
   if(p<0){await sleep(500);continue;} try{return JSON.parse(t.slice(p,e+1));}catch{await sleep(500);}
 }catch{await sleep(1000*(a+1));}} return null; }
 
-// Known EXPRESS TUNNEL chains — brands that are conveyor/tunnel washes, never customer self-serve
-// wand bays. Vision keeps misreading their tunnel/vacuum photos as bays; the name is decisive.
-// (Michael's tunnel-chain blocklist + the express chains this validation caught as false positives.)
-const EXPRESS_CHAINS = /\b(zips?|tidal\s*wave|quick\s*quack|tommy'?s|tommy\s*terrific|whitewater|white\s*water|raceway\s*express|bluewave|blue\s*wave|mister\s+car\s*wash|take\s*5|whistle\s*express|club\s*car\s*wash|go\s*car\s*wash|super\s*star|el\s*car\s*wash|mammoth|caliber|spinx|wildwater|splash\s*car\s*wash\s*express|flagship|autobell|delta\s*sonic\s*express)\b/i;
-// Attendant HAND-WASH / DETAIL / mobile / tint-wrap shops — staff wash the car, or it's a
-// detail/tint business, NOT a customer self-serve wand bay. The wand-on-a-car photo fools vision,
-// so the NAME decides. Precise on purpose: "hand wash", "mobile detail/wash", "full service",
-// tint/wrap/ppf, and "detail SHOP/CENTER" — but NOT a bare "...and Auto Detailing" suffix
-// (a real self-serve wash that also offers detailing, e.g. Sof-Spra).
-const HANDWASH_DETAIL = /\bhand[\s-]?(car\s*)?wash\b|\bmobile[\s-]?(detail|wash|car)|\bfull[\s-]?service\b|\btint\b|\bwrap\b|\bppf\b|ceramic[\s-]?coat|\bdetail(ing)?\s+(shop|cent(er|re)|studio|garage|pros?)\b/i;
-// A name with a real WASH signal ("wash", "self serve", "wand", "coin-op", "suds"…) is a car
-// wash even if it also details — so it is NEVER auto-rejected by the detail filter below.
-// Carve-out for e.g. "Sof-Spra Car Wash and Auto Detailing", "Amazing Detail Carwash".
-const HAS_WASH_SIGNAL = /\bwash\b|car\s*wash|carwash|self[\s-]?serv|wash\s*bay|coin[\s-]?op|laser\s*wash|touchless|\bwand\b|\bsuds\b|\bspray\b|\bfoam\b/i;
-// DETAIL-ONLY shops: a detailing / tint / wrap / ceramic / paint-correction business with NO wash
-// signal in the name. Staff detail the car — it isn't a customer self-serve wand bay. These fool
-// vision (a wand-on-a-car photo), so the NAME decides. (~35 of these had slipped into the queue.)
-const DETAIL_SHOP = /\bdetail(ing|s)?\b|ceramic\s*coat|paint\s*correction|\bppf\b|window\s*tint|\btint(ing)?\b|vinyl\s*wrap/i;
-// GAS / convenience brands — their washes are almost always automatic (in-bay/tunnel), not
-// customer self-serve. Michael's rule: filter these out by name.
-export const GAS_STATION = /\b(mobil|shell|chevron|exxon|texaco|conoco|phillips\s*66|valero|sunoco|citgo|sinclair|marathon|arco|\bbp\b|circle\s*k|sheetz|kwik[\s-]?trip|kwik[\s-]?star|wawa|quik[\s-]?trip|qt\b|racetrac|speedway|casey'?s|cenex|kum\s*&?\s*go|maverik|love'?s\s*travel|pilot\s*(travel|flying)|flying\s*j|7[\s-]?eleven|costco|sam'?s\s*club|buc[\s-]?ee'?s|murphy\s*(usa|express)|hy[\s-]?vee|holiday\s*station|meijer|thornton'?s|royal\s*farms|stripes|allsup'?s|get\s*go|getgo|gpm|circle|kroger\s*fuel)\b/i;
-
-// Big-rig / commercial TRUCK washes — a different business than a consumer self-serve car wash.
-// Tagged distinctly ('truck_wash') so a future truck-wash category can pull them back.
-export const TRUCK_WASH = /\btruck\s*wash(es|ing)?\b|\bbig\s*rig\b|\bfleet\s*wash(es|ing)?\b|\bsemi\s*(truck\s*)?wash\b|\b18[\s-]?wheeler\b|blue\s*beacon|\bwash\s*my\s*truck\b|\bwashout\b|\breefer\b|\btrailer\s*wash|\btruck\b[\s\S]{0,20}\bwash(out|ing|es)?\b/i;
-
 // Perceptual difference-hash (dHash): 9x8 grayscale, compare adjacent pixels → 64-bit fingerprint.
 // Two photos within HAMMING<=DEDUP_THRESH are the same shot (same building/angle, different file) —
 // so the gallery never shows the reviewer the same photo twice. Computed from the =w1024 buffer we
@@ -91,11 +69,8 @@ async function dhash(buf){ try{ const px=await sharp(buf).resize(9,8,{fit:'fill'
 const ham=(a,b)=>{ if(a==null||b==null)return 99; let x=a^b,n=0; while(x){n+=Number(x&1n);x>>=1n;} return n; };
 
 async function classify(l){
-  if (TRUCK_WASH.test(l.name || '')) return { verdict:'truck', reason:'commercial truck wash (name)', bay:0,touch:0,fac:0,vac:0,fric:0,closeup:0,other:0, chain:true };
-  if (EXPRESS_CHAINS.test(l.name || '')) return { verdict:'no', reason:'express tunnel chain (name)', bay:0,touch:0,fac:0,vac:0,fric:0,closeup:0,other:0, chain:true };
-  if (HANDWASH_DETAIL.test(l.name || '')) return { verdict:'no', reason:'hand-wash / detail / tint shop (name)', bay:0,touch:0,fac:0,vac:0,fric:0,closeup:0,other:0, chain:true };
-  if (DETAIL_SHOP.test(l.name || '') && !HAS_WASH_SIGNAL.test(l.name || '')) return { verdict:'no', reason:'detailing / tint shop — no wash signal in name', bay:0,touch:0,fac:0,vac:0,fric:0,closeup:0,other:0, chain:true };
-  if (GAS_STATION.test(l.name || '')) return { verdict:'no', reason:'gas / convenience station (name)', bay:0,touch:0,fac:0,vac:0,fric:0,closeup:0,other:0, chain:true };
+  const nv = nameVerdict(l.name);
+  if (nv) return { verdict:nv.verdict, reason:nv.reason, bay:0,touch:0,fac:0,vac:0,fric:0,closeup:0,other:0, chain:true };
   const g=GALLERY[l.id];
   const urls=(g&&g.match)?(g.urls||[]).slice(0,MAX_PHOTOS):[];
   if(!urls.length) return {verdict:'no_photos'};
