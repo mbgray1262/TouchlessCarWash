@@ -331,6 +331,12 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
       rating: r.rating,
       date: r.review_date ?? null,
     }));
+  // Combined "Review Highlights" for the hero modal — our stored snippets (evidence + generic),
+  // deduped, so the prime hero rating click opens on-site content instead of bouncing to Google.
+  const reviewHighlights = [...reviewSnippets, ...genericReviews]
+    .filter((r) => r.review_text && r.review_text.trim().length >= 20)
+    .filter((r, i, arr) => arr.findIndex((x) => x.id === r.id) === i)
+    .slice(0, 15);
   // Show the touchless-reviews module whenever there's a score OR at least one
   // labeled touchless review. The review snippets ALWAYS show; only the 0–100
   // score gauge waits for the 3-mention confidence gate.
@@ -473,6 +479,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
           heroImage={heroImage}
           logoImage={logoImage}
           heroObjectPosition={heroObjectPosition}
+          reviewHighlights={reviewHighlights}
         />
 
         <div className="container mx-auto px-4 max-w-5xl py-8">

@@ -11,12 +11,13 @@ import HeroImageFallback from '@/components/HeroImageFallback';
 import { TrackableLink } from '@/components/TrackableLink';
 import { ListingBreadcrumb } from '@/components/ListingBreadcrumb';
 import { Badge } from '@/components/ui/badge';
-import type { Listing } from '@/lib/supabase';
+import type { Listing, ReviewSnippet } from '@/lib/supabase';
 import { isSelfServeOnly, isSelfServePublic } from '@/lib/self-serve';
 import { tssTier } from '@/lib/touchless-satisfaction';
 import { streetAddress } from '@/lib/utils';
 import { isOptimizedImageHost } from './listing-content';
 import { StarRating } from './listing-ui';
+import { ReviewHighlights } from './ReviewHighlights';
 import type { BestOfRanking } from './listing-data';
 
 interface ListingHeroProps {
@@ -29,6 +30,7 @@ interface ListingHeroProps {
   heroImage: string | null;
   logoImage: string | null;
   heroObjectPosition: string;
+  reviewHighlights: ReviewSnippet[];
 }
 
 export function ListingHero({
@@ -41,26 +43,20 @@ export function ListingHero({
   heroImage,
   logoImage,
   heroObjectPosition,
+  reviewHighlights,
 }: ListingHeroProps) {
   const ratingStars = listing.rating > 0 ? (
     <span className="flex items-center gap-1.5">
       <StarRating rating={listing.rating} />
-      {listing.google_place_id ? (
-        <a
-          href={`https://search.google.com/local/reviews?placeid=${listing.google_place_id}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1 hover:underline underline-offset-2 decoration-white/40 transition-all"
-        >
-          <span className="font-semibold text-white">{Number(listing.rating).toFixed(1)}</span>
-          {listing.review_count > 0 && <span className="text-white/60">({listing.review_count} reviews)</span>}
-        </a>
-      ) : (
-        <>
-          <span className="font-semibold text-white">{Number(listing.rating).toFixed(1)}</span>
-          {listing.review_count > 0 && <span className="text-white/60">({listing.review_count} reviews)</span>}
-        </>
-      )}
+      {/* Opens an on-site "Review Highlights" modal (keeps the session on our page) instead of
+          bouncing to Google; the modal itself offers a secondary "see all on Google" link. */}
+      <ReviewHighlights
+        reviews={reviewHighlights}
+        businessName={listing.name}
+        rating={listing.rating}
+        reviewCount={listing.review_count}
+        googlePlaceId={listing.google_place_id ?? null}
+      />
     </span>
   ) : null;
 
