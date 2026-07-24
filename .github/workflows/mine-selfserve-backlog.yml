@@ -1,0 +1,56 @@
+name: Mine self-serve reviews (backlog drain)
+
+# Harvests SELF-SERVE review evidence for live self-serve listings that haven't been
+# mined yet, using the FREE Playwright miner (scripts/selfserve-harvest-reviews.py).
+#
+# How a listing enrols itself — no queue flag, no website token:
+#   When you approve a self-serve listing in the photo audit, it becomes
+#   is_self_service=true + is_approved=true + self_service_reviewed_at=<now>, while
+#   self_service_reviews_mined_at stays NULL. That combination IS the backlog. This
+#   drain (every 10 min) finds those, harvests their reviews, and stamps mined_at so
+#   they're never re-scraped — even if the wash has zero self-serve-relevant reviews.
+#
+# The harvester keeps ONLY reviews that describe self-serve washing (wand, foam brush,
+# wash bay, "spray it yourself", coin/token next to a wash-bay word) and rejects the
+# rest (vacuum/air-pump coins, negations, automatics). Irrelevant reviews never get stored.
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Max listings to mine this run'
+        required: false
+        default: '20'
+  schedule:
+    - cron: '*/10 * * * *'   # drain newly-approved self-serve ~every 10 min
+
+concurrency:
+  group: mine-selfserve-backlog
+  cancel-in-progress: false   # let an in-flight drain finish rather than killing it mid-listing
+
+jobs:
+  mine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Playwright + Chromium
+        run: |
+          pip install --quiet playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Drain the self-serve mining backlog
+        env:
+          # Service role: the harvester stamps listings.self_service_reviews_mined_at (an
+          # RLS-protected update) so drained listings aren't re-scraped. Falls back to the
+          # built-in anon key for the review_snippets inserts if this is ever absent.
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          LIMIT="${{ github.event.inputs.limit }}"
+          LIMIT="${LIMIT:-20}"
+          python3 scripts/selfserve-harvest-reviews.py --backlog --limit "$LIMIT" --headless --scrolls 6 --reloads 5

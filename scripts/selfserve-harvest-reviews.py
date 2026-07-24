@@ -31,6 +31,10 @@ from playwright.async_api import async_playwright
 
 SUPABASE_URL = 'https://gteqijdpqjmgxfnyuhvy.supabase.co'
 ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0ZXFpamRwcWptZ3hmbnl1aHZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzOTgzOTIsImV4cCI6MjA4Njk3NDM5Mn0.wGXXfGWax_wdQwFLIBZaZLH6-P580Zw6ROjXeSPlE78'
+# The mined-at stamp writes to listings; a service-role key (GitHub secret in the drain
+# workflow, or .env.local locally) bypasses RLS for that update. Falls back to ANON for
+# review_snippets inserts (which anon is already allowed to do).
+KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY') or os.environ.get('SVC') or ANON
 SSL_CTX = ssl.create_default_context(); SSL_CTX.check_hostname = False; SSL_CTX.verify_mode = ssl.CERT_NONE
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 LOG = os.path.join(SCRIPT_DIR, 'selfserve-harvest-reviews.log')
@@ -130,12 +134,23 @@ def log(m):
 
 def sb(method, path, body=None):
     req = urllib.request.Request(SUPABASE_URL + path, method=method,
-        headers={'apikey': ANON, 'Authorization': f'Bearer {ANON}', 'Content-Type': 'application/json',
+        headers={'apikey': KEY, 'Authorization': f'Bearer {KEY}', 'Content-Type': 'application/json',
                  'Prefer': 'resolution=merge-duplicates,return=minimal'},
         data=json.dumps(body).encode() if body is not None else None)
     with urllib.request.urlopen(req, context=SSL_CTX, timeout=60) as r:
         raw = r.read().decode()
         return json.loads(raw) if raw.strip() else None
+
+def stamp_mined(lid):
+    """Mark the listing as self-serve-review-mined so the backlog drain won't re-scrape it.
+    Called only on a COMPLETED attempt (reviews read, or confirmed no reviews) — never on a
+    transient failure. No-op in dry runs."""
+    if DRY: return
+    try:
+        sb('PATCH', f'/rest/v1/listings?id=eq.{lid}',
+           body={'self_service_reviews_mined_at': datetime.datetime.now(datetime.timezone.utc).isoformat()})
+    except Exception as e:
+        log(f'  ⚠ stamp mined_at failed for {lid}: {str(e)[:60]}')
 
 def parse_creds(info):
     is_lg = bool(info and re.search(r'local guide', info, re.I)); rc = pc = None
@@ -157,7 +172,7 @@ async def harvest_one(page, listing, stats):
             await page.wait_for_timeout(2600)
             if 'consent.google' in page.url: stats['consent'] += 1; log(f'  ⚠ {nm}: CONSENT WALL'); return
             if await page.evaluate(HAS_TAB_JS): got = True; break
-        if not got: stats['no_tab'] += 1; log(f'  · {nm}: no reviews tab'); return
+        if not got: stats['no_tab'] += 1; log(f'  · {nm}: no reviews tab'); stamp_mined(lid); return
 
         # ★ THE GUARD — verify BEFORE reading a single review.
         ok, why = await _verify_place(page, listing.get('name') or '')
@@ -187,7 +202,7 @@ async def harvest_one(page, listing, stats):
     except Exception as e:
         stats['fail'] += 1; log(f'  ❌ {nm}: {str(e)[:90]}'); return
 
-    if not reviews: stats['zero'] += 1; log(f'  · {nm}: 0 cards'); return
+    if not reviews: stats['zero'] += 1; log(f'  · {nm}: 0 cards'); stamp_mined(lid); return
     rows = []; ss_n = 0
     for r in reviews:
         text = r['text']
@@ -213,6 +228,7 @@ async def harvest_one(page, listing, stats):
     if rows and not DRY:
         try: sb('POST', '/rest/v1/review_snippets?on_conflict=review_id', body=rows)
         except Exception as e: log(f'  ⚠ {nm}: upsert {str(e)[:60]}')
+    stamp_mined(lid)   # completed a real attempt (verified place, reviews read) — don't re-mine
     stats['ok'] += 1; stats['snip'] += len(rows); stats['ss_listings'] += (1 if ss_n >= 2 else 0)
     log(f"  ✓ {nm:<34} cards={len(reviews)} kept={len(rows)}{' ★' if ss_n >= 2 else ''}")
 
@@ -225,6 +241,7 @@ async def main():
         return d
     limit = int(opt('--limit', '0')); start = int(opt('--start', '0'))
     ids_file = opt('--ids-file')   # enrich a SPECIFIC set (e.g. approved self-serve missing reviews)
+    backlog = '--backlog' in args  # auto-target every live self-serve listing not yet mined
     global DRY, SCROLLS, RELOADS
     DRY = '--dry' in args; SCROLLS = int(opt('--scrolls', '8')); RELOADS = int(opt('--reloads', '5'))
     headless = '--headless' in args   # Google serves headless clients a degraded page — default OFF
@@ -237,7 +254,28 @@ async def main():
     # rows with NO category are kept (unknown ≠ not a wash — that's the mistake that would
     # silently drop real washes).
     targets = []
-    if ids_file:
+    if backlog:
+        # BACKLOG MODE (the automated drain): every LIVE self-serve listing that hasn't been
+        # self-serve-review-mined yet. A listing enrols itself the instant it's approved
+        # (self_service_reviewed_at set, self_service_reviews_mined_at still NULL) — no queue
+        # flag needed. review_count>0 skips the ones with no Google reviews to mine. --limit
+        # bounds each drain run.
+        log('BACKLOG MODE — live self-serve, place_id, not yet mined, has reviews...')
+        off = 0
+        while True:
+            rows = sb('GET', f'/rest/v1/listings?select=id,name,google_place_id'
+                              f'&is_self_service=eq.true&is_approved=eq.true'
+                              f'&self_service_reviewed_at=not.is.null'
+                              f'&self_service_reviews_mined_at=is.null'
+                              f'&google_place_id=not.is.null&review_count=gt.0'
+                              f'&order=self_service_reviewed_at.desc&limit=1000&offset={off}')
+            if not rows: break
+            targets.extend([r for r in rows if (r.get('google_place_id') or '').startswith('ChIJ')])
+            if len(rows) < 1000: break
+            off += 1000
+            if limit and len(targets) >= limit: break
+        log(f'  backlog: {len(targets)} unmined live self-serve listings')
+    elif ids_file:
         # ENRICH MODE: harvest reviews for a specific set of listing ids (already-classified,
         # approved self-serve that are missing review snippets). No chain/category filtering —
         # these are confirmed washes; we just want their reviews.
