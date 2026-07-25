@@ -313,6 +313,9 @@ export async function getGenericReviews(listingId: string, limit = 6): Promise<R
     .select('*')
     .eq('listing_id', listingId)
     .eq('is_touchless_evidence', false)
+    // Self-serve-evidence snippets get their OWN module (getSelfServeReviewSnippets);
+    // exclude them here so they aren't duplicated in "More Customer Reviews".
+    .or('is_self_serve_evidence.is.null,is_self_serve_evidence.eq.false')
     .in('sentiment', ['positive', 'negative'])
     .not('rating', 'is', null)
     .order('iso_date', { ascending: false, nullsFirst: false });
@@ -335,6 +338,54 @@ export async function getGenericReviews(listingId: string, limit = 6): Promise<R
     ...critical.slice(0, maxCritical),
   ];
   return chosen.slice(0, limit);
+}
+
+/**
+ * Self-serve review snippets for the SelfServeReviewsModule (positive/negative buckets).
+ * Mined by scripts/selfserve-harvest-reviews.py (source='gmaps-selfserve', keyword pre-filter),
+ * then sentiment-labeled by scripts/ai-evaluate-selfserve-sentiment.mjs. We only surface ones the
+ * AI confirmed as real self-serve evidence with a positive/negative sentiment.
+ */
+export interface SelfServeSnippet {
+  id: string;
+  sentiment: 'positive' | 'negative';
+  text: string;
+  reviewerName: string | null;
+  credentials: string | null;
+  isLocalGuide: boolean;
+  rating: number | null;
+  date: string | null;
+  recencyDays: number | null;
+}
+
+export async function getSelfServeReviewSnippets(listingId: string): Promise<SelfServeSnippet[]> {
+  const { data } = await supabase
+    .from('review_snippets')
+    .select('*')
+    .eq('listing_id', listingId)
+    .eq('source', 'gmaps-selfserve')
+    .eq('is_self_serve_evidence', true)
+    .in('sentiment', ['positive', 'negative'])
+    .order('rating', { ascending: false, nullsFirst: false })
+    .limit(50);
+
+  const now = Date.now();
+  return ((data || []) as ReviewSnippet[])
+    .filter((r) => r.review_text && isRealCustomerSnippet(r))
+    .map((r) => {
+      const iso = (r as ReviewSnippet & { iso_date?: string | null }).iso_date;
+      return {
+        id: r.id,
+        sentiment: r.sentiment as 'positive' | 'negative',
+        text: r.review_text as string,
+        reviewerName: r.reviewer_name ?? null,
+        credentials: r.reviewer_credentials ?? null,
+        isLocalGuide: !!r.reviewer_is_local_guide,
+        rating: r.rating ?? null,
+        date: r.review_date ?? null,
+        recencyDays: iso ? Math.floor((now - new Date(iso).getTime()) / 86400000) : null,
+      };
+    });
 }
 
 export async function getCityScoreRanking(state: string, city: string): Promise<ScoreRankItem[]> {

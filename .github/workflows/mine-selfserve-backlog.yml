@@ -54,3 +54,23 @@ jobs:
           LIMIT="${{ github.event.inputs.limit }}"
           LIMIT="${LIMIT:-20}"
           python3 scripts/selfserve-harvest-reviews.py --backlog --limit "$LIMIT" --headless --scrolls 6 --reloads 5
+
+      # Sentiment-label the snippets just mined (and any other unlabeled ones) so the
+      # listing page's self-serve positive/negative buckets have data. Without this the
+      # snippets are stored but sentiment IS NULL, so the module can't bucket them.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save @supabase/supabase-js
+
+      - name: Sentiment-label the self-serve snippets
+        env:
+          SB_URL: https://gteqijdpqjmgxfnyuhvy.supabase.co
+        run: |
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=${SB_URL}"
+            echo "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+            echo "ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}"
+          } > .env.local
+          # Cap a bit above the harvest limit so a run always clears its own new snippets.
+          node scripts/ai-evaluate-selfserve-sentiment.mjs --apply --limit 400

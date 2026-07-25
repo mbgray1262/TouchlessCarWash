@@ -41,6 +41,8 @@ import {
   getReviewSnippetCount,
   getBestOfRankings,
   getMetroSiblingRankings,
+  getSelfServeReviewSnippets,
+  type SelfServeSnippet,
 } from './listing-data';
 import {
   getTodayKey,
@@ -293,7 +295,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     permanentRedirect(canonicalPath);
   }
 
-  const [nearbyListings, reviewSnippets, genericReviews, rankings, chainResult, verificationStats, equipmentVideos, paintSnippets, cityScoreRanking, badgeEmbedRes, selfServeNearby] = await Promise.all([
+  const [nearbyListings, reviewSnippets, genericReviews, rankings, chainResult, verificationStats, equipmentVideos, paintSnippets, cityScoreRanking, badgeEmbedRes, selfServeNearby, selfServeSnippets] = await Promise.all([
     getNearbyListings(listing),
     getReviewSnippets(listing.id),
     getGenericReviews(listing.id),
@@ -312,6 +314,8 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     // Self-serve cross-links: only fetch for listings that are actually public self-serve
     // (self-serve-only OR mixed) — a wasted query on the touchless-only majority otherwise.
     isSelfServePublic(listing) ? getNearbySelfServeListings(listing) : Promise.resolve([] as Listing[]),
+    // Self-serve review snippets for the SelfServeReviewsModule — same gate (self-serve-public only).
+    isSelfServePublic(listing) ? getSelfServeReviewSnippets(listing.id) : Promise.resolve([] as SelfServeSnippet[]),
   ]);
   const badgeInUse = listing.is_claimed === true || ((badgeEmbedRes?.data?.length ?? 0) > 0);
 
@@ -490,6 +494,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
               touchlessReviewSnippets={touchlessReviewSnippets}
               cityScoreRanking={cityScoreRanking}
               paintModuleSnippets={paintModuleSnippets}
+              selfServeSnippets={selfServeSnippets}
               genericReviews={genericReviews}
               galleryPhotos={galleryPhotos}
               equipmentVideos={equipmentVideos}

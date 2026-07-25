@@ -14,9 +14,11 @@ import { SavingsCalculator } from '@/components/SavingsCalculator';
 import { TouchlessVideo } from '@/components/TouchlessVideo';
 import { Badge } from '@/components/ui/badge';
 import PaintSafeModule, { type PaintSnippet } from '@/components/PaintSafeModule';
+import SelfServeReviewsModule from '@/components/SelfServeReviewsModule';
 import TouchlessSatisfactionGauge, { type TssSnippet } from '@/components/TouchlessSatisfactionGauge';
 import { TouchlessScoreComparison, type ScoreRankItem } from '@/components/TouchlessScoreComparison';
 import type { Listing, ReviewSnippet } from '@/lib/supabase';
+import type { SelfServeSnippet } from './listing-data';
 import { isSelfServeOnly, isSelfServePublic } from '@/lib/self-serve';
 import { getStateSlug, slugify } from '@/lib/constants';
 import { getBrandLabel, getBrandBySlug, slugifyModel } from '@/lib/equipment-data';
@@ -29,6 +31,7 @@ interface ListingMainColumnProps {
   touchlessReviewSnippets: TssSnippet[];
   cityScoreRanking: ScoreRankItem[];
   paintModuleSnippets: PaintSnippet[];
+  selfServeSnippets: SelfServeSnippet[];
   genericReviews: ReviewSnippet[];
   galleryPhotos: string[];
   equipmentVideos: { id: string; title: string; brand: string | null }[];
@@ -41,6 +44,7 @@ export function ListingMainColumn({
   touchlessReviewSnippets,
   cityScoreRanking,
   paintModuleSnippets,
+  selfServeSnippets,
   genericReviews,
   galleryPhotos,
   equipmentVideos,
@@ -120,6 +124,17 @@ export function ListingMainColumn({
           paintPos={listing.paint_pos ?? 0}
           paintNeg={listing.paint_neg ?? 0}
           snippets={paintModuleSnippets}
+        />
+      )}
+      {/* Self-serve review evidence — shown for any self-serve-public listing (self-serve-only
+          AND the self-serve side of a mixed facility). On mixed listings it sits directly below
+          the touchless module so a visitor from the self-serve directory sees self-serve reviews;
+          on self-serve-only listings the touchless block above is suppressed, so this leads. */}
+      {isSelfServePublic(listing) && (
+        <SelfServeReviewsModule
+          snippets={selfServeSnippets}
+          reviewCount={listing.review_count ?? 0}
+          googlePlaceId={listing.google_place_id ?? null}
         />
       )}
       {/* AI-Generated Description */}
