@@ -9,7 +9,7 @@
  *   ListingHero / ListingMainColumn / ListingSidebar / ListingCrossLinks
  */
 import { permanentRedirect } from 'next/navigation';
-import { supabase, type Listing } from '@/lib/supabase';
+import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
 import { publicListingsCount } from '@/lib/public-listings';
 import { isSelfServePublic, isSelfServeOnly } from '@/lib/self-serve';
 import type { TssSnippet } from '@/components/TouchlessSatisfactionGauge';
@@ -335,11 +335,25 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
       rating: r.rating,
       date: r.review_date ?? null,
     }));
-  // Combined "Review Highlights" for the hero modal — our stored snippets (evidence + generic),
-  // deduped, so the prime hero rating click opens on-site content instead of bouncing to Google.
-  const reviewHighlights = [...reviewSnippets, ...genericReviews]
+  // Combined "Review Highlights" for the hero modal — ALL our stored snippets (touchless
+  // evidence + self-serve evidence + generic), deduped and best-first, so the prime hero rating
+  // click opens a rich scrollable set of on-site reviews instead of bouncing to Google. Self-serve
+  // snippets matter here: a self-serve wash's reviews are mostly self-serve-evidence, so without
+  // them the modal would show just the odd touchless mention (often a single "highlight").
+  const selfServeAsSnippets = selfServeSnippets.map((s) => ({
+    id: s.id,
+    review_text: s.text,
+    rating: s.rating,
+    reviewer_name: s.reviewerName,
+    review_date: s.date,
+  })) as unknown as ReviewSnippet[];
+  const reviewHighlights = [...reviewSnippets, ...selfServeAsSnippets, ...genericReviews]
     .filter((r) => r.review_text && r.review_text.trim().length >= 20)
+    // de-dup by id, then by leading text (the same Google review can be stored as both a
+    // touchless and a self-serve snippet under different ids).
     .filter((r, i, arr) => arr.findIndex((x) => x.id === r.id) === i)
+    .filter((r, i, arr) => arr.findIndex((x) => (x.review_text || '').slice(0, 80) === (r.review_text || '').slice(0, 80)) === i)
+    .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
     .slice(0, 15);
   // Show the touchless-reviews module whenever there's a score OR at least one
   // labeled touchless review. The review snippets ALWAYS show; only the 0–100
