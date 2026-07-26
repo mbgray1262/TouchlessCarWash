@@ -21,7 +21,17 @@ def harvest(page, place_id):
     page.goto(f"https://www.google.com/maps/place/?q=place_id:{place_id}&hl=en",
               wait_until="domcontentloaded", timeout=35000)
     time.sleep(3)
+    # Navigation guard: a dropped VPN / geo hiccup can leave us on a consent wall, a search
+    # results list, a captcha, or the place_id may never resolve (URL keeps the ?q=place_id form).
+    # In any of those the page shows the WRONG (or previous) content, so trust nothing — return
+    # empty and let the name/stale guards downstream keep it out of the gallery.
+    final_url = page.url or ""
+    if ("consent.google" in final_url or "/maps/search/" in final_url
+            or "/sorry/" in final_url or "q=place_id" in final_url):
+        return "", []
     page_title = (page.title() or "").replace(" - Google Maps", "").strip()
+    if not page_title or page_title.lower() in ("google maps", "maps"):
+        return "", []
     # Open the full gallery: click the hero header photo button.
     for sel in ['button[jsaction*="heroHeaderImage"]', 'button[aria-label^="Photo"]',
                 'div[role="img"][aria-label]', 'button.aoRNLd', 'a[data-photo-index="0"]']:
@@ -113,6 +123,7 @@ def main():
                         out = json.load(f)
                 except Exception:
                     out = {}
+            prev_sig = None   # photo signature of the previous kept listing (stale-page guard)
             for row in batch:
                 lid, pid = row[0], row[1]
                 name = row[2] if len(row) > 2 else ""
@@ -129,9 +140,22 @@ def main():
                         time.sleep(2)
                 if err is None:
                     match = name_matches(name, title)
-                    out[lid] = {"title": title, "match": match, "urls": urls if match else []}
-                    flag = "" if match else f"  ⚠ NAME MISMATCH (page='{title}')"
-                    print(f"  {len(urls):>3} photos  {name[:34]:<34}{flag}", file=sys.stderr)
+                    keep = urls if match else []
+                    # STALE-PAGE GUARD: if this listing's photos are byte-identical to the previous
+                    # kept listing's, the page almost certainly didn't navigate (VPN/nav hiccup) and
+                    # we're re-reading the last place. Two DIFFERENT place_ids never share an exact
+                    # gallery — even chain siblings differ — so this is the contamination that pinned
+                    # one wash's photos onto many (esp. same-named chains, where name_matches passes).
+                    sig = tuple(keep)
+                    stale = bool(keep) and prev_sig is not None and sig == prev_sig
+                    if stale:
+                        keep = []
+                    elif keep:
+                        prev_sig = sig
+                    out[lid] = {"title": title, "match": match, "urls": keep}
+                    flag = ("  ⚠ STALE (identical to previous) — blanked" if stale
+                            else "" if match else f"  ⚠ NAME MISMATCH (page='{title}')")
+                    print(f"  {len(keep):>3} photos  {name[:34]:<34}{flag}", file=sys.stderr)
                 else:
                     out[lid] = {"title": "", "match": False, "urls": []}
                     print(f"  ERR {name[:34]}: {type(err).__name__}", file=sys.stderr)

@@ -1,0 +1,38 @@
+name: Detect photo contamination (safety net)
+
+# Daily scan for the photo-contamination bug class: listings showing an UNRELATED listing's
+# photos (the photo-audit save race + the gallery-harvester stale-page bug, both since fixed).
+# Auto-fixes what it finds and fails loudly if any live listing was affected, so it can never
+# silently accumulate again. Legitimate chain-brand photo sharing is not touched.
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '17 8 * * *'   # once a day, 08:17 UTC
+
+concurrency:
+  group: detect-photo-contamination
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save @supabase/supabase-js
+      - name: Write env
+        run: |
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=https://gteqijdpqjmgxfnyuhvy.supabase.co"
+            echo "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+          } > .env.local
+      - name: Scan + auto-fix contamination
+        run: |
+          # --fix strips any borrowed photos found. A second pass with no --fix then fails the job
+          # (exit 1) if anything LIVE still shows contamination, so a regression pages the owner.
+          node scripts/detect-photo-contamination.mjs --fix
+          node scripts/detect-photo-contamination.mjs
