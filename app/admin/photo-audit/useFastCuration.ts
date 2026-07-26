@@ -98,6 +98,10 @@ export function useFastCuration(listingId: string) {
   const [classifyResult, setClassifyResult] = useState<string | null>(null);
   const [classifyEvidence, setClassifyEvidence] = useState<string | null>(null);
   const prevListingId = useRef<string | null>(null);
+  // Which listing the current `candidates` were loaded for. saveAll refuses to write photos
+  // unless this matches listing.id — so one listing's photos can never be saved onto another
+  // during a fast "back to back" navigation (the cross-linked-photo contamination bug).
+  const candidatesOwnerId = useRef<string | null>(null);
   // URLs the admin has blocked — DB blocked_photos plus any X'd this session.
   // Kept in a ref (not just state) so discoverPhotos/seeding callbacks always
   // see the current set without stale-closure issues, ensuring an X'd photo
@@ -240,6 +244,7 @@ export function useFastCuration(listingId: string) {
       prevListingId.current = listingId;
       setListing(null);       // Clear stale listing to prevent old hero from flashing
       setCandidates([]);
+      candidatesOwnerId.current = null;   // candidates cleared → not valid to save until reloaded
       setSkippedUrls([]);
       blockedUrlsRef.current = new Set();
       setHeroRemoved(false);
@@ -313,6 +318,8 @@ export function useFastCuration(listingId: string) {
         });
       }
       if (existing.length > 0) setCandidates(existing);
+      // Candidates now represent THIS listing (even if empty) — saveAll may write them to it.
+      candidatesOwnerId.current = listing.id;
       // External photo discovery (Google Places API, Yelp, etc.) is NOT triggered
       // automatically — user must click "Google Photos" to avoid unexpected API costs.
     }
@@ -498,6 +505,15 @@ export function useFastCuration(listingId: string) {
   // Save all tags and advance
   const saveAll = async (): Promise<boolean> => {
     if (!listing || saving) return false;
+    // GUARD: never write photos built from `candidates` unless those candidates were loaded for
+    // THIS exact listing. During a fast back-to-back navigation, `listing` can advance to the next
+    // row before its candidates have (re)loaded; without this check saveAll would write the previous
+    // listing's photos onto the new listing (the cross-linked-photo contamination bug). If they
+    // don't match, we skip the whole save (nothing valid to persist) rather than corrupt data.
+    if (candidatesOwnerId.current !== listing.id) {
+      console.warn('[SaveAll] SKIPPED — candidates belong to', candidatesOwnerId.current, 'not', listing.id, '(navigation race; refusing to cross-contaminate photos)');
+      return true; // let navigation proceed; there was simply nothing safe to save for this listing
+    }
     setSaving(true);
 
     try {
