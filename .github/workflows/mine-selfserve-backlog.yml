@@ -74,3 +74,9 @@ jobs:
           } > .env.local
           # Cap a bit above the harvest limit so a run always clears its own new snippets.
           node scripts/ai-evaluate-selfserve-sentiment.mjs --apply --limit 400
+
+      # Score the listings whose sentiment just changed. --dirty = only listings (re-)mined since
+      # last scored, so a newly-approved+mined listing gets its Self-Serve Satisfaction Score in the
+      # same cycle it was mined + labeled — no manual step, and no full re-scan (Micro-DB safe).
+      - name: Score newly-labeled self-serve listings
+        run: node scripts/score-selfserve-satisfaction.mjs --dirty
