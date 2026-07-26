@@ -116,6 +116,24 @@ export default async function BestOfIndexPage() {
         </div>
       </section>
 
+      {/* Self-serve cross-link — a distinct search intent + internal link to the parallel rankings */}
+      <section className="py-12 px-4 bg-white border-t border-gray-200">
+        <div className="container mx-auto max-w-5xl">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-8 flex flex-col md:flex-row items-start md:items-center gap-6">
+            <div className="text-5xl">💦</div>
+            <div className="flex-1">
+              <h2 className="text-[#0F2744] font-bold text-2xl mb-2">Rather wash it yourself?</h2>
+              <p className="text-gray-600 leading-relaxed">
+                See our metro rankings for the best <strong>self-service</strong> car washes — coin-op &amp; wand bays where you clean your own car, ranked by real customer reviews.
+              </p>
+            </div>
+            <Link href="/best-self-serve" className="flex-shrink-0 bg-[#0F2744] hover:bg-[#1a3a5c] text-white font-bold px-7 py-3 rounded-xl transition-colors whitespace-nowrap">
+              Best Self-Service →
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="py-16 px-4 bg-[#0F2744]">
         <div className="container mx-auto max-w-2xl text-center">

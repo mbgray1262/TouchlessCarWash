@@ -190,7 +190,12 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   const reviewSnippetCount = listing.parent_chain
     ? await getReviewSnippetCount(listing.id)
     : 0; // Only matters for chain listings; non-chain can skip this query.
-  const thin = isThinListing({ ...listing, review_snippet_count: reviewSnippetCount });
+  // isThinListing is a TOUCHLESS metric (needs touchless-evidence reviews or a Google blurb). A
+  // self-serve-ONLY listing has no touchless reviews by definition, so it would be wrongly judged
+  // thin — but it's been human-reviewed (self_service_reviewed_at) and has its own content
+  // (self-serve reviews, photos, amenities). Don't touchless-thin-gate it. This also keeps the
+  // page in lockstep with the sitemap, which emits every self-serve-only listing (SEO invariant).
+  const thin = !isSelfServeOnly(listing) && isThinListing({ ...listing, review_snippet_count: reviewSnippetCount });
   const robots = thin ? { index: false, follow: true } : undefined;
 
   return {

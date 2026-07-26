@@ -3,6 +3,7 @@ import { publicListings } from '@/lib/public-listings';
 import { SELF_SERVE_LIVE, publicSelfServeListings, selfServeStateTally, qualifyingSelfServeCities } from '@/lib/self-serve';
 import { US_STATES, getStateSlug, slugify } from '@/lib/constants';
 import { getQualifyingMetros } from '@/lib/metro-queries';
+import { getQualifyingSelfServeMetros } from '@/lib/self-serve-metro';
 import { FEATURES } from '@/lib/features';
 import { EQUIPMENT_BRAND_DATA } from '@/lib/equipment-data';
 import { CHAINS } from '@/lib/chains';
@@ -353,6 +354,13 @@ export async function GET() {
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>`);
+    // Self-serve Best-Of index (/best-self-serve). Per-metro pages are emitted separately below.
+    selfServeUrls.push(`  <url>
+    <loc>${baseUrl}/best-self-serve</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`);
     for (const { code } of ssTally) {
       selfServeUrls.push(`  <url>
     <loc>${baseUrl}/self-serve-car-wash/${getStateSlug(code)}</loc>
@@ -408,6 +416,18 @@ export async function GET() {
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>`);
+
+  // Self-serve Best-Of metro pages — gated by getQualifyingSelfServeMetros() (>=5 public
+  // self-serve within radius AND >=1 best-of-eligible winner), the SAME function the page uses to
+  // decide 200-vs-redirect, so the sitemap lists exactly the /best-self-serve/<slug> pages that 200.
+  const selfServeBestOfUrls = SELF_SERVE_LIVE
+    ? (await getQualifyingSelfServeMetros()).map((metro) => `  <url>
+    <loc>${baseUrl}/best-self-serve/${metro.slug}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`)
+    : [];
 
   // Feature pages
   const featureIndexUrl = `  <url>
@@ -712,6 +732,7 @@ export async function GET() {
     <priority>0.5</priority>
   </url>
 ${bestOfUrls.join('\n')}
+${selfServeBestOfUrls.join('\n')}
 ${featureIndexUrl}
 ${featureHubUrls.join('\n')}
 ${featureStateUrls.join('\n')}
