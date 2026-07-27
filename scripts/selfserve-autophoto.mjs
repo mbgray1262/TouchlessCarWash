@@ -136,7 +136,12 @@ async function streetViewImage(lat, lng) {
     // If the pano sits essentially on top of the business, a bearing is meaningless — keep 0.
     const dLat = Math.abs((meta.location?.lat ?? lat) - lat), dLng = Math.abs((meta.location?.lng ?? lng) - lng);
     const heading = (dLat < 1e-5 && dLng < 1e-5) ? 0 : svBearing(meta.location, { lat, lng });
-    const r = await fetch(signGoogleUrl(`https://maps.googleapis.com/maps/api/streetview?size=2048x1152&pano=${meta.pano_id}&fov=90&heading=${heading.toFixed(0)}&pitch=0&key=${GKEY}`), { signal: AbortSignal.timeout(15000) });
+    //  3. RESOLUTION. The public Static API (maps/api/streetview) is hard-capped at
+    //     640px on our billing tier even when signed — so it bakes visibly-soft
+    //     640x360 heroes. The tiles endpoint that maps.google.com itself uses
+    //     (streetviewpixels-pa) serves the pano at native res (~1024-2048px). Pull
+    //     the big thumbnail from there, keyed by the pano_id + building-aimed heading.
+    const r = await fetch(`https://streetviewpixels-pa.googleapis.com/v1/thumbnail?cb_client=maps_sv.tactile&w=2048&h=1152&pitch=0&panoid=${meta.pano_id}&yaw=${heading.toFixed(0)}`, { headers: { Referer: 'https://www.google.com/' }, signal: AbortSignal.timeout(15000) });
     if (!r.ok) return null;
     const buf = Buffer.from(await r.arrayBuffer());
     return buf.length < MIN_BYTES ? null : buf;

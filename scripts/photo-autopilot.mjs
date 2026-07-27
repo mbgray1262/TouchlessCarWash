@@ -136,7 +136,11 @@ async function svViewpoints(lat,lng){
   return cands.sort((a,b)=>b.score-a.score).slice(0,3);
 }
 async function svRender(v,px=640){
-  const u=`https://maps.googleapis.com/maps/api/streetview?size=${px}x${Math.round(px*0.75)}&pano=${v.pano}&heading=${v.heading.toFixed(0)}&fov=${v.fov.toFixed(0)}&pitch=2&key=${GKEY}`;
+  // Use the streetviewpixels tiles endpoint (what maps.google.com itself serves) —
+  // native res up to ~1024-2048px. The public Static API (maps/api/streetview) is
+  // hard-capped at 640px on our billing tier even when signed, which is what baked
+  // the soft 640x360 heroes. `thumbfov` preserves the computed building-framing zoom.
+  const u=`https://streetviewpixels-pa.googleapis.com/v1/thumbnail?cb_client=maps_sv.tactile&w=${px}&h=${Math.round(px*0.75)}&thumbfov=${v.fov.toFixed(0)}&pitch=2&panoid=${v.pano}&yaw=${v.heading.toFixed(0)}`;
   const b=await dl(u); if(b) charge('svImage'); return b && b.length>4000 ? b : null;
 }
 async function hostBuffer(buf,id,slot){
