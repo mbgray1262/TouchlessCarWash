@@ -570,13 +570,30 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                         </span>
                       );
                     }
+                    // Green "Reviewed" ONLY for a genuine human confirmation (self_service_source
+                    // ='admin_review'). The autophoto pipeline auto-stamps self_service_reviewed_at
+                    // on listings it tags (source=autopilot_*/triage_*), which made those wrongly
+                    // wear the green "Reviewed" pill and look done — they're actually unpublished and
+                    // still need a human yes/no. Show them as amber "Auto-tagged · needs review".
+                    const humanConfirmed = listing.self_service_reviewed_at && listing.self_service_source === 'admin_review';
+                    if (humanConfirmed) {
+                      return (
+                        <span
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 cursor-help"
+                          title="You confirmed this as self-serve. It's approved and live in the self-serve directory."
+                        >
+                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                          Self-Serve Confirmed
+                        </span>
+                      );
+                    }
                     return listing.self_service_reviewed_at ? (
                       <span
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 cursor-help"
-                        title="You've reviewed this listing for self-serve. Hidden from the public until the self-serve directory launches."
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 cursor-help"
+                        title="Auto-tagged as self-serve by the pipeline — NOT yet human-reviewed or published. Confirm or reject it."
                       >
-                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                        Self-Serve Reviewed
+                        <span className="w-2 h-2 rounded-full bg-amber-500" />
+                        Auto-tagged · needs review
                       </span>
                     ) : (
                       <span

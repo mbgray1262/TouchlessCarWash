@@ -684,8 +684,8 @@ export default function PhotoAuditPage() {
                   { key: 'cleanup', label: 'Cleanup', count: stats.cleanup_total, title: 'Listings with junk gallery photos the AI flagged for removal.' },
                 ] },
                 { label: 'Review', tabs: [
-                  { key: 'held', label: 'Held', count: tc('held', heldCount),
-                    title: isSS ? 'Tagged self-serve but NOT approved yet, so not live. Approve (or reject) to clear.' : 'Touchless but not approved — the admin review queue.' },
+                  { key: 'held', label: isSS ? 'Unpublished' : 'Held', count: tc('held', heldCount),
+                    title: isSS ? 'Tagged self-serve but NOT approved yet, so not live. Most were auto-tagged by the pipeline (not human-reviewed) — Confirm to publish, or reject.' : 'Touchless but not approved — the admin review queue.' },
                   ...(!isSS ? [
                     { key: 'second_look' as ViewFilter, label: 'Second look', count: tc('second_look', secondLookCount) },
                     { key: 'best_of' as ViewFilter, label: '🏆 Best-Of', count: bestOfCount, always: true },
