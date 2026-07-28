@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { revalidateListing } from '@/lib/revalidate-listing';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -29,27 +30,30 @@ export async function POST(req: NextRequest) {
     const stamp = new Date().toISOString();
     const note = `[REMOVED ${stamp}] ${reason}`;
 
-    const { error, count } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from('listings')
-      .update(
-        {
-          is_approved: false,
-          is_touchless: false,
-          touchless_verified: null,
-          business_status: 'REMOVED_BY_ADMIN',
-          crawl_notes: note,
-        },
-        { count: 'exact' },
-      )
-      .eq('id', listing_id);
+      .update({
+        is_approved: false,
+        is_touchless: false,
+        touchless_verified: null,
+        business_status: 'REMOVED_BY_ADMIN',
+        crawl_notes: note,
+      })
+      .eq('id', listing_id)
+      .select('slug, city, state')
+      .maybeSingle();
 
     if (error) {
       console.error('remove listing error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
-    if (count === 0) {
+    if (!data) {
       return NextResponse.json({ error: 'listing not found' }, { status: 404 });
     }
+
+    // Bust every cache layer so the removed listing 308s within seconds.
+    await revalidateListing(data);
+
     return NextResponse.json({ success: true, listing_id });
   } catch (err) {
     console.error('remove listing exception:', err);

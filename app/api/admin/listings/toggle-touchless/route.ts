@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { revalidateListing } from '@/lib/revalidate-listing';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,18 +40,25 @@ export async function POST(req: NextRequest) {
       update.touchless_verified = null;
     }
 
-    const { error, count } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from('listings')
-      .update(update, { count: 'exact' })
-      .eq('id', listing_id);
+      .update(update)
+      .eq('id', listing_id)
+      .select('slug, city, state')
+      .maybeSingle();
 
     if (error) {
       console.error('toggle-touchless error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
-    if (count === 0) {
+    if (!data) {
       return NextResponse.json({ error: 'listing not found' }, { status: 404 });
     }
+
+    // Bust every cache layer so the public page reflects the new visibility
+    // within seconds (data cache tag + route cache + Netlify CDN).
+    await revalidateListing(data);
+
     return NextResponse.json({ success: true, listing_id, is_touchless });
   } catch (err) {
     console.error('toggle-touchless exception:', err);

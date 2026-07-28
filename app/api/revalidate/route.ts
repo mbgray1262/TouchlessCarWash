@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
+import { listingTag } from '@/lib/revalidate-listing';
 
 /**
  * On-demand revalidation endpoint for admin tools.
@@ -19,6 +20,16 @@ export async function POST(request: NextRequest) {
 
     // 1. Tell Next.js to invalidate any internal cache for this path
     revalidatePath(path);
+
+    // 1b. If this is a listing detail path (/state/<state>/<city>/<slug>),
+    // also evict the tagged getListing Data Cache entry. revalidatePath busts
+    // the rendered route cache but leaves the fetch Data Cache stale on Netlify,
+    // so ISR regeneration would re-read a reverted listing's old is_touchless
+    // and re-serve a live 200. revalidateTag is what actually flips it to a 308.
+    const segments = path.split('?')[0].split('/').filter(Boolean);
+    if (segments[0] === 'state' && segments.length === 4) {
+      revalidateTag(listingTag(segments[3]));
+    }
 
     // 2. Purge Netlify CDN edge cache (all pages — site is small enough)
     let netlifyPurged = false;

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { revalidateListingCaches, purgeNetlifyCdn } from '@/lib/revalidate-listing';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -68,7 +69,7 @@ export async function POST(req: NextRequest) {
     const ilikePattern = usePrefix ? `${escapedTerm}%` : escapedTerm;
     const { data: matches, error: searchErr } = await supabaseAdmin
       .from('listings')
-      .select('id, name, city, state, is_touchless, is_approved')
+      .select('id, name, slug, city, state, is_touchless, is_approved')
       .ilike('name', ilikePattern);
 
     if (searchErr) {
@@ -122,6 +123,8 @@ export async function POST(req: NextRequest) {
     // Pull current crawl_notes for each so we can append (don't clobber).
     // Fetch in chunks for safety on large chains.
     const ids = targets.map(t => t.id);
+    const targetById = new Map(targets.map(t => [t.id, t]));
+    const revalidated: Array<{ slug: string; city: string; state: string }> = [];
     const CHUNK = 200;
     let totalUpdated = 0;
     for (let i = 0; i < ids.length; i += CHUNK) {
@@ -150,9 +153,20 @@ export async function POST(req: NextRequest) {
             crawl_notes: newNotes,
           })
           .eq('id', id);
-        if (!upErr) totalUpdated++;
+        if (!upErr) {
+          totalUpdated++;
+          const t = targetById.get(id);
+          if (t?.slug && t?.city && t?.state) {
+            revalidated.push({ slug: t.slug, city: t.city, state: t.state });
+          }
+        }
       }
     }
+
+    // Bust the Data Cache tag + route cache for every reverted listing so their
+    // public pages 308 within seconds, then purge the Netlify CDN once for all.
+    for (const row of revalidated) revalidateListingCaches(row);
+    if (revalidated.length > 0) await purgeNetlifyCdn();
 
     return NextResponse.json({ updated: totalUpdated, name: rawName });
   } catch (err) {

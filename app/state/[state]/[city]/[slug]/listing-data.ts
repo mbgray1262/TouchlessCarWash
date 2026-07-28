@@ -7,25 +7,43 @@ import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
 import { publicListings } from '@/lib/public-listings';
 import { publicSelfServeListings } from '@/lib/self-serve';
 import { US_STATES, slugify } from '@/lib/constants';
+import { listingTag } from '@/lib/revalidate-listing';
 import type { VerificationStats } from '@/components/VerificationPrompt';
 import type { PaintSnippet, PaintTheme } from '@/components/PaintSafeModule';
 import type { ScoreRankItem } from '@/components/TouchlessScoreComparison';
 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
 export async function getListing(slug: string): Promise<Listing | null> {
   // Fetch by slug regardless of is_touchless — we want to handle three cases:
   //   1. Touchless listing exists → render detail page
-  //   2. Listing exists but is_touchless=false (reverted) → 301 redirect
+  //   2. Listing exists but is_touchless=false (reverted) → 308 redirect
   //      to city hub (NOT a 404) to preserve AdSense health + PageRank
   //   3. Listing doesn't exist at all → 404 (after trying slug-prefix
   //      lookup for old URL schemes)
-  const { data, error } = await supabase
-    .from('listings')
-    .select('*')
-    .eq('slug', slug)
-    .maybeSingle();
-
-  if (error || !data) return null;
-  return data as Listing;
+  //
+  // This is a raw PostgREST fetch rather than a supabase-js query so it can
+  // carry a Next Data Cache tag (`listing:<slug>`). supabase-js doesn't expose
+  // Next's per-request fetch options, so its reads land in the Data Cache with
+  // NO tag and can only be evicted by time. That was the reverted-listing bug:
+  // on ISR regeneration this read returned a CACHED is_touchless=true and the
+  // page re-served a live 200 for a wash an admin had already reverted. With
+  // the tag, admin visibility edits call revalidateTag(listingTag(slug)) (see
+  // lib/revalidate-listing.ts) to evict THIS entry immediately, so the next
+  // render reads fresh flags and 308s. `revalidate: 3600` keeps the steady-
+  // state cache lifetime identical to the route's ISR window (no extra compute).
+  const url = `${SUPABASE_URL}/rest/v1/listings?slug=eq.${encodeURIComponent(slug)}&select=*&limit=1`;
+  const res = await fetch(url, {
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+    next: { tags: [listingTag(slug)], revalidate: 3600 },
+  });
+  if (!res.ok) return null;
+  const rows = (await res.json()) as Listing[];
+  return rows[0] ?? null;
 }
 
 /**
