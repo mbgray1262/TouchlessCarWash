@@ -16,7 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const countStr = n > 0 ? n.toLocaleString() + '+' : '';
   const year = new Date().getFullYear();
   const title = `Self-Service Car Wash Near Me${countStr ? ` — ${countStr} Locations` : ''} | ${year}`;
-  const description = `Find a self-service car wash near you${countStr ? ` — ${countStr} verified coin-op / wand-bay locations` : ''}. Wash your car yourself in an open bay: gentle on your paint because you control the wand. Hours, ratings, and directions.`;
+  const description = `Find a self-service car wash near you${countStr ? ` — ${countStr} verified locations` : ''} where you wash your own car. Self-serve, DIY, self-wash & coin-op wand bays — gentle on your paint because you control the wand. Hours, ratings, and directions.`;
   return {
     title: { absolute: title },
     description,
@@ -31,6 +31,10 @@ const FAQ: { q: string; a: string }[] = [
   {
     q: 'What is a self-service car wash?',
     a: 'A self-service car wash is an open, coin- or card-operated bay where you wash your own vehicle with a handheld high-pressure wand. You control every step — pre-soak, soap, foam brush (optional), rinse, and spot-free — so you decide exactly how much (or how little) touches your paint. Most are open 24 hours and also offer self-serve vacuums.',
+  },
+  {
+    q: 'Is a self-service car wash the same as a DIY, self-wash, or coin-op car wash?',
+    a: 'Yes — these are all names for the same thing. A self-service car wash is also called a self-serve car wash, a self-wash or "self car wash," a DIY (do-it-yourself) car wash, a manual car wash, and a coin-op or wand car wash. Whatever you call it, it means an open wash bay where you clean your own vehicle with a high-pressure wand instead of driving through an automatic tunnel. Every location in this directory is that kind of hands-on, wash-it-yourself bay.',
   },
   {
     q: 'Is a self-service car wash gentle on your paint?',
@@ -82,8 +86,9 @@ export default async function SelfServeLanding() {
             Self-Service Car Wash Near You
           </h1>
           <p className="mt-4 text-lg text-white/90 max-w-2xl">
-            Find an open wand bay where you wash your own car, your way — the gentlest, most affordable
-            option, because <strong>you</strong> control the wand. {total > 0 && (
+            Find an open wand bay where you wash your own car, your way — a self-serve, DIY, self-wash
+            &amp; coin-op car wash all in one. The gentlest, most affordable option, because <strong>you</strong> control
+            the wand. {total > 0 && (
               <span>{total.toLocaleString()}+ verified locations across {stateCount} states.</span>
             )}
           </p>

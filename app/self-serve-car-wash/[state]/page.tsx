@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const n = listings.length;
   const year = new Date().getFullYear();
   const title = `Self-Service Car Washes in ${name}${n ? ` — ${n} Locations` : ''} | ${year}`;
-  const description = `Find self-service (coin-op / wand-bay) car washes in ${name}. ${n} verified locations where you wash your own car — hours, ratings, and directions.`;
+  const description = `Find self-service car washes in ${name} — ${n} verified DIY, self-wash & coin-op wand bays where you wash your own car. Hours, ratings, and directions.`;
   return {
     title: { absolute: title },
     description,
@@ -87,7 +87,7 @@ export default async function SelfServeStatePage({ params }: Props) {
 
         <h1 className="text-3xl font-extrabold text-[#0F2744]">Self-Service Car Washes in {name}</h1>
         <p className="mt-2 text-gray-600">
-          {listings.length} verified self-service {listings.length === 1 ? 'location' : 'locations'} across {cities.length} {cities.length === 1 ? 'city' : 'cities'} — wash your own car in an open wand bay.
+          {listings.length} verified self-service {listings.length === 1 ? 'location' : 'locations'} across {cities.length} {cities.length === 1 ? 'city' : 'cities'} — DIY, self-wash and coin-op bays where you wash your own car, your way.
         </p>
 
         {cities.map(([city, group]) => (

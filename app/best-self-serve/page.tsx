@@ -8,7 +8,7 @@ export const revalidate = 3600;
 export const metadata: Metadata = {
   title: 'Best Self-Service Car Washes by Metro Area',
   description:
-    'Find the best-rated self-service (coin-op & wand-bay) car washes near you across major US metro areas. Ranked by customer reviews and self-serve satisfaction.',
+    'Find the best-rated self-service car washes near you across major US metro areas — DIY, self-wash, coin-op & wand-bay locations where you wash your own car. Ranked by customer reviews and self-serve satisfaction.',
   alternates: { canonical: 'https://touchlesscarwashfinder.com/best-self-serve' },
   openGraph: {
     title: 'Best Self-Service Car Washes by Metro Area | Touchless Car Wash Finder',

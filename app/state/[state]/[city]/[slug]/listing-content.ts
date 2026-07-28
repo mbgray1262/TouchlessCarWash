@@ -220,7 +220,7 @@ export function buildFAQs(listing: Listing, hours: Record<string, string> | null
 
   // 1. Wash-type identity (always shown) — enriched with wash types & equipment
   if (selfServe) {
-    let ssAnswer = `Yes, ${listing.name} in ${listing.city}, ${listing.state} is a self-serve (self-service) car wash — an open-bay facility where you wash your own vehicle using a high-pressure wand and foaming brush that you control. Pull into an open bay, pay by coin, card, or app, and wash on your own schedule at your own pace.`;
+    let ssAnswer = `Yes, ${listing.name} in ${listing.city}, ${listing.state} is a self-serve (self-service) car wash — also called a DIY, self-wash, or coin-op car wash — an open-bay facility where you wash your own vehicle using a high-pressure wand and foaming brush that you control. Pull into an open bay, pay by coin, card, or app, and wash on your own schedule at your own pace.`;
     if (listing.amenities && listing.amenities.length > 0) {
       ssAnswer += ` On-site you'll find ${listing.amenities.slice(0, 4).join(', ')}.`;
     }

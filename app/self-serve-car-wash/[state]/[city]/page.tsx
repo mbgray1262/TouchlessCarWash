@@ -47,7 +47,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const n = listings.length;
   const year = new Date().getFullYear();
   const title = `Self-Service Car Washes in ${cityName}, ${code} — ${n} Locations | ${year}`;
-  const description = `Find self-service (coin-op / wand-bay) car washes in ${cityName}, ${stateName}. ${n} verified locations where you wash your own car — hours, ratings, and directions.`;
+  const description = `Find self-service car washes in ${cityName}, ${stateName} — ${n} verified DIY, self-wash & coin-op wand bays where you wash your own car. Hours, ratings, and directions.`;
   return {
     title: { absolute: title },
     description,
@@ -88,7 +88,7 @@ export default async function SelfServeCityPage({ params }: Props) {
 
         <h1 className="text-3xl font-extrabold text-[#0F2744]">Self-Service Car Washes in {cityName}, {stateName}</h1>
         <p className="mt-2 text-gray-600">
-          {listings.length} verified self-service {listings.length === 1 ? 'location' : 'locations'} in {cityName} — wash your own car in an open wand bay, on your own time.
+          {listings.length} verified self-service {listings.length === 1 ? 'location' : 'locations'} in {cityName} — DIY, self-wash and coin-op wand bays where you wash your own car, on your own time.
         </p>
 
         <div className="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">

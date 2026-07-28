@@ -44,7 +44,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = count === 1
     ? `The Best Self-Service Car Wash in the ${metro.name} Area — ${month} ${year}`
     : `${count} Best Self-Service Car Washes in the ${metro.name} Area — Ranked ${month} ${year}`;
-  const description = `The top self-service (coin-op / wand-bay) car washes across the greater ${metro.name} area, ranked by customer reviews and self-serve satisfaction. Updated ${month} ${year}.`;
+  const description = `The top self-service car washes across the greater ${metro.name} area — DIY, self-wash & coin-op wand bays where you wash your own car, ranked by customer reviews and self-serve satisfaction. Updated ${month} ${year}.`;
   const canonical = `https://touchlesscarwashfinder.com/best-self-serve/${metro.slug}`;
   return {
     title, description,
