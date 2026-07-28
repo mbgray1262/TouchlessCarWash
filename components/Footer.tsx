@@ -258,7 +258,7 @@ export function Footer() {
           <div>
             <h3 className="font-semibold text-white mb-4">About</h3>
             <p className="text-sm text-white/70">
-              The only directory dedicated exclusively to touchless, touch-free, and brushless car washes across all 50 states. No brushes, no scratches — just clean.
+              The paint-safe car wash directory — verified touchless, touch-free &amp; brushless washes, plus self-service wand bays, across all 50 states. No automated brushes, no scratches — just clean.
             </p>
           </div>
         </div>

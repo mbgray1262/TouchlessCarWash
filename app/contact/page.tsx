@@ -152,10 +152,10 @@ export default function ContactPage() {
         {/* CTA */}
         <div className="mt-12 p-8 rounded-2xl bg-[#0F2744] text-center">
           <h2 className="text-2xl font-bold text-white mb-3">
-            Own a Touchless Car Wash?
+            Own a Touchless or Self-Service Car Wash?
           </h2>
           <p className="text-white/70 mb-6 max-w-lg mx-auto">
-            Get your business listed on the only directory dedicated exclusively to touchless car washes. It&apos;s free to add your listing.
+            Get your business listed on the leading directory for paint-safe car washes — touchless and self-service. It&apos;s free to add your listing.
           </p>
           <Link
             href="/add-listing"

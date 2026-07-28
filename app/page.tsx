@@ -210,7 +210,7 @@ export default async function Home({ searchParams }: { searchParams?: { geo?: st
     name: 'Touchless Car Wash Finder',
     url: SITE_URL,
     logo: SITE_URL + '/logo.png',
-    description: 'The only directory dedicated exclusively to verified touchless car washes across the United States.',
+    description: 'The paint-safe car wash directory — verified touchless (brushless) car washes plus self-service wand bays across the United States.',
   };
 
   const websiteSchema = {
