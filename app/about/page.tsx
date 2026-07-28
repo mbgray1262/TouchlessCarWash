@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { CheckCircle, MapPin, Star, Clock, Shield, Search } from 'lucide-react';
+import { CheckCircle, MapPin, Star, Clock, Shield, Search, Droplet, Hand } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@supabase/supabase-js';
 import { getApprovedTouchlessCount } from '@/lib/listing-queries';
+import { SELF_SERVE_LIVE, publicSelfServeCount } from '@/lib/self-serve';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -12,14 +13,14 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 export const metadata: Metadata = {
   title: 'About Us',
   description:
-    'Learn about Touchless Car Wash Finder — the only directory dedicated exclusively to verified touchless (brushless) car washes across all 50 states + DC.',
+    'Learn about Touchless Car Wash Finder — the paint-safe car wash directory: verified touchless (brushless) car washes plus self-service wand bays across all 50 states + DC.',
   alternates: {
     canonical: 'https://touchlesscarwashfinder.com/about',
   },
   openGraph: {
     title: 'About Us | Touchless Car Wash Finder',
     description:
-      'The only directory dedicated exclusively to verified touchless car washes. 3,500+ locations across all 50 states + DC.',
+      'The paint-safe car wash directory — verified touchless car washes and self-service bays across all 50 states + DC.',
     url: 'https://touchlesscarwashfinder.com/about',
     type: 'website',
   },
@@ -31,13 +32,13 @@ const organizationSchema = {
   name: 'Touchless Car Wash Finder',
   url: 'https://touchlesscarwashfinder.com',
   description:
-    'The only directory dedicated exclusively to verified touchless (brushless) car washes across all 50 states + DC.',
+    'The paint-safe car wash directory — verified touchless (brushless) car washes plus self-service wand bays across all 50 states + DC.',
   foundingDate: '2024',
   areaServed: {
     '@type': 'Country',
     name: 'United States',
   },
-  knowsAbout: ['touchless car wash', 'brushless car wash', 'laser car wash', 'paint protection', 'ceramic coating care'],
+  knowsAbout: ['touchless car wash', 'brushless car wash', 'laser car wash', 'self-service car wash', 'self-serve car wash', 'paint protection', 'ceramic coating care'],
 };
 
 const breadcrumbSchema = {
@@ -57,21 +58,28 @@ async function getStats() {
   // listings vs. the home page (4,030+ vs 3,957+).
   const totalListings = await getApprovedTouchlessCount();
 
+  // Public self-serve count (same visibility rule the /self-serve-car-wash
+  // directory uses). Only surfaced while the category is live.
+  const { count: selfServeCount } = SELF_SERVE_LIVE
+    ? await publicSelfServeCount()
+    : { count: 0 };
+
   // Count actual review snippets stored in the DB — same metric the homepage uses.
   const { count: totalReviews } = await supabase
     .from('review_snippets')
     .select('*', { count: 'exact', head: true });
 
   const roundedReviews = Math.floor((totalReviews ?? 0) / 100) * 100;
-  return {
-    totalListings,
-    stats: [
-      { label: 'Verified Locations', value: `${totalListings.toLocaleString()}+`, icon: MapPin },
-      { label: 'States + DC', value: '50', icon: CheckCircle },
-      { label: 'Customer Reviews', value: `${roundedReviews.toLocaleString()}+`, icon: Star },
-      { label: 'Always Free to Use', value: '100%', icon: Clock },
-    ],
-  };
+  const stats = [
+    { label: 'Touchless Locations', value: `${totalListings.toLocaleString()}+`, icon: MapPin },
+    ...(SELF_SERVE_LIVE && (selfServeCount ?? 0) > 0
+      ? [{ label: 'Self-Serve Locations', value: `${(selfServeCount ?? 0).toLocaleString()}+`, icon: Droplet }]
+      : []),
+    { label: 'States + DC', value: '50', icon: CheckCircle },
+    { label: 'Customer Reviews', value: `${roundedReviews.toLocaleString()}+`, icon: Star },
+    { label: 'Always Free to Use', value: '100%', icon: Clock },
+  ];
+  return { totalListings, selfServeCount: selfServeCount ?? 0, stats };
 }
 
 function buildDifferentiators(totalListings: number) {
@@ -83,11 +91,19 @@ function buildDifferentiators(totalListings: number) {
     description:
       'We only list car washes confirmed as genuinely touchless — no brush-equipped washes sneak into our directory. If it touches your paint, it does not belong here.',
   },
+  ...(SELF_SERVE_LIVE
+    ? [{
+        icon: Hand,
+        title: 'Touchless and Self-Service — Both Paint-Safe',
+        description:
+          'Prefer to wash it yourself? We also cover self-service wand bays, where you control every spray. Automatic touchless or hands-on self-serve, both keep automated brushes off your paint.',
+      }]
+    : []),
   {
     icon: MapPin,
     title: `All 50 States + DC, ${countLabel} Locations`,
     description:
-      'From rural towns to major metros, we have built the most comprehensive touchless-only directory in the country — and we add new locations every week.',
+      'From rural towns to major metros, we have built the most comprehensive paint-safe car wash directory in the country — and we add new locations every week.',
   },
   {
     icon: Star,
@@ -132,8 +148,9 @@ const VERIFICATION_STEPS = [
 ];
 
 export default async function AboutPage() {
-  const { totalListings, stats } = await getStats();
+  const { totalListings, selfServeCount, stats } = await getStats();
   const differentiators = buildDifferentiators(totalListings);
+  const statsGridCols = stats.length >= 5 ? 'md:grid-cols-5' : 'md:grid-cols-4';
   return (
     <>
       <script
@@ -156,7 +173,8 @@ export default async function AboutPage() {
               About Touchless Car Wash Finder
             </h1>
             <p className="text-xl text-blue-100 leading-relaxed">
-              The only directory dedicated exclusively to touchless car washes.
+              Your directory for paint-safe car washing — verified touchless washes, plus
+              self-service bays where you control every spray.
             </p>
           </div>
         </section>
@@ -164,7 +182,7 @@ export default async function AboutPage() {
         {/* Stats Bar */}
         <section className="bg-[#22C55E] py-10 px-4">
           <div className="container mx-auto max-w-5xl">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+            <div className={`grid grid-cols-2 ${statsGridCols} gap-6 text-center`}>
               {stats.map(({ label, value, icon: Icon }) => (
                 <div key={label} className="flex flex-col items-center gap-1">
                   <Icon className="w-6 h-6 text-white mb-1" />
@@ -199,6 +217,17 @@ export default async function AboutPage() {
                 no risk to your paint, coating, or film. Find your nearest verified location, check
                 the reviews, and drive in with confidence.
               </p>
+              {SELF_SERVE_LIVE && (
+                <p>
+                  That same paint-safe philosophy is why we also cover{' '}
+                  <Link href="/self-serve-car-wash" className="text-[#22C55E] font-medium hover:underline">
+                    self-service car washes
+                  </Link>{' '}
+                  — the open wand bays where you wash your own car by hand. Whether you prefer a fully
+                  automatic touchless wash or a hands-on self-serve bay, both keep automated brushes
+                  away from your finish.{selfServeCount > 0 && ` We now list ${selfServeCount.toLocaleString()}+ verified self-service locations, and counting.`}
+                </p>
+              )}
             </div>
           </div>
         </section>
