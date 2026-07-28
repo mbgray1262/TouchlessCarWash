@@ -89,6 +89,9 @@ export default async function SelfServeStatePage({ params }: Props) {
         <p className="mt-2 text-gray-600">
           {listings.length} verified self-service {listings.length === 1 ? 'location' : 'locations'} across {cities.length} {cities.length === 1 ? 'city' : 'cities'} — DIY, self-wash and coin-op bays where you wash your own car, your way.
         </p>
+        <Link href="/best-self-serve" className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-[#22C55E] hover:underline">
+          🏆 See the best-rated self-service washes by metro →
+        </Link>
 
         {cities.map(([city, group]) => (
           <section key={city} className="mt-10">

@@ -95,10 +95,16 @@ export default async function SelfServeCityPage({ params }: Props) {
           {listings.map(l => <ListingCard key={l.id} listing={l} context="self-serve" />)}
         </div>
 
-        <div className="mt-10 flex items-center gap-2 text-sm">
-          <MapPin className="w-4 h-4 text-[#22C55E]" />
-          <Link href={`${PATH}/${params.state}`} className="text-[#22C55E] hover:underline font-medium">
-            All self-service car washes in {stateName} →
+        <div className="mt-10 flex flex-col sm:flex-row sm:items-center gap-3 text-sm">
+          <span className="inline-flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-[#22C55E]" />
+            <Link href={`${PATH}/${params.state}`} className="text-[#22C55E] hover:underline font-medium">
+              All self-service car washes in {stateName} →
+            </Link>
+          </span>
+          <span className="hidden sm:inline text-gray-300">·</span>
+          <Link href="/best-self-serve" className="text-[#22C55E] hover:underline font-medium">
+            🏆 Best self-service washes by metro →
           </Link>
         </div>
       </div>

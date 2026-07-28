@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Droplet, Menu, X, Heart, ShoppingBag } from 'lucide-react';
+import { Droplet, Menu, X, Heart, ShoppingBag, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
@@ -43,6 +43,7 @@ function MobileAdminParamReader({ pathname, onClick }: { pathname: string; onCli
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [bestOfOpen, setBestOfOpen] = useState(false);
   const pathname = usePathname();
   const { favorites } = useFavorites();
   const favCount = favorites.length;
@@ -70,9 +71,43 @@ export function Header() {
                 Self-Serve
               </Link>
             )}
-            <Link href="/best" className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors">
-              Best Of
-            </Link>
+            {SELF_SERVE_LIVE ? (
+              <div
+                className="relative"
+                onMouseEnter={() => setBestOfOpen(true)}
+                onMouseLeave={() => setBestOfOpen(false)}
+                onFocus={() => setBestOfOpen(true)}
+                onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setBestOfOpen(false); }}
+              >
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors"
+                  aria-haspopup="true"
+                  aria-expanded={bestOfOpen}
+                >
+                  Best Of
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${bestOfOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {bestOfOpen && (
+                  // pt-2 keeps a hover bridge between the button and the menu so
+                  // the dropdown doesn't close while the cursor crosses the gap.
+                  <div className="absolute left-0 top-full pt-2 z-50">
+                    <div className="w-52 rounded-xl border border-gray-200 bg-white shadow-lg py-1.5">
+                      <Link href="/best" onClick={() => setBestOfOpen(false)} className="block px-4 py-2 text-sm font-medium text-[#0F2744] hover:bg-gray-50 hover:text-[#22C55E] transition-colors">
+                        Best Touchless
+                      </Link>
+                      <Link href="/best-self-serve" onClick={() => setBestOfOpen(false)} className="block px-4 py-2 text-sm font-medium text-[#0F2744] hover:bg-gray-50 hover:text-[#22C55E] transition-colors">
+                        Best Self-Service
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link href="/best" className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors">
+                Best Of
+              </Link>
+            )}
             <Link href="/chains" className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors">
               Chains
             </Link>
@@ -141,13 +176,33 @@ export function Header() {
                   Self-Serve
                 </Link>
               )}
-              <Link
-                href="/best"
-                className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Best Of
-              </Link>
+              {SELF_SERVE_LIVE ? (
+                <div className="flex flex-col space-y-3">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Best Of</span>
+                  <Link
+                    href="/best"
+                    className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors pl-3"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Best Touchless
+                  </Link>
+                  <Link
+                    href="/best-self-serve"
+                    className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors pl-3"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Best Self-Service
+                  </Link>
+                </div>
+              ) : (
+                <Link
+                  href="/best"
+                  className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Best Of
+                </Link>
+              )}
               <Link
                 href="/chains"
                 className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors"

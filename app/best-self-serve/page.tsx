@@ -77,6 +77,11 @@ export default async function BestSelfServeIndexPage() {
                 ))}
               </div>
             )}
+            <div className="mt-8 text-center">
+              <Link href="/self-serve-car-wash" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#22C55E] hover:underline">
+                <MapPin className="w-4 h-4" /> Browse all self-service car washes by state →
+              </Link>
+            </div>
           </div>
         </section>
 
