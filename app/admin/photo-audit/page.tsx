@@ -431,7 +431,7 @@ export default function PhotoAuditPage() {
     runBatch, applyEquipment, rejectResult, applyAllHighConfidence, undoApply, reload,
     noHeroCount, noHeroUnprocessed, heldCount, secondLookCount, bestOfCount, removeFromResults,
     bestOfReviewedCount, bestOfTotal, bestOfSubFilter, setBestOfSubFilter, markBestOfReviewed, unmarkBestOfReviewed, aiPickedCount,
-    triageYesCount, triageNoCount, triageMaybeCount, ssUnreviewedCount,
+    triageYesCount, triageNoCount, triageMaybeCount, ssUnreviewedCount, ssAutotaggedLiveCount,
     noHeroSubFilter, setNoHeroSubFilter, markAllChainListingsAudited,
     lowResListings, lowResTotal, lowResPage, lowResTotalPages, changeLowResPage,
     dismissLowRes, scanForLowRes, scanProgress,
@@ -666,6 +666,8 @@ export default function PhotoAuditPage() {
                 ...(isSS ? [{ label: 'REVIEW', tabs: [
                   { key: 'ss_unreviewed' as ViewFilter, label: '📋 To Confirm', count: tc('ss_unreviewed', ssUnreviewedCount), always: true,
                     title: "Tagged self-serve AND approved (live-eligible), but you haven't personally signed off yet. Confirming keeps them in the self-serve directory." },
+                  { key: 'ss_autotagged_live' as ViewFilter, label: '⚠️ Auto-tagged Live', count: tc('ss_autotagged_live', ssAutotaggedLiveCount), always: true,
+                    title: 'Auto-tagged self-serve and ALREADY LIVE in the public directory, but never human-confirmed (the pipeline stamped the review timestamp). Review each: Confirm to keep it, or Not Self-Serve to remove it. Nothing is unpublished until you act.' },
                   { key: 'triage_yes' as ViewFilter, label: '🆕 AI Self-Serve', count: tc('triage_yes', triageYesCount), always: true,
                     title: 'New finds the nationwide AI classifier flagged as self-serve (it saw a wand bay). Confirm or reject each.' },
                   // Legacy bucket from the retired ai_hero_selected pipeline — it only drains, never
@@ -1102,9 +1104,10 @@ export default function PhotoAuditPage() {
             // listing stamps self_service_reviewed_at, so drop it from the current
             // list immediately for progress feedback (it also stays gone on reload
             // when "Unreviewed only" is checked).
-            if (washType === 'self_serve' && (viewFilter === 'all' || viewFilter === 'ai_picked') && editorListingId) {
-              // AI-Picked: confirming stamps self_service_source='admin_review', which the
-              // tab's query excludes — so drop it now for instant feedback, gone on reload too.
+            if (washType === 'self_serve' && (viewFilter === 'all' || viewFilter === 'ai_picked' || viewFilter === 'ss_unreviewed' || viewFilter === 'ss_autotagged_live') && editorListingId) {
+              // Confirm stamps self_service_source='admin_review' and Not Self-Serve sets
+              // is_self_service=false — either way the listing no longer matches these tabs'
+              // queries, so drop it now for instant feedback (gone on reload too).
               removeFromResults(editorListingId);
             }
             // On the Best-Of tab, approving/saving a winner counts as having

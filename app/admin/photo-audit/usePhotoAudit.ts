@@ -92,7 +92,7 @@ export interface LowResListing {
   hero_image_source: string | null;
 }
 
-export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup' | 'no_hero' | 'low_res' | 'held' | 'unscanned' | 'second_look' | 'best_of' | 'no_evidence' | 'by_equipment' | 'tier2_recheck' | 'ai_picked' | 'triage_yes' | 'triage_no' | 'triage_maybe' | 'ss_unreviewed';
+export type ViewFilter = 'all' | 'review' | 'equipment' | 'heroes' | 'cleanup' | 'no_hero' | 'low_res' | 'held' | 'unscanned' | 'second_look' | 'best_of' | 'no_evidence' | 'by_equipment' | 'tier2_recheck' | 'ai_picked' | 'triage_yes' | 'triage_no' | 'triage_maybe' | 'ss_unreviewed' | 'ss_autotagged_live';
 
 // The nationwide AI triage (scripts/triage-selfserve.mjs) stamps self_service_source with
 // one of these as it classifies the unclassified pool. These three views let you browse and
@@ -168,6 +168,7 @@ export function usePhotoAudit() {
   const [triageNoCount, setTriageNoCount] = useState(0);
   const [triageMaybeCount, setTriageMaybeCount] = useState(0);
   const [ssUnreviewedCount, setSsUnreviewedCount] = useState(0);
+  const [ssAutotaggedLiveCount, setSsAutotaggedLiveCount] = useState(0);
   const [bestOfCount, setBestOfCount] = useState(0);
   const [bestOfReviewedCount, setBestOfReviewedCount] = useState(0);
   const [bestOfTotal, setBestOfTotal] = useState(0);
@@ -272,6 +273,17 @@ export function usePhotoAudit() {
       if (stateFilterRef.current) su = su.eq('state', stateFilterRef.current);
       su = su.or(NOT_CLOSED).or(OPEN_BIZ);
       setSsUnreviewedCount((await su).count ?? 0);
+      // Auto-tagged + ALREADY LIVE, but never human-confirmed: is_self_service + is_approved +
+      // self_service_reviewed_at IS NOT NULL (so the public gate treats it as reviewed → it's in
+      // the self-serve directory) AND self_service_source != 'admin_review' (no human sign-off).
+      // These fall through every other queue precisely because reviewed_at is stamped. Matches the
+      // amber "Auto-tagged · needs review" badge. Reviewing keeps (Confirm) or removes (Not Self-Serve).
+      let sal = supabase.from('listings').select('id', { count: 'exact', head: true })
+        .eq('is_self_service', true).eq('is_approved', true).not('self_service_reviewed_at', 'is', null)
+        .or('self_service_source.is.null,self_service_source.neq.admin_review');
+      if (stateFilterRef.current) sal = sal.eq('state', stateFilterRef.current);
+      sal = sal.or(NOT_CLOSED).or(OPEN_BIZ);
+      setSsAutotaggedLiveCount((await sal).count ?? 0);
     } else {
       setAiPickedCount(0);
       setTriageYesCount(0);
@@ -829,6 +841,41 @@ export function usePhotoAudit() {
       }));
       setResults(suResults);
       setFilteredTotal(suTotal ?? 0);
+      setLoading(false);
+      return;
+    }
+
+    // "ss_autotagged_live" filter: tagged self-serve + approved + self_service_reviewed_at IS NOT
+    // NULL (so it's LIVE in the public self-serve directory) but self_service_source != 'admin_review'
+    // (the pipeline auto-stamped it; no human ever confirmed it). These are the ~800 that slip past
+    // every other queue. Confirm keeps them live (source='admin_review'); Not Self-Serve removes them
+    // from the directory (is_self_service=false). Reviewing here NEVER unpublishes until you act.
+    if (filter === 'ss_autotagged_live') {
+      let countQuery = supabase.from('listings').select('id', { count: 'exact', head: true })
+        .eq('is_self_service', true).eq('is_approved', true).not('self_service_reviewed_at', 'is', null)
+        .or('self_service_source.is.null,self_service_source.neq.admin_review');
+      let dataQuery = supabase.from('listings')
+        .select('id, name, slug, city, state, hero_image, hero_image_source, photos, equipment_brand, equipment_model, is_approved, photo_audited_at, parent_chain')
+        .eq('is_self_service', true).eq('is_approved', true).not('self_service_reviewed_at', 'is', null)
+        .or('self_service_source.is.null,self_service_source.neq.admin_review');
+      if (stateFilterRef.current) { countQuery = countQuery.eq('state', stateFilterRef.current); dataQuery = dataQuery.eq('state', stateFilterRef.current); }
+      countQuery = countQuery.or(NOT_CLOSED).or(OPEN_BIZ);
+      dataQuery = dataQuery.or(NOT_CLOSED).or(OPEN_BIZ);
+      const { count: salTotal } = await countQuery;
+      const { data: salListings } = await dataQuery
+        .order('state', { ascending: true }).order('city', { ascending: true }).order('name', { ascending: true })
+        .range(offset, offset + PAGE_SIZE - 1);
+      const salResults: AuditResult[] = (salListings ?? []).map((l): AuditResult => ({
+        id: `ssauto-${l.id}`, listing_id: l.id, listing_name: l.name, listing_slug: l.slug,
+        listing_city: l.city, listing_state: l.state, listing_hero: l.hero_image,
+        hero_quality: l.hero_image ? 'has_hero' : 'missing', equipment_brand: l.equipment_brand,
+        equipment_model: l.equipment_model, equipment_confidence: null, equipment_source_photo: null,
+        suggested_hero_url: null, suggested_hero_reason: 'Auto-tagged self-serve and ALREADY LIVE in the directory, but never human-confirmed. Confirm to keep it, or Not Self-Serve to remove it from the self-serve directory.',
+        photos_to_remove: [], reviewed: false, applied: false, created_at: '', raw_response: null,
+        google_photos_added: 0, google_photos_screened: 0, listing_parent_chain: l.parent_chain ?? null,
+      }));
+      setResults(salResults);
+      setFilteredTotal(salTotal ?? 0);
       setLoading(false);
       return;
     }
@@ -1753,6 +1800,7 @@ export function usePhotoAudit() {
     triageNoCount,
     triageMaybeCount,
     ssUnreviewedCount,
+    ssAutotaggedLiveCount,
     bestOfCount,
     bestOfReviewedCount,
     bestOfTotal,
