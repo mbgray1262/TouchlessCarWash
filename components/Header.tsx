@@ -88,20 +88,21 @@ export function Header() {
                   Best Of
                   <ChevronDown className={`w-3.5 h-3.5 transition-transform ${bestOfOpen ? 'rotate-180' : ''}`} />
                 </button>
-                {bestOfOpen && (
-                  // pt-2 keeps a hover bridge between the button and the menu so
-                  // the dropdown doesn't close while the cursor crosses the gap.
-                  <div className="absolute left-0 top-full pt-2 z-50">
-                    <div className="w-52 rounded-xl border border-gray-200 bg-white shadow-lg py-1.5">
-                      <Link href="/best" onClick={() => setBestOfOpen(false)} className="block px-4 py-2 text-sm font-medium text-[#0F2744] hover:bg-gray-50 hover:text-[#22C55E] transition-colors">
-                        Best Touchless
-                      </Link>
-                      <Link href="/best-self-serve" onClick={() => setBestOfOpen(false)} className="block px-4 py-2 text-sm font-medium text-[#0F2744] hover:bg-gray-50 hover:text-[#22C55E] transition-colors">
-                        Best Self-Service
-                      </Link>
-                    </div>
+                {/* Menu is ALWAYS rendered in the DOM (visibility toggled via CSS,
+                    not conditional-render) so crawlers see the /best + /best-self-serve
+                    links in the server HTML. A JS-only ({bestOfOpen && …}) dropdown made
+                    these links invisible to crawlers and orphaned all 110 /best-self-serve
+                    metro pages. pt-2 keeps a hover bridge between the button and the menu. */}
+                <div className={`absolute left-0 top-full pt-2 z-50 ${bestOfOpen ? 'block' : 'hidden'}`}>
+                  <div className="w-52 rounded-xl border border-gray-200 bg-white shadow-lg py-1.5">
+                    <Link href="/best" onClick={() => setBestOfOpen(false)} className="block px-4 py-2 text-sm font-medium text-[#0F2744] hover:bg-gray-50 hover:text-[#22C55E] transition-colors">
+                      Best Touchless
+                    </Link>
+                    <Link href="/best-self-serve" onClick={() => setBestOfOpen(false)} className="block px-4 py-2 text-sm font-medium text-[#0F2744] hover:bg-gray-50 hover:text-[#22C55E] transition-colors">
+                      Best Self-Service
+                    </Link>
                   </div>
-                )}
+                </div>
               </div>
             ) : (
               <Link href="/best" className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors">
