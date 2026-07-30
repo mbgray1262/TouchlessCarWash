@@ -611,7 +611,7 @@ export default function PhotoAuditPage() {
       <div className="flex items-center gap-2 mb-3">
         <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Wash type:</span>
         <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5">
-          {([['touchless', 'Touchless'], ['self_serve', 'Self-Service']] as const).map(([key, label]) => (
+          {([['touchless', 'Touchless'], ['self_serve', 'Self-Service'], ['hand_wash', 'Hand Wash']] as const).map(([key, label]) => (
             <button
               key={key}
               onClick={() => setWashType(key)}
@@ -657,8 +657,8 @@ export default function PhotoAuditPage() {
                   { key: 'all', label: 'All', count: tc('all', queueStats.totalUntagged), primary: true,
                     title: isSS ? 'Every self-serve-relevant listing in scope, grouped by state → city.' : 'Every touchless listing.' },
                   // "Need Review" is a touchless-only concept (AI photo-audit results awaiting review).
-                  // Self-serve review happens through the REVIEW group below, so hide it there.
-                  ...(!isSS ? [{ key: 'review' as ViewFilter, label: 'Need Review', count: stats.needs_review, primary: true,
+                  // Self-serve + hand-wash review through their own queues, so hide it there.
+                  ...(washType === 'touchless' ? [{ key: 'review' as ViewFilter, label: 'Need Review', count: stats.needs_review, primary: true,
                     title: 'Listings the AI photo-audit flagged as needing a human decision.' }] : []),
                   { key: 'unscanned', label: 'Unscanned', count: tc('unscanned', queueStats.remaining), primary: true,
                     title: "Listings the AI classifier hasn't scanned yet — the work queue for running a batch." },
@@ -686,9 +686,9 @@ export default function PhotoAuditPage() {
                   { key: 'cleanup', label: 'Cleanup', count: stats.cleanup_total, title: 'Listings with junk gallery photos the AI flagged for removal.' },
                 ] },
                 { label: 'Review', tabs: [
-                  { key: 'held', label: isSS ? 'Unpublished' : 'Held', count: tc('held', heldCount),
-                    title: isSS ? 'Tagged self-serve but NOT approved yet, so not live. Most were auto-tagged by the pipeline (not human-reviewed) — Confirm to publish, or reject.' : 'Touchless but not approved — the admin review queue.' },
-                  ...(!isSS ? [
+                  { key: 'held', label: washType === 'touchless' ? 'Held' : 'Unpublished', count: tc('held', heldCount),
+                    title: washType === 'hand_wash' ? 'Tagged hand-wash (from the name) but NOT reviewed/approved yet — the review queue. Confirm to keep + publish later, or reject.' : isSS ? 'Tagged self-serve but NOT approved yet, so not live. Most were auto-tagged by the pipeline (not human-reviewed) — Confirm to publish, or reject.' : 'Touchless but not approved — the admin review queue.' },
+                  ...(washType === 'touchless' ? [
                     { key: 'second_look' as ViewFilter, label: 'Second look', count: tc('second_look', secondLookCount) },
                     { key: 'best_of' as ViewFilter, label: '🏆 Best-Of', count: bestOfCount, always: true },
                     { key: 'tier2_recheck' as ViewFilter, label: '♻️ Tier-2', count: viewFilter === 'tier2_recheck' ? filteredTotal : 0, always: true },
@@ -1108,6 +1108,12 @@ export default function PhotoAuditPage() {
               // Confirm stamps self_service_source='admin_review' and Not Self-Serve sets
               // is_self_service=false — either way the listing no longer matches these tabs'
               // queries, so drop it now for instant feedback (gone on reload too).
+              removeFromResults(editorListingId);
+            }
+            // Hand-wash review: the Held/Unpublished queue is is_hand_wash=true +
+            // is_approved=false. Confirm (approve) or Not-a-Hand-Wash (is_hand_wash=false)
+            // both drop the listing from that query, so remove it now for instant feedback.
+            if (washType === 'hand_wash' && (viewFilter === 'held' || viewFilter === 'all') && editorListingId) {
               removeFromResults(editorListingId);
             }
             // On the Best-Of tab, approving/saving a winner counts as having

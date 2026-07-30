@@ -976,6 +976,48 @@ export function useFastCuration(listingId: string) {
     setSaving(false);
   }, [listing]);
 
+  // Hand-wash equivalent of approveSelfServeAndNext. Confirms the listing IS a
+  // hand wash and approves its photos, stamping hand_wash_reviewed_at (independent
+  // of the touchless/self-serve review columns) so reviewing here never disturbs
+  // the other queues. hand_wash_source='admin_review' marks a human sign-off.
+  const approveHandWashAndNext = async (onUpdate?: () => void, onNext?: () => void, onClose?: () => void): Promise<void> => {
+    if (listing) {
+      const missingCity = !listing.city || !listing.city.trim();
+      const missingStreet = !listing.address || !listing.address.trim();
+      if (missingCity || missingStreet) {
+        const what = [missingStreet && 'street address', missingCity && 'city'].filter(Boolean).join(' and ');
+        alert(`"${listing.name}" has no ${what} — fill it in before approving (a partial listing breaks the public URL and renders with no location).`);
+        return;
+      }
+    }
+    const ok = await saveAll();
+    if (!ok) return;
+    if (listing) {
+      const now = new Date().toISOString();
+      await supabase.from('listings').update({
+        reviewed_at: now, hand_wash_reviewed_at: now, is_approved: true, is_hand_wash: true, hand_wash_source: 'admin_review',
+      }).eq('id', listing.id);
+      setListing(prev => prev ? { ...prev, is_approved: true, is_hand_wash: true, hand_wash_reviewed_at: now, hand_wash_source: 'admin_review' } : prev);
+    }
+    onUpdate?.();
+    if (onNext) onNext();
+    else onClose?.();
+  };
+
+  // Hand-wash equivalent of markNotSelfServe — removes the hand-wash tag only
+  // (is_hand_wash=false), records a durable human "no" via hand_wash_reviewed_at +
+  // source, and never touches is_touchless / is_self_service / is_approved.
+  const markNotHandWash = useCallback(async () => {
+    if (!listing) return;
+    setSaving(true);
+    const now = new Date().toISOString();
+    await supabase.from('listings')
+      .update({ is_hand_wash: false, hand_wash_reviewed_at: now, hand_wash_source: 'admin_review' })
+      .eq('id', listing.id);
+    setListing(prev => prev ? { ...prev, is_hand_wash: false, hand_wash_reviewed_at: now, hand_wash_source: 'admin_review' } : prev);
+    setSaving(false);
+  }, [listing]);
+
   // Delete listing
   const updateWebsite = useCallback(async (newUrl: string | null) => {
     if (!listing) return;
@@ -1048,6 +1090,8 @@ export function useFastCuration(listingId: string) {
     approveAndNext,
     approveSelfServeAndNext,
     markNotSelfServe,
+    approveHandWashAndNext,
+    markNotHandWash,
     discoverPhotos,
     classifyEquipment,
     setEquipment,
