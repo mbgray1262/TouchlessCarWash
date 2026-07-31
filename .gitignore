@@ -73,3 +73,6 @@ scripts/_*.json
 scripts/_*.mts
 scripts/_*.mjs
 scripts/_*.txt
+
+scripts/_hw_review*.html
+scripts/_hw_weedout.html
