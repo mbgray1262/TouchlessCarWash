@@ -36,7 +36,7 @@ LOG = os.path.join(SCRIPT_DIR, 'handwash-harvest-reviews.log')
 SOURCE = 'gmaps-handwash'
 
 # Google pre-filters reviews to these; keep it to terms customers actually type.
-SEARCH_QUERY = '"by hand" OR "hand wash" OR "hand washed" OR "hand dried" OR detailing OR "wiped down"'
+SEARCH_QUERY = '"by hand" OR "hand wash" OR "hand washed" OR "hand dried" OR detailing OR "wiped down" OR "full service" OR "full serve"'
 
 # ── What we KEEP ─────────────────────────────────────────────────────────────────────
 # STRONG: language that only describes an ATTENDED hand wash / detail. Patterns are
@@ -53,9 +53,11 @@ STRONG_RE = re.compile(
     r'(?:they|guys|men|crew|staff|workers?|attendants?|employees?|team|gentlemen)\b'
     r'[^.!?]{0,35}?\b(?:wash|washed|dried|drying|wiped|detail|detailed|hand[\s-]?wash)',  # a person doing it
     re.I)
-# WEAK: corroborating only, must sit in a wash context.
+# WEAK: corroborating only. "full serv(ice)" is a strong hint an attendant does the work
+# (Michael's ask) but not proof — a full-service tunnel exists — so it stays WEAK and the
+# Haiku evidence pass drops any that are really automatic/tunnel.
 WEAK_RE = re.compile(
-    r'\bfull[\s-]?service\b|'
+    r'\bfull[\s-]?serv\w*|'                # full service / full serve / full-service / full servicing
     r'\btowel(?:ed)?\s+dr(?:y|ied)\b|'
     r'\bhand\b[^.!?]{0,25}?\b(?:wash|dry|dried|wax|buff|towel|clean)\w*|'
     r'\b(?:wash|dry|dried|wax|buff|towel|clean)\w*[^.!?]{0,25}?\bby\s+hand\b',
