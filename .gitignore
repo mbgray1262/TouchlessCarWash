@@ -76,3 +76,5 @@ scripts/_*.txt
 
 scripts/_hw_review*.html
 scripts/_hw_weedout.html
+scripts/_hw_apply_shard1.html
+scripts/_address_state_conflicts*.json
