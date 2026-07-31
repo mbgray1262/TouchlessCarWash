@@ -12,6 +12,7 @@ import { permanentRedirect } from 'next/navigation';
 import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
 import { publicListingsCount } from '@/lib/public-listings';
 import { isSelfServePublic, isSelfServeOnly, listingPrimaryWashType } from '@/lib/self-serve';
+import { isHandWashPublic, isHandWashOnly } from '@/lib/hand-wash';
 import type { TssSnippet } from '@/components/TouchlessSatisfactionGauge';
 import type { ScoreRankItem } from '@/components/TouchlessScoreComparison';
 import { earnsTrophy } from '@/lib/metro-scoring';
@@ -102,7 +103,7 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   // URL drops out of "Duplicate without user-selected canonical" reports.
   // Redirect/noindex unless the listing is touchless-public OR (when the category
   // is live) self-serve-public. isSelfServePublic is always false while gated.
-  if ((!listing.is_touchless || !listing.is_approved) && !isSelfServePublic(listing)) {
+  if ((!listing.is_touchless || !listing.is_approved) && !isSelfServePublic(listing) && !isHandWashPublic(listing)) {
     return {
       title: 'Listing Not Available',
       robots: { index: false, follow: true },
@@ -119,20 +120,28 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   // instead of leaving all self-serve demand to the hub pages. `alsoSelfServe` is gated on
   // isSelfServePublic (reviewed + approved + category live) so we only claim self-serve once a
   // human has confirmed it — never on an unreviewed is_self_service flag.
-  const selfServe = isSelfServeOnly(listing);
-  const alsoSelfServe = !selfServe && isSelfServePublic(listing) && !!listing.is_touchless;
-  const washTypeLabel = selfServe
-    ? 'Self-Serve Car Wash'
-    : alsoSelfServe
-      ? 'Touchless & Self-Serve Car Wash'
-      : 'Touchless Car Wash';
+  // Hand-wash-only listings (attended, staff wash by hand) get their own wording — never
+  // "touch-free / brushless" (hand washing IS contact). Checked first; selfServe/touchless fall
+  // through for mixed listings (a hand-wash that's also self-serve or touchless keeps that framing).
+  const handWash = isHandWashOnly(listing);
+  const selfServe = !handWash && isSelfServeOnly(listing);
+  const alsoSelfServe = !selfServe && !handWash && isSelfServePublic(listing) && !!listing.is_touchless;
+  const washTypeLabel = handWash
+    ? 'Hand Car Wash'
+    : selfServe
+      ? 'Self-Serve Car Wash'
+      : alsoSelfServe
+        ? 'Touchless & Self-Serve Car Wash'
+        : 'Touchless Car Wash';
   const topAmenities = (listing.amenities || []).slice(0, 3).join(', ');
   const amenityPart = topAmenities
-    ? selfServe
-      ? ` Self-serve wash bays offering ${topAmenities}.`
-      : alsoSelfServe
-        ? ` Touch-free automatic and self-serve wash bays offering ${topAmenities}.`
-        : ` Touch-free, brushless car wash offering ${topAmenities}.`
+    ? handWash
+      ? ` Full-service hand car wash offering ${topAmenities}.`
+      : selfServe
+        ? ` Self-serve wash bays offering ${topAmenities}.`
+        : alsoSelfServe
+          ? ` Touch-free automatic and self-serve wash bays offering ${topAmenities}.`
+          : ` Touch-free, brushless car wash offering ${topAmenities}.`
     : '';
   // Canonical URL is built from the listing's OWN state + city (via the same
   // buildListingUrl() the render path redirects to and that /sitemap.xml emits),
@@ -253,7 +262,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
   // isSelfServePublic is false while gated so they keep redirecting until launch.
   // NOTE (pre-launch TODO): the detail template below is touchless-branded — its
   // self-serve copy/schema adaptation is the remaining task before flipping the switch.
-  if ((!listing.is_touchless || !listing.is_approved) && !isSelfServePublic(listing)) {
+  if ((!listing.is_touchless || !listing.is_approved) && !isSelfServePublic(listing) && !isHandWashPublic(listing)) {
     const stateSlug = getStateSlug(listing.state) || params.state;
     const citySlug = slugify(listing.city) || params.city;
     // Prefer the listing's own city hub (most relevant to the original
