@@ -221,7 +221,13 @@ async function analyzeAll(name, imgs) {
 const gallery = JSON.parse(readFileSync(GALLERY_FILE, 'utf8'));       // {listing_id:{title,match,urls[]}}
 const meta = JSON.parse(readFileSync(META_FILE, 'utf8'));              // [{id,name,city,state,lat,lng,has_hero}]
 const metaById = Object.fromEntries(meta.map(m => [m.id, m]));
-const ids = Object.keys(gallery);
+// --offset/--limit slice the id list so a big run can be sharded (apply a first shard,
+// verify the real cost, then continue). Order follows the meta file (stable).
+const OFFSET = parseInt(arg('--offset', '0'), 10);
+const LIMIT = arg('--limit') ? parseInt(arg('--limit'), 10) : null;
+const orderedIds = meta.map(m => m.id).filter(id => gallery[id]);
+const extraIds = Object.keys(gallery).filter(id => !orderedIds.includes(id));
+let ids = [...orderedIds, ...extraIds].slice(OFFSET, LIMIT != null ? OFFSET + LIMIT : undefined);
 console.log(`Hand-wash ${APPLY ? 'APPLY' : 'VALIDATION'} pass: ${ids.length} listings, model ${MODEL}\n`);
 
 let selIn = 0, selOut = 0, triageInTot = 0, triageOutTot = 0;
