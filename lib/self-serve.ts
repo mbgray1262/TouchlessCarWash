@@ -75,6 +75,28 @@ export function isSelfServeOnly(listing: {
   return !!listing.is_self_service && !listing.is_touchless;
 }
 
+/** The wash types a community-verification vote can be cast against. */
+export type WashType = 'touchless' | 'self_serve' | 'hand_wash';
+
+/**
+ * The PRIMARY wash type a listing's page presents itself as — used to ask the
+ * right community-verification question ("Is it touchless?" vs "self-serve?" vs
+ * "hand wash?"). Touchless wins for mixed listings: it's the flagship framing
+ * and the page already renders touchless copy for them (see isSelfServeOnly).
+ * Falls back to 'touchless' for the rare untyped row that only reaches the
+ * listing template via the self-serve gate.
+ */
+export function listingPrimaryWashType(listing: {
+  is_touchless?: boolean | null;
+  is_self_service?: boolean | null;
+  is_hand_wash?: boolean | null;
+}): WashType {
+  if (listing.is_touchless) return 'touchless';
+  if (listing.is_self_service) return 'self_serve';
+  if (listing.is_hand_wash) return 'hand_wash';
+  return 'touchless';
+}
+
 /** Count of publicly visible self-serve listings matching the chained filters. */
 export function publicSelfServeCount() {
   return publicSelfServeListings('*', { count: 'exact', head: true });

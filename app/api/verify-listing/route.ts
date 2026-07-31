@@ -22,6 +22,12 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { listing_id, is_touchless, comment } = body;
+    // wash_type says which question the visitor answered. is_touchless stays the vote
+    // value (true = confirms the listing matches its wash type). Defaults to 'touchless'
+    // for backward compatibility with older clients.
+    const WASH_TYPES = ['touchless', 'self_serve', 'hand_wash'] as const;
+    const wash_type: (typeof WASH_TYPES)[number] =
+      WASH_TYPES.includes(body.wash_type) ? body.wash_type : 'touchless';
 
     if (!listing_id || typeof listing_id !== 'string') {
       return NextResponse.json({ error: 'listing_id is required' }, { status: 400 });
@@ -60,6 +66,7 @@ export async function POST(req: NextRequest) {
     const { error } = await supabaseAdmin.from('listing_verifications').insert({
       listing_id,
       is_touchless,
+      wash_type,
       comment: comment?.trim() || null,
       ip_address: ip,
     });
@@ -69,10 +76,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to save verification' }, { status: 500 });
     }
 
-    // Auto-hide rule: when 2+ "not touchless" flags from distinct IPs land
-    // on the same listing within 90 days, unapprove it pending admin review.
-    // Two independent strangers reporting the same problem is a strong
-    // enough signal to pull the listing from public view.
+    // Auto-hide rule: when 2+ "no" flags from distinct IPs land on the same listing
+    // FOR THE SAME WASH TYPE within 90 days, unapprove it pending admin review. Two
+    // independent strangers reporting the same problem is a strong enough signal to
+    // pull the listing from public view. Scoped by wash_type so flags from before a
+    // reclassification don't count against a different type.
     if (!is_touchless) {
       const flagWindow = new Date();
       flagWindow.setDate(flagWindow.getDate() - 90);
@@ -82,6 +90,7 @@ export async function POST(req: NextRequest) {
         .select('ip_address')
         .eq('listing_id', listing_id)
         .eq('is_touchless', false)
+        .eq('wash_type', wash_type)
         .gte('created_at', flagWindow.toISOString());
 
       const distinctIps = new Set((flagRows ?? []).map(r => r.ip_address)).size;

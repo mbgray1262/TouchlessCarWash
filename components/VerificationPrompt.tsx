@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ThumbsUp, ThumbsDown, CheckCircle, Users, MessageSquare } from 'lucide-react';
+import type { WashType } from '@/lib/self-serve';
 
 export interface VerificationStats {
   yesCount: number;
@@ -17,7 +18,42 @@ interface VerificationPromptProps {
   listingId: string;
   listingName: string;
   stats: VerificationStats;
+  /** Which wash type this listing presents as, so the question matches the page.
+   *  Defaults to touchless for backward compatibility. */
+  washType?: WashType;
 }
+
+// Per-wash-type wording. The underlying vote (is_touchless boolean in the DB) is a
+// generic "does this listing match its claimed type?" — true = confirmed. Only the
+// copy changes per type.
+const WASH_LABELS: Record<WashType, {
+  yes: string; no: string; markedYes: string; markedNo: string; pct: string; placeholder: string;
+}> = {
+  touchless: {
+    yes: "Yes, it's touchless",
+    no: 'Not touchless',
+    markedYes: 'Marked as touchless',
+    markedNo: 'Marked as not touchless',
+    pct: 'confirmed touchless',
+    placeholder: 'e.g. No brushes at all, great pressure wash...',
+  },
+  self_serve: {
+    yes: "Yes, it's self-serve",
+    no: 'Not self-serve',
+    markedYes: 'Marked as self-serve',
+    markedNo: 'Marked as not self-serve',
+    pct: 'confirmed self-serve',
+    placeholder: 'e.g. Coin-op wand bays you wash the car yourself...',
+  },
+  hand_wash: {
+    yes: 'Yes, attendants hand-wash here',
+    no: "No, they don't",
+    markedYes: 'Marked as hand wash',
+    markedNo: 'Marked as not a hand wash',
+    pct: 'confirmed hand wash',
+    placeholder: 'e.g. Staff washed my car by hand, great job...',
+  },
+};
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -30,7 +66,8 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(days / 365)} year${Math.floor(days / 365) > 1 ? 's' : ''} ago`;
 }
 
-export default function VerificationPrompt({ listingId, listingName, stats }: VerificationPromptProps) {
+export default function VerificationPrompt({ listingId, listingName, stats, washType = 'touchless' }: VerificationPromptProps) {
+  const L = WASH_LABELS[washType];
   const [step, setStep] = useState<'idle' | 'comment' | 'done' | 'already_submitted'>('idle');
   const [selectedVote, setSelectedVote] = useState<boolean | null>(null);
   const [comment, setComment] = useState('');
@@ -59,6 +96,7 @@ export default function VerificationPrompt({ listingId, listingName, stats }: Ve
         body: JSON.stringify({
           listing_id: listingId,
           is_touchless: selectedVote,
+          wash_type: washType,
           comment: comment.trim() || null,
         }),
       });
@@ -109,7 +147,7 @@ export default function VerificationPrompt({ listingId, listingName, stats }: Ve
             </span>
             {pct !== null && (
               <span className={`font-semibold ${pct >= 70 ? 'text-green-600' : pct >= 40 ? 'text-amber-600' : 'text-red-600'}`}>
-                {pct}% confirmed touchless
+                {pct}% {L.pct}
               </span>
             )}
           </div>
@@ -157,14 +195,14 @@ export default function VerificationPrompt({ listingId, listingName, stats }: Ve
               className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border-2 border-green-200 bg-green-50 hover:bg-green-100 hover:border-green-400 text-green-700 font-medium text-sm transition-all"
             >
               <ThumbsUp className="w-4 h-4" />
-              Yes, it&apos;s touchless
+              {L.yes}
             </button>
             <button
               onClick={() => handleVote(false)}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border-2 border-red-100 bg-red-50 hover:bg-red-100 hover:border-red-300 text-red-600 font-medium text-sm transition-all"
             >
               <ThumbsDown className="w-4 h-4" />
-              Not touchless
+              {L.no}
             </button>
           </div>
         </div>
@@ -174,8 +212,8 @@ export default function VerificationPrompt({ listingId, listingName, stats }: Ve
         <div>
           <div className={`flex items-center gap-2 text-sm font-medium mb-3 ${selectedVote ? 'text-green-700' : 'text-red-600'}`}>
             {selectedVote
-              ? <><ThumbsUp className="w-4 h-4" /> Marked as touchless</>
-              : <><ThumbsDown className="w-4 h-4" /> Marked as not touchless</>}
+              ? <><ThumbsUp className="w-4 h-4" /> {L.markedYes}</>
+              : <><ThumbsDown className="w-4 h-4" /> {L.markedNo}</>}
           </div>
           <div className="mb-3">
             <label className="text-xs text-gray-500 flex items-center gap-1 mb-1.5">
@@ -187,7 +225,7 @@ export default function VerificationPrompt({ listingId, listingName, stats }: Ve
               onChange={e => setComment(e.target.value)}
               maxLength={500}
               rows={3}
-              placeholder="e.g. No brushes at all, great pressure wash..."
+              placeholder={L.placeholder}
               className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none text-gray-700 placeholder-gray-400"
             />
             <div className="text-right text-xs text-gray-400 mt-0.5">{comment.length}/500</div>

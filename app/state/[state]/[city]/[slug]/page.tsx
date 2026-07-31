@@ -11,7 +11,7 @@
 import { permanentRedirect } from 'next/navigation';
 import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
 import { publicListingsCount } from '@/lib/public-listings';
-import { isSelfServePublic, isSelfServeOnly } from '@/lib/self-serve';
+import { isSelfServePublic, isSelfServeOnly, listingPrimaryWashType } from '@/lib/self-serve';
 import type { TssSnippet } from '@/components/TouchlessSatisfactionGauge';
 import type { ScoreRankItem } from '@/components/TouchlessScoreComparison';
 import { earnsTrophy } from '@/lib/metro-scoring';
@@ -308,7 +308,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     getGenericReviews(listing.id),
     getBestOfRankings(listing.id),
     getChainListings(listing),
-    getVerificationStats(listing.id),
+    getVerificationStats(listing.id, listingPrimaryWashType(listing)),
     getEquipmentVideos(),
     getPaintModuleSnippets(listing.id),
     listing.touchless_satisfaction_score != null

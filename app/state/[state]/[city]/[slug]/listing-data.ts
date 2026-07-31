@@ -5,7 +5,7 @@
 import { cache } from 'react';
 import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
 import { publicListings } from '@/lib/public-listings';
-import { publicSelfServeListings } from '@/lib/self-serve';
+import { publicSelfServeListings, type WashType } from '@/lib/self-serve';
 import { US_STATES, slugify } from '@/lib/constants';
 import { listingTag } from '@/lib/revalidate-listing';
 import type { VerificationStats } from '@/components/VerificationPrompt';
@@ -220,11 +220,14 @@ export async function getChainListings(listing: Listing, limit = 6): Promise<{ c
   return { chainName, listings: [...sameState, ...otherState].slice(0, limit) as Listing[] };
 }
 
-export async function getVerificationStats(listingId: string): Promise<VerificationStats> {
+export async function getVerificationStats(listingId: string, washType: WashType = 'touchless'): Promise<VerificationStats> {
   const { data } = await supabase
     .from('listing_verifications')
     .select('is_touchless, comment, created_at')
     .eq('listing_id', listingId)
+    // Scope to this listing's current wash type so votes cast before a
+    // reclassification (e.g. old touchless votes) don't skew the new type's stats.
+    .eq('wash_type', washType)
     .order('created_at', { ascending: false })
     .limit(50);
 
