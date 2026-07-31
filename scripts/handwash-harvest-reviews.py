@@ -51,7 +51,10 @@ STRONG_RE = re.compile(
     r'\bwiped?\s+(?:it\s+|the\s+car\s+|everything\s+)?down\b|'# wiped it down
     r'\bwash\w*\b[^.!?]{0,20}?\bfor\s+(?:you|me|us)\b|'       # "they wash it for you" (full service)
     r'(?:they|guys|men|crew|staff|workers?|attendants?|employees?|team|gentlemen)\b'
-    r'[^.!?]{0,35}?\b(?:wash|washed|dried|drying|wiped|detail|detailed|hand[\s-]?wash)',  # a person doing it
+    # a person DOING the work. Note: bare "detail" is intentionally excluded here — it let the
+    # idiom "they pay attention to detail" match (praise for attentiveness, not hand-washing);
+    # genuine "they detailed my car" still matches via "detailed" / STRONG detail(ing|ed).
+    r'[^.!?]{0,35}?\b(?:wash|washed|dried|drying|wiped|detailed|hand[\s-]?wash)',
     re.I)
 # WEAK: corroborating only. "full serv(ice)" is a strong hint an attendant does the work
 # (Michael's ask) but not proof — a full-service tunnel exists — so it stays WEAK and the
@@ -292,11 +295,15 @@ async def main():
                     except Exception: pass
                 # Real Chrome (channel) resists Google's bot-detection best; headed by
                 # default (Google degrades headless). Fall back to bundled Chromium.
+                # Headed (Google degrades headless) but pushed OFF-SCREEN so a long run
+                # doesn't pop up / steal focus on Michael's Mac. Playwright types via CDP,
+                # so an off-screen window still receives the trusted keystrokes.
+                launch_args = ['--lang=en-US', '--disable-blink-features=AutomationControlled',
+                               '--window-position=-2400,-2400', '--window-size=1300,950']
                 try:
-                    browser = await p.chromium.launch(channel='chrome', headless=headless,
-                        args=['--lang=en-US', '--disable-blink-features=AutomationControlled'])
+                    browser = await p.chromium.launch(channel='chrome', headless=headless, args=launch_args)
                 except Exception:
-                    browser = await p.chromium.launch(headless=headless, args=['--lang=en-US'])
+                    browser = await p.chromium.launch(headless=headless, args=launch_args)
                 ctx = await browser.new_context(locale='en-US', viewport={'width': 1300, 'height': 950}, user_agent=UA)
                 page = await ctx.new_page()
             try:
