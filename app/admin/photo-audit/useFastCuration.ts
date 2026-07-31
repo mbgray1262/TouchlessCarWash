@@ -1018,6 +1018,22 @@ export function useFastCuration(listingId: string) {
     setSaving(false);
   }, [listing]);
 
+  // "Skip" in the photo-audit modal: mark the listing REVIEWED for the active
+  // wash type (stamp its reviewed_at column) WITHOUT approving or changing its
+  // classification. A skip means "I looked, no decision" — so it must drop out of
+  // the "Unreviewed only" queue instead of resurfacing every pass (e.g. listings
+  // missing an address that can't be approved). Touchless → photo_audited_at,
+  // self-serve → self_service_reviewed_at, hand-wash → hand_wash_reviewed_at.
+  const skipReview = useCallback(async (washType: 'touchless' | 'self_serve' | 'hand_wash') => {
+    if (!listing) return;
+    const col = washType === 'self_serve' ? 'self_service_reviewed_at'
+      : washType === 'hand_wash' ? 'hand_wash_reviewed_at'
+      : 'photo_audited_at';
+    const now = new Date().toISOString();
+    await supabase.from('listings').update({ [col]: now }).eq('id', listing.id);
+    setListing(prev => prev ? { ...prev, [col]: now } : prev);
+  }, [listing]);
+
   // Delete listing
   const updateWebsite = useCallback(async (newUrl: string | null) => {
     if (!listing) return;
@@ -1092,6 +1108,7 @@ export function useFastCuration(listingId: string) {
     markNotSelfServe,
     approveHandWashAndNext,
     markNotHandWash,
+    skipReview,
     discoverPhotos,
     classifyEquipment,
     setEquipment,

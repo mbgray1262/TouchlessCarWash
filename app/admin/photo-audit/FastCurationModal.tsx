@@ -31,7 +31,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
     tagPhoto, setAsHero, addToGallery, removeFromGallery, removeHero, skipPhoto,
     addCapture, addUpload, addHeroDirect, addGalleryDirect, replaceUrl, updateWebsite, setFallbackHero,
     saveAll, approveAndNext, approveSelfServeAndNext, markNotSelfServe, classifyEquipment, setEquipment,
-    approveHandWashAndNext, markNotHandWash,
+    approveHandWashAndNext, markNotHandWash, skipReview,
     markNotTouchless, markCantVerify, markNotACarWash, markClosed, deleteListing, heroRemoved,
     markTouchless, markSelfServe,
   } = useFastCuration(listingId);
@@ -1260,10 +1260,10 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
             )}
             {onNext && (
               <button
-                onClick={async () => { await saveAll(); onUpdate?.(); onNext(); }}
+                onClick={async () => { await saveAll(); await skipReview(washType); onUpdate?.(); onNext(); }}
                 disabled={saving}
                 className="flex items-center gap-1 px-3 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium disabled:opacity-50"
-                title="Save edits and skip to next listing without making a touchless decision"
+                title="Mark this listing reviewed (no decision) and skip to the next — it won't reappear under 'Unreviewed only'."
               >
                 Skip →
               </button>
