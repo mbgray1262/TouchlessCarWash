@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Droplet } from 'lucide-react';
 import { HAND_WASH_LIVE } from '@/lib/hand-wash';
+import { DETAILING_LIVE } from '@/lib/detailing';
 
 // Top 30 cities by approved touchless car wash listing count.
 // Data-driven — last refreshed 2026-06-02 from the live listings table
@@ -157,6 +158,13 @@ export function Footer() {
                 <li>
                   <Link href="/hand-car-wash" className="text-white/70 hover:text-[#22C55E] transition-colors py-1.5 inline-block">
                     Hand Car Washes
+                  </Link>
+                </li>
+              )}
+              {DETAILING_LIVE && (
+                <li>
+                  <Link href="/car-detailing" className="text-white/70 hover:text-[#22C55E] transition-colors py-1.5 inline-block">
+                    Auto Detailing
                   </Link>
                 </li>
               )}

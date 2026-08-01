@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import type { Listing, ReviewSnippet } from '@/lib/supabase';
 import { isSelfServeOnly, isSelfServePublic } from '@/lib/self-serve';
 import { isHandWashOnly } from '@/lib/hand-wash';
+import { isDetailingOnly } from '@/lib/detailing';
 import { tssTier } from '@/lib/touchless-satisfaction';
 import { streetAddress } from '@/lib/utils';
 import { isOptimizedImageHost } from './listing-content';
@@ -73,9 +74,10 @@ export function ListingHero({
   // a single "Self-Serve" badge instead. Mixed (also-touchless) keep touchless.
   const selfServe = isSelfServeOnly(listing);
   const handWash = isHandWashOnly(listing);
-  // Satisfaction badge score: hand-wash listings show their hand_wash_score, everyone else
-  // the touchless score (same 0-100 scale, so tssTier's color mapping applies to both).
-  const satScore = handWash ? listing.hand_wash_score : listing.touchless_satisfaction_score;
+  const detailing = isDetailingOnly(listing);
+  // Satisfaction badge score: hand-wash → hand_wash_score, detailing → detailing_score, everyone
+  // else the touchless score (all on the same 0-100 scale, so tssTier's color mapping applies).
+  const satScore = handWash ? listing.hand_wash_score : detailing ? listing.detailing_score : listing.touchless_satisfaction_score;
   const heroContent = (
     <>
       <ListingBreadcrumb

@@ -24,6 +24,11 @@ export type Listing = {
   is_approved: boolean;
   is_featured: boolean;
   is_touchless: boolean | null;
+  // Other wash-type flags (optional — not always selected). The visibility helpers in
+  // lib/self-serve.ts / lib/hand-wash.ts / lib/detailing.ts read these structurally.
+  is_self_service?: boolean | null;
+  is_hand_wash?: boolean | null;
+  is_detailing?: boolean | null;
   latitude: number | null;
   longitude: number | null;
   created_at: string;
@@ -86,9 +91,10 @@ export type Listing = {
   touchless_mentions?: number | null;
   /** 'improving' = touchless reviews trending more positive lately; else null. */
   touchless_trend?: string | null;
-  // Self-serve + hand-wash satisfaction scores (same 0-100 scale as touchless).
+  // Self-serve + hand-wash + detailing satisfaction scores (same 0-100 scale as touchless).
   self_service_score?: number | null;
   hand_wash_score?: number | null;
+  detailing_score?: number | null;
 };
 
 // Columns needed by ListingCard — avoids fetching heavy fields like description,

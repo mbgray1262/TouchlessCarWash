@@ -25,6 +25,7 @@ interface ListingCrossLinksProps {
   selfServeOnly: boolean;
   selfServePublic: boolean;
   handWashOnly: boolean;
+  detailingOnly: boolean;
   lastVerified: string | null;
 }
 
@@ -42,6 +43,7 @@ export function ListingCrossLinks({
   selfServeOnly,
   selfServePublic,
   handWashOnly,
+  detailingOnly,
   lastVerified,
 }: ListingCrossLinksProps) {
   return (
@@ -111,7 +113,7 @@ export function ListingCrossLinks({
 
       {/* Touchless nearby — shown for touchless & mixed listings. Hidden for self-serve-ONLY
           listings (they aren't touchless, so touchless cross-links are off-topic for them). */}
-      {!selfServeOnly && !handWashOnly && nearbyListings.length > 0 && (
+      {!selfServeOnly && !handWashOnly && !detailingOnly && nearbyListings.length > 0 && (
         <div className="mt-10">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-xl font-bold text-[#0F2744]">
@@ -182,7 +184,7 @@ export function ListingCrossLinks({
       )}
 
       {/* RelatedReading is all touchless-themed blog posts — off-topic on a hand-wash page. */}
-      {!handWashOnly && <RelatedReading />}
+      {!handWashOnly && !detailingOnly && <RelatedReading />}
 
       {lastVerified && (
         <div className="mt-8 pt-6 border-t border-gray-200 flex items-center gap-2 text-xs text-gray-400">

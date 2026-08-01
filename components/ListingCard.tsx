@@ -52,10 +52,10 @@ interface ListingCardProps {
    * chrome — the Touchless Satisfaction Score and Paint-safe badge both rate the
    * touchless bay, not the self-serve bays the visitor is shopping for. Those
    * signals still show on every touchless surface (default context). Hand-wash
-   * surfaces behave the same way — a hand wash isn't touch-free/paint-safe, so its
-   * cards must not show the touchless-only chrome either.
+   * and detailing surfaces behave the same way — neither is touch-free/paint-safe,
+   * so their cards must not show the touchless-only chrome either.
    */
-  context?: 'default' | 'self-serve' | 'hand-wash';
+  context?: 'default' | 'self-serve' | 'hand-wash' | 'detailing';
 }
 
 export function ListingCard({ listing, href, showVerifiedBadge = false, distance, rank, context = 'default' }: ListingCardProps) {

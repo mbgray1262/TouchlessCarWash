@@ -442,6 +442,39 @@ export async function getHandWashReviewSnippets(listingId: string): Promise<Self
     });
 }
 
+// Detailing evidence snippets — the detailing twin of getHandWashReviewSnippets. Same shape
+// (SelfServeSnippet), so the evidence-drawer module renders them too. Source + evidence flag
+// scope it to mined detailing reviews (paint correction, ceramic, PPF, interior), sentiment-labeled.
+export async function getDetailingReviewSnippets(listingId: string): Promise<SelfServeSnippet[]> {
+  const { data } = await supabase
+    .from('review_snippets')
+    .select('*')
+    .eq('listing_id', listingId)
+    .eq('source', 'gmaps-detailing')
+    .eq('is_detailing_evidence', true)
+    .in('sentiment', ['positive', 'negative'])
+    .order('rating', { ascending: false, nullsFirst: false })
+    .limit(50);
+
+  const now = Date.now();
+  return ((data || []) as ReviewSnippet[])
+    .filter((r) => r.review_text && isRealCustomerSnippet(r))
+    .map((r) => {
+      const iso = (r as ReviewSnippet & { iso_date?: string | null }).iso_date;
+      return {
+        id: r.id,
+        sentiment: r.sentiment as 'positive' | 'negative',
+        text: r.review_text as string,
+        reviewerName: r.reviewer_name ?? null,
+        credentials: r.reviewer_credentials ?? null,
+        isLocalGuide: !!r.reviewer_is_local_guide,
+        rating: r.rating ?? null,
+        date: r.review_date ?? null,
+        recencyDays: iso ? Math.floor((now - new Date(iso).getTime()) / 86400000) : null,
+      };
+    });
+}
+
 export async function getCityScoreRanking(state: string, city: string): Promise<ScoreRankItem[]> {
   const { data } = await publicListings('id, name, slug, city, state, touchless_satisfaction_score')
     .eq('state', state)

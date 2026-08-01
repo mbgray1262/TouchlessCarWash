@@ -21,6 +21,7 @@ import type { Listing, ReviewSnippet } from '@/lib/supabase';
 import type { SelfServeSnippet } from './listing-data';
 import { isSelfServeOnly, isSelfServePublic } from '@/lib/self-serve';
 import { isHandWashOnly, isHandWashPublic } from '@/lib/hand-wash';
+import { isDetailingOnly, isDetailingPublic } from '@/lib/detailing';
 import { getStateSlug, slugify } from '@/lib/constants';
 import { getBrandLabel, getBrandBySlug, slugifyModel } from '@/lib/equipment-data';
 import { WASH_TYPE_LABELS, asArray, monthlyMemberships, defaultWashPrice } from './listing-content';
@@ -34,6 +35,7 @@ interface ListingMainColumnProps {
   paintModuleSnippets: PaintSnippet[];
   selfServeSnippets: SelfServeSnippet[];
   handWashSnippets: SelfServeSnippet[];
+  detailingSnippets: SelfServeSnippet[];
   genericReviews: ReviewSnippet[];
   galleryPhotos: string[];
   equipmentVideos: { id: string; title: string; brand: string | null }[];
@@ -48,6 +50,7 @@ export function ListingMainColumn({
   paintModuleSnippets,
   selfServeSnippets,
   handWashSnippets,
+  detailingSnippets,
   genericReviews,
   galleryPhotos,
   equipmentVideos,
@@ -58,14 +61,15 @@ export function ListingMainColumn({
   // Paint-Safe module renders even in its empty "not enough reviews" state, so
   // gate it explicitly.
   const selfServe = isSelfServeOnly(listing);
-  // Hand-wash listings, like self-serve, must not show the touchless Paint-Safe module.
+  // Hand-wash + detailing listings, like self-serve, must not show the touchless Paint-Safe module.
   const handWash = isHandWashOnly(listing);
+  const detailing = isDetailingOnly(listing);
   return (
     <div className="lg:col-span-2 space-y-6">
       {/* Touchless Satisfaction Score — the headline 0–100 gauge (and its
           "a score appears once there are 3 reviews" empty state). It rates the
           touchless wash specifically, so it's hidden on self-serve-only listings. */}
-      {!selfServe && !handWash && showTouchlessGauge && (
+      {!selfServe && !handWash && !detailing && showTouchlessGauge && (
         <TouchlessSatisfactionGauge
           score={listing.touchless_satisfaction_score ?? null}
           pos={listing.touchless_pos ?? 0}
@@ -75,7 +79,7 @@ export function ListingMainColumn({
           snippets={touchlessReviewSnippets}
         />
       )}
-      {!selfServe && !handWash && cityScoreRanking.length >= 2 && (
+      {!selfServe && !handWash && !detailing && cityScoreRanking.length >= 2 && (
         <TouchlessScoreComparison
           items={cityScoreRanking}
           currentId={listing.id}
@@ -88,7 +92,7 @@ export function ListingMainColumn({
           touchless-themed snippet in the Paint-Safe module) so it never claims
           reviews the visitor can't see, and suppressed when the gauge is present
           (the gauge already shows the sentiment split). */}
-      {!selfServe && !handWash && listing.touchless_sentiment && !showTouchlessGauge && paintModuleSnippets.some((s) => s.theme === 'touchless') && (
+      {!selfServe && !handWash && !detailing && listing.touchless_sentiment && !showTouchlessGauge && paintModuleSnippets.some((s) => s.theme === 'touchless') && (
         <div className={`flex items-center gap-2 px-4 py-3 rounded-xl border ${
           listing.touchless_sentiment === 'positive'
             ? 'bg-green-50 border-green-200'
@@ -122,7 +126,7 @@ export function ListingMainColumn({
           (absorbs the old touchless-snippets section). Public badge only; the
           granular paint_score stays internal for ranking. Touchless-only framing,
           so it's hidden on self-serve-only listings. */}
-      {!selfServe && !handWash && (
+      {!selfServe && !handWash && !detailing && (
         <PaintSafeModule
           state={(listing.paint_state as 'verified' | 'has_data_unverified' | 'not_enough') ?? 'not_enough'}
           reviewCount={listing.review_count ?? 0}
@@ -152,10 +156,20 @@ export function ListingMainColumn({
           googlePlaceId={listing.google_place_id ?? null}
         />
       )}
+      {/* Detailing review evidence — same drawer, detailing variant/copy. Fed by mined
+          gmaps-detailing snippets (getDetailingReviewSnippets). Shown on detailing-public listings. */}
+      {isDetailingPublic(listing) && (
+        <SelfServeReviewsModule
+          variant="detailing"
+          snippets={detailingSnippets}
+          reviewCount={listing.review_count ?? 0}
+          googlePlaceId={listing.google_place_id ?? null}
+        />
+      )}
       {/* AI-Generated Description */}
       {listing.description && (
         <div className="bg-white rounded-2xl border border-gray-200 p-6">
-          <h2 className="text-lg font-bold text-[#0F2744] mb-3">{listing.name} — {isHandWashOnly(listing) ? 'Hand' : isSelfServeOnly(listing) ? 'Self-Serve' : (isSelfServePublic(listing) && listing.is_touchless ? 'Touchless & Self-Serve' : 'Touchless & Brushless')} Car Wash in {listing.city}, {listing.state}</h2>
+          <h2 className="text-lg font-bold text-[#0F2744] mb-3">{listing.name} — {isHandWashOnly(listing) ? 'Hand Car Wash' : isDetailingOnly(listing) ? 'Auto Detailing' : isSelfServeOnly(listing) ? 'Self-Serve Car Wash' : (isSelfServePublic(listing) && listing.is_touchless ? 'Touchless & Self-Serve Car Wash' : 'Touchless & Brushless Car Wash')} in {listing.city}, {listing.state}</h2>
           <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
             {listing.description}
           </div>
@@ -388,7 +402,7 @@ export function ListingMainColumn({
 
       {/* "See a Touchless Wash in Action" — touchless equipment footage, off-topic
           on a self-serve-only listing, so hidden there. */}
-      {!selfServe && !handWash && equipmentVideos.length > 0 && (
+      {!selfServe && !handWash && !detailing && equipmentVideos.length > 0 && (
         <TouchlessVideo listingId={listing.id} videos={equipmentVideos} preferBrand={listing.equipment_brand} />
       )}
 

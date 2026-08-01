@@ -13,6 +13,7 @@ import { supabase, type Listing, type ReviewSnippet } from '@/lib/supabase';
 import { publicListingsCount } from '@/lib/public-listings';
 import { isSelfServePublic, isSelfServeOnly, listingPrimaryWashType } from '@/lib/self-serve';
 import { isHandWashPublic, isHandWashOnly } from '@/lib/hand-wash';
+import { isDetailingPublic, isDetailingOnly } from '@/lib/detailing';
 import type { TssSnippet } from '@/components/TouchlessSatisfactionGauge';
 import type { ScoreRankItem } from '@/components/TouchlessScoreComparison';
 import { earnsTrophy } from '@/lib/metro-scoring';
@@ -44,6 +45,7 @@ import {
   getMetroSiblingRankings,
   getSelfServeReviewSnippets,
   getHandWashReviewSnippets,
+  getDetailingReviewSnippets,
   type SelfServeSnippet,
 } from './listing-data';
 import {
@@ -104,7 +106,7 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   // URL drops out of "Duplicate without user-selected canonical" reports.
   // Redirect/noindex unless the listing is touchless-public OR (when the category
   // is live) self-serve-public. isSelfServePublic is always false while gated.
-  if ((!listing.is_touchless || !listing.is_approved) && !isSelfServePublic(listing) && !isHandWashPublic(listing)) {
+  if ((!listing.is_touchless || !listing.is_approved) && !isSelfServePublic(listing) && !isHandWashPublic(listing) && !isDetailingPublic(listing)) {
     return {
       title: 'Listing Not Available',
       robots: { index: false, follow: true },
@@ -124,25 +126,33 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   // Hand-wash-only listings (attended, staff wash by hand) get their own wording — never
   // "touch-free / brushless" (hand washing IS contact). Checked first; selfServe/touchless fall
   // through for mixed listings (a hand-wash that's also self-serve or touchless keeps that framing).
+  // Detailing-only listings (paint correction / ceramic / PPF / interior, none of the wash flags)
+  // get their own wording — never "touch-free / brushless" and not "hand wash" either. Checked
+  // alongside hand-wash; a detailer that's also a hand wash / touchless / self-serve keeps that framing.
   const handWash = isHandWashOnly(listing);
-  const selfServe = !handWash && isSelfServeOnly(listing);
-  const alsoSelfServe = !selfServe && !handWash && isSelfServePublic(listing) && !!listing.is_touchless;
+  const detailing = !handWash && isDetailingOnly(listing);
+  const selfServe = !handWash && !detailing && isSelfServeOnly(listing);
+  const alsoSelfServe = !selfServe && !handWash && !detailing && isSelfServePublic(listing) && !!listing.is_touchless;
   const washTypeLabel = handWash
     ? 'Hand Car Wash'
-    : selfServe
-      ? 'Self-Serve Car Wash'
-      : alsoSelfServe
-        ? 'Touchless & Self-Serve Car Wash'
-        : 'Touchless Car Wash';
+    : detailing
+      ? 'Auto Detailing'
+      : selfServe
+        ? 'Self-Serve Car Wash'
+        : alsoSelfServe
+          ? 'Touchless & Self-Serve Car Wash'
+          : 'Touchless Car Wash';
   const topAmenities = (listing.amenities || []).slice(0, 3).join(', ');
   const amenityPart = topAmenities
     ? handWash
       ? ` Full-service hand car wash offering ${topAmenities}.`
-      : selfServe
-        ? ` Self-serve wash bays offering ${topAmenities}.`
-        : alsoSelfServe
-          ? ` Touch-free automatic and self-serve wash bays offering ${topAmenities}.`
-          : ` Touch-free, brushless car wash offering ${topAmenities}.`
+      : detailing
+        ? ` Professional auto detailing offering ${topAmenities}.`
+        : selfServe
+          ? ` Self-serve wash bays offering ${topAmenities}.`
+          : alsoSelfServe
+            ? ` Touch-free automatic and self-serve wash bays offering ${topAmenities}.`
+            : ` Touch-free, brushless car wash offering ${topAmenities}.`
     : '';
   // Canonical URL is built from the listing's OWN state + city (via the same
   // buildListingUrl() the render path redirects to and that /sitemap.xml emits),
@@ -211,7 +221,7 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   // so both are excluded (they're never "thin"), otherwise they'd noindex while still being
   // emitted in the sitemap (in-sitemap ⟺ indexable violation). Their own review evidence lives
   // in the self-serve / hand-wash snippet tables, not the touchless count.
-  const thin = !isSelfServeOnly(listing) && !isHandWashOnly(listing) && isThinListing({ ...listing, review_snippet_count: reviewSnippetCount });
+  const thin = !isSelfServeOnly(listing) && !isHandWashOnly(listing) && !isDetailingOnly(listing) && isThinListing({ ...listing, review_snippet_count: reviewSnippetCount });
   const robots = thin ? { index: false, follow: true } : undefined;
 
   return {
@@ -267,7 +277,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
   // isSelfServePublic is false while gated so they keep redirecting until launch.
   // NOTE (pre-launch TODO): the detail template below is touchless-branded — its
   // self-serve copy/schema adaptation is the remaining task before flipping the switch.
-  if ((!listing.is_touchless || !listing.is_approved) && !isSelfServePublic(listing) && !isHandWashPublic(listing)) {
+  if ((!listing.is_touchless || !listing.is_approved) && !isSelfServePublic(listing) && !isHandWashPublic(listing) && !isDetailingPublic(listing)) {
     const stateSlug = getStateSlug(listing.state) || params.state;
     const citySlug = slugify(listing.city) || params.city;
     // Prefer the listing's own city hub (most relevant to the original
@@ -316,7 +326,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     permanentRedirect(canonicalPath);
   }
 
-  const [nearbyListings, reviewSnippets, genericReviews, rankings, chainResult, verificationStats, equipmentVideos, paintSnippets, cityScoreRanking, badgeEmbedRes, selfServeNearby, selfServeSnippets, handWashSnippets] = await Promise.all([
+  const [nearbyListings, reviewSnippets, genericReviews, rankings, chainResult, verificationStats, equipmentVideos, paintSnippets, cityScoreRanking, badgeEmbedRes, selfServeNearby, selfServeSnippets, handWashSnippets, detailingSnippets] = await Promise.all([
     getNearbyListings(listing),
     getReviewSnippets(listing.id),
     getGenericReviews(listing.id),
@@ -339,6 +349,8 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     isSelfServePublic(listing) ? getSelfServeReviewSnippets(listing.id) : Promise.resolve([] as SelfServeSnippet[]),
     // Hand-wash review snippets for the same module (hand-wash variant) — only for hand-wash-public listings.
     isHandWashPublic(listing) ? getHandWashReviewSnippets(listing.id) : Promise.resolve([] as SelfServeSnippet[]),
+    // Detailing review snippets for the same module (detailing variant) — only for detailing-public listings.
+    isDetailingPublic(listing) ? getDetailingReviewSnippets(listing.id) : Promise.resolve([] as SelfServeSnippet[]),
   ]);
   const badgeInUse = listing.is_claimed === true || ((badgeEmbedRes?.data?.length ?? 0) > 0);
 
@@ -373,7 +385,9 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
   const selfServeAsSnippets = selfServeSnippets.map(snippetToHighlight) as unknown as ReviewSnippet[];
   // Same reasoning for hand-wash: a hand wash's reviews are mostly hand-wash-evidence.
   const handWashAsSnippets = handWashSnippets.map(snippetToHighlight) as unknown as ReviewSnippet[];
-  const reviewHighlights = [...reviewSnippets, ...selfServeAsSnippets, ...handWashAsSnippets, ...genericReviews]
+  // Same for detailing — a detailer's reviews are mostly detailing-evidence.
+  const detailingAsSnippets = detailingSnippets.map(snippetToHighlight) as unknown as ReviewSnippet[];
+  const reviewHighlights = [...reviewSnippets, ...selfServeAsSnippets, ...handWashAsSnippets, ...detailingAsSnippets, ...genericReviews]
     .filter((r) => r.review_text && r.review_text.trim().length >= 20)
     // de-dup by id, then by leading text (the same Google review can be stored as both a
     // touchless and a self-serve snippet under different ids).
@@ -536,6 +550,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
               paintModuleSnippets={paintModuleSnippets}
               selfServeSnippets={selfServeSnippets}
               handWashSnippets={handWashSnippets}
+              detailingSnippets={detailingSnippets}
               genericReviews={genericReviews}
               galleryPhotos={galleryPhotos}
               equipmentVideos={equipmentVideos}
@@ -572,6 +587,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
             selfServeOnly={isSelfServeOnly(listing)}
             selfServePublic={isSelfServePublic(listing)}
             handWashOnly={isHandWashOnly(listing)}
+            detailingOnly={isDetailingOnly(listing)}
             lastVerified={lastVerified}
           />
         </div>

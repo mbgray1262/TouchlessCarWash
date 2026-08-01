@@ -9,6 +9,7 @@ import { earnsTrophy } from '@/lib/metro-scoring';
 import { getBrandLabel } from '@/lib/equipment-data';
 import { isSelfServeOnly } from '@/lib/self-serve';
 import { isHandWashOnly } from '@/lib/hand-wash';
+import { isDetailingOnly } from '@/lib/detailing';
 import { isRealCustomerSnippet, type BestOfRanking } from './listing-data';
 
 export const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -222,9 +223,19 @@ export function buildFAQs(listing: Listing, hours: Record<string, string> | null
   // hand washing is CONTACT washing. Flip the wash-type-specific FAQ answers to hand-wash
   // wording (attendants wash by hand). Mixed listings keep touchless/self-serve framing.
   const handWash = isHandWashOnly(listing);
+  // Detailing-only listings must never wear touchless/brushless/paint-safe OR hand-wash copy —
+  // a detailer does deep reconditioning (paint correction, ceramic, PPF, interior). Flip the
+  // wash-type-specific FAQ answers to detailing wording. Mixed listings keep their other framing.
+  const detailing = isDetailingOnly(listing);
 
   // 1. Wash-type identity (always shown) — enriched with wash types & equipment
-  if (handWash) {
+  if (detailing) {
+    let dAnswer = `Yes, ${listing.name} in ${listing.city}, ${listing.state} is an auto detailing business — a professional shop that deep-cleans and reconditions vehicles far beyond a regular wash. Detailing typically includes a thorough hand wash, clay-bar treatment, machine polishing or paint correction to remove swirls and scratches, protection such as wax, sealant, ceramic coating, or paint protection film (PPF), and a full interior detail.`;
+    if (listing.amenities && listing.amenities.length > 0) {
+      dAnswer += ` On-site you'll find ${listing.amenities.slice(0, 4).join(', ')}.`;
+    }
+    faqs.push({ q: `Is ${listing.name} an auto detailer?`, a: dAnswer });
+  } else if (handWash) {
     let hwAnswer = `Yes, ${listing.name} in ${listing.city}, ${listing.state} is a hand car wash — a full-service facility where trained attendants wash your vehicle by hand using wash mitts, sponges, foam, and drying towels, rather than sending it through an automatic machine or tunnel. You wait or drop the car off, and the crew washes it thoroughly, usually hand-dries it, and often cleans the interior too.`;
     if (listing.amenities && listing.amenities.length > 0) {
       hwAnswer += ` On-site you'll find ${listing.amenities.slice(0, 4).join(', ')}.`;
@@ -311,14 +322,16 @@ export function buildFAQs(listing: Listing, hours: Record<string, string> | null
     if (model) {
       equipAnswer += model;
     } else if (brandLabel) {
-      equipAnswer += handWash ? `${brandLabel} wash equipment` : selfServe ? `${brandLabel} wash equipment` : `${brandLabel} touchless wash equipment`;
+      equipAnswer += detailing ? `${brandLabel} detailing equipment` : handWash ? `${brandLabel} wash equipment` : selfServe ? `${brandLabel} wash equipment` : `${brandLabel} touchless wash equipment`;
     } else {
-      equipAnswer += handWash ? 'professional hand-washing supplies and detailing equipment' : selfServe ? 'professional self-serve wash-bay equipment' : 'professional touchless wash equipment';
+      equipAnswer += detailing ? 'professional detailing tools — polishers, extractors, and coating products' : handWash ? 'professional hand-washing supplies and detailing equipment' : selfServe ? 'professional self-serve wash-bay equipment' : 'professional touchless wash equipment';
     }
     if (tech.length > 0) {
       equipAnswer += `, featuring ${tech.join(', ')}`;
     }
-    equipAnswer += handWash
+    equipAnswer += detailing
+      ? '. Skilled detailers correct, protect, and deep-clean each vehicle by hand for a showroom finish.'
+      : handWash
       ? '. Trained attendants wash and detail each vehicle by hand for a thorough, careful clean.'
       : selfServe
       ? '. You control the high-pressure wand yourself, so you decide exactly how your vehicle is cleaned.'
@@ -331,7 +344,9 @@ export function buildFAQs(listing: Listing, hours: Record<string, string> | null
   if (serviceTypes.length > 0) {
     faqs.push({
       q: `What types of car wash services does ${listing.name} offer?`,
-      a: handWash
+      a: detailing
+        ? `${listing.name} offers the following services: ${serviceTypes.join(', ')}. The team reconditions your vehicle by hand — correcting, protecting, and deep-cleaning inside and out.`
+        : handWash
         ? `${listing.name} offers the following services: ${serviceTypes.join(', ')}. The team hand washes and details your vehicle for you, by hand.`
         : selfServe
         ? `${listing.name} offers the following services: ${serviceTypes.join(', ')}. Choose your wash settings at the bay and clean your vehicle at your own pace.`
@@ -353,14 +368,16 @@ export function buildFAQs(listing: Listing, hours: Record<string, string> | null
   if (specialFeatures.length > 0) {
     faqs.push({
       q: `What special features does ${listing.name} have?`,
-      a: `${listing.name} offers these special features: ${specialFeatures.join(', ')}. These extras make it a standout among ${handWash ? 'hand' : selfServe ? 'self-serve' : 'touchless'} car washes in ${listing.city}.`,
+      a: `${listing.name} offers these special features: ${specialFeatures.join(', ')}. These extras make it a standout among ${detailing ? 'auto detailers' : handWash ? 'hand car washes' : selfServe ? 'self-serve car washes' : 'touchless car washes'} in ${listing.city}.`,
     });
   }
 
   // 10. Safe for luxury vehicles (always shown — high-value ad keyword content)
   faqs.push({
     q: `Is ${listing.name} safe for Tesla, BMW, and luxury vehicles?`,
-    a: handWash
+    a: detailing
+      ? `Yes. ${listing.name} is a professional auto detailer, and careful hand detailing is exactly what owners of luxury and high-end vehicles look for — Tesla Model 3, Model Y, and Model S, BMW, Mercedes-Benz, Lexus, Audi, Porsche, Range Rover, and Genesis. Skilled detailers correct and protect the finish by hand, and services like ceramic coating and paint protection film (PPF) are designed specifically to preserve premium paint. If your vehicle has a ceramic coating, PPF, or a vinyl wrap, ask about their process for those finishes.`
+      : handWash
       ? `Yes. ${listing.name} is a professional hand car wash where trained attendants clean each vehicle by hand with care. A careful hand wash — clean mitts, gentle technique, and hand drying — is a popular choice for owners of Tesla Model 3, Model Y, and Model S, BMW, Mercedes-Benz, Lexus, Audi, Porsche, Range Rover, and Genesis who want a thorough, detailed clean with personal attention. If your vehicle has a ceramic coating, paint protection film (PPF), or a vinyl wrap, ask the team about their hand-wash process and detailing options for premium finishes.`
       : selfServe
       ? `Yes. At ${listing.name} you wash your own vehicle with a high-pressure wand you control — no automated spinning brushes or cloth strips ever touch your paint. That hands-on control makes a self-serve bay a popular choice for owners of Tesla Model 3, Model Y, and Model S, BMW, Mercedes-Benz, Lexus, Audi, Porsche, Range Rover, and Genesis, and for cars with ceramic coatings, paint protection film (PPF), or vinyl wraps — you decide exactly how each panel is cleaned and rinsed.`

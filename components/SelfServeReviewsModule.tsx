@@ -22,12 +22,16 @@ import type { SelfServeSnippet } from '@/app/state/[state]/[city]/[slug]/listing
 const HL_EVIDENCE = {
   'self-serve': String.raw`self[\s-]?serv\w*|\bwand\b|foam[\s-]?brush|\bcoins?\b|\btokens?\b|wash[\s-]?bays?`,
   'hand-wash': String.raw`hand(?:[\s-]?car)?[\s-]?wash\w*|washed?\s+(?:it\s+|my\s+car\s+|the\s+car\s+)?by\s+hand|\bby\s+hand\b|hand[\s-]?dr(?:y|ied|ies)|hand[\s-]?wax\w*|\bdetail(?:ing|ed|er)?\b|wiped?\s+(?:it\s+|the\s+car\s+|everything\s+)?down|full[\s-]?serv\w*|attendant\w*`,
+  // Detailing evidence — the services/terms that mark real detailing work. `detail` is matched
+  // only in suffixed forms (detail(ing|ed|er|ers)) to skip the "attention to detail" idiom, which
+  // HL_POS already highlights green anyway.
+  'detailing': String.raw`\bdetail(?:ing|ed|er|ers)\b|ceramic\s+coat\w*|paint\s+correction|clay[\s-]?bar\w*|\bppf\b|paint\s+protection(?:\s+film)?|buff\w*|polish\w*|swirl\w*|\bwax\w*|interior\s+detail\w*|full\s+detail\w*|paint[\s-]?job|showroom`,
 } as const;
 const HL_POS = String.raw`spotless|sparkl\w*|shin(?:e|y|ing)|gleaming|immaculate|pristine|flawless|thorough\w*|careful\w*|meticulous|amazing|excellent|fantastic|great\s+job|perfect|attention\s+to\s+detail|highly\s+recommend`;
 const HL_NEG_NEGATED = String.raw`(?:no|not|never|without|didn'?t|couldn'?t|wasn'?t|zero)\b[\w\s,'-]{0,15}?\b(?:scratch\w*|streak\w*|spot\w*|dirt\w*|damage\w*|residue|mark\w*|swirl\w*|miss\w*|smear\w*|fault\w*|complaint\w*)`;
 const HL_NEG_BARE = String.raw`dirty|filthy|streak\w*|smear\w*|grimy|scratch\w*|swirl\w*|damage\w*|broke\w*|broken|residue|missed|rushed|sloppy|disappoint\w*|terrible|awful`;
 
-function highlightWashType(text: string, variant: 'self-serve' | 'hand-wash'): ReactNode[] {
+function highlightWashType(text: string, variant: 'self-serve' | 'hand-wash' | 'detailing'): ReactNode[] {
   const re = new RegExp(`(${HL_NEG_NEGATED}|${HL_POS}|${HL_EVIDENCE[variant]})|(${HL_NEG_BARE})`, 'gi');
   const nodes: ReactNode[] = [];
   let last = 0, key = 0;
@@ -57,7 +61,7 @@ function Stars({ n }: { n: number | null }) {
   );
 }
 
-function SnippetCard({ s, variant }: { s: SelfServeSnippet; variant: 'self-serve' | 'hand-wash' }) {
+function SnippetCard({ s, variant }: { s: SelfServeSnippet; variant: 'self-serve' | 'hand-wash' | 'detailing' }) {
   const neg = s.sentiment === 'negative';
   return (
     <div className="border border-gray-200 rounded-xl p-3.5 animate-[fadeIn_.3s_ease]">
@@ -91,6 +95,7 @@ function SnippetCard({ s, variant }: { s: SelfServeSnippet; variant: 'self-serve
 const VARIANT_COPY = {
   'self-serve': { heading: 'What customers say about the self-serve wash', mention: 'mention the self-serve bays' },
   'hand-wash': { heading: 'What customers say about the hand wash', mention: 'mention the hand wash' },
+  'detailing': { heading: 'What customers say about the detailing', mention: 'mention the detailing work' },
 } as const;
 
 export default function SelfServeReviewsModule({
@@ -102,7 +107,7 @@ export default function SelfServeReviewsModule({
   snippets: SelfServeSnippet[];
   reviewCount: number;
   googlePlaceId: string | null;
-  variant?: 'self-serve' | 'hand-wash';
+  variant?: 'self-serve' | 'hand-wash' | 'detailing';
 }) {
   const copy = VARIANT_COPY[variant];
   const [sent, setSent] = useState<null | 'positive' | 'negative'>(null);

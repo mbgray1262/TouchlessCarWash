@@ -8,6 +8,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { useFavorites } from '@/lib/useFavorites';
 import { SELF_SERVE_LIVE } from '@/lib/self-serve';
 import { HAND_WASH_LIVE } from '@/lib/hand-wash';
+import { DETAILING_LIVE } from '@/lib/detailing';
 
 /**
  * Inner component that reads searchParams (must be wrapped in Suspense
@@ -77,7 +78,12 @@ export function Header() {
                 Hand Wash
               </Link>
             )}
-            {(SELF_SERVE_LIVE || HAND_WASH_LIVE) ? (
+            {DETAILING_LIVE && (
+              <Link href="/car-detailing" className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors">
+                Detailing
+              </Link>
+            )}
+            {(SELF_SERVE_LIVE || HAND_WASH_LIVE || DETAILING_LIVE) ? (
               <div
                 className="relative"
                 onMouseEnter={() => setBestOfOpen(true)}
@@ -112,6 +118,11 @@ export function Header() {
                     {HAND_WASH_LIVE && (
                       <Link href="/best-hand-wash" onClick={() => setBestOfOpen(false)} className="block px-4 py-2 text-sm font-medium text-[#0F2744] hover:bg-gray-50 hover:text-[#22C55E] transition-colors">
                         Best Hand Wash
+                      </Link>
+                    )}
+                    {DETAILING_LIVE && (
+                      <Link href="/best-detailing" onClick={() => setBestOfOpen(false)} className="block px-4 py-2 text-sm font-medium text-[#0F2744] hover:bg-gray-50 hover:text-[#22C55E] transition-colors">
+                        Best Detailing
                       </Link>
                     )}
                   </div>
@@ -199,7 +210,16 @@ export function Header() {
                   Hand Wash
                 </Link>
               )}
-              {(SELF_SERVE_LIVE || HAND_WASH_LIVE) ? (
+              {DETAILING_LIVE && (
+                <Link
+                  href="/car-detailing"
+                  className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Detailing
+                </Link>
+              )}
+              {(SELF_SERVE_LIVE || HAND_WASH_LIVE || DETAILING_LIVE) ? (
                 <div className="flex flex-col space-y-3">
                   <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Best Of</span>
                   <Link
@@ -225,6 +245,15 @@ export function Header() {
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       Best Hand Wash
+                    </Link>
+                  )}
+                  {DETAILING_LIVE && (
+                    <Link
+                      href="/best-detailing"
+                      className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors pl-3"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Best Detailing
                     </Link>
                   )}
                 </div>

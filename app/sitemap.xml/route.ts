@@ -3,6 +3,8 @@ import { publicListings } from '@/lib/public-listings';
 import { SELF_SERVE_LIVE, publicSelfServeListings, selfServeStateTally, qualifyingSelfServeCities } from '@/lib/self-serve';
 import { HAND_WASH_LIVE, publicHandWashListings, handWashStateTally, qualifyingHandWashCities } from '@/lib/hand-wash';
 import { getQualifyingHandWashMetros } from '@/lib/hand-wash-metro';
+import { DETAILING_LIVE, publicDetailingListings, detailingStateTally, qualifyingDetailingCities } from '@/lib/detailing';
+import { getQualifyingDetailingMetros } from '@/lib/detailing-metro';
 import { US_STATES, getStateSlug, slugify } from '@/lib/constants';
 import { getQualifyingMetros } from '@/lib/metro-queries';
 import { getQualifyingSelfServeMetros } from '@/lib/self-serve-metro';
@@ -461,6 +463,75 @@ export async function GET() {
   </url>`)
     : [];
 
+  // ── Detailing directory (only emitted when the category is live) ──
+  // Landing + Best-Of index + per-state/city hubs + detailing-ONLY listing detail pages.
+  // A detailer that's also touchless / self-serve / hand-wash is already emitted in those
+  // sections, so we filter to !is_touchless && !is_self_service && !is_hand_wash to avoid a
+  // duplicate <loc>. Mirrors the exact render/robots gate in lib/detailing.ts (sitemap ⟺ indexable).
+  let detailingUrls: string[] = [];
+  if (DETAILING_LIVE) {
+    const [dTally, dCities, dListingsRes] = await Promise.all([
+      detailingStateTally(),
+      qualifyingDetailingCities(),
+      publicDetailingListings('slug, state, city, is_touchless, is_self_service, is_hand_wash, updated_at, created_at').limit(10000),
+    ]);
+    const dListings = (dListingsRes.data ?? []) as {
+      slug: string; state: string; city: string | null; is_touchless: boolean | null; is_self_service: boolean | null;
+      is_hand_wash: boolean | null; updated_at: string | null; created_at: string | null;
+    }[];
+    detailingUrls.push(`  <url>
+    <loc>${baseUrl}/car-detailing</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`);
+    detailingUrls.push(`  <url>
+    <loc>${baseUrl}/best-detailing</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`);
+    for (const { code } of dTally) {
+      detailingUrls.push(`  <url>
+    <loc>${baseUrl}/car-detailing/${getStateSlug(code)}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`);
+    }
+    // City hubs — only cities with >= MIN_DETAILING_CITY listings (shared
+    // qualifyingDetailingCities() drives BOTH this and the page's 200-vs-404).
+    for (const c of dCities) {
+      detailingUrls.push(`  <url>
+    <loc>${baseUrl}/car-detailing/${getStateSlug(c.stateCode)}/${c.citySlug}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`);
+    }
+    for (const l of dListings) {
+      if (l.is_touchless || l.is_self_service || l.is_hand_wash || !l.city?.trim() || !VALID_STATE_CODES.has(l.state)) continue;
+      detailingUrls.push(`  <url>
+    <loc>${baseUrl}/state/${getStateSlug(l.state)}/${slugify(l.city)}/${l.slug}</loc>
+    <lastmod>${l.updated_at ?? l.created_at ?? now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>`);
+    }
+  }
+
+  // Detailing Best-Of metro pages — gated by getQualifyingDetailingMetros(), the SAME function the
+  // page uses to decide 200-vs-redirect, so the sitemap lists exactly the /best-detailing/<slug>
+  // pages that 200.
+  const detailingBestOfUrls = DETAILING_LIVE
+    ? (await getQualifyingDetailingMetros()).map((metro) => `  <url>
+    <loc>${baseUrl}/best-detailing/${metro.slug}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`)
+    : [];
+
   // Retired blog slugs that 301-redirect elsewhere (see next.config.js
   // redirects) must not be advertised even though a published_at row lingers.
   const REDIRECTED_BLOG_SLUGS = new Set(['recommended-products']); // -> /shop
@@ -805,6 +876,7 @@ export async function GET() {
 ${bestOfUrls.join('\n')}
 ${selfServeBestOfUrls.join('\n')}
 ${handWashBestOfUrls.join('\n')}
+${detailingBestOfUrls.join('\n')}
 ${featureIndexUrl}
 ${featureHubUrls.join('\n')}
 ${featureStateUrls.join('\n')}
@@ -821,6 +893,7 @@ ${listingUrls.join('\n')}
 ${blogUrls.join('\n')}
 ${selfServeUrls.join('\n')}
 ${handWashUrls.join('\n')}
+${detailingUrls.join('\n')}
 </urlset>`;
 
   return new Response(sitemap, {
