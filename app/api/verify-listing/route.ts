@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     // wash_type says which question the visitor answered. is_touchless stays the vote
     // value (true = confirms the listing matches its wash type). Defaults to 'touchless'
     // for backward compatibility with older clients.
-    const WASH_TYPES = ['touchless', 'self_serve', 'hand_wash'] as const;
+    const WASH_TYPES = ['touchless', 'self_serve', 'hand_wash', 'detailing'] as const;
     const wash_type: (typeof WASH_TYPES)[number] =
       WASH_TYPES.includes(body.wash_type) ? body.wash_type : 'touchless';
 

@@ -76,7 +76,7 @@ export function isSelfServeOnly(listing: {
 }
 
 /** The wash types a community-verification vote can be cast against. */
-export type WashType = 'touchless' | 'self_serve' | 'hand_wash';
+export type WashType = 'touchless' | 'self_serve' | 'hand_wash' | 'detailing';
 
 /**
  * The PRIMARY wash type a listing's page presents itself as — used to ask the
@@ -90,10 +90,12 @@ export function listingPrimaryWashType(listing: {
   is_touchless?: boolean | null;
   is_self_service?: boolean | null;
   is_hand_wash?: boolean | null;
+  is_detailing?: boolean | null;
 }): WashType {
   if (listing.is_touchless) return 'touchless';
   if (listing.is_self_service) return 'self_serve';
   if (listing.is_hand_wash) return 'hand_wash';
+  if (listing.is_detailing) return 'detailing';
   return 'touchless';
 }
 

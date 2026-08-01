@@ -53,6 +53,14 @@ const WASH_LABELS: Record<WashType, {
     pct: 'confirmed hand wash',
     placeholder: 'e.g. Staff washed my car by hand, great job...',
   },
+  detailing: {
+    yes: 'Yes, they detail cars here',
+    no: "No, they don't",
+    markedYes: 'Marked as auto detailer',
+    markedNo: 'Marked as not a detailer',
+    pct: 'confirmed detailer',
+    placeholder: 'e.g. Full detail — paint correction, ceramic, interior...',
+  },
 };
 
 function timeAgo(dateStr: string): string {
