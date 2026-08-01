@@ -144,6 +144,7 @@ export function ListingMainColumn({
           snippets={selfServeSnippets}
           reviewCount={listing.review_count ?? 0}
           googlePlaceId={listing.google_place_id ?? null}
+          score={listing.self_service_score ?? null}
         />
       )}
       {/* Hand-wash review evidence — same drawer, hand-wash variant/copy. Fed by mined
@@ -154,6 +155,7 @@ export function ListingMainColumn({
           snippets={handWashSnippets}
           reviewCount={listing.review_count ?? 0}
           googlePlaceId={listing.google_place_id ?? null}
+          score={listing.hand_wash_score ?? null}
         />
       )}
       {/* Detailing review evidence — same drawer, detailing variant/copy. Fed by mined
@@ -164,6 +166,7 @@ export function ListingMainColumn({
           snippets={detailingSnippets}
           reviewCount={listing.review_count ?? 0}
           googlePlaceId={listing.google_place_id ?? null}
+          score={listing.detailing_score ?? null}
         />
       )}
       {/* AI-Generated Description */}

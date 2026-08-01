@@ -15,6 +15,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { ThumbsUp, AlertTriangle, Droplets } from 'lucide-react';
 import type { SelfServeSnippet } from '@/app/state/[state]/[city]/[slug]/listing-data';
+import { tssTier } from '@/lib/touchless-satisfaction';
 
 // Evidence vocabulary highlighted per variant (the reason the snippet was mined), plus shared
 // quality sentiment. Mirrors highlightTouchless in TouchlessSatisfactionGauge: group 1 → green
@@ -90,12 +91,14 @@ function SnippetCard({ s, variant }: { s: SelfServeSnippet; variant: 'self-serve
   );
 }
 
-// Same evidence-drawer, two wash types: 'self-serve' (default) and 'hand-wash'. Only the
-// two heading strings differ; the mechanics (sentiment split, filters, sort) are identical.
+// Same evidence-drawer, one per non-touchless wash type. Heading + score label differ; the
+// mechanics (sentiment split, filters, sort) are identical. `scoreLabel` names the number shown
+// in the header — self-serve is scored on FACILITY quality (the customer washes their own car),
+// so its copy says "facility", not "wash".
 const VARIANT_COPY = {
-  'self-serve': { heading: 'What customers say about the self-serve wash', mention: 'mention the self-serve bays' },
-  'hand-wash': { heading: 'What customers say about the hand wash', mention: 'mention the hand wash' },
-  'detailing': { heading: 'What customers say about the detailing', mention: 'mention the detailing work' },
+  'self-serve': { heading: 'What customers say about the self-serve facility', mention: 'mention the bays or equipment', scoreLabel: 'Facility Score' },
+  'hand-wash': { heading: 'What customers say about the hand wash', mention: 'mention the hand wash', scoreLabel: 'Hand Wash Score' },
+  'detailing': { heading: 'What customers say about the detailing', mention: 'mention the detailing work', scoreLabel: 'Detailing Score' },
 } as const;
 
 export default function SelfServeReviewsModule({
@@ -103,13 +106,18 @@ export default function SelfServeReviewsModule({
   reviewCount,
   googlePlaceId,
   variant = 'self-serve',
+  score = null,
 }: {
   snippets: SelfServeSnippet[];
   reviewCount: number;
   googlePlaceId: string | null;
   variant?: 'self-serve' | 'hand-wash' | 'detailing';
+  /** The 0-100 category score (self_service_score / hand_wash_score / detailing_score), or null
+   *  if under the 3-mention gate. Shown as a compact gauge in the header when present. */
+  score?: number | null;
 }) {
   const copy = VARIANT_COPY[variant];
+  const tier = score != null ? tssTier(score) : null;
   const [sent, setSent] = useState<null | 'positive' | 'negative'>(null);
   const [sort, setSort] = useState<'helpful' | 'recent'>('helpful');
   const [expanded, setExpanded] = useState(false);
@@ -134,10 +142,24 @@ export default function SelfServeReviewsModule({
 
   return (
     <section className="bg-white border border-gray-200 rounded-2xl p-5 mb-4">
-      <h2 className="text-[17px] font-extrabold text-[#0F2744] flex items-center gap-2 mb-1">
-        <Droplets className="w-5 h-5 text-[#22C55E]" />
-        {copy.heading}
-      </h2>
+      <div className="flex items-start justify-between gap-3 mb-1">
+        <h2 className="text-[17px] font-extrabold text-[#0F2744] flex items-center gap-2">
+          <Droplets className="w-5 h-5 text-[#22C55E]" />
+          {copy.heading}
+        </h2>
+        {score != null && tier != null && (
+          <div
+            className="shrink-0 flex items-center gap-2 rounded-xl px-3 py-1.5 border"
+            style={{ backgroundColor: tier.bg, borderColor: tier.arc }}
+            title={`${copy.scoreLabel}: ${score}/100 (${tier.label}) — from customer reviews`}
+          >
+            <span className="text-2xl font-extrabold leading-none" style={{ color: tier.color }}>{score}</span>
+            <span className="text-[10px] font-bold uppercase leading-tight" style={{ color: tier.color }}>
+              {copy.scoreLabel.split(' ').map((w, i) => <span key={i} className="block">{w}</span>)}
+            </span>
+          </div>
+        )}
+      </div>
       <p className="text-[12.5px] text-slate-500 mb-2">
         Of <b className="text-slate-700">{reviewCount.toLocaleString()}</b> total reviews,{' '}
         <b className="text-slate-700">{clear}</b> {copy.mention}:

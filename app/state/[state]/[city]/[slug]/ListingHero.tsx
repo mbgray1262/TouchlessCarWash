@@ -15,7 +15,7 @@ import type { Listing, ReviewSnippet } from '@/lib/supabase';
 import { isSelfServeOnly, isSelfServePublic } from '@/lib/self-serve';
 import { isHandWashOnly } from '@/lib/hand-wash';
 import { isDetailingOnly } from '@/lib/detailing';
-import { tssTier } from '@/lib/touchless-satisfaction';
+import { getListingScores } from '@/lib/listing-scores';
 import { streetAddress } from '@/lib/utils';
 import { isOptimizedImageHost } from './listing-content';
 import { StarRating } from './listing-ui';
@@ -75,9 +75,11 @@ export function ListingHero({
   const selfServe = isSelfServeOnly(listing);
   const handWash = isHandWashOnly(listing);
   const detailing = isDetailingOnly(listing);
-  // Satisfaction badge score: hand-wash → hand_wash_score, detailing → detailing_score, everyone
-  // else the touchless score (all on the same 0-100 scale, so tssTier's color mapping applies).
-  const satScore = handWash ? listing.hand_wash_score : detailing ? listing.detailing_score : listing.touchless_satisfaction_score;
+  // Satisfaction chip(s): every publicly-shown, scored category this listing has — so a
+  // multi-service listing shows each score, labeled. A single-category listing keeps the plain
+  // "Satisfaction N" chip; only when there are 2+ do we prefix each with its category so it's
+  // unambiguous which number is which. All on the same 0-100 scale (tssTier colors both).
+  const scores = getListingScores(listing);
   const heroContent = (
     <>
       <ListingBreadcrumb
@@ -106,11 +108,16 @@ export function ListingHero({
                 </Badge>
               </Link>
             )}
-            {satScore != null && (
-              <Badge className={`border-0 shadow-sm text-white ${heroPill}`} style={{ backgroundColor: tssTier(satScore).arc }}>
-                <Gauge className="w-3 h-3 mr-1" />Satisfaction {satScore}
+            {scores.map((s) => (
+              <Badge
+                key={s.key}
+                className={`border-0 shadow-sm text-white ${heroPill}`}
+                style={{ backgroundColor: s.tier.arc }}
+                title={`${s.heading} — rates ${s.measures} (${s.tier.label})`}
+              >
+                <Gauge className="w-3 h-3 mr-1" />{scores.length > 1 ? `${s.chipLabel} ${s.score}` : `Satisfaction ${s.score}`}
               </Badge>
-            )}
+            ))}
             {handWash ? (
               /* Hand-wash: no touchless/paint-safe claims (it's contact washing) — just the wash-type badge. */
               <Badge className={`bg-[#22C55E] text-white border-0 shadow-sm ${heroPill}`}>
