@@ -32,6 +32,15 @@ for i, arg in enumerate(sys.argv[1:], 1):
     elif arg.startswith('--limit='):
         LIMIT = int(arg.split('=')[1])
 
+# Which category to enrich (amenity/hours/package extraction is wash-type-neutral, and the
+# write NEVER sets touchless flags, so this is safe for any type). Default: touchless.
+if '--hand-wash' in sys.argv:
+    WASH_FILTER, WASH_LABEL = 'is_hand_wash=eq.true&is_approved=eq.true', 'hand-wash'
+elif '--self-serve' in sys.argv:
+    WASH_FILTER, WASH_LABEL = 'is_self_service=eq.true&is_approved=eq.true', 'self-serve'
+else:
+    WASH_FILTER, WASH_LABEL = 'is_touchless=eq.true', 'touchless'
+
 
 def log(msg):
     ts = datetime.datetime.now().strftime('%H:%M:%S')
@@ -41,8 +50,13 @@ def log(msg):
         f.write(line + '\n')
 
 
+# Writes to listings (amenities/hours) need the service-role key (anon is read-only on
+# listings via RLS → 401). Falls back to anon for read-only runs. Export
+# SUPABASE_SERVICE_ROLE_KEY before an --apply/enrich run.
+KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY') or SUPABASE_ANON
+
 def sb_req(method, path, body=None):
-    headers = {'apikey': SUPABASE_ANON, 'Authorization': f'Bearer {SUPABASE_ANON}',
+    headers = {'apikey': KEY, 'Authorization': f'Bearer {KEY}',
         'Content-Type': 'application/json', 'Prefer': 'return=representation'}
     req = urllib.request.Request(f'{SUPABASE_URL}{path}',
         data=json.dumps(body).encode() if body else None, headers=headers, method=method)
@@ -108,6 +122,17 @@ def extract_amenities(text):
         'Triple Foam': r'triple\s+foam',
         'Rain-X': r'rain[\s-]?x',
         'Touchless Automatic': r'touch[\s-]?(?:less|free)\s+(?:auto|wash|car)',
+        # Hand-wash / detailing amenities
+        'Hand Wash': r'hand[\s-]?wash',
+        'Hand Dry': r'hand[\s-]?dr(?:y|ied|ying)|towel\s+dr(?:y|ied)',
+        'Interior Detailing': r'interior\s+(?:detail|clean|shampoo)',
+        'Full Detailing': r'full\s+detail|complete\s+detail|auto\s+detail',
+        'Paint Correction': r'paint\s+correction|buff(?:ing)?|polish(?:ing)?',
+        'Clay Bar': r'clay\s+bar',
+        'Waxing': r'\bwax(?:ing)?\b',
+        'Engine Cleaning': r'engine\s+(?:clean|detail|degreas)',
+        'Waiting Lounge': r'waiting\s+(?:room|area|lounge)|lounge\s+area|comfortable\s+wait',
+        'Free WiFi': r'free\s+wi[\s-]?fi|complimentary\s+wi[\s-]?fi',
     }
 
     for name, pattern in amenity_patterns.items():
@@ -145,8 +170,8 @@ async def main():
     while True:
         # Prioritize listings missing the most data
         rows = sb_req('GET',
-            f'/rest/v1/listings?select=id,name,website,city,state,hours,amenities'
-            f'&is_touchless=eq.true'
+            f'/rest/v1/listings?select=id,name,website,city,state,hours,amenities,wash_packages'
+            f'&{WASH_FILTER}'
             f'&website=not.is.null'
             f'&order=review_count.desc.nullslast'
             f'&limit=1000&offset={offset}')
@@ -160,7 +185,7 @@ async def main():
         if len(rows) < 1000: break
         offset += 1000
 
-    log(f'Found {len(candidates)} touchless listings needing enrichment')
+    log(f'Found {len(candidates)} {WASH_LABEL} listings needing enrichment')
     batch = candidates[:LIMIT]
     log(f'Processing batch of {len(batch)}')
 
