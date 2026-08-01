@@ -21,6 +21,7 @@ import { tssTier } from '@/lib/touchless-satisfaction';
 // quality sentiment. Mirrors highlightTouchless in TouchlessSatisfactionGauge: group 1 → green
 // (positive / negated-negative / wash-type evidence), group 2 → red (bare negative).
 const HL_EVIDENCE = {
+  'touchless': String.raw`touch[\s-]?less|touch[\s-]?free|no[\s-]?touch|brush[\s-]?less|no\s+brush\w*|laser\s+wash|high[\s-]?pressure`,
   'self-serve': String.raw`self[\s-]?serv\w*|\bwand\b|foam[\s-]?brush|\bcoins?\b|\btokens?\b|wash[\s-]?bays?`,
   'hand-wash': String.raw`hand(?:[\s-]?car)?[\s-]?wash\w*|washed?\s+(?:it\s+|my\s+car\s+|the\s+car\s+)?by\s+hand|\bby\s+hand\b|hand[\s-]?dr(?:y|ied|ies)|hand[\s-]?wax\w*|\bdetail(?:ing|ed|er)?\b|wiped?\s+(?:it\s+|the\s+car\s+|everything\s+)?down|full[\s-]?serv\w*|attendant\w*`,
   // Detailing evidence — the services/terms that mark real detailing work. `detail` is matched
@@ -32,7 +33,7 @@ const HL_POS = String.raw`spotless|sparkl\w*|shin(?:e|y|ing)|gleaming|immaculate
 const HL_NEG_NEGATED = String.raw`(?:no|not|never|without|didn'?t|couldn'?t|wasn'?t|zero)\b[\w\s,'-]{0,15}?\b(?:scratch\w*|streak\w*|spot\w*|dirt\w*|damage\w*|residue|mark\w*|swirl\w*|miss\w*|smear\w*|fault\w*|complaint\w*)`;
 const HL_NEG_BARE = String.raw`dirty|filthy|streak\w*|smear\w*|grimy|scratch\w*|swirl\w*|damage\w*|broke\w*|broken|residue|missed|rushed|sloppy|disappoint\w*|terrible|awful`;
 
-function highlightWashType(text: string, variant: 'self-serve' | 'hand-wash' | 'detailing'): ReactNode[] {
+function highlightWashType(text: string, variant: 'touchless' | 'self-serve' | 'hand-wash' | 'detailing'): ReactNode[] {
   const re = new RegExp(`(${HL_NEG_NEGATED}|${HL_POS}|${HL_EVIDENCE[variant]})|(${HL_NEG_BARE})`, 'gi');
   const nodes: ReactNode[] = [];
   let last = 0, key = 0;
@@ -62,7 +63,7 @@ function Stars({ n }: { n: number | null }) {
   );
 }
 
-function SnippetCard({ s, variant }: { s: SelfServeSnippet; variant: 'self-serve' | 'hand-wash' | 'detailing' }) {
+function SnippetCard({ s, variant }: { s: SelfServeSnippet; variant: 'touchless' | 'self-serve' | 'hand-wash' | 'detailing' }) {
   const neg = s.sentiment === 'negative';
   return (
     <div className="border border-gray-200 rounded-xl p-3.5 animate-[fadeIn_.3s_ease]">
@@ -96,6 +97,7 @@ function SnippetCard({ s, variant }: { s: SelfServeSnippet; variant: 'self-serve
 // in the header — self-serve is scored on FACILITY quality (the customer washes their own car),
 // so its copy says "facility", not "wash".
 const VARIANT_COPY = {
+  'touchless': { heading: 'What customers say about the touchless wash', mention: 'mention the touchless wash', scoreLabel: 'Touchless Score' },
   'self-serve': { heading: 'What customers say about the self-serve facility', mention: 'mention the bays or equipment', scoreLabel: 'Facility Score' },
   'hand-wash': { heading: 'What customers say about the hand wash', mention: 'mention the hand wash', scoreLabel: 'Hand Wash Score' },
   'detailing': { heading: 'What customers say about the detailing', mention: 'mention the detailing work', scoreLabel: 'Detailing Score' },
@@ -107,17 +109,21 @@ export default function SelfServeReviewsModule({
   googlePlaceId,
   variant = 'self-serve',
   score = null,
+  hideScore = false,
 }: {
   snippets: SelfServeSnippet[];
   reviewCount: number;
   googlePlaceId: string | null;
-  variant?: 'self-serve' | 'hand-wash' | 'detailing';
+  variant?: 'touchless' | 'self-serve' | 'hand-wash' | 'detailing';
   /** The 0-100 category score (self_service_score / hand_wash_score / detailing_score), or null
    *  if under the 3-mention gate. Shown as a compact gauge in the header when present. */
   score?: number | null;
+  /** Suppress the in-header score gauge — used inside the multi-service tabs, where the
+   *  RatingsByService scorecard already shows every score (so it isn't shown twice). */
+  hideScore?: boolean;
 }) {
   const copy = VARIANT_COPY[variant];
-  const tier = score != null ? tssTier(score) : null;
+  const tier = score != null && !hideScore ? tssTier(score) : null;
   const [sent, setSent] = useState<null | 'positive' | 'negative'>(null);
   const [sort, setSort] = useState<'helpful' | 'recent'>('helpful');
   const [expanded, setExpanded] = useState(false);

@@ -17,11 +17,14 @@ import PaintSafeModule, { type PaintSnippet } from '@/components/PaintSafeModule
 import SelfServeReviewsModule from '@/components/SelfServeReviewsModule';
 import TouchlessSatisfactionGauge, { type TssSnippet } from '@/components/TouchlessSatisfactionGauge';
 import { TouchlessScoreComparison, type ScoreRankItem } from '@/components/TouchlessScoreComparison';
+import RatingsByService from '@/components/RatingsByService';
+import CategoryReviewTabs, { type ReviewTab } from '@/components/CategoryReviewTabs';
 import type { Listing, ReviewSnippet } from '@/lib/supabase';
 import type { SelfServeSnippet } from './listing-data';
 import { isSelfServeOnly, isSelfServePublic } from '@/lib/self-serve';
 import { isHandWashOnly, isHandWashPublic } from '@/lib/hand-wash';
 import { isDetailingOnly, isDetailingPublic } from '@/lib/detailing';
+import { getListingScores } from '@/lib/listing-scores';
 import { getStateSlug, slugify } from '@/lib/constants';
 import { getBrandLabel, getBrandBySlug, slugifyModel } from '@/lib/equipment-data';
 import { WASH_TYPE_LABELS, asArray, monthlyMemberships, defaultWashPrice } from './listing-content';
@@ -64,12 +67,51 @@ export function ListingMainColumn({
   // Hand-wash + detailing listings, like self-serve, must not show the touchless Paint-Safe module.
   const handWash = isHandWashOnly(listing);
   const detailing = isDetailingOnly(listing);
+
+  // MULTI-SERVICE adaptive layout: a listing with 2+ publicly-shown category scores gets the
+  // compact "Ratings by service" scorecard + ONE tabbed review drawer instead of stacking several
+  // big gauges + a full drawer per category. Single-score listings (the ~95% case) keep the rich
+  // per-category layout below, untouched.
+  const scores = getListingScores(listing);
+  const multi = scores.length >= 2;
+  // Touchless snippets are TssSnippet[]; map to the shared SelfServeSnippet shape so the one
+  // review module renders every category's evidence uniformly inside the tabs.
+  const touchlessAsSnippets: SelfServeSnippet[] = touchlessReviewSnippets
+    .filter((s) => s.sentiment === 'positive' || s.sentiment === 'negative')
+    .map((s) => ({
+      id: s.id, sentiment: s.sentiment as 'positive' | 'negative', text: s.text,
+      reviewerName: s.reviewerName, credentials: null, isLocalGuide: false,
+      rating: s.rating, date: s.date, recencyDays: null,
+    }));
+  const SNIPPETS_BY_KEY: Record<string, SelfServeSnippet[]> = {
+    touchless: touchlessAsSnippets, self_serve: selfServeSnippets,
+    hand_wash: handWashSnippets, detailing: detailingSnippets,
+  };
+  const VARIANT_BY_KEY = {
+    touchless: 'touchless', self_serve: 'self-serve', hand_wash: 'hand-wash', detailing: 'detailing',
+  } as const;
+  const reviewTabs: ReviewTab[] = multi
+    ? scores
+        .map((s) => ({
+          key: s.key, label: s.chipLabel, variant: VARIANT_BY_KEY[s.key],
+          color: s.tier.arc, snippets: SNIPPETS_BY_KEY[s.key] ?? [],
+        }))
+        .filter((t) => t.snippets.length > 0)
+    : [];
+
   return (
     <div className="lg:col-span-2 space-y-6">
+      {/* ── Multi-service listings: compact scorecard + tabbed reviews (see above) ── */}
+      {multi && (
+        <>
+          <RatingsByService scores={scores} />
+          <CategoryReviewTabs tabs={reviewTabs} reviewCount={listing.review_count ?? 0} googlePlaceId={listing.google_place_id ?? null} />
+        </>
+      )}
       {/* Touchless Satisfaction Score — the headline 0–100 gauge (and its
           "a score appears once there are 3 reviews" empty state). It rates the
           touchless wash specifically, so it's hidden on self-serve-only listings. */}
-      {!selfServe && !handWash && !detailing && showTouchlessGauge && (
+      {!multi && !selfServe && !handWash && !detailing && showTouchlessGauge && (
         <TouchlessSatisfactionGauge
           score={listing.touchless_satisfaction_score ?? null}
           pos={listing.touchless_pos ?? 0}
@@ -79,7 +121,7 @@ export function ListingMainColumn({
           snippets={touchlessReviewSnippets}
         />
       )}
-      {!selfServe && !handWash && !detailing && cityScoreRanking.length >= 2 && (
+      {!multi && !selfServe && !handWash && !detailing && cityScoreRanking.length >= 2 && (
         <TouchlessScoreComparison
           items={cityScoreRanking}
           currentId={listing.id}
@@ -92,7 +134,7 @@ export function ListingMainColumn({
           touchless-themed snippet in the Paint-Safe module) so it never claims
           reviews the visitor can't see, and suppressed when the gauge is present
           (the gauge already shows the sentiment split). */}
-      {!selfServe && !handWash && !detailing && listing.touchless_sentiment && !showTouchlessGauge && paintModuleSnippets.some((s) => s.theme === 'touchless') && (
+      {!multi && !selfServe && !handWash && !detailing && listing.touchless_sentiment && !showTouchlessGauge && paintModuleSnippets.some((s) => s.theme === 'touchless') && (
         <div className={`flex items-center gap-2 px-4 py-3 rounded-xl border ${
           listing.touchless_sentiment === 'positive'
             ? 'bg-green-50 border-green-200'
@@ -126,7 +168,7 @@ export function ListingMainColumn({
           (absorbs the old touchless-snippets section). Public badge only; the
           granular paint_score stays internal for ranking. Touchless-only framing,
           so it's hidden on self-serve-only listings. */}
-      {!selfServe && !handWash && !detailing && (
+      {!multi && !selfServe && !handWash && !detailing && (
         <PaintSafeModule
           state={(listing.paint_state as 'verified' | 'has_data_unverified' | 'not_enough') ?? 'not_enough'}
           reviewCount={listing.review_count ?? 0}
@@ -139,7 +181,7 @@ export function ListingMainColumn({
           AND the self-serve side of a mixed facility). On mixed listings it sits directly below
           the touchless module so a visitor from the self-serve directory sees self-serve reviews;
           on self-serve-only listings the touchless block above is suppressed, so this leads. */}
-      {isSelfServePublic(listing) && (
+      {!multi && isSelfServePublic(listing) && (
         <SelfServeReviewsModule
           snippets={selfServeSnippets}
           reviewCount={listing.review_count ?? 0}
@@ -149,7 +191,7 @@ export function ListingMainColumn({
       )}
       {/* Hand-wash review evidence — same drawer, hand-wash variant/copy. Fed by mined
           gmaps-handwash snippets (getHandWashReviewSnippets). Shown on hand-wash-public listings. */}
-      {isHandWashPublic(listing) && (
+      {!multi && isHandWashPublic(listing) && (
         <SelfServeReviewsModule
           variant="hand-wash"
           snippets={handWashSnippets}
@@ -160,7 +202,7 @@ export function ListingMainColumn({
       )}
       {/* Detailing review evidence — same drawer, detailing variant/copy. Fed by mined
           gmaps-detailing snippets (getDetailingReviewSnippets). Shown on detailing-public listings. */}
-      {isDetailingPublic(listing) && (
+      {!multi && isDetailingPublic(listing) && (
         <SelfServeReviewsModule
           variant="detailing"
           snippets={detailingSnippets}
