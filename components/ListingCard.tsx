@@ -51,13 +51,17 @@ interface ListingCardProps {
    * MIXED facility (touchless + self-serve) must not flash its touchless-only
    * chrome — the Touchless Satisfaction Score and Paint-safe badge both rate the
    * touchless bay, not the self-serve bays the visitor is shopping for. Those
-   * signals still show on every touchless surface (default context).
+   * signals still show on every touchless surface (default context). Hand-wash
+   * surfaces behave the same way — a hand wash isn't touch-free/paint-safe, so its
+   * cards must not show the touchless-only chrome either.
    */
-  context?: 'default' | 'self-serve';
+  context?: 'default' | 'self-serve' | 'hand-wash';
 }
 
 export function ListingCard({ listing, href, showVerifiedBadge = false, distance, rank, context = 'default' }: ListingCardProps) {
-  const selfServeContext = context === 'self-serve';
+  // True on self-serve AND hand-wash surfaces: suppress the touchless-only chrome
+  // (Touchless Satisfaction Score + Paint-safe badge), which don't apply to those washes.
+  const selfServeContext = context !== 'default';
   const defaultHref = `/state/${getStateSlug(listing.state)}/${slugify(listing.city)}/${listing.slug}`;
   const linkHref = href ?? defaultHref;
 
