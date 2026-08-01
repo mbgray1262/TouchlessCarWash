@@ -65,7 +65,7 @@ export function ListingMainColumn({
       {/* Touchless Satisfaction Score — the headline 0–100 gauge (and its
           "a score appears once there are 3 reviews" empty state). It rates the
           touchless wash specifically, so it's hidden on self-serve-only listings. */}
-      {!selfServe && showTouchlessGauge && (
+      {!selfServe && !handWash && showTouchlessGauge && (
         <TouchlessSatisfactionGauge
           score={listing.touchless_satisfaction_score ?? null}
           pos={listing.touchless_pos ?? 0}
@@ -75,7 +75,7 @@ export function ListingMainColumn({
           snippets={touchlessReviewSnippets}
         />
       )}
-      {!selfServe && cityScoreRanking.length >= 2 && (
+      {!selfServe && !handWash && cityScoreRanking.length >= 2 && (
         <TouchlessScoreComparison
           items={cityScoreRanking}
           currentId={listing.id}
@@ -88,7 +88,7 @@ export function ListingMainColumn({
           touchless-themed snippet in the Paint-Safe module) so it never claims
           reviews the visitor can't see, and suppressed when the gauge is present
           (the gauge already shows the sentiment split). */}
-      {!selfServe && listing.touchless_sentiment && !showTouchlessGauge && paintModuleSnippets.some((s) => s.theme === 'touchless') && (
+      {!selfServe && !handWash && listing.touchless_sentiment && !showTouchlessGauge && paintModuleSnippets.some((s) => s.theme === 'touchless') && (
         <div className={`flex items-center gap-2 px-4 py-3 rounded-xl border ${
           listing.touchless_sentiment === 'positive'
             ? 'bg-green-50 border-green-200'
@@ -388,7 +388,7 @@ export function ListingMainColumn({
 
       {/* "See a Touchless Wash in Action" — touchless equipment footage, off-topic
           on a self-serve-only listing, so hidden there. */}
-      {!selfServe && equipmentVideos.length > 0 && (
+      {!selfServe && !handWash && equipmentVideos.length > 0 && (
         <TouchlessVideo listingId={listing.id} videos={equipmentVideos} preferBrand={listing.equipment_brand} />
       )}
 

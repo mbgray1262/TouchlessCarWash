@@ -12,9 +12,40 @@
  * self-serve reviews instead of only the touchless ones.
  */
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { ThumbsUp, AlertTriangle, Droplets } from 'lucide-react';
 import type { SelfServeSnippet } from '@/app/state/[state]/[city]/[slug]/listing-data';
+
+// Evidence vocabulary highlighted per variant (the reason the snippet was mined), plus shared
+// quality sentiment. Mirrors highlightTouchless in TouchlessSatisfactionGauge: group 1 → green
+// (positive / negated-negative / wash-type evidence), group 2 → red (bare negative).
+const HL_EVIDENCE = {
+  'self-serve': String.raw`self[\s-]?serv\w*|\bwand\b|foam[\s-]?brush|\bcoins?\b|\btokens?\b|wash[\s-]?bays?`,
+  'hand-wash': String.raw`hand(?:[\s-]?car)?[\s-]?wash\w*|washed?\s+(?:it\s+|my\s+car\s+|the\s+car\s+)?by\s+hand|\bby\s+hand\b|hand[\s-]?dr(?:y|ied|ies)|hand[\s-]?wax\w*|\bdetail(?:ing|ed|er)?\b|wiped?\s+(?:it\s+|the\s+car\s+|everything\s+)?down|full[\s-]?serv\w*|attendant\w*`,
+} as const;
+const HL_POS = String.raw`spotless|sparkl\w*|shin(?:e|y|ing)|gleaming|immaculate|pristine|flawless|thorough\w*|careful\w*|meticulous|amazing|excellent|fantastic|great\s+job|perfect|attention\s+to\s+detail|highly\s+recommend`;
+const HL_NEG_NEGATED = String.raw`(?:no|not|never|without|didn'?t|couldn'?t|wasn'?t|zero)\b[\w\s,'-]{0,15}?\b(?:scratch\w*|streak\w*|spot\w*|dirt\w*|damage\w*|residue|mark\w*|swirl\w*|miss\w*|smear\w*|fault\w*|complaint\w*)`;
+const HL_NEG_BARE = String.raw`dirty|filthy|streak\w*|smear\w*|grimy|scratch\w*|swirl\w*|damage\w*|broke\w*|broken|residue|missed|rushed|sloppy|disappoint\w*|terrible|awful`;
+
+function highlightWashType(text: string, variant: 'self-serve' | 'hand-wash'): ReactNode[] {
+  const re = new RegExp(`(${HL_NEG_NEGATED}|${HL_POS}|${HL_EVIDENCE[variant]})|(${HL_NEG_BARE})`, 'gi');
+  const nodes: ReactNode[] = [];
+  let last = 0, key = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index === re.lastIndex) { re.lastIndex++; continue; } // guard against zero-length matches
+    if (m.index > last) nodes.push(text.slice(last, m.index));
+    const green = m[1] !== undefined;
+    nodes.push(
+      <mark key={key++} className={green ? 'bg-emerald-100 text-emerald-800 rounded px-0.5' : 'bg-red-100 text-red-800 rounded px-0.5'}>
+        {m[0]}
+      </mark>,
+    );
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) nodes.push(text.slice(last));
+  return nodes;
+}
 
 function Stars({ n }: { n: number | null }) {
   if (!n) return null;
@@ -26,7 +57,7 @@ function Stars({ n }: { n: number | null }) {
   );
 }
 
-function SnippetCard({ s }: { s: SelfServeSnippet }) {
+function SnippetCard({ s, variant }: { s: SelfServeSnippet; variant: 'self-serve' | 'hand-wash' }) {
   const neg = s.sentiment === 'negative';
   return (
     <div className="border border-gray-200 rounded-xl p-3.5 animate-[fadeIn_.3s_ease]">
@@ -44,7 +75,7 @@ function SnippetCard({ s }: { s: SelfServeSnippet }) {
         </div>
         <Stars n={s.rating} />
       </div>
-      <p className="text-[13.5px] text-slate-800 mt-2 leading-relaxed">{s.text}</p>
+      <p className="text-[13.5px] text-slate-800 mt-2 leading-relaxed">{highlightWashType(s.text, variant)}</p>
       <div className="flex items-center gap-2 mt-2.5">
         <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-md ${neg ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
           {neg ? 'Concern' : 'Praise'}
@@ -167,7 +198,7 @@ export default function SelfServeReviewsModule({
 
       <div className="flex flex-col gap-2.5 mt-2.5">
         {rows.length > 0 ? (
-          rows.slice(0, expanded ? rows.length : INITIAL).map((s) => <SnippetCard key={s.id} s={s} />)
+          rows.slice(0, expanded ? rows.length : INITIAL).map((s) => <SnippetCard key={s.id} s={s} variant={variant} />)
         ) : (
           <div className="text-[13px] text-gray-400 py-3 text-center">No matching reviews in this filter.</div>
         )}

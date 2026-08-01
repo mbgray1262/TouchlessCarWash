@@ -571,6 +571,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
             selfServeNearby={selfServeNearby}
             selfServeOnly={isSelfServeOnly(listing)}
             selfServePublic={isSelfServePublic(listing)}
+            handWashOnly={isHandWashOnly(listing)}
             lastVerified={lastVerified}
           />
         </div>
