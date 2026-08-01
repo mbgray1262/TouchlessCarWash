@@ -47,7 +47,7 @@ function SnippetCard({ s }: { s: SelfServeSnippet }) {
       <p className="text-[13.5px] text-slate-800 mt-2 leading-relaxed">{s.text}</p>
       <div className="flex items-center gap-2 mt-2.5">
         <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-md ${neg ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
-          {neg ? 'Self-serve concern' : 'Self-serve praise'}
+          {neg ? 'Concern' : 'Praise'}
         </span>
         {s.date && <span className="text-[11px] text-gray-400 ml-auto">{s.date}</span>}
       </div>
@@ -55,15 +55,25 @@ function SnippetCard({ s }: { s: SelfServeSnippet }) {
   );
 }
 
+// Same evidence-drawer, two wash types: 'self-serve' (default) and 'hand-wash'. Only the
+// two heading strings differ; the mechanics (sentiment split, filters, sort) are identical.
+const VARIANT_COPY = {
+  'self-serve': { heading: 'What customers say about the self-serve wash', mention: 'mention the self-serve bays' },
+  'hand-wash': { heading: 'What customers say about the hand wash', mention: 'mention the hand wash' },
+} as const;
+
 export default function SelfServeReviewsModule({
   snippets,
   reviewCount,
   googlePlaceId,
+  variant = 'self-serve',
 }: {
   snippets: SelfServeSnippet[];
   reviewCount: number;
   googlePlaceId: string | null;
+  variant?: 'self-serve' | 'hand-wash';
 }) {
+  const copy = VARIANT_COPY[variant];
   const [sent, setSent] = useState<null | 'positive' | 'negative'>(null);
   const [sort, setSort] = useState<'helpful' | 'recent'>('helpful');
   const [expanded, setExpanded] = useState(false);
@@ -90,11 +100,11 @@ export default function SelfServeReviewsModule({
     <section className="bg-white border border-gray-200 rounded-2xl p-5 mb-4">
       <h2 className="text-[17px] font-extrabold text-[#0F2744] flex items-center gap-2 mb-1">
         <Droplets className="w-5 h-5 text-[#22C55E]" />
-        What customers say about the self-serve wash
+        {copy.heading}
       </h2>
       <p className="text-[12.5px] text-slate-500 mb-2">
         Of <b className="text-slate-700">{reviewCount.toLocaleString()}</b> total reviews,{' '}
-        <b className="text-slate-700">{clear}</b> mention the self-serve bays:
+        <b className="text-slate-700">{clear}</b> {copy.mention}:
       </p>
 
       <div className="flex h-3 rounded-full overflow-hidden border border-gray-200">

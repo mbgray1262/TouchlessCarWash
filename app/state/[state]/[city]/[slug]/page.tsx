@@ -43,6 +43,7 @@ import {
   getBestOfRankings,
   getMetroSiblingRankings,
   getSelfServeReviewSnippets,
+  getHandWashReviewSnippets,
   type SelfServeSnippet,
 } from './listing-data';
 import {
@@ -315,7 +316,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     permanentRedirect(canonicalPath);
   }
 
-  const [nearbyListings, reviewSnippets, genericReviews, rankings, chainResult, verificationStats, equipmentVideos, paintSnippets, cityScoreRanking, badgeEmbedRes, selfServeNearby, selfServeSnippets] = await Promise.all([
+  const [nearbyListings, reviewSnippets, genericReviews, rankings, chainResult, verificationStats, equipmentVideos, paintSnippets, cityScoreRanking, badgeEmbedRes, selfServeNearby, selfServeSnippets, handWashSnippets] = await Promise.all([
     getNearbyListings(listing),
     getReviewSnippets(listing.id),
     getGenericReviews(listing.id),
@@ -336,6 +337,8 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     isSelfServePublic(listing) ? getNearbySelfServeListings(listing) : Promise.resolve([] as Listing[]),
     // Self-serve review snippets for the SelfServeReviewsModule — same gate (self-serve-public only).
     isSelfServePublic(listing) ? getSelfServeReviewSnippets(listing.id) : Promise.resolve([] as SelfServeSnippet[]),
+    // Hand-wash review snippets for the same module (hand-wash variant) — only for hand-wash-public listings.
+    isHandWashPublic(listing) ? getHandWashReviewSnippets(listing.id) : Promise.resolve([] as SelfServeSnippet[]),
   ]);
   const badgeInUse = listing.is_claimed === true || ((badgeEmbedRes?.data?.length ?? 0) > 0);
 
@@ -360,14 +363,17 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
   // click opens a rich scrollable set of on-site reviews instead of bouncing to Google. Self-serve
   // snippets matter here: a self-serve wash's reviews are mostly self-serve-evidence, so without
   // them the modal would show just the odd touchless mention (often a single "highlight").
-  const selfServeAsSnippets = selfServeSnippets.map((s) => ({
+  const snippetToHighlight = (s: SelfServeSnippet) => ({
     id: s.id,
     review_text: s.text,
     rating: s.rating,
     reviewer_name: s.reviewerName,
     review_date: s.date,
-  })) as unknown as ReviewSnippet[];
-  const reviewHighlights = [...reviewSnippets, ...selfServeAsSnippets, ...genericReviews]
+  });
+  const selfServeAsSnippets = selfServeSnippets.map(snippetToHighlight) as unknown as ReviewSnippet[];
+  // Same reasoning for hand-wash: a hand wash's reviews are mostly hand-wash-evidence.
+  const handWashAsSnippets = handWashSnippets.map(snippetToHighlight) as unknown as ReviewSnippet[];
+  const reviewHighlights = [...reviewSnippets, ...selfServeAsSnippets, ...handWashAsSnippets, ...genericReviews]
     .filter((r) => r.review_text && r.review_text.trim().length >= 20)
     // de-dup by id, then by leading text (the same Google review can be stored as both a
     // touchless and a self-serve snippet under different ids).
@@ -529,6 +535,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
               cityScoreRanking={cityScoreRanking}
               paintModuleSnippets={paintModuleSnippets}
               selfServeSnippets={selfServeSnippets}
+              handWashSnippets={handWashSnippets}
               genericReviews={genericReviews}
               galleryPhotos={galleryPhotos}
               equipmentVideos={equipmentVideos}

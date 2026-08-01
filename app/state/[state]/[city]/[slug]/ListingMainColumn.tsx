@@ -20,7 +20,7 @@ import { TouchlessScoreComparison, type ScoreRankItem } from '@/components/Touch
 import type { Listing, ReviewSnippet } from '@/lib/supabase';
 import type { SelfServeSnippet } from './listing-data';
 import { isSelfServeOnly, isSelfServePublic } from '@/lib/self-serve';
-import { isHandWashOnly } from '@/lib/hand-wash';
+import { isHandWashOnly, isHandWashPublic } from '@/lib/hand-wash';
 import { getStateSlug, slugify } from '@/lib/constants';
 import { getBrandLabel, getBrandBySlug, slugifyModel } from '@/lib/equipment-data';
 import { WASH_TYPE_LABELS, asArray, monthlyMemberships, defaultWashPrice } from './listing-content';
@@ -33,6 +33,7 @@ interface ListingMainColumnProps {
   cityScoreRanking: ScoreRankItem[];
   paintModuleSnippets: PaintSnippet[];
   selfServeSnippets: SelfServeSnippet[];
+  handWashSnippets: SelfServeSnippet[];
   genericReviews: ReviewSnippet[];
   galleryPhotos: string[];
   equipmentVideos: { id: string; title: string; brand: string | null }[];
@@ -46,6 +47,7 @@ export function ListingMainColumn({
   cityScoreRanking,
   paintModuleSnippets,
   selfServeSnippets,
+  handWashSnippets,
   genericReviews,
   galleryPhotos,
   equipmentVideos,
@@ -136,6 +138,16 @@ export function ListingMainColumn({
       {isSelfServePublic(listing) && (
         <SelfServeReviewsModule
           snippets={selfServeSnippets}
+          reviewCount={listing.review_count ?? 0}
+          googlePlaceId={listing.google_place_id ?? null}
+        />
+      )}
+      {/* Hand-wash review evidence — same drawer, hand-wash variant/copy. Fed by mined
+          gmaps-handwash snippets (getHandWashReviewSnippets). Shown on hand-wash-public listings. */}
+      {isHandWashPublic(listing) && (
+        <SelfServeReviewsModule
+          variant="hand-wash"
+          snippets={handWashSnippets}
           reviewCount={listing.review_count ?? 0}
           googlePlaceId={listing.google_place_id ?? null}
         />
