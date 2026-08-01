@@ -21,7 +21,7 @@ import { slugify, getStateName } from '@/lib/constants';
 /** Category master switch. Flip to true (+ deploy) to launch the hand-wash directory.
  *  Built gated (false) so the whole section can be assembled + verify:seo'd while invisible
  *  to Google (noindex ⟺ absent from sitemap; no internal links), then flipped in one commit. */
-export const HAND_WASH_LIVE = false;
+export const HAND_WASH_LIVE = true;
 
 /** Landing hero — a real attended-hand-wash photo from our own top-scored listings. */
 export const HAND_WASH_HERO_IMAGE =

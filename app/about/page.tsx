@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { createClient } from '@supabase/supabase-js';
 import { getApprovedTouchlessCount } from '@/lib/listing-queries';
 import { SELF_SERVE_LIVE, publicSelfServeCount } from '@/lib/self-serve';
+import { HAND_WASH_LIVE, publicHandWashCount } from '@/lib/hand-wash';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -64,6 +65,11 @@ async function getStats() {
     ? await publicSelfServeCount()
     : { count: 0 };
 
+  // Public hand-wash count (same visibility rule the /hand-car-wash directory uses).
+  const { count: handWashCount } = HAND_WASH_LIVE
+    ? await publicHandWashCount()
+    : { count: 0 };
+
   // Count actual review snippets stored in the DB — same metric the homepage uses.
   const { count: totalReviews } = await supabase
     .from('review_snippets')
@@ -74,6 +80,9 @@ async function getStats() {
     { label: 'Touchless Locations', value: `${totalListings.toLocaleString()}+`, icon: MapPin },
     ...(SELF_SERVE_LIVE && (selfServeCount ?? 0) > 0
       ? [{ label: 'Self-Serve Locations', value: `${(selfServeCount ?? 0).toLocaleString()}+`, icon: Droplet }]
+      : []),
+    ...(HAND_WASH_LIVE && (handWashCount ?? 0) > 0
+      ? [{ label: 'Hand Wash Locations', value: `${(handWashCount ?? 0).toLocaleString()}+`, icon: Droplet }]
       : []),
     { label: 'States + DC', value: '50', icon: CheckCircle },
     { label: 'Customer Reviews', value: `${roundedReviews.toLocaleString()}+`, icon: Star },

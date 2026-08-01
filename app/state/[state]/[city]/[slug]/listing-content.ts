@@ -8,6 +8,7 @@ import { getChainBrandImage } from '@/lib/chain-brand-images';
 import { earnsTrophy } from '@/lib/metro-scoring';
 import { getBrandLabel } from '@/lib/equipment-data';
 import { isSelfServeOnly } from '@/lib/self-serve';
+import { isHandWashOnly } from '@/lib/hand-wash';
 import { isRealCustomerSnippet, type BestOfRanking } from './listing-data';
 
 export const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -217,9 +218,19 @@ export function buildFAQs(listing: Listing, hours: Record<string, string> | null
   // touchless/brushless/paint-safe branding — flip the wash-type-specific copy
   // to self-serve wording. Mixed (also-touchless) listings keep touchless copy.
   const selfServe = isSelfServeOnly(listing);
+  // Hand-wash-only listings must never wear the touchless/brushless/paint-safe copy —
+  // hand washing is CONTACT washing. Flip the wash-type-specific FAQ answers to hand-wash
+  // wording (attendants wash by hand). Mixed listings keep touchless/self-serve framing.
+  const handWash = isHandWashOnly(listing);
 
   // 1. Wash-type identity (always shown) — enriched with wash types & equipment
-  if (selfServe) {
+  if (handWash) {
+    let hwAnswer = `Yes, ${listing.name} in ${listing.city}, ${listing.state} is a hand car wash — a full-service facility where trained attendants wash your vehicle by hand using wash mitts, sponges, foam, and drying towels, rather than sending it through an automatic machine or tunnel. You wait or drop the car off, and the crew washes it thoroughly, usually hand-dries it, and often cleans the interior too.`;
+    if (listing.amenities && listing.amenities.length > 0) {
+      hwAnswer += ` On-site you'll find ${listing.amenities.slice(0, 4).join(', ')}.`;
+    }
+    faqs.push({ q: `Is ${listing.name} a hand car wash?`, a: hwAnswer });
+  } else if (selfServe) {
     let ssAnswer = `Yes, ${listing.name} in ${listing.city}, ${listing.state} is a self-serve (self-service) car wash — also called a DIY, self-wash, or coin-op car wash — an open-bay facility where you wash your own vehicle using a high-pressure wand and foaming brush that you control. Pull into an open bay, pay by coin, card, or app, and wash on your own schedule at your own pace.`;
     if (listing.amenities && listing.amenities.length > 0) {
       ssAnswer += ` On-site you'll find ${listing.amenities.slice(0, 4).join(', ')}.`;
@@ -300,14 +311,16 @@ export function buildFAQs(listing: Listing, hours: Record<string, string> | null
     if (model) {
       equipAnswer += model;
     } else if (brandLabel) {
-      equipAnswer += selfServe ? `${brandLabel} wash equipment` : `${brandLabel} touchless wash equipment`;
+      equipAnswer += handWash ? `${brandLabel} wash equipment` : selfServe ? `${brandLabel} wash equipment` : `${brandLabel} touchless wash equipment`;
     } else {
-      equipAnswer += selfServe ? 'professional self-serve wash-bay equipment' : 'professional touchless wash equipment';
+      equipAnswer += handWash ? 'professional hand-washing supplies and detailing equipment' : selfServe ? 'professional self-serve wash-bay equipment' : 'professional touchless wash equipment';
     }
     if (tech.length > 0) {
       equipAnswer += `, featuring ${tech.join(', ')}`;
     }
-    equipAnswer += selfServe
+    equipAnswer += handWash
+      ? '. Trained attendants wash and detail each vehicle by hand for a thorough, careful clean.'
+      : selfServe
       ? '. You control the high-pressure wand yourself, so you decide exactly how your vehicle is cleaned.'
       : '. This touch-free technology ensures a scratch-free, brushless wash every time.';
     faqs.push({ q: `What equipment does ${listing.name} use?`, a: equipAnswer });
@@ -318,7 +331,9 @@ export function buildFAQs(listing: Listing, hours: Record<string, string> | null
   if (serviceTypes.length > 0) {
     faqs.push({
       q: `What types of car wash services does ${listing.name} offer?`,
-      a: selfServe
+      a: handWash
+        ? `${listing.name} offers the following services: ${serviceTypes.join(', ')}. The team hand washes and details your vehicle for you, by hand.`
+        : selfServe
         ? `${listing.name} offers the following services: ${serviceTypes.join(', ')}. Choose your wash settings at the bay and clean your vehicle at your own pace.`
         : `${listing.name} offers the following services: ${serviceTypes.join(', ')}. All washes are touchless and touch-free — no brushes or cloth touch your vehicle.`,
     });
@@ -338,14 +353,16 @@ export function buildFAQs(listing: Listing, hours: Record<string, string> | null
   if (specialFeatures.length > 0) {
     faqs.push({
       q: `What special features does ${listing.name} have?`,
-      a: `${listing.name} offers these special features: ${specialFeatures.join(', ')}. These extras make it a standout among ${selfServe ? 'self-serve' : 'touchless'} car washes in ${listing.city}.`,
+      a: `${listing.name} offers these special features: ${specialFeatures.join(', ')}. These extras make it a standout among ${handWash ? 'hand' : selfServe ? 'self-serve' : 'touchless'} car washes in ${listing.city}.`,
     });
   }
 
   // 10. Safe for luxury vehicles (always shown — high-value ad keyword content)
   faqs.push({
     q: `Is ${listing.name} safe for Tesla, BMW, and luxury vehicles?`,
-    a: selfServe
+    a: handWash
+      ? `Yes. ${listing.name} is a professional hand car wash where trained attendants clean each vehicle by hand with care. A careful hand wash — clean mitts, gentle technique, and hand drying — is a popular choice for owners of Tesla Model 3, Model Y, and Model S, BMW, Mercedes-Benz, Lexus, Audi, Porsche, Range Rover, and Genesis who want a thorough, detailed clean with personal attention. If your vehicle has a ceramic coating, paint protection film (PPF), or a vinyl wrap, ask the team about their hand-wash process and detailing options for premium finishes.`
+      : selfServe
       ? `Yes. At ${listing.name} you wash your own vehicle with a high-pressure wand you control — no automated spinning brushes or cloth strips ever touch your paint. That hands-on control makes a self-serve bay a popular choice for owners of Tesla Model 3, Model Y, and Model S, BMW, Mercedes-Benz, Lexus, Audi, Porsche, Range Rover, and Genesis, and for cars with ceramic coatings, paint protection film (PPF), or vinyl wraps — you decide exactly how each panel is cleaned and rinsed.`
       : `Yes. ${listing.name} is a touchless car wash, meaning no brushes or cloth ever contact your vehicle. This makes it the safest automated wash option for luxury and high-end vehicles including Tesla Model 3, Model Y, and Model S, BMW, Mercedes-Benz, Lexus, Audi, Porsche, Range Rover, and Genesis. Touchless washes are also recommended by auto detailing professionals for cars with ceramic coatings, paint protection film (PPF), vinyl wraps, or any premium paint finish.`,
   });

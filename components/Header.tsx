@@ -7,6 +7,7 @@ import { useState, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useFavorites } from '@/lib/useFavorites';
 import { SELF_SERVE_LIVE } from '@/lib/self-serve';
+import { HAND_WASH_LIVE } from '@/lib/hand-wash';
 
 /**
  * Inner component that reads searchParams (must be wrapped in Suspense
@@ -71,7 +72,12 @@ export function Header() {
                 Self-Serve
               </Link>
             )}
-            {SELF_SERVE_LIVE ? (
+            {HAND_WASH_LIVE && (
+              <Link href="/hand-car-wash" className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors">
+                Hand Wash
+              </Link>
+            )}
+            {(SELF_SERVE_LIVE || HAND_WASH_LIVE) ? (
               <div
                 className="relative"
                 onMouseEnter={() => setBestOfOpen(true)}
@@ -98,9 +104,16 @@ export function Header() {
                     <Link href="/best" onClick={() => setBestOfOpen(false)} className="block px-4 py-2 text-sm font-medium text-[#0F2744] hover:bg-gray-50 hover:text-[#22C55E] transition-colors">
                       Best Touchless
                     </Link>
-                    <Link href="/best-self-serve" onClick={() => setBestOfOpen(false)} className="block px-4 py-2 text-sm font-medium text-[#0F2744] hover:bg-gray-50 hover:text-[#22C55E] transition-colors">
-                      Best Self-Service
-                    </Link>
+                    {SELF_SERVE_LIVE && (
+                      <Link href="/best-self-serve" onClick={() => setBestOfOpen(false)} className="block px-4 py-2 text-sm font-medium text-[#0F2744] hover:bg-gray-50 hover:text-[#22C55E] transition-colors">
+                        Best Self-Service
+                      </Link>
+                    )}
+                    {HAND_WASH_LIVE && (
+                      <Link href="/best-hand-wash" onClick={() => setBestOfOpen(false)} className="block px-4 py-2 text-sm font-medium text-[#0F2744] hover:bg-gray-50 hover:text-[#22C55E] transition-colors">
+                        Best Hand Wash
+                      </Link>
+                    )}
                   </div>
                 </div>
               </div>
@@ -177,7 +190,16 @@ export function Header() {
                   Self-Serve
                 </Link>
               )}
-              {SELF_SERVE_LIVE ? (
+              {HAND_WASH_LIVE && (
+                <Link
+                  href="/hand-car-wash"
+                  className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Hand Wash
+                </Link>
+              )}
+              {(SELF_SERVE_LIVE || HAND_WASH_LIVE) ? (
                 <div className="flex flex-col space-y-3">
                   <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Best Of</span>
                   <Link
@@ -187,13 +209,24 @@ export function Header() {
                   >
                     Best Touchless
                   </Link>
-                  <Link
-                    href="/best-self-serve"
-                    className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors pl-3"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Best Self-Service
-                  </Link>
+                  {SELF_SERVE_LIVE && (
+                    <Link
+                      href="/best-self-serve"
+                      className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors pl-3"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Best Self-Service
+                    </Link>
+                  )}
+                  {HAND_WASH_LIVE && (
+                    <Link
+                      href="/best-hand-wash"
+                      className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors pl-3"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Best Hand Wash
+                    </Link>
+                  )}
                 </div>
               ) : (
                 <Link

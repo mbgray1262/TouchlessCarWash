@@ -86,6 +86,9 @@ export type Listing = {
   touchless_mentions?: number | null;
   /** 'improving' = touchless reviews trending more positive lately; else null. */
   touchless_trend?: string | null;
+  // Self-serve + hand-wash satisfaction scores (same 0-100 scale as touchless).
+  self_service_score?: number | null;
+  hand_wash_score?: number | null;
 };
 
 // Columns needed by ListingCard — avoids fetching heavy fields like description,

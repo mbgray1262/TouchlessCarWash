@@ -20,6 +20,7 @@ import { TouchlessScoreComparison, type ScoreRankItem } from '@/components/Touch
 import type { Listing, ReviewSnippet } from '@/lib/supabase';
 import type { SelfServeSnippet } from './listing-data';
 import { isSelfServeOnly, isSelfServePublic } from '@/lib/self-serve';
+import { isHandWashOnly } from '@/lib/hand-wash';
 import { getStateSlug, slugify } from '@/lib/constants';
 import { getBrandLabel, getBrandBySlug, slugifyModel } from '@/lib/equipment-data';
 import { WASH_TYPE_LABELS, asArray, monthlyMemberships, defaultWashPrice } from './listing-content';
@@ -55,6 +56,8 @@ export function ListingMainColumn({
   // Paint-Safe module renders even in its empty "not enough reviews" state, so
   // gate it explicitly.
   const selfServe = isSelfServeOnly(listing);
+  // Hand-wash listings, like self-serve, must not show the touchless Paint-Safe module.
+  const handWash = isHandWashOnly(listing);
   return (
     <div className="lg:col-span-2 space-y-6">
       {/* Touchless Satisfaction Score — the headline 0–100 gauge (and its
@@ -117,7 +120,7 @@ export function ListingMainColumn({
           (absorbs the old touchless-snippets section). Public badge only; the
           granular paint_score stays internal for ranking. Touchless-only framing,
           so it's hidden on self-serve-only listings. */}
-      {!selfServe && (
+      {!selfServe && !handWash && (
         <PaintSafeModule
           state={(listing.paint_state as 'verified' | 'has_data_unverified' | 'not_enough') ?? 'not_enough'}
           reviewCount={listing.review_count ?? 0}
@@ -140,7 +143,7 @@ export function ListingMainColumn({
       {/* AI-Generated Description */}
       {listing.description && (
         <div className="bg-white rounded-2xl border border-gray-200 p-6">
-          <h2 className="text-lg font-bold text-[#0F2744] mb-3">{listing.name} — {isSelfServeOnly(listing) ? 'Self-Serve' : (isSelfServePublic(listing) && listing.is_touchless ? 'Touchless & Self-Serve' : 'Touchless & Brushless')} Car Wash in {listing.city}, {listing.state}</h2>
+          <h2 className="text-lg font-bold text-[#0F2744] mb-3">{listing.name} — {isHandWashOnly(listing) ? 'Hand' : isSelfServeOnly(listing) ? 'Self-Serve' : (isSelfServePublic(listing) && listing.is_touchless ? 'Touchless & Self-Serve' : 'Touchless & Brushless')} Car Wash in {listing.city}, {listing.state}</h2>
           <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
             {listing.description}
           </div>

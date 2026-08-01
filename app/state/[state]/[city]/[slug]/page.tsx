@@ -206,7 +206,11 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   // thin — but it's been human-reviewed (self_service_reviewed_at) and has its own content
   // (self-serve reviews, photos, amenities). Don't touchless-thin-gate it. This also keeps the
   // page in lockstep with the sitemap, which emits every self-serve-only listing (SEO invariant).
-  const thin = !isSelfServeOnly(listing) && isThinListing({ ...listing, review_snippet_count: reviewSnippetCount });
+  // isThinListing counts TOUCHLESS snippets, which are 0 on a hand-wash / self-serve listing —
+  // so both are excluded (they're never "thin"), otherwise they'd noindex while still being
+  // emitted in the sitemap (in-sitemap ⟺ indexable violation). Their own review evidence lives
+  // in the self-serve / hand-wash snippet tables, not the touchless count.
+  const thin = !isSelfServeOnly(listing) && !isHandWashOnly(listing) && isThinListing({ ...listing, review_snippet_count: reviewSnippetCount });
   const robots = thin ? { index: false, follow: true } : undefined;
 
   return {

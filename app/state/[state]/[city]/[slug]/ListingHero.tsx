@@ -13,6 +13,7 @@ import { ListingBreadcrumb } from '@/components/ListingBreadcrumb';
 import { Badge } from '@/components/ui/badge';
 import type { Listing, ReviewSnippet } from '@/lib/supabase';
 import { isSelfServeOnly, isSelfServePublic } from '@/lib/self-serve';
+import { isHandWashOnly } from '@/lib/hand-wash';
 import { tssTier } from '@/lib/touchless-satisfaction';
 import { streetAddress } from '@/lib/utils';
 import { isOptimizedImageHost } from './listing-content';
@@ -71,6 +72,10 @@ export function ListingHero({
   // Self-serve-only listings must not wear touchless/paint-safe badges — they get
   // a single "Self-Serve" badge instead. Mixed (also-touchless) keep touchless.
   const selfServe = isSelfServeOnly(listing);
+  const handWash = isHandWashOnly(listing);
+  // Satisfaction badge score: hand-wash listings show their hand_wash_score, everyone else
+  // the touchless score (same 0-100 scale, so tssTier's color mapping applies to both).
+  const satScore = handWash ? listing.hand_wash_score : listing.touchless_satisfaction_score;
   const heroContent = (
     <>
       <ListingBreadcrumb
@@ -99,12 +104,17 @@ export function ListingHero({
                 </Badge>
               </Link>
             )}
-            {listing.touchless_satisfaction_score != null && (
-              <Badge className={`border-0 shadow-sm text-white ${heroPill}`} style={{ backgroundColor: tssTier(listing.touchless_satisfaction_score).arc }}>
-                <Gauge className="w-3 h-3 mr-1" />Satisfaction {listing.touchless_satisfaction_score}
+            {satScore != null && (
+              <Badge className={`border-0 shadow-sm text-white ${heroPill}`} style={{ backgroundColor: tssTier(satScore).arc }}>
+                <Gauge className="w-3 h-3 mr-1" />Satisfaction {satScore}
               </Badge>
             )}
-            {selfServe ? (
+            {handWash ? (
+              /* Hand-wash: no touchless/paint-safe claims (it's contact washing) — just the wash-type badge. */
+              <Badge className={`bg-[#22C55E] text-white border-0 shadow-sm ${heroPill}`}>
+                <CheckCircle className="w-3 h-3 mr-1" />Hand Wash
+              </Badge>
+            ) : selfServe ? (
               /* Self-serve: no touchless/paint-safe claims — just the wash-type badge. */
               <Badge className={`bg-[#22C55E] text-white border-0 shadow-sm ${heroPill}`}>
                 <CheckCircle className="w-3 h-3 mr-1" />Self-Serve

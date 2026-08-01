@@ -1,6 +1,8 @@
 import { supabase, type Listing } from '@/lib/supabase';
 import { publicListings } from '@/lib/public-listings';
 import { SELF_SERVE_LIVE, publicSelfServeListings, selfServeStateTally, qualifyingSelfServeCities } from '@/lib/self-serve';
+import { HAND_WASH_LIVE, publicHandWashListings, handWashStateTally, qualifyingHandWashCities } from '@/lib/hand-wash';
+import { getQualifyingHandWashMetros } from '@/lib/hand-wash-metro';
 import { US_STATES, getStateSlug, slugify } from '@/lib/constants';
 import { getQualifyingMetros } from '@/lib/metro-queries';
 import { getQualifyingSelfServeMetros } from '@/lib/self-serve-metro';
@@ -390,6 +392,75 @@ export async function GET() {
     }
   }
 
+  // ── Hand-wash directory (only emitted when the category is live) ──
+  // Landing + Best-Of index + per-state/city hubs + hand-wash-ONLY listing detail pages.
+  // A hand wash that's also touchless (listingUrls) or self-serve (selfServeUrls) is already
+  // emitted there, so we filter to !is_touchless && !is_self_service to avoid duplicate <loc>.
+  // Mirrors the exact render/robots gate in lib/hand-wash.ts, keeping sitemap ⟺ indexable.
+  let handWashUrls: string[] = [];
+  if (HAND_WASH_LIVE) {
+    const [hwTally, hwCities, hwListingsRes] = await Promise.all([
+      handWashStateTally(),
+      qualifyingHandWashCities(),
+      publicHandWashListings('slug, state, city, is_touchless, is_self_service, updated_at, created_at').limit(10000),
+    ]);
+    const hwListings = (hwListingsRes.data ?? []) as {
+      slug: string; state: string; city: string | null; is_touchless: boolean | null; is_self_service: boolean | null;
+      updated_at: string | null; created_at: string | null;
+    }[];
+    handWashUrls.push(`  <url>
+    <loc>${baseUrl}/hand-car-wash</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`);
+    handWashUrls.push(`  <url>
+    <loc>${baseUrl}/best-hand-wash</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`);
+    for (const { code } of hwTally) {
+      handWashUrls.push(`  <url>
+    <loc>${baseUrl}/hand-car-wash/${getStateSlug(code)}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`);
+    }
+    // City hubs — only cities with >= MIN_HAND_WASH_CITY listings (shared
+    // qualifyingHandWashCities() drives BOTH this and the page's 200-vs-404).
+    for (const c of hwCities) {
+      handWashUrls.push(`  <url>
+    <loc>${baseUrl}/hand-car-wash/${getStateSlug(c.stateCode)}/${c.citySlug}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`);
+    }
+    for (const l of hwListings) {
+      if (l.is_touchless || l.is_self_service || !l.city?.trim() || !VALID_STATE_CODES.has(l.state)) continue;
+      handWashUrls.push(`  <url>
+    <loc>${baseUrl}/state/${getStateSlug(l.state)}/${slugify(l.city)}/${l.slug}</loc>
+    <lastmod>${l.updated_at ?? l.created_at ?? now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>`);
+    }
+  }
+
+  // Hand-wash Best-Of metro pages — gated by getQualifyingHandWashMetros(), the SAME function the
+  // page uses to decide 200-vs-redirect, so the sitemap lists exactly the /best-hand-wash/<slug>
+  // pages that 200.
+  const handWashBestOfUrls = HAND_WASH_LIVE
+    ? (await getQualifyingHandWashMetros()).map((metro) => `  <url>
+    <loc>${baseUrl}/best-hand-wash/${metro.slug}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`)
+    : [];
+
   // Retired blog slugs that 301-redirect elsewhere (see next.config.js
   // redirects) must not be advertised even though a published_at row lingers.
   const REDIRECTED_BLOG_SLUGS = new Set(['recommended-products']); // -> /shop
@@ -733,6 +804,7 @@ export async function GET() {
   </url>
 ${bestOfUrls.join('\n')}
 ${selfServeBestOfUrls.join('\n')}
+${handWashBestOfUrls.join('\n')}
 ${featureIndexUrl}
 ${featureHubUrls.join('\n')}
 ${featureStateUrls.join('\n')}
@@ -748,6 +820,7 @@ ${cityUrls.join('\n')}
 ${listingUrls.join('\n')}
 ${blogUrls.join('\n')}
 ${selfServeUrls.join('\n')}
+${handWashUrls.join('\n')}
 </urlset>`;
 
   return new Response(sitemap, {
