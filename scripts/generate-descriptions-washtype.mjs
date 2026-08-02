@@ -47,7 +47,10 @@ async function haiku(l, reviews) {
 
 let targets = [];
 for (let from = 0; ; from += 1000) {
-  let q = db.from('listings').select('id,name,city,state,rating,review_count,amenities,wash_packages,is_hand_wash,is_self_service,is_detailing,is_touchless').eq('is_approved', true).or('description.is.null,description.eq.');
+  let q = db.from('listings').select('id,name,city,state,rating,review_count,amenities,wash_packages,is_hand_wash,is_self_service,is_detailing,is_touchless').or('description.is.null,description.eq.');
+  // Detailing is PRE-LAUNCH: its listings are mostly is_approved=false (pending manual review),
+  // so enrich them regardless of approval. Other (live) categories keep the is_approved gate.
+  if (ONLY !== 'detail') q = q.eq('is_approved', true);
   if (ONLY === 'hand') q = q.eq('is_hand_wash', true);
   else if (ONLY === 'self') q = q.eq('is_self_service', true);
   else if (ONLY === 'detail') q = q.eq('is_detailing', true);

@@ -47,7 +47,10 @@ async function haiku(name, washType, category, reviews) {
 // Targets: approved hand-wash/self-serve listings with no amenities.
 let targets = [];
 for (let from = 0; ; from += 1000) {
-  let q = db.from('listings').select('id,name,is_hand_wash,is_self_service,is_detailing,google_category').eq('is_approved', true).or('amenities.is.null,amenities.eq.{}');
+  let q = db.from('listings').select('id,name,is_hand_wash,is_self_service,is_detailing,google_category').or('amenities.is.null,amenities.eq.{}');
+  // Detailing is PRE-LAUNCH (mostly is_approved=false, pending manual review) — enrich regardless
+  // of approval. Other (live) categories keep the is_approved gate.
+  if (ONLY !== 'detail') q = q.eq('is_approved', true);
   if (ONLY === 'hand') q = q.eq('is_hand_wash', true);
   else if (ONLY === 'self') q = q.eq('is_self_service', true);
   else if (ONLY === 'detail') q = q.eq('is_detailing', true);
