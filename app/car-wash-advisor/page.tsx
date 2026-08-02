@@ -32,7 +32,7 @@ const TYPES = [
 ];
 
 const FAQ: { q: string; a: string }[] = [
-  { q: 'How does the car wash advisor work?', a: 'You answer four quick questions — what matters most to you, who should do the washing, what you drive, and how often you wash. Based on your answers, the tool recommends the car wash type that best fits: touchless automatic, self-serve, or hand wash. It then points you to verified locations of that type near you.' },
+  { q: 'How does the car wash advisor work?', a: 'You answer four quick questions — what matters most to you, who should do the washing, what you drive, and how often you wash. Based on your answers, the tool recommends the car wash type that best fits: touchless automatic, tunnel/express, self-serve, or hand wash. It then points you to verified locations of that type near you.' },
   { q: 'Which type of car wash is safest for my paint?', a: 'A touchless automatic wash is the safest automated option because no brushes or cloth ever touch your paint. A careful hand wash is the most thorough, but its safety depends on the crew’s technique. Traditional brush/tunnel washes carry the most risk of swirl marks from physical contact.' },
   { q: 'What is the cheapest type of car wash?', a: 'Self-serve is the cheapest — typically $3–$12, and you only pay for the time and settings you use. Touchless automatic washes usually run $8–$18, and hand washes $15–$45 because you’re paying for labor.' },
   { q: 'Is a hand wash better than an automatic wash?', a: 'A good hand wash is the most thorough option because people reach spots a machine skips and adjust to how dirty your car is. The trade-off is cost and that quality depends on the crew — which is why we score every location from real customer reviews.' },
