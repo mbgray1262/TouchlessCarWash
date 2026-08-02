@@ -15,6 +15,7 @@ import { RedirectBanner } from '@/components/RedirectBanner';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { publicListings } from '@/lib/public-listings';
 import { SELF_SERVE_LIVE, selfServeStateTally } from '@/lib/self-serve';
+import { ADVISOR_LIVE } from '@/lib/advisor';
 import { getApprovedTouchlessCount } from '@/lib/listing-queries';
 import { US_STATES, getStateSlug } from '@/lib/constants';
 import { getMetroBySlug } from '@/lib/metro-areas';
@@ -540,6 +541,32 @@ export default async function Home({ searchParams }: { searchParams?: { geo?: st
           </Link>
         </div>
       </section>
+
+      {/* Wash-Type Advisor CTA — funnels undecided visitors into the interactive tool,
+          which routes them into the right directory (touchless/self-serve/hand-wash). */}
+      {ADVISOR_LIVE && (
+        <section className="py-10 px-4 bg-gray-50">
+          <div className="container mx-auto max-w-3xl">
+            <Link
+              href="/car-wash-advisor"
+              className="block bg-[#0F2744] rounded-xl hover:shadow-md transition-all p-6 group"
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-[#22C55E] uppercase tracking-wide mb-1">Not sure which is best?</p>
+                  <h3 className="text-lg font-bold text-white mb-1">
+                    Take the 20-second Car Wash Advisor quiz
+                  </h3>
+                  <p className="text-sm text-blue-100">
+                    Answer 4 quick questions and get a personalized recommendation — touchless, self-serve, or hand wash — plus locations near you.
+                  </p>
+                </div>
+                <ArrowRight className="w-5 h-5 text-[#22C55E] group-hover:translate-x-1 transition-all flex-shrink-0" />
+              </div>
+            </Link>
+          </div>
+        </section>
+      )}
 
       <section className="py-10 px-4 bg-gray-50">
         <div className="container mx-auto max-w-3xl">

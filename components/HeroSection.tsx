@@ -7,7 +7,21 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import HeroScorePromo from '@/components/HeroScorePromo';
 import { publicListings } from '@/lib/public-listings';
+import { SELF_SERVE_LIVE, publicSelfServeListings } from '@/lib/self-serve';
+import { HAND_WASH_LIVE, publicHandWashListings } from '@/lib/hand-wash';
 import { getStateSlug, slugify, US_STATES } from '@/lib/constants';
+
+// Homepage search wash-type scope. Touchless is the default; the tabs let a visitor scope both
+// the autocomplete suggestions AND the results page to self-serve or hand-wash.
+type SearchWashType = 'touchless' | 'self_serve' | 'hand_wash';
+const SEARCH_SOURCE = {
+  touchless: publicListings,
+  self_serve: publicSelfServeListings,
+  hand_wash: publicHandWashListings,
+} as const;
+const SEARCH_TYPE_PARAM: Record<SearchWashType, string> = {
+  touchless: '', self_serve: '&type=self-serve', hand_wash: '&type=hand-wash',
+};
 import { METRO_AREAS } from '@/lib/metro-areas';
 import { CHAINS } from '@/lib/chains';
 
@@ -151,7 +165,7 @@ function parseQuery(term: string): { namePart: string; locationPart: string | nu
  *  matches. Within each tier, groups ranked by group size, singletons by
  *  review_count.
  */
-async function fetchListingMatches(term: string): Promise<{ results: ListingResult[]; total: number }> {
+async function fetchListingMatches(term: string, washType: SearchWashType = 'touchless'): Promise<{ results: ListingResult[]; total: number }> {
   // Parse query — split into (namePart, locationPart) for "sparkle boston" style queries
   const parsed = parseQuery(term);
   // What we use to filter on name (falls back to full term if parsing found no location)
@@ -168,7 +182,8 @@ async function fetchListingMatches(term: string): Promise<{ results: ListingResu
     patterns.push(`%${nameTerm.replace(/ and /gi, ' & ')}%`);
   }
 
-  let query = publicListings('id, name, slug, city, state, review_count, rating', { count: 'exact' });
+  // Source enforces the wash-type visibility rule (touchless / self-serve / hand-wash) itself.
+  let query = SEARCH_SOURCE[washType]('id, name, slug, city, state, review_count, rating', { count: 'exact' });
 
   // Apply name filter only if there's a name component
   if (nameTerm) {
@@ -189,7 +204,6 @@ async function fetchListingMatches(term: string): Promise<{ results: ListingResu
   }
 
   const { data, count } = await query
-    .eq('is_touchless', true)
     .order('review_count', { ascending: false, nullsFirst: false })
     .limit(100);
 
@@ -287,6 +301,8 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [washType, setWashType] = useState<SearchWashType>('touchless');
+  const typeParam = SEARCH_TYPE_PARAM[washType];
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -453,7 +469,7 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
       });
       const listingsPromise = isZipLike
         ? Promise.resolve({ results: [] as ListingResult[], total: 0 })
-        : fetchListingMatches(term).catch((err) => {
+        : fetchListingMatches(term, washType).catch((err) => {
             console.error('[search] fetchListingMatches failed:', err);
             return { results: [] as ListingResult[], total: 0 };
           });
@@ -492,7 +508,7 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
       });
       setOpen(chains.length > 0 || metros.length > 0 || googlePlaces.length > 0 || listingsResult.results.length > 0);
     }, 200);
-  }, []);
+  }, [washType]);
 
   // ── Build flat list of all items for keyboard nav ───────────────────
   const allItems = [
@@ -512,7 +528,8 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
       router.push(`/chain/${c.slug}`);
     } else if (item.type === 'metro') {
       const m = item.data as MetroResult;
-      router.push(`/best/${m.slug}`);
+      const bestBase = washType === 'self_serve' ? '/best-self-serve' : washType === 'hand_wash' ? '/best-hand-wash' : '/best';
+      router.push(`${bestBase}/${m.slug}`);
     } else if (item.type === 'location') {
       const loc = item.data as GooglePlaceResult;
       setIsSubmitting(true);
@@ -523,10 +540,10 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
           sessionToken.current = new google.maps.places.AutocompleteSessionToken();
         }
         if (coords) {
-          router.push(`/search?q=${encodeURIComponent(loc.description)}&lat=${coords.lat}&lng=${coords.lng}`);
+          router.push(`/search?q=${encodeURIComponent(loc.description)}&lat=${coords.lat}&lng=${coords.lng}${typeParam}`);
         } else {
           // Fallback: text search
-          router.push(`/search?q=${encodeURIComponent(loc.description)}`);
+          router.push(`/search?q=${encodeURIComponent(loc.description)}${typeParam}`);
         }
       } finally {
         setIsSubmitting(false);
@@ -535,12 +552,12 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
       const l = item.data as ListingResult;
       if (l.count > 1 || !l.id) {
         // Grouped result — go to the full search page with the group name as query
-        router.push(`/search?q=${encodeURIComponent(l.name)}`);
+        router.push(`/search?q=${encodeURIComponent(l.name)}${typeParam}`);
       } else {
         router.push(`/state/${getStateSlug(l.state)}/${slugify(l.city)}/${l.slug}`);
       }
     }
-  }, [router]);
+  }, [router, washType, typeParam]);
 
   // ── Keyboard navigation ─────────────────────────────────────────────
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -586,10 +603,10 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
         const locCoords = await forwardGeocode(parsed.locationPart);
         const searchQ = parsed.namePart || q;
         if (locCoords) {
-          router.push(`/search?q=${encodeURIComponent(searchQ)}&lat=${locCoords.lat}&lng=${locCoords.lng}`);
+          router.push(`/search?q=${encodeURIComponent(searchQ)}&lat=${locCoords.lat}&lng=${locCoords.lng}${typeParam}`);
           return;
         }
-        router.push(`/search?q=${encodeURIComponent(q)}`);
+        router.push(`/search?q=${encodeURIComponent(q)}${typeParam}`);
         return;
       }
 
@@ -603,7 +620,7 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
         namePatterns.push(`name.ilike.%${nameTerm.replace(/ & /g, '&')}%`);
       }
       // How many listings match? If exactly 1, jump to it. If >1, go to search page.
-      const { data: matches, count: matchCount } = await publicListings('id, name, slug, city, state', { count: 'exact' })
+      const { data: matches, count: matchCount } = await SEARCH_SOURCE[washType]('id, name, slug, city, state', { count: 'exact' })
         .or(namePatterns.join(','))
         .order('review_count', { ascending: false, nullsFirst: false })
         .limit(2);
@@ -614,17 +631,17 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
         return;
       }
       if (matchCount && matchCount > 1) {
-        router.push(`/search?q=${encodeURIComponent(q)}`);
+        router.push(`/search?q=${encodeURIComponent(q)}${typeParam}`);
         return;
       }
 
       // No name matches — try geocoding as a pure location query
       const coords = await forwardGeocode(q);
       if (coords) {
-        router.push(`/search?q=${encodeURIComponent(q)}&lat=${coords.lat}&lng=${coords.lng}`);
+        router.push(`/search?q=${encodeURIComponent(q)}&lat=${coords.lat}&lng=${coords.lng}${typeParam}`);
         return;
       }
-      router.push(`/search?q=${encodeURIComponent(q)}`);
+      router.push(`/search?q=${encodeURIComponent(q)}${typeParam}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -692,6 +709,25 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
           </p>
 
           <div className="mb-6" ref={containerRef}>
+            {(SELF_SERVE_LIVE || HAND_WASH_LIVE) && (
+              <div className="flex items-center gap-1.5 mb-3">
+                {([
+                  ['touchless', 'Touchless', true],
+                  ['self_serve', 'Self-Serve', SELF_SERVE_LIVE],
+                  ['hand_wash', 'Hand Wash', HAND_WASH_LIVE],
+                ] as const).filter(([, , show]) => show).map(([key, label]) => (
+                  <button
+                    type="button"
+                    key={key}
+                    onClick={() => setWashType(key)}
+                    aria-pressed={washType === key}
+                    className={`text-sm font-medium px-3.5 py-1.5 rounded-full border transition-colors ${washType === key ? 'bg-white text-[#0F2744] border-white' : 'bg-white/10 text-white border-white/30 hover:bg-white/20'}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
             <form onSubmit={handleSearch} className="flex gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 z-10 pointer-events-none" />
@@ -842,7 +878,7 @@ export default function HeroSection({ totalCount }: { totalCount?: number }) {
                                   setOpen(false);
                                   const q = query.trim();
                                   setQuery('');
-                                  router.push(`/search?q=${encodeURIComponent(q)}`);
+                                  router.push(`/search?q=${encodeURIComponent(q)}${typeParam}`);
                                 }}
                                 className="w-full px-4 py-2.5 text-center text-sm font-semibold text-blue-600 hover:bg-blue-50 border-t border-gray-100 transition-colors"
                               >

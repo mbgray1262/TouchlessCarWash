@@ -3,6 +3,7 @@ import Image from 'next/image';
 import type { Metadata } from 'next';
 import { Droplet, MapPin, CheckCircle, Hand, Clock, DollarSign, ChevronRight } from 'lucide-react';
 import { SELF_SERVE_LIVE, SELF_SERVE_HERO_IMAGE, publicSelfServeCount, selfServeStateTally } from '@/lib/self-serve';
+import { ADVISOR_LIVE } from '@/lib/advisor';
 import { US_STATES, getStateName, slugify } from '@/lib/constants';
 
 const SITE_URL = 'https://touchlesscarwashfinder.com';
@@ -155,6 +156,16 @@ export default async function SelfServeLanding() {
           </Link>
         </div>
       </section>
+
+      {/* ── Advisor CTA — undecided visitors → the quiz ── */}
+      {ADVISOR_LIVE && (
+        <section className="max-w-6xl mx-auto px-4 pb-2">
+          <Link href="/car-wash-advisor" className="block bg-gray-50 border border-gray-200 rounded-2xl p-5 hover:border-[#22C55E] transition-colors text-center">
+            <span className="text-[#0F2744] font-semibold">Not sure self-serve is right for you? </span>
+            <span className="text-[#22C55E] font-semibold">Take the 20-second Car Wash Advisor quiz →</span>
+          </Link>
+        </section>
+      )}
 
       {/* ── FAQ ── */}
       <section className="max-w-3xl mx-auto px-4 py-14">

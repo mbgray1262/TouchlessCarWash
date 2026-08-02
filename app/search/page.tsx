@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { publicListings } from '@/lib/public-listings';
 import { SELF_SERVE_LIVE, publicSelfServeListings } from '@/lib/self-serve';
+import { HAND_WASH_LIVE, publicHandWashListings } from '@/lib/hand-wash';
 import { getStateSlug, slugify, US_STATES } from '@/lib/constants';
 import { ListingCard } from '@/components/ListingCard';
 import { Pagination, PAGE_SIZE } from '@/components/Pagination';
@@ -451,7 +452,7 @@ async function getMetroListingCount(metro: MetroArea): Promise<number> {
   return count ?? 0;
 }
 
-function buildBaseHref(query: string, activeFilterSlugs: string[], lat?: number | null, lng?: number | null, washType?: 'touchless' | 'self_serve'): string {
+function buildBaseHref(query: string, activeFilterSlugs: string[], lat?: number | null, lng?: number | null, washType?: 'touchless' | 'self_serve' | 'hand_wash'): string {
   const params = new URLSearchParams();
   if (query) params.set('q', query);
   if (lat != null && lng != null) {
@@ -460,6 +461,7 @@ function buildBaseHref(query: string, activeFilterSlugs: string[], lat?: number 
   }
   if (activeFilterSlugs.length > 0) params.set('filters', activeFilterSlugs.join(','));
   if (washType === 'self_serve') params.set('type', 'self-serve');
+  else if (washType === 'hand_wash') params.set('type', 'hand-wash');
   const qs = params.toString();
   return `/search${qs ? `?${qs}` : ''}`;
 }
@@ -468,10 +470,13 @@ export async function generateMetadata({ searchParams }: SearchPageProps): Promi
   const query = searchParams.q || '';
   const filterSlugs = searchParams.filters?.split(',').filter(Boolean) ?? [];
   const hasCoords = searchParams.lat && searchParams.lng;
+  const mLabel = SELF_SERVE_LIVE && searchParams.type === 'self-serve' ? 'Self-Serve'
+    : HAND_WASH_LIVE && searchParams.type === 'hand-wash' ? 'Hand Wash'
+    : 'Touchless';
 
   if (!query && filterSlugs.length === 0) {
     return {
-      title: 'Search Touchless Car Washes',
+      title: `Search ${mLabel} Car Washes`,
       description: 'Search for touchless, touch-free, and brushless car washes by city, zip code, or filter. Find verified no-scratch car wash locations near you.',
       robots: { index: false, follow: true },
     };
@@ -480,9 +485,9 @@ export async function generateMetadata({ searchParams }: SearchPageProps): Promi
   let title = '';
   if (query) {
     const displayQuery = query.replace(/\b\w/g, c => c.toUpperCase());
-    title = hasCoords ? `Touchless Car Washes Near ${displayQuery}` : `Touchless Car Washes in ${displayQuery}`;
+    title = hasCoords ? `${mLabel} Car Washes Near ${displayQuery}` : `${mLabel} Car Washes in ${displayQuery}`;
   } else {
-    title = 'Touchless Car Washes';
+    title = `${mLabel} Car Washes`;
   }
 
   if (filterSlugs.length > 0) {
@@ -514,11 +519,18 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   // only exists once the category is live; until then this is always touchless,
   // so the search page is unchanged. `source` swaps the visibility rule; the rest
   // of the touchless-only funnel (Best-Of banner, TSS sort) is gated off below.
-  const washType: 'touchless' | 'self_serve' =
-    SELF_SERVE_LIVE && searchParams.type === 'self-serve' ? 'self_serve' : 'touchless';
+  const washType: 'touchless' | 'self_serve' | 'hand_wash' =
+    SELF_SERVE_LIVE && searchParams.type === 'self-serve' ? 'self_serve'
+    : HAND_WASH_LIVE && searchParams.type === 'hand-wash' ? 'hand_wash'
+    : 'touchless';
   const selfServe = washType === 'self_serve';
-  const washNoun = selfServe ? 'self-serve' : 'touchless';
-  const source: ListingSource = selfServe ? publicSelfServeListings : publicListings;
+  const handWash = washType === 'hand_wash';
+  // `selfServe` still gates the touchless-only funnel (Best-Of banner, TSS sort) — anything that
+  // isn't touchless suppresses it, so treat hand-wash the same way where that gate is used.
+  const notTouchless = selfServe || handWash;
+  const washNoun = selfServe ? 'self-serve' : handWash ? 'hand wash' : 'touchless';
+  const washLabel = selfServe ? 'Self-Serve' : handWash ? 'Hand Wash' : 'Touchless';
+  const source: ListingSource = selfServe ? publicSelfServeListings : handWash ? publicHandWashListings : publicListings;
 
   const allFilters = await getFilters();
 
@@ -580,7 +592,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   // consistent and simply don't appear for metros not yet synced.
   // Best-Of is a touchless-only funnel (metros ranked by touchless evidence), so
   // it's suppressed on the self-serve tab.
-  const searchMetro = !selfServe && listings.length > 0
+  const searchMetro = !notTouchless && listings.length > 0
     ? resolveSearchMetro(query, resolvedLat, resolvedLng)
     : undefined;
   const [metroRanks, metroListingCount] = searchMetro
@@ -593,8 +605,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         '@context': 'https://schema.org',
         '@type': 'ItemList',
         name: query
-          ? `${selfServe ? 'Self-Serve' : 'Touchless'} Car Washes in ${query}`
-          : `${selfServe ? 'Self-Serve' : 'Touchless'} Car Wash Search Results`,
+          ? `${washLabel} Car Washes in ${query}`
+          : `${washLabel} Car Wash Search Results`,
         numberOfItems: listings.length,
         itemListElement: paginatedListings.map((listing, index) => ({
           '@type': 'ListItem',
@@ -618,7 +630,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         <div className="container mx-auto px-4 max-w-6xl">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
             {resolvedProximity && query
-              ? <>{selfServe ? 'Self-Serve' : 'Touchless'} Car Washes Near {query}</>
+              ? <>{washLabel} Car Washes Near {query}</>
               : query
                 ? <>Results for &ldquo;{query}&rdquo;</>
                 : 'Find a Car Wash'}
@@ -630,21 +642,22 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       </div>
 
       <div className="container mx-auto px-4 max-w-6xl py-8">
-        {SELF_SERVE_LIVE && (hasSearch || resolvedProximity) && (
-          <div className="flex items-center gap-2 mb-5">
+        {(SELF_SERVE_LIVE || HAND_WASH_LIVE) && (hasSearch || resolvedProximity) && (
+          <div className="flex items-center gap-2 mb-5 flex-wrap">
             <span className="text-sm text-gray-500">Wash type:</span>
-            <Link
-              href={buildBaseHref(query, activeFilterSlugs, resolvedLat, resolvedLng, 'touchless')}
-              className={`text-sm font-medium px-3 py-1.5 rounded-full border transition-colors ${!selfServe ? 'bg-[#0F2744] text-white border-[#0F2744]' : 'bg-white text-gray-700 border-gray-200 hover:border-[#0F2744]'}`}
-            >
-              Touchless
-            </Link>
-            <Link
-              href={buildBaseHref(query, activeFilterSlugs, resolvedLat, resolvedLng, 'self_serve')}
-              className={`text-sm font-medium px-3 py-1.5 rounded-full border transition-colors ${selfServe ? 'bg-[#0F2744] text-white border-[#0F2744]' : 'bg-white text-gray-700 border-gray-200 hover:border-[#0F2744]'}`}
-            >
-              Self-Serve
-            </Link>
+            {([
+              ['touchless', 'Touchless', washType === 'touchless', true],
+              ['self_serve', 'Self-Serve', selfServe, SELF_SERVE_LIVE],
+              ['hand_wash', 'Hand Wash', handWash, HAND_WASH_LIVE],
+            ] as const).filter(([, , , show]) => show).map(([key, label, active]) => (
+              <Link
+                key={key}
+                href={buildBaseHref(query, activeFilterSlugs, resolvedLat, resolvedLng, key)}
+                className={`text-sm font-medium px-3 py-1.5 rounded-full border transition-colors ${active ? 'bg-[#0F2744] text-white border-[#0F2744]' : 'bg-white text-gray-700 border-gray-200 hover:border-[#0F2744]'}`}
+              >
+                {label}
+              </Link>
+            ))}
           </div>
         )}
         <SearchFilters
@@ -686,7 +699,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             </CardContent>
           </Card>
         ) : listings.length === 0 ? (
-          <NoResultsSection query={query} activeFilterSlugs={activeFilterSlugs} isProximitySearch={resolvedProximity} lat={resolvedLat} lng={resolvedLng} washNoun={washNoun} selfServe={selfServe} />
+          <NoResultsSection query={query} activeFilterSlugs={activeFilterSlugs} isProximitySearch={resolvedProximity} lat={resolvedLat} lng={resolvedLng} washNoun={washNoun} selfServe={selfServe} handWash={handWash} />
         ) : (
           <>
             {hasBestOf && searchMetro && (
@@ -719,7 +732,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                     listing={listing}
                     distance={listing.distanceMiles}
                     rank={earnsTrophy(listing) ? metroRanks.get(listing.id) : undefined}
-                    context={selfServe ? 'self-serve' : 'default'}
+                    context={selfServe ? 'self-serve' : handWash ? 'hand-wash' : 'default'}
                   />
                   {/* Inline funnel after the first row (page 1 only) */}
                   {hasBestOf && searchMetro && page === 1 && idx === 2 && listings.length > 3 && (
@@ -755,6 +768,7 @@ function NoResultsSection({
   isProximitySearch,
   washNoun = 'touchless',
   selfServe = false,
+  handWash = false,
 }: {
   query: string;
   activeFilterSlugs: string[];
@@ -763,7 +777,10 @@ function NoResultsSection({
   lng?: number | null;
   washNoun?: string;
   selfServe?: boolean;
+  handWash?: boolean;
 }) {
+  // Directory hub for the active non-touchless type (null → touchless, which browses by state).
+  const hubBase = selfServe ? '/self-serve-car-wash' : handWash ? '/hand-car-wash' : null;
   const isZip = /^\d{5}$/.test(query.trim());
   const stateFromZip = isZip ? getStateFromZip(query.trim()) : null;
   const stateFromQuery = !isZip ? guessStateFromQuery(query) : null;
@@ -799,24 +816,24 @@ function NoResultsSection({
             )}
             {stateInfo && (
               <Button asChild>
-                <Link href={selfServe ? `/self-serve-car-wash/${getStateSlug(stateInfo.code)}` : `/state/${getStateSlug(stateInfo.code)}`}>
+                <Link href={hubBase ? `${hubBase}/${getStateSlug(stateInfo.code)}` : `/state/${getStateSlug(stateInfo.code)}`}>
                   <MapPin className="w-4 h-4 mr-1.5" />
                   Browse {stateInfo.name}
                 </Link>
               </Button>
             )}
             <Button variant={stateInfo ? 'outline' : 'default'} asChild>
-              <Link href={selfServe ? '/self-serve-car-wash' : '/states'}>
+              <Link href={hubBase ?? '/states'}>
                 <MapIcon className="w-4 h-4 mr-1.5" />
-                {selfServe ? 'Browse Self-Serve' : 'Browse All States'}
+                {hubBase ? (handWash ? 'Browse Hand Wash' : 'Browse Self-Serve') : 'Browse All States'}
               </Link>
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Suggested "Best Of" metros — touchless-only funnel, hidden on self-serve */}
-      {!selfServe && suggestedMetros.length > 0 && (
+      {/* Suggested "Best Of" metros — touchless-only funnel, hidden on self-serve + hand-wash */}
+      {!hubBase && suggestedMetros.length > 0 && (
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <Trophy className="w-5 h-5 text-amber-500" />

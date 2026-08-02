@@ -3,6 +3,7 @@ import Image from 'next/image';
 import type { Metadata } from 'next';
 import { Droplet, MapPin, CheckCircle, Hand, Sparkles, Users, ChevronRight } from 'lucide-react';
 import { HAND_WASH_LIVE, HAND_WASH_HERO_IMAGE, publicHandWashCount, handWashStateTally } from '@/lib/hand-wash';
+import { ADVISOR_LIVE } from '@/lib/advisor';
 import { US_STATES, slugify } from '@/lib/constants';
 
 const SITE_URL = 'https://touchlesscarwashfinder.com';
@@ -154,6 +155,16 @@ export default async function HandWashLanding() {
           </Link>
         </div>
       </section>
+
+      {/* ── Advisor CTA — undecided visitors → the quiz ── */}
+      {ADVISOR_LIVE && (
+        <section className="max-w-6xl mx-auto px-4 pb-2">
+          <Link href="/car-wash-advisor" className="block bg-gray-50 border border-gray-200 rounded-2xl p-5 hover:border-[#22C55E] transition-colors text-center">
+            <span className="text-[#0F2744] font-semibold">Not sure a hand wash is right for you? </span>
+            <span className="text-[#22C55E] font-semibold">Take the 20-second Car Wash Advisor quiz →</span>
+          </Link>
+        </section>
+      )}
 
       {/* ── FAQ ── */}
       <section className="max-w-3xl mx-auto px-4 py-14">
