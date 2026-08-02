@@ -611,7 +611,7 @@ export default function PhotoAuditPage() {
       <div className="flex items-center gap-2 mb-3">
         <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Wash type:</span>
         <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5">
-          {([['touchless', 'Touchless'], ['self_serve', 'Self-Service'], ['hand_wash', 'Hand Wash'], ['detailing', 'Detailing']] as const).map(([key, label]) => (
+          {([['touchless', 'Touchless'], ['self_serve', 'Self-Service'], ['hand_wash', 'Hand Wash']] as const).map(([key, label]) => (
             <button
               key={key}
               onClick={() => setWashType(key)}

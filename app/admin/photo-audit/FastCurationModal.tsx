@@ -20,7 +20,7 @@ interface Props {
   // Which directory the admin is curating. In 'self_serve' mode the decision
   // buttons act on is_self_service instead of is_touchless, so approving/rejecting
   // a self-serve listing never disturbs its touchless status.
-  washType?: 'touchless' | 'self_serve' | 'hand_wash' | 'detailing';
+  washType?: 'touchless' | 'self_serve' | 'hand_wash';
 }
 
 export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev, washType = 'touchless' }: Props) {
@@ -31,13 +31,12 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
     tagPhoto, setAsHero, addToGallery, removeFromGallery, removeHero, skipPhoto,
     addCapture, addUpload, addHeroDirect, addGalleryDirect, replaceUrl, updateWebsite, setFallbackHero,
     saveAll, approveAndNext, approveSelfServeAndNext, markNotSelfServe, classifyEquipment, setEquipment,
-    approveHandWashAndNext, markNotHandWash, approveDetailingAndNext, markNotDetailing, skipReview,
+    approveHandWashAndNext, markNotHandWash, skipReview,
     markNotTouchless, markCantVerify, markNotACarWash, markClosed, deleteListing, heroRemoved,
     markTouchless, markSelfServe,
   } = useFastCuration(listingId);
   const isSelfServe = washType === 'self_serve';
   const isHandWash = washType === 'hand_wash';
-  const isDetailing = washType === 'detailing';
 
   const [cropPhoto, setCropPhoto] = useState<CandidatePhoto | null>(null);
   const [enhancing, setEnhancing] = useState<string | null>(null);
@@ -291,8 +290,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
   };
 
   const handleApproveAndNext = async () => {
-    if (isDetailing) await approveDetailingAndNext(onUpdate, onNext, onClose);
-    else if (isHandWash) await approveHandWashAndNext(onUpdate, onNext, onClose);
+    if (isHandWash) await approveHandWashAndNext(onUpdate, onNext, onClose);
     else if (isSelfServe) await approveSelfServeAndNext(onUpdate, onNext, onClose);
     else await approveAndNext(onUpdate, onNext, onClose);
   };
@@ -1027,16 +1025,7 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
                 In self-serve mode the "not this type" action removes the
                 self-serve tag only (leaves touchless untouched), and the
                 touchless-specific "Tag Chain" bulk-demote is hidden. */}
-            {isDetailing ? (
-              <button
-                onClick={async () => { await saveAll(); await markNotDetailing(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
-                disabled={saving}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-100 hover:bg-orange-200 text-orange-700 text-sm font-medium disabled:opacity-50"
-                title="This isn't an auto detailer. Saves any photo edits first, then removes the detailing tag (leaves the other wash-type flags untouched) and drops it from the detailing queue."
-              >
-                <Ban className="w-4 h-4" /> Not a Detailer
-              </button>
-            ) : isHandWash ? (
+            {isHandWash ? (
               <button
                 onClick={async () => { await saveAll(); await markNotHandWash(); onUpdate?.(); if (onNext) onNext(); else onClose(); }}
                 disabled={saving}
@@ -1289,34 +1278,30 @@ export function FastCurationModal({ listingId, onClose, onUpdate, onNext, onPrev
               onClick={handleApproveAndNext}
               disabled={saving}
               className={`self-start flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold shadow-sm disabled:opacity-50 transition-colors ${
-                isDetailing || isHandWash || isSelfServe || listing.is_touchless === false
+                isHandWash || isSelfServe || listing.is_touchless === false
                   ? 'bg-green-600 hover:bg-green-700 text-white'
                   : 'bg-violet-600 hover:bg-violet-700 text-white'
               }`}
               title={
-                isDetailing
-                  ? 'Confirm this listing is an auto detailer and approve its photos. Leaves the other wash-type flags untouched; stays hidden from the public until the detailing directory launches.'
-                  : isHandWash
-                    ? 'Confirm this listing is a hand wash and approve its photos. Leaves touchless/self-serve status untouched; stays hidden from the public until the hand-wash directory launches.'
-                    : isSelfServe
-                      ? 'Confirm this listing is self-serve and approve its photos. Leaves touchless status untouched; stays hidden from the public until the self-serve directory launches.'
-                      : listing.is_touchless === false
-                        ? 'Mark this listing as Touchless, approve it for the public site, and advance to the next listing.'
-                        : 'Approve this listing for the public site and advance to the next listing.'
+                isHandWash
+                  ? 'Confirm this listing is a hand wash and approve its photos. Leaves touchless/self-serve status untouched; stays hidden from the public until the hand-wash directory launches.'
+                  : isSelfServe
+                    ? 'Confirm this listing is self-serve and approve its photos. Leaves touchless status untouched; stays hidden from the public until the self-serve directory launches.'
+                    : listing.is_touchless === false
+                      ? 'Mark this listing as Touchless, approve it for the public site, and advance to the next listing.'
+                      : 'Approve this listing for the public site and advance to the next listing.'
               }
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCheck className="w-4 h-4" />}
               {saving
                 ? 'Saving...'
-                : isDetailing
-                  ? 'Confirm Detailer & Approve →'
-                  : isHandWash
-                    ? 'Confirm Hand Wash & Approve →'
-                    : isSelfServe
-                      ? 'Confirm Self-Serve & Approve →'
-                      : listing.is_touchless === false
-                        ? 'Mark Touchless & Approve →'
-                        : 'Approve & Next →'}
+                : isHandWash
+                  ? 'Confirm Hand Wash & Approve →'
+                  : isSelfServe
+                    ? 'Confirm Self-Serve & Approve →'
+                    : listing.is_touchless === false
+                      ? 'Mark Touchless & Approve →'
+                      : 'Approve & Next →'}
             </button>
           </div>
         </div>
