@@ -8,7 +8,7 @@
  * (one line) + deploy to launch.
  */
 
-export const ADVISOR_LIVE = false;
+export const ADVISOR_LIVE = true;
 
 export type WashType = 'touchless' | 'self_serve' | 'hand_wash' | 'tunnel';
 
