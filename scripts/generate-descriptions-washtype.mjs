@@ -18,15 +18,18 @@ const AKEY = env.ANTHROPIC_API_KEY;
 const APPLY = process.argv.includes('--apply');
 const arg = (f, d) => { const a = process.argv.find(x => x.startsWith(f + '=')); return a ? a.split('=')[1] : d; };
 const LIMIT = parseInt(arg('--limit', '0'), 10);
-const ONLY = process.argv.includes('--hand-wash') ? 'hand' : process.argv.includes('--self-serve') ? 'self' : 'both';
+const ONLY = process.argv.includes('--hand-wash') ? 'hand' : process.argv.includes('--self-serve') ? 'self' : process.argv.includes('--detailing') ? 'detail' : 'both';
 const POOL = 4, sleep = ms => new Promise(r => setTimeout(r, ms));
 
 const BANNED = /touch[\s-]?less|touch[\s-]?free|brushless|no[\s-]?touch|paint[\s-]?safe/i;
 
 async function haiku(l, reviews) {
   const handWash = l.is_hand_wash && !l.is_self_service && !l.is_touchless;
-  const selfServe = l.is_self_service && !l.is_hand_wash && !l.is_touchless;
+  // Detailing-only takes precedence for the copy when it's not a hand-wash/self-serve/touchless.
+  const detailing = l.is_detailing && !l.is_hand_wash && !l.is_self_service && !l.is_touchless;
+  const selfServe = l.is_self_service && !l.is_hand_wash && !l.is_touchless && !detailing;
   const kind = handWash ? 'a full-service HAND car wash where trained attendants wash the vehicle BY HAND (and often detail it)'
+    : detailing ? 'a professional AUTO DETAILING business — deep reconditioning like paint correction, ceramic coating, paint protection film (PPF), and full interior detailing (NOT a routine wash)'
     : selfServe ? 'a SELF-SERVICE car wash where the customer washes their own vehicle in open coin/card wand bays'
     : 'a car wash';
   const facts = [
@@ -36,7 +39,7 @@ async function haiku(l, reviews) {
     (Array.isArray(l.wash_packages) && l.wash_packages.length) ? `Packages: ${l.wash_packages.map(p => p.name + (p.price ? ` (${p.price})` : '')).join(', ')}` : null,
     reviews.length ? `What customers say: ${reviews.slice(0, 3).map(r => `"${r.slice(0, 160)}"`).join(' ')}` : null,
   ].filter(Boolean).join('\n');
-  const sys = `You write a concise, factual 2–4 sentence directory description for ${kind}. Use ONLY the facts provided — do not invent hours, prices, or services. Write in a neutral, informative tone (third person). ${handWash ? 'Emphasize the hand washing / attention / detailing. ' : selfServe ? 'Emphasize the DIY wand-bay self-service. ' : ''}NEVER use the words "touchless", "touch-free", "brushless", "no-touch", or "paint-safe" — ${handWash ? 'a hand wash involves hand contact' : selfServe ? 'this is a self-service wash' : ''}. Output ONLY the description text, no preamble.`;
+  const sys = `You write a concise, factual 2–4 sentence directory description for ${kind}. Use ONLY the facts provided — do not invent hours, prices, or services. Write in a neutral, informative tone (third person). ${handWash ? 'Emphasize the hand washing / attention / detailing. ' : detailing ? 'Emphasize the detailing services (correction, coatings, PPF, interior). ' : selfServe ? 'Emphasize the DIY wand-bay self-service. ' : ''}NEVER use the words "touchless", "touch-free", "brushless", "no-touch", or "paint-safe" — ${handWash ? 'a hand wash involves hand contact' : detailing ? 'this is a detailer, not a touchless wash' : selfServe ? 'this is a self-service wash' : ''}. Output ONLY the description text, no preamble.`;
   const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'x-api-key': AKEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }, body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 320, system: sys, messages: [{ role: 'user', content: facts }] }) });
   if (!res.ok) throw new Error(res.status + ' ' + (await res.text()).slice(0, 120));
   return ((await res.json()).content?.[0]?.text ?? '').trim();
@@ -44,10 +47,11 @@ async function haiku(l, reviews) {
 
 let targets = [];
 for (let from = 0; ; from += 1000) {
-  let q = db.from('listings').select('id,name,city,state,rating,review_count,amenities,wash_packages,is_hand_wash,is_self_service,is_touchless').eq('is_approved', true).or('description.is.null,description.eq.');
+  let q = db.from('listings').select('id,name,city,state,rating,review_count,amenities,wash_packages,is_hand_wash,is_self_service,is_detailing,is_touchless').eq('is_approved', true).or('description.is.null,description.eq.');
   if (ONLY === 'hand') q = q.eq('is_hand_wash', true);
   else if (ONLY === 'self') q = q.eq('is_self_service', true);
-  else q = q.or('is_hand_wash.eq.true,is_self_service.eq.true');
+  else if (ONLY === 'detail') q = q.eq('is_detailing', true);
+  else q = q.or('is_hand_wash.eq.true,is_self_service.eq.true,is_detailing.eq.true');
   const { data } = await q.order('id').range(from, from + 999);
   if (!data?.length) break;
   targets.push(...data);

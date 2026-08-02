@@ -38,6 +38,8 @@ if '--hand-wash' in sys.argv:
     WASH_FILTER, WASH_LABEL = 'is_hand_wash=eq.true&is_approved=eq.true', 'hand-wash'
 elif '--self-serve' in sys.argv:
     WASH_FILTER, WASH_LABEL = 'is_self_service=eq.true&is_approved=eq.true', 'self-serve'
+elif '--detailing' in sys.argv:
+    WASH_FILTER, WASH_LABEL = 'is_detailing=eq.true&is_approved=eq.true', 'detailing'
 else:
     WASH_FILTER, WASH_LABEL = 'is_touchless=eq.true', 'touchless'
 
