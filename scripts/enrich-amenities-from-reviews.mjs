@@ -17,7 +17,7 @@ const AKEY = env.ANTHROPIC_API_KEY;
 const APPLY = process.argv.includes('--apply');
 const arg = (f, d) => { const a = process.argv.find(x => x.startsWith(f + '=')); return a ? a.split('=')[1] : d; };
 const LIMIT = parseInt(arg('--limit', '0'), 10);
-const ONLY = process.argv.includes('--hand-wash') ? 'hand' : process.argv.includes('--self-serve') ? 'self' : 'both';
+const ONLY = process.argv.includes('--hand-wash') ? 'hand' : process.argv.includes('--self-serve') ? 'self' : process.argv.includes('--detailing') ? 'detail' : 'both';
 const POOL = 4, sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // FIXED amenity vocabulary — the model may ONLY return items from this list.
@@ -47,10 +47,11 @@ async function haiku(name, washType, category, reviews) {
 // Targets: approved hand-wash/self-serve listings with no amenities.
 let targets = [];
 for (let from = 0; ; from += 1000) {
-  let q = db.from('listings').select('id,name,is_hand_wash,is_self_service,google_category').eq('is_approved', true).or('amenities.is.null,amenities.eq.{}');
+  let q = db.from('listings').select('id,name,is_hand_wash,is_self_service,is_detailing,google_category').eq('is_approved', true).or('amenities.is.null,amenities.eq.{}');
   if (ONLY === 'hand') q = q.eq('is_hand_wash', true);
   else if (ONLY === 'self') q = q.eq('is_self_service', true);
-  else q = q.or('is_hand_wash.eq.true,is_self_service.eq.true');
+  else if (ONLY === 'detail') q = q.eq('is_detailing', true);
+  else q = q.or('is_hand_wash.eq.true,is_self_service.eq.true,is_detailing.eq.true');
   const { data } = await q.order('id').range(from, from + 999);
   if (!data?.length) break;
   targets.push(...data);
@@ -67,7 +68,7 @@ async function worker(queue) {
       const { data: snips } = await db.from('review_snippets').select('review_text').eq('listing_id', l.id).not('review_text', 'is', null).limit(14);
       const reviews = (snips || []).map(s => (s.review_text || '').replace(/\s+/g, ' ').trim()).filter(t => t.length > 15);
       if (reviews.length < 2) { noEvidence++; continue; }               // not enough to infer honestly
-      const washType = l.is_hand_wash && !l.is_self_service ? 'HAND (attendants wash by hand + detailing)' : l.is_self_service && !l.is_hand_wash ? 'SELF-SERVE (customer washes own car in coin/wand bays)' : 'car';
+      const washType = l.is_detailing && !l.is_hand_wash && !l.is_self_service ? 'AUTO DETAILING (paint correction, ceramic, PPF, full interior/exterior detail)' : l.is_hand_wash && !l.is_self_service ? 'HAND (attendants wash by hand + detailing)' : l.is_self_service && !l.is_hand_wash ? 'SELF-SERVE (customer washes own car in coin/wand bays)' : 'car';
       const amenities = await haiku(l.name, washType, l.google_category, reviews);
       if (!amenities.length) { noEvidence++; continue; }
       if (wrote < 20) console.log(`  ✓ ${(l.name || '').slice(0, 36).padEnd(37)} → ${JSON.stringify(amenities)}`);
