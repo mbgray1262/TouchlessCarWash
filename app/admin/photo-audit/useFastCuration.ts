@@ -1018,16 +1018,59 @@ export function useFastCuration(listingId: string) {
     setSaving(false);
   }, [listing]);
 
+  // Detailing twin of approveHandWashAndNext. Confirms this listing IS a real detailer and
+  // approves it into the (pre-launch) detailing directory, stamping detailing_reviewed_at +
+  // is_approved=true (detailing listings start unapproved) + detailing_source='admin_review'.
+  // Independent of the touchless/self-serve/hand-wash review columns.
+  const approveDetailingAndNext = async (onUpdate?: () => void, onNext?: () => void, onClose?: () => void): Promise<void> => {
+    if (listing) {
+      const missingCity = !listing.city || !listing.city.trim();
+      const missingStreet = !listing.address || !listing.address.trim();
+      if (missingCity || missingStreet) {
+        const what = [missingStreet && 'street address', missingCity && 'city'].filter(Boolean).join(' and ');
+        alert(`"${listing.name}" has no ${what} — fill it in before approving (a partial listing breaks the public URL and renders with no location).`);
+        return;
+      }
+    }
+    const ok = await saveAll();
+    if (!ok) return;
+    if (listing) {
+      const now = new Date().toISOString();
+      await supabase.from('listings').update({
+        reviewed_at: now, detailing_reviewed_at: now, is_approved: true, is_detailing: true, detailing_source: 'admin_review',
+      }).eq('id', listing.id);
+      setListing(prev => prev ? { ...prev, is_approved: true, is_detailing: true, detailing_reviewed_at: now, detailing_source: 'admin_review' } : prev);
+    }
+    onUpdate?.();
+    if (onNext) onNext();
+    else onClose?.();
+  };
+
+  // Detailing twin of markNotHandWash — removes the detailing tag (is_detailing=false),
+  // records a durable human "no" via detailing_reviewed_at + source, and never touches the
+  // other wash-type flags or is_approved.
+  const markNotDetailing = useCallback(async () => {
+    if (!listing) return;
+    setSaving(true);
+    const now = new Date().toISOString();
+    await supabase.from('listings')
+      .update({ is_detailing: false, detailing_reviewed_at: now, detailing_source: 'admin_review' })
+      .eq('id', listing.id);
+    setListing(prev => prev ? { ...prev, is_detailing: false, detailing_reviewed_at: now, detailing_source: 'admin_review' } : prev);
+    setSaving(false);
+  }, [listing]);
+
   // "Skip" in the photo-audit modal: mark the listing REVIEWED for the active
   // wash type (stamp its reviewed_at column) WITHOUT approving or changing its
   // classification. A skip means "I looked, no decision" — so it must drop out of
   // the "Unreviewed only" queue instead of resurfacing every pass (e.g. listings
   // missing an address that can't be approved). Touchless → photo_audited_at,
   // self-serve → self_service_reviewed_at, hand-wash → hand_wash_reviewed_at.
-  const skipReview = useCallback(async (washType: 'touchless' | 'self_serve' | 'hand_wash') => {
+  const skipReview = useCallback(async (washType: 'touchless' | 'self_serve' | 'hand_wash' | 'detailing') => {
     if (!listing) return;
     const col = washType === 'self_serve' ? 'self_service_reviewed_at'
       : washType === 'hand_wash' ? 'hand_wash_reviewed_at'
+      : washType === 'detailing' ? 'detailing_reviewed_at'
       : 'photo_audited_at';
     const now = new Date().toISOString();
     await supabase.from('listings').update({ [col]: now }).eq('id', listing.id);
@@ -1108,6 +1151,8 @@ export function useFastCuration(listingId: string) {
     markNotSelfServe,
     approveHandWashAndNext,
     markNotHandWash,
+    approveDetailingAndNext,
+    markNotDetailing,
     skipReview,
     discoverPhotos,
     classifyEquipment,

@@ -188,16 +188,16 @@ export function usePhotoAudit() {
   // Every direct listing query reads washColRef.current, so switching the toggle
   // re-scopes all tabs without threading a variable through each callback's deps.
   // (RPC-backed tabs — Review/Equipment/Heroes/Cleanup/Low-Res — stay touchless.)
-  const [washType, setWashType] = useState<'touchless' | 'self_serve' | 'hand_wash'>('touchless');
-  const washColRef = useRef<'is_touchless' | 'is_self_service' | 'is_hand_wash'>('is_touchless');
-  washColRef.current = washType === 'self_serve' ? 'is_self_service' : washType === 'hand_wash' ? 'is_hand_wash' : 'is_touchless';
+  const [washType, setWashType] = useState<'touchless' | 'self_serve' | 'hand_wash' | 'detailing'>('touchless');
+  const washColRef = useRef<'is_touchless' | 'is_self_service' | 'is_hand_wash' | 'is_detailing'>('is_touchless');
+  washColRef.current = washType === 'self_serve' ? 'is_self_service' : washType === 'hand_wash' ? 'is_hand_wash' : washType === 'detailing' ? 'is_detailing' : 'is_touchless';
   // "Reviewed" marker column, scoped to wash type. Touchless review is tracked by
   // photo_audited_at; self-serve review is tracked separately by
   // self_service_reviewed_at (see migration 20260710120000). Queue surfaces that
   // mean "has this been reviewed for THIS wash type" read reviewedColRef.current
   // so a mixed listing stays in the self-serve queue until reviewed there too.
-  const reviewedColRef = useRef<'photo_audited_at' | 'self_service_reviewed_at' | 'hand_wash_reviewed_at'>('photo_audited_at');
-  reviewedColRef.current = washType === 'self_serve' ? 'self_service_reviewed_at' : washType === 'hand_wash' ? 'hand_wash_reviewed_at' : 'photo_audited_at';
+  const reviewedColRef = useRef<'photo_audited_at' | 'self_service_reviewed_at' | 'hand_wash_reviewed_at' | 'detailing_reviewed_at'>('photo_audited_at');
+  reviewedColRef.current = washType === 'self_serve' ? 'self_service_reviewed_at' : washType === 'hand_wash' ? 'hand_wash_reviewed_at' : washType === 'detailing' ? 'detailing_reviewed_at' : 'photo_audited_at';
   // Self-serve launch: work state-by-state (densest first) so state pages gain
   // depth, instead of scattering approvals alphabetically. stateFilter narrows the
   // All queue to one state; the self-serve All query also clusters by state/city.
@@ -627,7 +627,7 @@ export function usePhotoAudit() {
       // Self-serve AND hand-wash review the same way: geo-grouped (state → city →
       // name) so whole areas finish together, and closed washes excluded (no reason
       // to review them). Touchless keeps its alphabetical-by-name order.
-      const grouped = selfServe || washColRef.current === 'is_hand_wash';
+      const grouped = selfServe || washColRef.current === 'is_hand_wash' || washColRef.current === 'is_detailing';
       if (grouped) {
         countQuery = countQuery.or(NOT_CLOSED).or('business_status.is.null,business_status.not.in.(CLOSED_PERMANENTLY,CLOSED_TEMPORARILY)');
         dataQuery = dataQuery.or(NOT_CLOSED).or('business_status.is.null,business_status.not.in.(CLOSED_PERMANENTLY,CLOSED_TEMPORARILY)');
