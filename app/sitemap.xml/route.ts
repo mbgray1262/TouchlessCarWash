@@ -5,6 +5,7 @@ import { HAND_WASH_LIVE, publicHandWashListings, handWashStateTally, qualifyingH
 import { getQualifyingHandWashMetros } from '@/lib/hand-wash-metro';
 import { DETAILING_LIVE, publicDetailingListings, detailingStateTally, qualifyingDetailingCities } from '@/lib/detailing';
 import { getQualifyingDetailingMetros } from '@/lib/detailing-metro';
+import { ADVISOR_LIVE } from '@/lib/advisor';
 import { US_STATES, getStateSlug, slugify } from '@/lib/constants';
 import { getQualifyingMetros } from '@/lib/metro-queries';
 import { getQualifyingSelfServeMetros } from '@/lib/self-serve-metro';
@@ -800,7 +801,13 @@ export async function GET() {
     <lastmod>${now}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
-  </url>
+  </url>${ADVISOR_LIVE ? `
+  <url>
+    <loc>${baseUrl}/car-wash-advisor</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>` : ''}
   <url>
     <loc>${baseUrl}/shop</loc>
     <lastmod>${now}</lastmod>

@@ -9,6 +9,7 @@ import { useFavorites } from '@/lib/useFavorites';
 import { SELF_SERVE_LIVE } from '@/lib/self-serve';
 import { HAND_WASH_LIVE } from '@/lib/hand-wash';
 import { DETAILING_LIVE } from '@/lib/detailing';
+import { ADVISOR_LIVE } from '@/lib/advisor';
 
 /**
  * Inner component that reads searchParams (must be wrapped in Suspense
@@ -131,6 +132,11 @@ export function Header() {
             ) : (
               <Link href="/best" className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors">
                 Best Of
+              </Link>
+            )}
+            {ADVISOR_LIVE && (
+              <Link href="/car-wash-advisor" className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors">
+                Which Wash?
               </Link>
             )}
             <Link href="/chains" className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors">
@@ -264,6 +270,15 @@ export function Header() {
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Best Of
+                </Link>
+              )}
+              {ADVISOR_LIVE && (
+                <Link
+                  href="/car-wash-advisor"
+                  className="text-sm font-medium text-[#0F2744] hover:text-[#22C55E] transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Which Wash?
                 </Link>
               )}
               <Link
