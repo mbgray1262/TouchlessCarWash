@@ -16,8 +16,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const n = count ?? 0;
   const countStr = n > 0 ? n.toLocaleString() + '+' : '';
   const year = new Date().getFullYear();
-  const title = `Self-Service Car Wash Near Me${countStr ? ` — ${countStr} Locations` : ''} | ${year}`;
-  const description = `Find a self-service car wash near you${countStr ? ` — ${countStr} verified locations` : ''} where you wash your own car. Self-serve, DIY, self-wash & coin-op wand bays — gentle on your paint because you control the wand. Hours, ratings, and directions.`;
+  const title = `Self-Serve Car Wash Near Me${countStr ? ` — ${countStr} Locations` : ''} | ${year}`;
+  const description = `Find a self-serve car wash near you${countStr ? ` — ${countStr} verified self car wash & coin-op bays` : ''} where you wash your own car. Self-service, DIY & coin-op wand bays — the gentlest, cheapest wash because you control the wand. Hours, ratings, and directions.`;
   return {
     title: { absolute: title },
     description,
@@ -84,12 +84,12 @@ export default async function SelfServeLanding() {
             <Hand className="w-3.5 h-3.5" /> Wash it yourself — you control every spray
           </div>
           <h1 className="text-4xl sm:text-5xl font-extrabold text-white leading-tight max-w-3xl">
-            Self-Service Car Wash Near You
+            Self-Serve Car Wash Near You
           </h1>
           <p className="mt-4 text-lg text-white/90 max-w-2xl">
-            Find an open wand bay where you wash your own car, your way — a self-serve, DIY, self-wash
-            &amp; coin-op car wash all in one. The gentlest, most affordable option, because <strong>you</strong> control
-            the wand. {total > 0 && (
+            Find an open wand bay where you wash your own car, your way — a self-serve, self car wash,
+            DIY &amp; coin-op wand bay all in one. The gentlest, most affordable option,
+            because <strong>you</strong> control the wand. {total > 0 && (
               <span>{total.toLocaleString()}+ verified locations across {stateCount} states.</span>
             )}
           </p>
