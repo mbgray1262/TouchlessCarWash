@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { listingTag } from '@/lib/revalidate-listing';
 
-const SITE_URL = 'https://touchlesscarwashfinder.com';
-
 /**
  * On-demand revalidation endpoint for admin tools.
  * POST /api/revalidate { path: "/state/kansas/louisburg/xcel-car-wash-..." }
@@ -44,13 +42,16 @@ export async function POST(request: NextRequest) {
       // Not on Netlify (local dev) or purge failed
     }
 
-    // 2b. Purge the Cloudflare edge cache for this URL. Cloudflare now edge-caches
-    //     public HTML (Cache Rule), and the Netlify purgeCache() above does NOT
-    //     reach Cloudflare — so without this an admin edit would stay stale at the
-    //     Cloudflare edge until its Edge TTL expired. Best-effort + env-gated: a
-    //     no-op on local dev or when the token isn't configured, and it never
-    //     blocks the response. Purges by exact URL (cheap, no rate-limit concerns
-    //     during batch curation, unlike purge-everything).
+    // 2b. Purge the Cloudflare edge cache. Cloudflare now edge-caches public HTML
+    //     (Cache Rule), and the Netlify purgeCache() above does NOT reach it — so
+    //     without this an admin edit would stay stale at the Cloudflare edge until
+    //     the Edge TTL expired. We purge EVERYTHING (not purge-by-URL): Next.js App
+    //     Router responses carry `Vary: RSC, Next-Router-*` headers, and Cloudflare's
+    //     single-URL purge does not reliably evict those objects (verified — it
+    //     returns success but leaves the page HIT). Purge-everything mirrors what the
+    //     Netlify purgeCache() above already does and is well within rate limits at
+    //     our (human-paced) edit volume. Best-effort + env-gated: a no-op on local
+    //     dev or when the token isn't configured, and it never blocks the response.
     let cloudflarePurged = false;
     const cfZoneId = process.env.CLOUDFLARE_ZONE_ID;
     const cfPurgeToken = process.env.CLOUDFLARE_CACHE_PURGE_TOKEN;
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
               Authorization: `Bearer ${cfPurgeToken}`,
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ files: [`${SITE_URL}${path}`] }),
+            body: JSON.stringify({ purge_everything: true }),
             signal: AbortSignal.timeout(10000),
           },
         );
