@@ -2,13 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { listingTag } from '@/lib/revalidate-listing';
 
+const SITE_URL = 'https://touchlesscarwashfinder.com';
+
 /**
  * On-demand revalidation endpoint for admin tools.
  * POST /api/revalidate { path: "/state/kansas/louisburg/xcel-car-wash-..." }
  *
- * Strategy: pages use ISR (`revalidate`, mostly 1h) cached at the Netlify edge.
- * On admin edits we purge the Netlify CDN cache + pre-warm the page so the next
- * visitor gets fresh content immediately, without waiting on the ISR window.
+ * Strategy: pages use ISR (`revalidate`, mostly 1h) cached at the Netlify edge,
+ * and (since the Cloudflare migration) also at the Cloudflare edge in front of it.
+ * On admin edits we purge BOTH CDNs + pre-warm the page so the next visitor gets
+ * fresh content immediately, without waiting on the ISR / Edge-TTL window.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -41,7 +44,39 @@ export async function POST(request: NextRequest) {
       // Not on Netlify (local dev) or purge failed
     }
 
-    // 3. Pre-warm the page so the next visitor gets a cached response instantly
+    // 2b. Purge the Cloudflare edge cache for this URL. Cloudflare now edge-caches
+    //     public HTML (Cache Rule), and the Netlify purgeCache() above does NOT
+    //     reach Cloudflare — so without this an admin edit would stay stale at the
+    //     Cloudflare edge until its Edge TTL expired. Best-effort + env-gated: a
+    //     no-op on local dev or when the token isn't configured, and it never
+    //     blocks the response. Purges by exact URL (cheap, no rate-limit concerns
+    //     during batch curation, unlike purge-everything).
+    let cloudflarePurged = false;
+    const cfZoneId = process.env.CLOUDFLARE_ZONE_ID;
+    const cfPurgeToken = process.env.CLOUDFLARE_CACHE_PURGE_TOKEN;
+    if (cfZoneId && cfPurgeToken) {
+      try {
+        const res = await fetch(
+          `https://api.cloudflare.com/client/v4/zones/${cfZoneId}/purge_cache`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${cfPurgeToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ files: [`${SITE_URL}${path}`] }),
+            signal: AbortSignal.timeout(10000),
+          },
+        );
+        cloudflarePurged = res.ok;
+      } catch {
+        // Best-effort — the page refreshes on its own within the Edge TTL.
+      }
+    }
+
+    // 3. Pre-warm the page so the next visitor gets a cached response instantly.
+    //    This fetch goes back through Cloudflare (public DNS), so it also re-warms
+    //    the Cloudflare edge cache we just purged, not only Netlify's.
     let prewarmed = false;
     try {
       const origin = request.nextUrl.origin;
@@ -54,7 +89,13 @@ export async function POST(request: NextRequest) {
       // Best-effort — page will be generated on next real visit
     }
 
-    return NextResponse.json({ revalidated: true, netlifyPurged, prewarmed, path });
+    return NextResponse.json({
+      revalidated: true,
+      netlifyPurged,
+      cloudflarePurged,
+      prewarmed,
+      path,
+    });
   } catch (err) {
     return NextResponse.json(
       { error: 'Revalidation failed', detail: String(err) },
