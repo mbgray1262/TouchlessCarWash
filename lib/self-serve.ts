@@ -18,8 +18,10 @@
  * self-serve directory until the admin has consciously reviewed them in the self-serve
  * context (confirmed real bays + appropriate photos). See project_self_serve_broadening.
  */
-import { supabase } from '@/lib/supabase';
+import { cache } from 'react';
+import { supabase, LISTING_CARD_COLUMNS, type Listing } from '@/lib/supabase';
 import { slugify, getStateName } from '@/lib/constants';
+import { type ProximityListing, bestNearby, INDEXABLE_MIN_EFFECTIVE } from '@/lib/nearby-augment';
 
 /** Category master switch. Flip to true (+ deploy) to launch the self-serve directory. */
 export const SELF_SERVE_LIVE = true;
@@ -104,53 +106,109 @@ export function publicSelfServeCount() {
   return publicSelfServeListings('*', { count: 'exact', head: true });
 }
 
-/**
- * Minimum public self-serve listings a city needs before it earns its own
- * /self-serve-car-wash/<state>/<city> hub page. Below this, a city hub would be a
- * thin/near-duplicate of the single listing's own page (which already targets
- * "self serve car wash <city>"), so we don't create one. THE shared threshold —
- * both the city-hub page (200-vs-404) and the sitemap import it, so the
- * "in sitemap ⟺ indexable" invariant can never drift.
- */
-export const MIN_SELF_SERVE_CITY = 5;
+// Raw slim row as loaded from the DB (city may be null).
+type SelfServeSlim = { id: string; state: string | null; city: string | null; latitude: number | null; longitude: number | null };
+// Normalized geo row fed to bestNearby (city coerced to a non-null string, matching NearbyCandidate).
+type SlimGeo = { id: string; city: string; latitude: number | null; longitude: number | null };
 
 /**
- * The cities that qualify for a self-serve city hub (>= MIN_SELF_SERVE_CITY public
- * self-serve listings). One scan, grouped by state code + city SLUG (so name variants
- * that slugify the same are counted together, matching how the page resolves its slug).
- * Used by BOTH /sitemap.xml and the state hub's city links.
+ * Per-state slim proximity rows for public self-serve augmentation — the
+ * self-serve mirror of nearby-augment's getStateListingsForAugment. Only the
+ * fields the haversine scan needs; full card data is fetched later for the ~8
+ * selected nearby listings via getSelfServeCardsByIds().
+ */
+export const getStateSelfServeForAugment = cache(
+  async (stateCode: string): Promise<ProximityListing[]> => {
+    const { data } = await publicSelfServeListings('id, city, latitude, longitude')
+      .eq('state', stateCode)
+      .not('latitude', 'is', null)
+      .not('longitude', 'is', null)
+      .limit(2000);
+    return (data as ProximityListing[]) ?? [];
+  },
+);
+
+/** Full card data for a set of self-serve listing ids (the ~8 nearby picks). */
+export async function getSelfServeCardsByIds(
+  ids: string[],
+): Promise<Array<Listing & { latitude: number | null; longitude: number | null }>> {
+  if (ids.length === 0) return [];
+  const { data } = await publicSelfServeListings(`${LISTING_CARD_COLUMNS}, latitude, longitude`).in('id', ids);
+  return (data as Array<Listing & { latitude: number | null; longitude: number | null }>) ?? [];
+}
+
+/**
+ * Effective "in or near" count for a self-serve city — the shared indexability
+ * rule. Mirrors the touchless model exactly (lib/nearby-augment.ts): a city
+ * page is indexable, and therefore listed in the sitemap, iff
+ * (in-city + nearby-within-radius) >= INDEXABLE_MIN_EFFECTIVE. This is THE single
+ * source both the city page (200 + index vs 200 + noindex) and the sitemap
+ * import, so the "in sitemap ⟺ indexable" invariant can never drift.
+ *
+ * bestNearby maximizes neighbors over every in-city anchor, so the count is
+ * independent of row order — the page (orders in-city by name) and this function
+ * (orders by id) reach the identical verdict. Same-city listings are excluded by
+ * id, so the name-based exclusion in bestNearby is a redundant secondary guard.
+ */
+function selfServeEffectiveCount(
+  inCity: SlimGeo[],
+  statePool: SlimGeo[],
+): number {
+  if (inCity.length >= INDEXABLE_MIN_EFFECTIVE) return inCity.length;
+  const excludeIds = new Set(inCity.map((l) => l.id));
+  const cityName = (inCity[0]?.city ?? '').toLowerCase().trim();
+  const nearby = bestNearby(inCity, statePool, cityName, excludeIds).length;
+  return inCity.length + nearby;
+}
+
+/**
+ * The cities that qualify for a self-serve city hub — those whose effective
+ * "in or near" count reaches INDEXABLE_MIN_EFFECTIVE. Grouped by state code +
+ * city SLUG (so name variants that slugify the same are counted together,
+ * matching how the page resolves its slug). Used by BOTH /sitemap.xml and the
+ * state hub's city links. `count` is the in-city count (for display).
  */
 export async function qualifyingSelfServeCities(): Promise<
   { stateCode: string; stateSlug: string; citySlug: string; cityName: string; count: number }[]
 > {
-  const groups = new Map<string, { stateCode: string; cityName: string; count: number }>();
+  // One scan of all public self-serve slim rows.
+  const rows: SelfServeSlim[] = [];
   let from = 0;
   while (true) {
-    const { data } = await publicSelfServeListings('state, city').order('id').range(from, from + 999);
+    const { data } = await publicSelfServeListings('id, state, city, latitude, longitude').order('id').range(from, from + 999);
     if (!data || !data.length) break;
-    for (const r of data as { state: string | null; city: string | null }[]) {
-      const code = (r.state || '').toUpperCase();
-      const city = r.city || '';
-      const cslug = slugify(city);
-      if (!code || !cslug) continue;
-      const key = `${code}/${cslug}`;
-      const g = groups.get(key);
-      if (g) g.count++;
-      else groups.set(key, { stateCode: code, cityName: city, count: 1 });
-    }
+    rows.push(...(data as SelfServeSlim[]));
     from += data.length;
     if (data.length < 1000) break;
   }
+  // Group into per-city (by state + city slug) and per-state proximity pools.
+  const byCity = new Map<string, { stateCode: string; cityName: string; rows: SlimGeo[] }>();
+  const byState = new Map<string, SlimGeo[]>();
+  for (const r of rows) {
+    const code = (r.state || '').toUpperCase();
+    const city = r.city || '';
+    const cslug = slugify(city);
+    if (!code || !cslug) continue;
+    const geo: SlimGeo = { id: r.id, city, latitude: r.latitude, longitude: r.longitude };
+    const key = `${code}/${cslug}`;
+    const g = byCity.get(key);
+    if (g) g.rows.push(geo);
+    else byCity.set(key, { stateCode: code, cityName: city, rows: [geo] });
+    const pool = byState.get(code) ?? [];
+    pool.push(geo);
+    byState.set(code, pool);
+  }
   const out: { stateCode: string; stateSlug: string; citySlug: string; cityName: string; count: number }[] = [];
-  for (const [key, g] of Array.from(groups.entries())) {
-    if (g.count < MIN_SELF_SERVE_CITY) continue;
+  for (const [key, g] of Array.from(byCity.entries())) {
+    const effective = selfServeEffectiveCount(g.rows, byState.get(g.stateCode) ?? []);
+    if (effective < INDEXABLE_MIN_EFFECTIVE) continue;
     const citySlug = key.split('/')[1];
     out.push({
       stateCode: g.stateCode,
       stateSlug: slugify(getStateName(g.stateCode)),
       citySlug,
       cityName: g.cityName,
-      count: g.count,
+      count: g.rows.length,
     });
   }
   return out.sort((a, b) => b.count - a.count || a.stateCode.localeCompare(b.stateCode));

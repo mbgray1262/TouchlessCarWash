@@ -374,8 +374,9 @@ export async function GET() {
     <priority>0.7</priority>
   </url>`);
     }
-    // City hubs — only cities with >= MIN_SELF_SERVE_CITY listings (shared
-    // qualifyingSelfServeCities() drives BOTH this and the page's 200-vs-404).
+    // City hubs — only cities whose effective in-or-near count qualifies (shared
+    // qualifyingSelfServeCities() drives BOTH this and the page's index/noindex,
+    // the same effective-count model the touchless city hubs use).
     for (const c of ssCities) {
       selfServeUrls.push(`  <url>
     <loc>${baseUrl}/self-serve-car-wash/${getStateSlug(c.stateCode)}/${c.citySlug}</loc>
