@@ -55,20 +55,18 @@ export default function RootLayout({
     <html lang="en">
       <head>
         {/* Google Analytics — a RAW inline <script> at the top of <head>, run
-            during HTML parse (before hydration and before the Monumetric ad
-            stack). Two things were making GA undercount ~80% of visits after
-            Monumetric's ad changes:
-              1. next/script deferred gtag into Next's queue; and
-              2. the ad stack's IAB/TCF consent framework made GA4 WAIT ~5s for
-                 a consent signal before sending each pageview.
-            On a search directory most visitors leave within a few seconds, so
-            they left before the delayed hit ever fired (real traffic was fine —
-            confirmed server-side via Cloudflare; GA was just blind).
-            Fix: run GA first AND explicitly grant `analytics_storage` up front
-            so gtag sends the pageview immediately instead of waiting on the CMP.
-            This is scoped to analytics ONLY — `ad_storage` / `ad_user_data` /
-            `ad_personalization` are deliberately left unset so Monumetric's CMP
-            still governs all ad consent (ad-side compliance is unchanged).
+            during HTML parse, before hydration and before the Monumetric ad
+            stack (which is deferred to `lazyOnload` in AnalyticsScripts). After
+            Monumetric's ad changes, GA was undercounting ~80% of visits: the ad
+            stack (~250 resources, froze the main thread for several seconds)
+            monopolized the browser so gtag couldn't dispatch its pageview for
+            ~6s, and on a search directory most visitors leave before that (real
+            traffic was fine — confirmed server-side via Cloudflare; GA was just
+            blind). Fix = run GA first + defer the ad stack so the pageview
+            fires in the first second. The `analytics_storage` grant below is
+            good hygiene (no consent framework is active on the site); it is
+            scoped to analytics ONLY — ad_storage / ad_user_data /
+            ad_personalization are left unset so Monumetric governs ad consent.
             Self-gates /admin (admin visits skewed totals); production only. */}
         {process.env.NODE_ENV === 'production' && (
           <script
