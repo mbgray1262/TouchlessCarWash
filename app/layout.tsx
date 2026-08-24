@@ -55,19 +55,26 @@ export default function RootLayout({
     <html lang="en">
       <head>
         {/* Google Analytics — a RAW inline <script> at the top of <head>, run
-            during HTML parse, before hydration and before the Monumetric ad
-            stack (which is deferred to `lazyOnload` in AnalyticsScripts). After
-            Monumetric's ad changes, GA was undercounting ~80% of visits: the ad
-            stack (~250 resources, froze the main thread for several seconds)
-            monopolized the browser so gtag couldn't dispatch its pageview for
-            ~6s, and on a search directory most visitors leave before that (real
-            traffic was fine — confirmed server-side via Cloudflare; GA was just
-            blind). Fix = run GA first + defer the ad stack so the pageview
-            fires in the first second. The `analytics_storage` grant below is
-            good hygiene (no consent framework is active on the site); it is
-            scoped to analytics ONLY — ad_storage / ad_user_data /
-            ad_personalization are left unset so Monumetric governs ad consent.
-            Self-gates /admin (admin visits skewed totals); production only. */}
+            during HTML parse. After Monumetric's ad changes, GA was
+            undercounting ~80% of visits: the gtag pageview beacon was firing
+            ~6s after load, and on a search directory most visitors leave within
+            a few seconds (real traffic was fine — confirmed server-side via
+            Cloudflare; a real-browser hit DID register live in Realtime — GA was
+            just blind to the fast bounces).
+
+            Root cause (diagnosed via the resource waterfall): gtag.js loads in
+            ~0.8s, then WAITS ~5s before sending the first hit. It is not
+            contention (deferring the ad stack didn't help), not load order, and
+            not consent (no TCF/CMP is active; granting analytics_storage didn't
+            help). It is GA4 "Google Signals": when Google ad tags (AdSense /
+            Ad Manager, loaded by Monumetric) are present, GA4 waits up to 5s to
+            sync advertising identity before dispatching the first event.
+
+            Fix: disable Google Signals on the GA config so the pageview sends
+            immediately. Cost is minor (loses GA's cross-device / demographics
+            modeling); it does NOT affect Monumetric's ad serving or revenue.
+            The analytics_storage grant is good hygiene, scoped to analytics only
+            (ad_* consent left to Monumetric). Self-gates /admin; production only. */}
         {process.env.NODE_ENV === 'production' && (
           <script
             // eslint-disable-next-line react/no-danger
@@ -77,7 +84,8 @@ export default function RootLayout({
                 'window.dataLayer=window.dataLayer||[];' +
                 'function gtag(){dataLayer.push(arguments);}window.gtag=gtag;' +
                 "gtag('consent','default',{analytics_storage:'granted'});" +
-                "gtag('js',new Date());gtag('config','G-55HHXHEVFP');" +
+                "gtag('js',new Date());" +
+                "gtag('config','G-55HHXHEVFP',{allow_google_signals:false,allow_ad_personalization_signals:false});" +
                 'var s=document.createElement("script");s.async=true;' +
                 "s.src='https://www.googletagmanager.com/gtag/js?id=G-55HHXHEVFP';" +
                 'document.head.appendChild(s);})();',
