@@ -4,13 +4,16 @@ import Script from 'next/script';
 import { usePathname } from 'next/navigation';
 
 /**
- * Wraps Google Analytics + AdSense so neither loads on /admin/* pages.
- * Admin sessions were skewing the GA traffic numbers because every
- * admin visit counted as a pageview against the public site's totals.
+ * Loads the AdSense + Monumetric ad scripts, excluded from /admin/* pages.
  *
- * usePathname() works in client components even during the initial
- * SSR pass, so the scripts are excluded from the rendered HTML for
- * admin paths — they never load, and admin pageviews never fire.
+ * NOTE: Google Analytics is deliberately NOT here — it's a raw inline <script>
+ * at the top of <head> in app/layout.tsx. Loading GA alongside these ad scripts
+ * (even with next/script `beforeInteractive`) let the ad stack's consent
+ * framework delay the gtag page_view ~5s, so most visitors left uncounted. See
+ * the comment in app/layout.tsx for the full rationale.
+ *
+ * usePathname() works in client components even during the initial SSR pass,
+ * so these scripts are excluded from the rendered HTML for admin paths.
  */
 export function AnalyticsScripts() {
   const pathname = usePathname();
@@ -20,28 +23,6 @@ export function AnalyticsScripts() {
 
   return (
     <>
-      {/* Google Analytics is loaded with `beforeInteractive` so the gtag
-          library initializes and dispatches its first `page_view` BEFORE
-          hydration — and, critically, before the AdSense/Monumetric scripts
-          below (which run `afterInteractive`) start saturating the main
-          thread. When GA shared the `afterInteractive` window with the ad
-          stack, the page_view beacon was being starved for ~8 seconds after
-          load; on a search directory where most visitors leave within a few
-          seconds, that meant ~80% of sessions were never counted (real
-          traffic was fine — confirmed via Cloudflare — GA was just blind).
-          Loading GA first fixes the undercount without changing ad timing. */}
-      <Script
-        src="https://www.googletagmanager.com/gtag/js?id=G-55HHXHEVFP"
-        strategy="beforeInteractive"
-      />
-      <Script id="google-analytics" strategy="beforeInteractive">
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', 'G-55HHXHEVFP');
-        `}
-      </Script>
       {/* Google AdSense loader — required for AdSense approval
           verification AND for any AdUnit components to serve ads. */}
       <Script
