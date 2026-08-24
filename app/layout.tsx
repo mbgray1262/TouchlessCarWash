@@ -54,51 +54,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Google Analytics — a RAW inline <script> at the top of <head>, run
-            during HTML parse. After Monumetric's ad changes, GA was
-            undercounting ~80% of visits: the gtag pageview beacon was firing
-            ~6s after load, and on a search directory most visitors leave within
-            a few seconds (real traffic was fine — confirmed server-side via
-            Cloudflare; a real-browser hit DID register live in Realtime — GA was
-            just blind to the fast bounces).
-
-            Root cause (diagnosed via the resource waterfall): gtag.js loads in
-            ~0.8s, then WAITS ~5s before sending the first hit. It is not
-            contention (deferring the ad stack didn't help), not load order, and
-            not consent (no TCF/CMP is active; granting analytics_storage didn't
-            help). It is GA4 "Google Signals": when Google ad tags (AdSense /
-            Ad Manager, loaded by Monumetric) are present, GA4 waits up to 5s to
-            sync advertising identity before dispatching the first event.
-
-            Fix: disable Google Signals on the GA config so the pageview sends
-            immediately. Cost is minor (loses GA's cross-device / demographics
-            modeling); it does NOT affect Monumetric's ad serving or revenue.
-            The analytics_storage grant is good hygiene, scoped to analytics only
-            (ad_* consent left to Monumetric). Self-gates /admin; production only. */}
-        {process.env.NODE_ENV === 'production' && (
-          <script
-            // eslint-disable-next-line react/no-danger
-            dangerouslySetInnerHTML={{
-              __html:
-                "(function(){if(location.pathname.indexOf('/admin')===0)return;" +
-                'window.dataLayer=window.dataLayer||[];' +
-                'function gtag(){dataLayer.push(arguments);}window.gtag=gtag;' +
-                "gtag('consent','default',{analytics_storage:'granted'});" +
-                "gtag('js',new Date());" +
-                "gtag('config','G-55HHXHEVFP',{allow_google_signals:false,allow_ad_personalization_signals:false});" +
-                'var s=document.createElement("script");s.async=true;' +
-                "s.src='https://www.googletagmanager.com/gtag/js?id=G-55HHXHEVFP';" +
-                'document.head.appendChild(s);})();',
-            }}
-          />
-        )}
         <link rel="icon" href="/favicon.ico" sizes="48x48" />
         <meta name="impact-site-verification" content="f3b814bc-d87d-473f-b3f3-91951d20170e" />
         <link rel="preconnect" href="https://res.cloudinary.com" />
         <link rel="dns-prefetch" href="https://res.cloudinary.com" />
-        {/* AdSense + Monumetric ad scripts (afterInteractive), excluded from
-            /admin. GA is loaded above (not here) so it can't be delayed by the
-            ad stack. */}
+        {/* GA + AdSense are wrapped in AnalyticsScripts so they don't load
+            on /admin/* pages — admin sessions were skewing GA totals. */}
         <AnalyticsScripts />
         {/* Google Maps is loaded on-demand by HeroSection when user interacts with search */}
       </head>

@@ -4,20 +4,13 @@ import Script from 'next/script';
 import { usePathname } from 'next/navigation';
 
 /**
- * Loads the AdSense + Monumetric ad scripts (afterInteractive), excluded from
- * /admin/* pages.
+ * Wraps Google Analytics + AdSense so neither loads on /admin/* pages.
+ * Admin sessions were skewing the GA traffic numbers because every
+ * admin visit counted as a pageview against the public site's totals.
  *
- * NOTE: Google Analytics is deliberately NOT here — it's a raw inline <script>
- * at the top of <head> in app/layout.tsx. The GA pageview was firing ~6s late
- * (undercounting ~80% of visits) because GA4 waits up to 5s to sync Google
- * Signals advertising identity with the on-page Google ad tags before sending
- * the first hit. That is fixed in layout.tsx by disabling Google Signals on the
- * GA config, NOT by changing how these ad scripts load — so ad serving/revenue
- * is unaffected. (Deferring these to lazyOnload was tried and made the delay
- * slightly worse, since the ad tag then loaded later.)
- *
- * usePathname() works in client components even during the initial SSR pass,
- * so these scripts are excluded from the rendered HTML for admin paths.
+ * usePathname() works in client components even during the initial
+ * SSR pass, so the scripts are excluded from the rendered HTML for
+ * admin paths — they never load, and admin pageviews never fire.
  */
 export function AnalyticsScripts() {
   const pathname = usePathname();
@@ -27,6 +20,18 @@ export function AnalyticsScripts() {
 
   return (
     <>
+      <Script
+        src="https://www.googletagmanager.com/gtag/js?id=G-55HHXHEVFP"
+        strategy="afterInteractive"
+      />
+      <Script id="google-analytics" strategy="afterInteractive">
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-55HHXHEVFP');
+        `}
+      </Script>
       {/* Google AdSense loader — required for AdSense approval
           verification AND for any AdUnit components to serve ads. */}
       <Script
