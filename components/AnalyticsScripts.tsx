@@ -20,11 +20,21 @@ export function AnalyticsScripts() {
 
   return (
     <>
+      {/* Google Analytics is loaded with `beforeInteractive` so the gtag
+          library initializes and dispatches its first `page_view` BEFORE
+          hydration — and, critically, before the AdSense/Monumetric scripts
+          below (which run `afterInteractive`) start saturating the main
+          thread. When GA shared the `afterInteractive` window with the ad
+          stack, the page_view beacon was being starved for ~8 seconds after
+          load; on a search directory where most visitors leave within a few
+          seconds, that meant ~80% of sessions were never counted (real
+          traffic was fine — confirmed via Cloudflare — GA was just blind).
+          Loading GA first fixes the undercount without changing ad timing. */}
       <Script
         src="https://www.googletagmanager.com/gtag/js?id=G-55HHXHEVFP"
-        strategy="afterInteractive"
+        strategy="beforeInteractive"
       />
-      <Script id="google-analytics" strategy="afterInteractive">
+      <Script id="google-analytics" strategy="beforeInteractive">
         {`
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
