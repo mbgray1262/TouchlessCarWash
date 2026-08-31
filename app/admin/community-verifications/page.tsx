@@ -49,7 +49,11 @@ interface Report {
   is_touchless: boolean; // the vote value (true = confirms the listing matches its wash type)
   comment: string | null;
   created_at: string;
+  resolved_at: string | null; // when an admin verdict settled this flag (null = still open)
 }
+
+// The admin verdict recorded on a card, so the UI can say exactly what was done.
+type ResolveAction = 'confirmed' | 'not_touchless' | 'removed';
 
 // One card = one listing's votes FOR ONE wash type. Grouping by (listing, wash_type) keeps
 // every CTA unambiguous (the card is about that category) and makes the per-category filter/
@@ -70,8 +74,11 @@ interface ListingRow {
   listing_business_status: string | null;
   listing_is_approved: boolean;
   reports: Report[];
-  no_count: number;
+  no_count: number;        // total thumbs-down votes for this listing+type
+  open_no_count: number;   // thumbs-down votes NOT yet resolved by an admin — drives "needs review"
   yes_count: number;
+  resolved_at: string | null;        // when the admin last gave a verdict (null = never / reopened)
+  resolved_action: ResolveAction | null; // which verdict was given
   latest_at: string;
 }
 
@@ -136,6 +143,8 @@ export default function CommunityVerificationsPage() {
           wash_type,
           comment,
           created_at,
+          resolved_at,
+          resolved_action,
           listings!inner(name, city, state, slug, is_touchless, is_self_service, is_hand_wash, is_detailing, business_status, is_approved)
         `)
         .order('created_at', { ascending: false })
@@ -159,6 +168,8 @@ export default function CommunityVerificationsPage() {
         wash_type: string | null;
         comment: string | null;
         created_at: string;
+        resolved_at: string | null;
+        resolved_action: string | null;
         listings: JoinedListing | JoinedListing[];
       };
 
@@ -185,14 +196,26 @@ export default function CommunityVerificationsPage() {
             listing_is_approved: l?.is_approved ?? true,
             reports: [],
             no_count: 0,
+            open_no_count: 0,
             yes_count: 0,
+            resolved_at: null,
+            resolved_action: null,
             latest_at: r.created_at,
           });
         }
         const entry = map.get(key)!;
-        entry.reports.push({ id: r.id, is_touchless: r.is_touchless, comment: r.comment, created_at: r.created_at });
-        if (r.is_touchless) entry.yes_count++;
-        else entry.no_count++;
+        entry.reports.push({ id: r.id, is_touchless: r.is_touchless, comment: r.comment, created_at: r.created_at, resolved_at: r.resolved_at });
+        if (r.is_touchless) {
+          entry.yes_count++;
+        } else {
+          entry.no_count++;
+          if (!r.resolved_at) entry.open_no_count++;
+          // Remember the most recent verdict stamped on this card's flags.
+          if (r.resolved_at && (!entry.resolved_at || r.resolved_at > entry.resolved_at)) {
+            entry.resolved_at = r.resolved_at;
+            entry.resolved_action = (r.resolved_action as ResolveAction | null) ?? null;
+          }
+        }
         if (r.created_at > entry.latest_at) entry.latest_at = r.created_at;
       }
 
@@ -222,6 +245,75 @@ export default function CommunityVerificationsPage() {
     setRows(prev => prev.map(r => r.listing_id === listing_id ? { ...r, ...patch } : r));
   }
 
+  /** Optimistically patch ONE card (resolution is per listing+wash-type, keyed by row.key). */
+  function patchRow(key: string, patch: Partial<ListingRow>) {
+    setRows(prev => prev.map(r => r.key === key ? { ...r, ...patch } : r));
+  }
+
+  /**
+   * Record an admin verdict on a card's flags (or reopen it). This is what actually
+   * clears "needs review": it stamps the thumbs-down votes resolved so the card drops
+   * out of the queue. Votes are kept (not deleted), so Undo can reopen it.
+   */
+  async function setResolved(row: ListingRow, resolved: boolean, action: ResolveAction | null) {
+    const before = { open_no_count: row.open_no_count, resolved_at: row.resolved_at, resolved_action: row.resolved_action };
+    patchRow(row.key, resolved
+      ? { open_no_count: 0, resolved_at: new Date().toISOString(), resolved_action: action }
+      : { open_no_count: row.no_count, resolved_at: null, resolved_action: null });
+    try {
+      const res = await fetch('/api/admin/listings/resolve-verifications', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listing_id: row.listing_id, wash_type: row.wash_type, resolved, action }),
+      });
+      if (!res.ok) {
+        patchRow(row.key, before); // revert
+        const body = await res.json().catch(() => ({}));
+        alert(`Failed to update: ${body.error ?? res.statusText}`);
+        return false;
+      }
+      return true;
+    } catch {
+      patchRow(row.key, before);
+      alert('Failed to update: network error');
+      return false;
+    }
+  }
+
+  /** VERDICT: the flags were wrong — keep the listing exactly as it is, mark them handled. */
+  async function keepAsIs(row: ListingRow) {
+    setBusy(row.key);
+    try { await setResolved(row, true, 'confirmed'); }
+    finally { setBusy(null); }
+  }
+
+  /** VERDICT: the flags were right — flip the category flag off (touchless also hides it) and resolve. */
+  async function agreeNotType(row: ListingRow) {
+    setBusy(row.key);
+    try {
+      const field = CAT[row.wash_type].flagField;
+      patchListing(row.listing_id, { [field]: false } as Partial<ListingRow>);
+      const res = await fetch('/api/admin/listings/toggle-wash-type', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listing_id: row.listing_id, wash_type: row.wash_type, value: false }),
+      });
+      if (!res.ok) {
+        patchListing(row.listing_id, { [field]: true } as Partial<ListingRow>);
+        const body = await res.json().catch(() => ({}));
+        alert(`Failed to update: ${body.error ?? res.statusText}`);
+        return;
+      }
+      if (row.wash_type === 'touchless') patchListing(row.listing_id, { listing_is_approved: false });
+      await setResolved(row, true, 'not_touchless');
+    } finally { setBusy(null); }
+  }
+
+  /** Undo a verdict: reopen the flags for review (and, if we'd flipped the flag, leave that to the admin). */
+  async function undoResolve(row: ListingRow) {
+    setBusy(row.key);
+    try { await setResolved(row, false, null); }
+    finally { setBusy(null); }
+  }
+
   async function removeListing(row: ListingRow) {
     const reason = window.prompt(
       `Remove "${row.listing_name}"?\n\nThis hides it from the public site immediately. Optional reason for the audit log:`,
@@ -240,6 +332,8 @@ export default function CommunityVerificationsPage() {
         return;
       }
       patchListing(row.listing_id, { listing_is_approved: false, listing_business_status: 'REMOVED_BY_ADMIN' });
+      // A removed listing's open flags are settled too — mark this card's flags resolved.
+      if (row.open_no_count > 0) await setResolved(row, true, 'removed');
     } finally {
       setBusy(null);
     }
@@ -264,53 +358,8 @@ export default function CommunityVerificationsPage() {
     }
   }
 
-  /** Wipe negative reports for this listing + wash type — used when the flag was wrong. */
-  async function dismissFlags(row: ListingRow) {
-    if (!window.confirm(`Dismiss all ${row.no_count} "${CAT[row.wash_type].flagged}" flag${row.no_count !== 1 ? 's' : ''} for "${row.listing_name}"?\n\nPositive votes for this category are kept.`)) return;
-    setBusy(row.key);
-    try {
-      const res = await fetch('/api/admin/listings/dismiss-flags', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ listing_id: row.listing_id, wash_type: row.wash_type }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        alert(`Failed to dismiss: ${body.error ?? res.statusText}`);
-        return;
-      }
-      setRows(prev => prev.map(r => r.key === row.key
-        ? { ...r, reports: r.reports.filter(rep => rep.is_touchless), no_count: 0 }
-        : r));
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  /** Flip the category flag this card is about (uses the wash-type-aware toggle). */
-  async function toggleWashType(row: ListingRow, next: boolean) {
-    const field = CAT[row.wash_type].flagField;
-    setBusy(row.key);
-    patchListing(row.listing_id, { [field]: next } as Partial<ListingRow>);
-    try {
-      const res = await fetch('/api/admin/listings/toggle-wash-type', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ listing_id: row.listing_id, wash_type: row.wash_type, value: next }),
-      });
-      if (!res.ok) {
-        patchListing(row.listing_id, { [field]: !next } as Partial<ListingRow>);
-        const body = await res.json().catch(() => ({}));
-        alert(`Failed to update: ${body.error ?? res.statusText}`);
-      } else if (row.wash_type === 'touchless' && next === false) {
-        // touchless off also unapproves (mirrors the API side effect)
-        patchListing(row.listing_id, { listing_is_approved: false });
-      }
-    } finally {
-      setBusy(null);
-    }
-  }
-
   /** Delete a single report. */
-  async function deleteReport(report_id: string, rowKey: string, isNegative: boolean, snippet: string) {
+  async function deleteReport(report_id: string, rowKey: string, snippet: string) {
     if (!window.confirm(`Delete this report?\n\n"${snippet}"\n\nThe individual vote is removed; the listing's status is unchanged.`)) return;
     setDeletingReport(report_id);
     try {
@@ -324,12 +373,19 @@ export default function CommunityVerificationsPage() {
         return;
       }
       setRows(prev => prev
-        .map(r => r.key === rowKey ? {
-          ...r,
-          reports: r.reports.filter(rep => rep.id !== report_id),
-          no_count: r.no_count - (isNegative ? 1 : 0),
-          yes_count: r.yes_count - (isNegative ? 0 : 1),
-        } : r)
+        .map(r => {
+          if (r.key !== rowKey) return r;
+          const reports = r.reports.filter(rep => rep.id !== report_id);
+          // Recompute from what's left so open-flag counts stay exact.
+          const negatives = reports.filter(rep => !rep.is_touchless);
+          return {
+            ...r,
+            reports,
+            no_count: negatives.length,
+            open_no_count: negatives.filter(rep => !rep.resolved_at).length,
+            yes_count: reports.filter(rep => rep.is_touchless).length,
+          };
+        })
         .filter(r => r.reports.length > 0));
     } finally {
       setDeletingReport(null);
@@ -338,8 +394,10 @@ export default function CommunityVerificationsPage() {
 
   // ─────────────────────────── Derived view state ────────────────────────
 
+  // Outstanding = still has UNRESOLVED thumbs-down votes. Once the admin gives a verdict,
+  // the flags are stamped resolved and the card leaves the queue — that's the whole fix.
   const isOutstanding = useCallback(
-    (r: ListingRow) => r.no_count > 0 && !isRemoved(r.listing_business_status),
+    (r: ListingRow) => r.open_no_count > 0 && !isRemoved(r.listing_business_status),
     [],
   );
 
@@ -526,26 +584,33 @@ export default function CommunityVerificationsPage() {
             const c = CAT[row.wash_type];
             const url = buildListingUrl(row.listing_state, row.listing_city, row.listing_slug);
             const removed = isRemoved(row.listing_business_status);
-            const outstanding = row.no_count > 0 && !removed;
+            const outstanding = row.open_no_count > 0 && !removed;
+            // Has flags AND the admin already gave a verdict on them (and it's not removed).
+            const resolved = !removed && row.no_count > 0 && row.open_no_count === 0 && !!row.resolved_at;
             const rowBusy = busy === row.key;
             const flagOn = !!row[c.flagField];
             const publicNow = flagOn && row.listing_is_approved && !removed;
+            // Human-readable summary of the verdict, for the resolved banner.
+            const verdictText =
+              row.resolved_action === 'not_touchless' ? `Marked NOT ${c.label.toLowerCase()} — hidden from public`
+              : row.resolved_action === 'removed' ? 'Listing removed'
+              : `Kept as-is — confirmed ${c.label.toLowerCase()}`;
             return (
               <div
                 key={row.key}
                 className={`bg-white rounded-xl border-2 overflow-hidden transition-colors ${
-                  removed ? 'border-gray-200 opacity-75' : outstanding ? 'border-red-200' : 'border-gray-200'
+                  removed ? 'border-gray-200 opacity-75' : outstanding ? 'border-red-200' : resolved ? 'border-green-200' : 'border-gray-200'
                 }`}
               >
                 {/* Header */}
                 <div className={`px-5 py-3 flex items-start justify-between gap-4 ${
-                  removed ? 'bg-gray-50' : outstanding ? 'bg-red-50/50' : 'bg-gray-50/50'
+                  removed ? 'bg-gray-50' : outstanding ? 'bg-red-50/50' : resolved ? 'bg-green-50/40' : 'bg-gray-50/50'
                 }`}>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      {/* Category badge — which question these votes answered */}
-                      <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border ${c.badge}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />{c.label}
+                      {/* Topic chip — the QUESTION the community raised (muted, not a status claim). */}
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200">
+                        <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />{c.label} check
                       </span>
                       <Link href={url} target="_blank" className="text-base font-semibold text-[#0F2744] hover:text-[#22C55E] flex items-center gap-1.5">
                         {row.listing_name}
@@ -555,14 +620,24 @@ export default function CommunityVerificationsPage() {
                       <span className="text-sm text-gray-500">{row.listing_city}, {row.listing_state}</span>
                     </div>
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                      {/* Status pill — is this listing public + tagged as this category? */}
+                      {/* Review-state pill — the single source of truth for "what do I need to do?" */}
+                      {removed ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 border border-gray-300"><Ban className="w-3 h-3" /> Removed</span>
+                      ) : outstanding ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-red-600 text-white"><AlertTriangle className="w-3 h-3" /> Needs review</span>
+                      ) : resolved ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-green-600 text-white"><CheckCircle className="w-3 h-3" /> Reviewed</span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200"><CheckCircle className="w-3 h-3" /> No open flags</span>
+                      )}
+                      {/* Public-visibility pill — separate concern: is it live on the site right now? */}
                       <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
-                        removed ? 'bg-gray-200 text-gray-700 border border-gray-300'
+                        removed ? 'bg-gray-100 text-gray-500 border border-gray-200'
                           : publicNow ? 'bg-green-50 text-green-700 border border-green-200'
                           : 'bg-amber-50 text-amber-700 border border-amber-200'
                       }`}>
-                        {removed ? <><Ban className="w-3 h-3" /> Removed</>
-                          : publicNow ? <><CheckCircle className="w-3 h-3" /> {c.label} · Public</>
+                        {removed ? <>Hidden</>
+                          : publicNow ? <><CheckCircle className="w-3 h-3" /> Public · tagged {c.label.toLowerCase()}</>
                           : flagOn ? <><XCircle className="w-3 h-3" /> Hidden from public</>
                           : <><XCircle className="w-3 h-3" /> Not tagged {c.label.toLowerCase()}</>}
                       </span>
@@ -572,12 +647,28 @@ export default function CommunityVerificationsPage() {
                       {row.no_count > 0 && (
                         <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-600"><ThumbsDown className="w-3 h-3" /> {row.no_count} flag{row.no_count !== 1 ? 's' : ''}</span>
                       )}
-                      {outstanding && (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold bg-red-600 text-white px-2 py-0.5 rounded-full">Needs review</span>
-                      )}
                     </div>
                   </div>
                 </div>
+
+                {/* Resolved banner — makes the admin's own decision unmistakable + reversible. */}
+                {resolved && (
+                  <div className="px-5 py-2.5 bg-green-50 border-b border-green-100 flex items-center justify-between gap-3">
+                    <span className="inline-flex items-center gap-2 text-sm text-green-800">
+                      <CheckCircle className="w-4 h-4 shrink-0 text-green-600" />
+                      <span><span className="font-semibold">You reviewed this.</span> {verdictText}.</span>
+                    </span>
+                    <button
+                      onClick={() => undoResolve(row)}
+                      disabled={rowBusy}
+                      className="shrink-0 inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border border-green-300 text-green-700 bg-white hover:bg-green-100 disabled:opacity-50 transition-colors"
+                      title="Reopen these flags for review"
+                    >
+                      {rowBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                      Undo
+                    </button>
+                  </div>
+                )}
 
                 {/* Reports list */}
                 <div className="divide-y divide-gray-100">
@@ -598,7 +689,7 @@ export default function CommunityVerificationsPage() {
                         <p className="text-xs text-gray-400 mt-0.5">{timeAgo(r.created_at)}</p>
                       </div>
                       <button
-                        onClick={() => deleteReport(r.id, row.key, !r.is_touchless, r.comment || (r.is_touchless ? 'Thumbs-up vote (no comment)' : 'Thumbs-down vote (no comment)'))}
+                        onClick={() => deleteReport(r.id, row.key, r.comment || (r.is_touchless ? 'Thumbs-up vote (no comment)' : 'Thumbs-down vote (no comment)'))}
                         disabled={deletingReport === r.id}
                         title="Delete this report (e.g. nonsense comment)"
                         className="shrink-0 inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded border border-gray-200 text-gray-500 bg-white hover:bg-red-50 hover:border-red-200 hover:text-red-600 disabled:opacity-40 transition-colors"
@@ -610,8 +701,8 @@ export default function CommunityVerificationsPage() {
                   ))}
                 </div>
 
-                {/* Action bar — category-aware CTAs */}
-                <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center gap-2 flex-wrap">
+                {/* Action bar */}
+                <div className="px-5 py-3 bg-gray-50 border-t border-gray-100">
                   {removed ? (
                     <button
                       onClick={() => restoreListing(row)}
@@ -621,49 +712,57 @@ export default function CommunityVerificationsPage() {
                       {rowBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
                       Restore listing
                     </button>
+                  ) : outstanding ? (
+                    /* The verdict: one decisive click. Each option both records the decision
+                       AND clears the card from the queue. */
+                    <div className="flex flex-col gap-2">
+                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Your verdict — is this really {c.label.toLowerCase()}?</span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          onClick={() => keepAsIs(row)}
+                          disabled={rowBusy}
+                          className="inline-flex items-center gap-1.5 text-sm font-semibold px-3.5 py-2 rounded-lg border border-green-300 text-green-700 bg-white hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          title="The flags are wrong. Keep the listing exactly as it is and clear the flags."
+                        >
+                          {rowBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                          Keep — it IS {c.label.toLowerCase()}
+                        </button>
+                        <button
+                          onClick={() => agreeNotType(row)}
+                          disabled={rowBusy}
+                          className="inline-flex items-center gap-1.5 text-sm font-semibold px-3.5 py-2 rounded-lg bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          title={row.wash_type === 'touchless'
+                            ? 'The flags are right. Untag touchless and hide the listing from the public site.'
+                            : `The flags are right. Untag ${c.label.toLowerCase()} on this listing.`}
+                        >
+                          {rowBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsDown className="w-4 h-4" />}
+                          Change — {c.markNo.replace('Mark ', '')}
+                        </button>
+                        <span className="w-px h-6 bg-gray-200 mx-1" />
+                        <button
+                          onClick={() => removeListing(row)}
+                          disabled={rowBusy}
+                          className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-lg border border-red-200 text-red-600 bg-white hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          title="Take the whole listing down (spam, duplicate, or permanently closed)"
+                        >
+                          {rowBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
+                          Remove listing
+                        </button>
+                      </div>
+                    </div>
                   ) : (
-                    <>
+                    /* Reviewed or no open flags — Undo lives in the green banner above. */
+                    <div className="flex items-center gap-2 flex-wrap">
                       <button
                         onClick={() => removeListing(row)}
                         disabled={rowBusy}
-                        className="inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        title="Hide this listing from the public site"
+                        className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg border border-red-200 text-red-600 bg-white hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        title="Take the whole listing down (spam, duplicate, or permanently closed)"
                       >
                         {rowBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Ban className="w-3.5 h-3.5" />}
                         Remove listing
                       </button>
-                      {row.no_count > 0 && (
-                        <button
-                          onClick={() => dismissFlags(row)}
-                          disabled={rowBusy}
-                          className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          title={`Clear the ${c.label} flags (listing stays as-is)`}
-                        >
-                          {rowBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
-                          Dismiss {c.label} flags
-                        </button>
-                      )}
-                      {flagOn ? (
-                        <button
-                          onClick={() => toggleWashType(row, false)}
-                          disabled={rowBusy}
-                          className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg border border-amber-200 text-amber-700 bg-white hover:bg-amber-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          title={`Keep the listing but mark it as ${c.markNo.replace('Mark ', '')}`}
-                        >
-                          {rowBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ThumbsDown className="w-3.5 h-3.5" />}
-                          {c.markNo}
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => toggleWashType(row, true)}
-                          disabled={rowBusy}
-                          className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg border border-green-200 text-green-700 bg-white hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                          {rowBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ThumbsUp className="w-3.5 h-3.5" />}
-                          {c.markYes}
-                        </button>
-                      )}
-                    </>
+                    </div>
                   )}
                 </div>
               </div>
